@@ -10,6 +10,7 @@ import {
   pdf,
   Font,
 } from '@react-pdf/renderer';
+import { APP_NAME, APP_NAME_UPPER } from '@/lib/brand';
 import {
   PDF_COLORS,
   formatDateForPDF,
@@ -811,16 +812,16 @@ const LoansPDFDocument = ({
 
   return (
     <Document
-      title="Loan Report — Pawn Tracker"
-      author="Pawn Tracker"
-      creator="Pawn Tracker"
+      title={`Loan Report — ${APP_NAME}`}
+      author={APP_NAME}
+      creator={APP_NAME}
       producer="@react-pdf/renderer"
     >
       <Page size="A4" style={styles.page}>
         {/* Page header: not `fixed` — only on first page (fixed repeats on every page) */}
         <View style={styles.pageHeader}>
           <View style={styles.pageHeaderLeft}>
-            <Text style={styles.brandName}>PAWN TRACKER</Text>
+            <Text style={styles.brandName}>{APP_NAME_UPPER}</Text>
             <Text style={styles.reportTitle}>Loan Report</Text>
           </View>
           <View style={styles.pageHeaderRight}>
@@ -908,7 +909,7 @@ const LoansPDFDocument = ({
         {/* Page Footer */}
         <View style={styles.pageFooter} fixed>
           <Text style={styles.footerText}>
-            Pawn Tracker — Confidential
+            {APP_NAME} — Confidential
           </Text>
           <Text
             style={styles.footerText}
