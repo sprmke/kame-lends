@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "pawn-tracker",
+      "name": "kame-lends",
       "dependencies": {
         "@auth/drizzle-adapter": "^1.11.1",
         "@hookform/resolvers": "^5.2.2",
