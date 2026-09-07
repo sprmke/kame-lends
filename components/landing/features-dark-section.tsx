@@ -34,7 +34,7 @@ export function FeaturesDarkSection() {
             Guiding Principles
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Built the way pawn businesses actually work
+            Built the way lending teams actually work
           </h2>
         </ScrollReveal>
 

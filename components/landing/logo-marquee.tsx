@@ -20,7 +20,7 @@ export function LogoMarquee() {
   return (
     <section className="border-y border-border/50 bg-muted/30 py-10 overflow-hidden">
       <p className="mb-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        Everything your pawn business needs
+        Everything your lending operation needs
       </p>
       <div className="landing-marquee flex whitespace-nowrap">
         {repeated.map((item, i) => (

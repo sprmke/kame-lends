@@ -1,10 +1,11 @@
 import { cn } from '@/lib/utils';
+import { APP_DOMAIN, APP_NAME } from '@/lib/brand';
 import { ReactNode } from 'react';
 
-const APP_BASE_URL = 'pawn-tracker.vercel.app';
+const APP_BASE_URL = APP_DOMAIN;
 
 function previewUrl(path: string) {
-  if (path === 'PawnTracker') return `${APP_BASE_URL}/`;
+  if (path === APP_NAME) return `${APP_BASE_URL}/`;
   return `${APP_BASE_URL}/${path}`;
 }
 
@@ -17,7 +18,7 @@ interface BrowserFrameProps {
 
 export function BrowserFrame({
   children,
-  title = 'PawnTracker',
+  title = APP_NAME,
   className,
   glow = false,
 }: BrowserFrameProps) {

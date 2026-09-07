@@ -50,7 +50,7 @@ export function DashboardPreview({ glow = true }: { glow?: boolean }) {
           </p>
           <h3 className="text-sm font-bold text-foreground">Dashboard</h3>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            Your pawn business at a glance
+            Your lending portfolio at a glance
           </p>
         </div>
 

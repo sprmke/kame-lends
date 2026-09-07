@@ -66,6 +66,7 @@ export function ContractSigningClient({
 }: ContractSigningClientProps) {
   const [data, setData] = useState(() => normalizeSigningPayload(initialData));
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [isDrawingSignature, setIsDrawingSignature] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [consentDetailsOpen, setConsentDetailsOpen] = useState(false);
@@ -111,7 +112,7 @@ export function ContractSigningClient({
   );
 
   useEffect(() => {
-    if (data.signedAt || data.expired) return;
+    if (data.signedAt || data.expired || isDrawingSignature) return;
 
     const refreshSignatures = async () => {
       try {
@@ -133,7 +134,7 @@ export function ContractSigningClient({
 
     const intervalId = window.setInterval(refreshSignatures, 10000);
     return () => window.clearInterval(intervalId);
-  }, [token, data.signedAt, data.expired]);
+  }, [token, data.signedAt, data.expired, isDrawingSignature]);
 
   const handleSubmit = async () => {
     if (!signatureDataUrl) {
@@ -303,23 +304,7 @@ export function ContractSigningClient({
       </Card>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_360px] xl:items-start">
-        <Card className="overflow-hidden rounded-3xl shadow-sm">
-          <CardHeader className={signingCardHeaderClass}>
-            <CardTitle className={signingCardTitleClass}>
-              Contract Preview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <LoanContractDocumentBody
-              data={previewContract.data}
-              customization={previewContract.customization}
-              signingContext={signingContext}
-              variant="compact"
-            />
-          </CardContent>
-        </Card>
-
-        <div className="space-y-5 xl:sticky xl:top-6">
+        <div className="order-1 space-y-5 xl:order-2 xl:sticky xl:top-6">
           <Card className="rounded-3xl shadow-sm">
             <CardHeader className={signingCardHeaderClass}>
               <CardTitle className={signingCardTitleClass}>
@@ -327,7 +312,10 @@ export function ContractSigningClient({
               </CardTitle>
             </CardHeader>
             <CardContent className={signingCardContentClass}>
-              <SignaturePad onChange={setSignatureDataUrl} />
+              <SignaturePad
+                onChange={setSignatureDataUrl}
+                onDrawingChange={setIsDrawingSignature}
+              />
               <div className="mt-3 rounded-lg border border-dashed border-border/70 bg-muted/20 p-3">
                 <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
                   Live preview updates as you draw. Your signature stays on this
@@ -415,6 +403,22 @@ export function ContractSigningClient({
             </CardContent>
           </Card>
         </div>
+
+        <Card className="order-2 overflow-hidden rounded-3xl shadow-sm xl:order-1">
+          <CardHeader className={signingCardHeaderClass}>
+            <CardTitle className={signingCardTitleClass}>
+              Contract Preview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <LoanContractDocumentBody
+              data={previewContract.data}
+              customization={previewContract.customization}
+              signingContext={signingContext}
+              variant="compact"
+            />
+          </CardContent>
+        </Card>
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 backdrop-blur supports-backdrop-filter:bg-background/85 xl:hidden">

@@ -71,8 +71,8 @@ export function FeaturesSection() {
             Everything you need, nothing you don&apos;t
           </h2>
           <p className="mt-5 text-lg text-muted-foreground">
-            Purpose-built for pawn operations. No generic spreadsheets, no
-            banking software that misses how your shop actually runs.
+            Purpose-built for lending operations. No generic spreadsheets, no
+            banking software that misses how your team actually works.
           </p>
         </ScrollReveal>
 

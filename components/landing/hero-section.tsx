@@ -6,6 +6,7 @@ import { ArrowRight, Play, Sparkles } from 'lucide-react';
 import { HeroFloatingAccents } from './hero-floating-accents';
 import { DashboardPreview } from './mockups/dashboard-preview';
 import { ScrollReveal } from './scroll-reveal';
+import { APP_NAME } from '@/lib/brand';
 import { SHOW_TRANSACTIONS_UI } from '@/lib/feature-flags';
 
 const stats = [
@@ -27,13 +28,13 @@ export function HeroSection() {
             <ScrollReveal>
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/8 px-4 py-2 text-sm font-medium text-primary landing-shimmer-badge">
                 <Sparkles className="h-4 w-4" />
-                Built for modern pawn businesses
+                Built for modern lending teams
               </div>
             </ScrollReveal>
 
             <ScrollReveal delay={100}>
               <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl xl:text-[3.5rem] xl:leading-[1.08]">
-                Run your pawn business with{' '}
+                Manage lending with{' '}
                 <span className="landing-gradient-text">clarity</span> and
                 control
               </h1>
@@ -41,7 +42,7 @@ export function HeroSection() {
 
             <ScrollReveal delay={200}>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-                PawnTracker unifies loans, investors, and{' '}
+                {APP_NAME} unifies loans, investors, and{' '}
                 {SHOW_TRANSACTIONS_UI ? 'transactions' : 'borrowings'} in one
                 beautiful system, so always know what&apos;s due, what&apos;s
                 collected, and what&apos;s next.

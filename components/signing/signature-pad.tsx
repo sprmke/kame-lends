@@ -6,6 +6,7 @@ import { Eraser } from 'lucide-react';
 
 interface SignaturePadProps {
   onChange: (dataUrl: string | null) => void;
+  onDrawingChange?: (isDrawing: boolean) => void;
   disabled?: boolean;
   className?: string;
 }
@@ -15,8 +16,52 @@ interface Point {
   y: number;
 }
 
+interface LockedScroll {
+  x: number;
+  y: number;
+}
+
+function setupCanvasContext(ctx: CanvasRenderingContext2D, ratio: number) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(ratio, ratio);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#0f172a';
+}
+
+function lockPageScroll(): LockedScroll {
+  const locked = { x: window.scrollX, y: window.scrollY };
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${locked.y}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+  document.documentElement.style.overflow = 'hidden';
+  document.documentElement.style.overscrollBehavior = 'none';
+  return locked;
+}
+
+function unlockPageScroll(locked: LockedScroll | null) {
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.body.style.overflow = '';
+  document.body.style.touchAction = '';
+  document.documentElement.style.overflow = '';
+  document.documentElement.style.overscrollBehavior = '';
+  if (locked) {
+    window.scrollTo(locked.x, locked.y);
+  }
+}
+
 export function SignaturePad({
   onChange,
+  onDrawingChange,
   disabled = false,
   className = '',
 }: SignaturePadProps) {
@@ -25,7 +70,10 @@ export function SignaturePad({
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef<Point | null>(null);
   const hasInkRef = useRef(false);
-  const scrollLockRef = useRef<{ x: number; y: number } | null>(null);
+  const lockedScrollRef = useRef<LockedScroll | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
+  const pendingResizeRef = useRef(false);
+  const resizeRafRef = useRef<number | null>(null);
   const [hasInk, setHasInk] = useState(false);
 
   const getPoint = useCallback(
@@ -41,40 +89,6 @@ export function SignaturePad({
     [],
   );
 
-  const resizeCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-
-    const ratio = window.devicePixelRatio || 1;
-    canvas.width = Math.floor(rect.width * ratio);
-    canvas.height = Math.floor(rect.height * ratio);
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(ratio, ratio);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#0f172a';
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    resizeCanvas();
-
-    const observer = new ResizeObserver(() => {
-      resizeCanvas();
-    });
-    observer.observe(canvas);
-
-    return () => observer.disconnect();
-  }, [resizeCanvas]);
-
   const emitChange = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
@@ -84,39 +98,111 @@ export function SignaturePad({
     onChange(canvas.toDataURL('image/png'));
   }, [onChange]);
 
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const ratio = window.devicePixelRatio || 1;
+    const newWidth = Math.floor(rect.width * ratio);
+    const newHeight = Math.floor(rect.height * ratio);
+
+    if (canvas.width === newWidth && canvas.height === newHeight) return;
+
+    if (isDrawingRef.current) {
+      pendingResizeRef.current = true;
+      return;
+    }
+
+    const previousDataUrl =
+      hasInkRef.current && canvas.width > 0 && canvas.height > 0
+        ? canvas.toDataURL('image/png')
+        : null;
+
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    setupCanvasContext(ctx, ratio);
+
+    if (previousDataUrl) {
+      const image = new Image();
+      image.onload = () => {
+        const restoreCtx = canvas.getContext('2d');
+        if (!restoreCtx) return;
+        setupCanvasContext(restoreCtx, ratio);
+        restoreCtx.drawImage(image, 0, 0, rect.width, rect.height);
+      };
+      image.src = previousDataUrl;
+    }
+  }, []);
+
+  const processPendingResize = useCallback(() => {
+    if (!pendingResizeRef.current) return;
+    pendingResizeRef.current = false;
+    resizeCanvas();
+    if (hasInkRef.current) {
+      emitChange();
+    }
+  }, [resizeCanvas, emitChange]);
+
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    const preventTouchScroll = (event: TouchEvent) => {
-      event.preventDefault();
-    };
+    resizeCanvas();
 
-    const restoreScrollPosition = () => {
-      const locked = scrollLockRef.current;
-      if (!locked || !isDrawingRef.current) return;
-      if (
-        window.scrollX !== locked.x ||
-        window.scrollY !== locked.y
-      ) {
-        window.scrollTo(locked.x, locked.y);
+    const observer = new ResizeObserver(() => {
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
       }
-    };
-
-    container.addEventListener('touchstart', preventTouchScroll, {
-      passive: false,
+      resizeRafRef.current = requestAnimationFrame(() => {
+        resizeRafRef.current = null;
+        resizeCanvas();
+      });
     });
-    container.addEventListener('touchmove', preventTouchScroll, {
-      passive: false,
-    });
-    window.addEventListener('scroll', restoreScrollPosition, { passive: true });
+    observer.observe(canvas);
 
     return () => {
-      container.removeEventListener('touchstart', preventTouchScroll);
-      container.removeEventListener('touchmove', preventTouchScroll);
-      window.removeEventListener('scroll', restoreScrollPosition);
+      observer.disconnect();
+      if (resizeRafRef.current !== null) {
+        cancelAnimationFrame(resizeRafRef.current);
+      }
     };
+  }, [resizeCanvas]);
+
+  const preventDocumentTouch = useCallback((event: TouchEvent) => {
+    if (!isDrawingRef.current) return;
+    event.preventDefault();
   }, []);
+
+  const releaseDrawingLock = useCallback(() => {
+    document.removeEventListener('touchstart', preventDocumentTouch);
+    document.removeEventListener('touchmove', preventDocumentTouch);
+    document.removeEventListener('touchend', preventDocumentTouch);
+    document.removeEventListener('touchcancel', preventDocumentTouch);
+
+    if (lockedScrollRef.current) {
+      unlockPageScroll(lockedScrollRef.current);
+      lockedScrollRef.current = null;
+    }
+
+    if (isDrawingRef.current) {
+      isDrawingRef.current = false;
+      onDrawingChange?.(false);
+    }
+
+    activePointerIdRef.current = null;
+    lastPointRef.current = null;
+  }, [onDrawingChange, preventDocumentTouch]);
+
+  useEffect(() => {
+    return () => {
+      releaseDrawingLock();
+    };
+  }, [releaseDrawingLock]);
 
   const clear = useCallback(() => {
     const canvas = canvasRef.current;
@@ -141,20 +227,40 @@ export function SignaturePad({
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (disabled) return;
+    if (disabled || event.button !== 0) return;
+    if (activePointerIdRef.current !== null) return;
+
     event.preventDefault();
-    scrollLockRef.current = {
-      x: window.scrollX,
-      y: window.scrollY,
-    };
-    const canvas = canvasRef.current;
-    canvas?.setPointerCapture(event.pointerId);
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    activePointerIdRef.current = event.pointerId;
+    lockedScrollRef.current = lockPageScroll();
     isDrawingRef.current = true;
+    onDrawingChange?.(true);
     lastPointRef.current = getPoint(event);
+
+    document.addEventListener('touchstart', preventDocumentTouch, {
+      passive: false,
+    });
+    document.addEventListener('touchmove', preventDocumentTouch, {
+      passive: false,
+    });
+    document.addEventListener('touchend', preventDocumentTouch, {
+      passive: false,
+    });
+    document.addEventListener('touchcancel', preventDocumentTouch, {
+      passive: false,
+    });
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (disabled || !isDrawingRef.current) return;
+    if (
+      disabled ||
+      !isDrawingRef.current ||
+      activePointerIdRef.current !== event.pointerId
+    ) {
+      return;
+    }
     event.preventDefault();
     const point = getPoint(event);
     const lastPoint = lastPointRef.current;
@@ -166,12 +272,17 @@ export function SignaturePad({
     lastPointRef.current = point;
   };
 
-  const finishStroke = () => {
-    if (!isDrawingRef.current) return;
-    isDrawingRef.current = false;
-    scrollLockRef.current = null;
-    lastPointRef.current = null;
-    if (hasInkRef.current) {
+  const finishStroke = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (activePointerIdRef.current !== event.pointerId) return;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    const hadInk = hasInkRef.current;
+    releaseDrawingLock();
+    processPendingResize();
+    if (hadInk) {
       emitChange();
     }
   };
@@ -180,7 +291,7 @@ export function SignaturePad({
     <div className={`space-y-3 ${className}`}>
       <div
         ref={containerRef}
-        className="touch-none overscroll-none rounded-xl border-2 border-dashed border-primary/50 bg-white shadow-sm"
+        className="isolate touch-none overscroll-none contain-layout rounded-xl border-2 border-dashed border-primary/50 bg-white shadow-sm"
       >
         <canvas
           ref={canvasRef}

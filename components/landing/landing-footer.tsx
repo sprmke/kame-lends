@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { APP_NAME } from '@/lib/brand';
 import { SHOW_TRANSACTIONS_UI } from '@/lib/feature-flags';
 
 const navigateLinks = [
@@ -19,7 +20,7 @@ export function LandingFooter() {
           <div className="lg:col-span-5">
             <Logo size="lg" showIcon gradient />
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Professional pawn business management. Track loans, investors,
+              Professional lending management. Track loans, investors,
               and {SHOW_TRANSACTIONS_UI ? 'transactions' : 'borrowings'} in one
               modern platform.
             </p>
@@ -69,7 +70,7 @@ export function LandingFooter() {
 
         <div className="mt-12 border-t border-border/40 pt-8">
           <p className="text-center text-sm text-muted-foreground sm:text-left">
-            &copy; {new Date().getFullYear()} PawnTracker. All rights reserved.
+            &copy; {new Date().getFullYear()} {APP_NAME}. All rights reserved.
           </p>
         </div>
       </div>

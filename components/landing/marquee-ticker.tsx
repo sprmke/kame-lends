@@ -1,4 +1,4 @@
-const phrase = 'Smart Pawn Management';
+const phrase = 'Smart Lending Management';
 
 export function MarqueeTicker() {
   const items = Array.from({ length: 12 }, (_, i) => (

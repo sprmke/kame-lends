@@ -6,9 +6,9 @@ import { ScrollReveal } from './scroll-reveal';
 const testimonials = [
   {
     quote:
-      'Finally a system that understands pawn loans. We replaced three spreadsheets in the first week.',
+      'Finally a system that understands collateral-backed loans. We replaced three spreadsheets in the first week.',
     name: 'Rico M.',
-    role: 'Pawn Business Owner, Cebu',
+    role: 'Lending Operator, Cebu',
     rating: 5,
   },
   {
@@ -44,7 +44,7 @@ export function TestimonialsSection() {
               <Star key={i} className="h-5 w-5 fill-primary text-primary" />
             ))}
             <span className="ml-2 text-sm font-medium text-muted-foreground">
-              Loved by pawn professionals
+              Loved by lending professionals
             </span>
           </div>
         </ScrollReveal>

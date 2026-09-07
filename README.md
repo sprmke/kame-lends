@@ -1,11 +1,11 @@
-# PawnTracker
+# Kame Lends
 
-**A modern web app for pawn businesses to manage loans, investors, and cashflow in one place.**
+**A modern web app for lending teams to manage loans, investors, and cashflow in one place.**
 
 Built with Next.js 15, React 19, and a polished UI for day-to-day operations — from recording Lot Title / OR/CR / Agent loans to tracking investor participation, interest periods, and collections. Hosted on **Vercel**, backed by **Neon** serverless Postgres, with **Google sign-in** for access and optional **Google Calendar** sync for disbursements, due dates, and daily summaries.
 
 <p align="center">
-  <img src="./docs/screenshots/landing-hero.png" alt="PawnTracker marketing landing page" width="900" />
+  <img src="./docs/screenshots/landing-hero.png" alt="Kame Lends marketing landing page" width="900" />
 </p>
 
 <p align="center">

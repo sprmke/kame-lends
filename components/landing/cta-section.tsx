@@ -15,7 +15,7 @@ export function CtaSection() {
             <div className="landing-cta-orbs pointer-events-none absolute inset-0" />
             <div className="relative mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl lg:text-5xl">
-                Ready to take control of your pawn business?
+                Ready to take control of your lending operation?
               </h2>
               <p className="mx-auto mt-6 max-w-lg text-lg text-primary-foreground/85">
                 Join operators who run smarter with loans, investors, and{' '}

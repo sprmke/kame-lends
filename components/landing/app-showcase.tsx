@@ -7,6 +7,7 @@ import { DashboardPreview } from './mockups/dashboard-preview';
 import { LoansPreview } from './mockups/loans-preview';
 import { InvestorsPreview } from './mockups/investors-preview';
 import { TransactionsPreview } from './mockups/transactions-preview';
+import { APP_NAME } from '@/lib/brand';
 import { SHOW_TRANSACTIONS_UI } from '@/lib/feature-flags';
 
 const allTabs = [
@@ -52,7 +53,7 @@ export function AppShowcase() {
         <ScrollReveal className="mx-auto max-w-2xl text-center">
           <p className="section-eyebrow">Product Tour</p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-            See PawnTracker in action
+            See {APP_NAME} in action
           </h2>
           <p className="mt-5 text-lg text-muted-foreground">
             Browse real app screens with amounts shown, and see how your team
