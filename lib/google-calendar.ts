@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { APP_DEFAULT_URL } from '@/lib/brand';
 import { LoanWithInvestors } from '@/lib/types';
 import { toLocalDateString } from '@/lib/date-utils';
 
@@ -69,8 +70,7 @@ function createEventDescription(eventData: CalendarEventData): string {
   } = eventData;
 
   // Get the app URL from environment or use default
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://pawn-tracker.vercel.app';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || APP_DEFAULT_URL;
 
   let description = '';
 

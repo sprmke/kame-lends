@@ -4,6 +4,7 @@ import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { format } from 'date-fns';
 import { Resend } from 'resend';
+import { APP_NAME, backupFilename } from '@/lib/brand';
 import { fetchBackupDataForUser } from '@/lib/backup-data';
 
 // Initialize Resend if API key is available
@@ -97,16 +98,16 @@ export async function GET(request: Request) {
 
       if (resend && backupEmail) {
         try {
-          const filename = `pawn-tracker-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+          const filename = backupFilename(new Date(), false);
           const jsonContent = JSON.stringify(backupData, null, 2);
           const base64Content = Buffer.from(jsonContent).toString('base64');
 
           await resend.emails.send({
             from:
               process.env.RESEND_FROM_EMAIL ||
-              'Pawn Tracker <onboarding@resend.dev>',
+              `${APP_NAME} <onboarding@resend.dev>`,
             to: backupEmail,
-            subject: `📦 Pawn Tracker Daily Backup - ${format(new Date(), 'MMM dd, yyyy')}`,
+            subject: `📦 ${APP_NAME} Daily Backup - ${format(new Date(), 'MMM dd, yyyy')}`,
             html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #1a1a1a;">Daily Backup Summary</h2>
@@ -162,7 +163,7 @@ export async function GET(request: Request) {
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                 
                 <p style="color: #999; font-size: 12px;">
-                  This is an automated backup from Pawn Tracker.<br>
+                  This is an automated backup from ${APP_NAME}.<br>
                   Generated on ${format(new Date(), "MMMM dd, yyyy 'at' h:mm a")}
                 </p>
               </div>

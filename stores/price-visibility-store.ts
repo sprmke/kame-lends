@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { APP_NAME_SLUG } from '@/lib/brand';
 
 interface PriceVisibilityState {
   pricesHidden: boolean;
@@ -16,7 +17,7 @@ export const usePriceVisibilityStore = create<PriceVisibilityState>()(
       setPricesHidden: (pricesHidden) => set({ pricesHidden }),
     }),
     {
-      name: 'pawn-tracker-price-visibility',
+      name: `${APP_NAME_SLUG}-price-visibility`,
       storage: createJSONStorage(() => localStorage),
     }
   )

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { backupFilename } from '@/lib/brand';
 
 interface DownloadBackupButtonProps {
   variant?: 'default' | 'outline' | 'ghost';
@@ -36,7 +36,7 @@ export function DownloadBackupButton({
 
       // Get the filename from the Content-Disposition header or generate one
       const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `pawn-tracker-backup-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.json`;
+      let filename = backupFilename(new Date());
 
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="(.+)"/);

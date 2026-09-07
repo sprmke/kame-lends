@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { APP_NAME_SLUG } from '@/lib/brand';
 
-const OVERDUE_CHECK_KEY = 'pawn-tracker:last-overdue-check';
+const OVERDUE_CHECK_KEY = `${APP_NAME_SLUG}:last-overdue-check`;
 const OVERDUE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 /**

@@ -49,7 +49,7 @@ const LOAN_INVESTOR_NESTED = {
 } as const;
 
 /**
- * Fetches all pawn business data visible to this user (same scope as dashboard).
+ * Fetches all lending business data visible to this user (same scope as dashboard).
  */
 export async function fetchBackupDataForUser(options: {
   userId: string;

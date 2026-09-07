@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { format } from 'date-fns';
+import { backupFilename } from '@/lib/brand';
 import { fetchBackupDataForUser, type BackupData } from '@/lib/backup-data';
 
 /**
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const download = searchParams.get('download') === 'true';
 
     if (download) {
-      const filename = `pawn-tracker-backup-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.json`;
+      const filename = backupFilename(new Date());
 
       return new NextResponse(JSON.stringify(backupData, null, 2), {
         status: 200,
