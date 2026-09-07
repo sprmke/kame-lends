@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { APP_NAME } from '@/lib/brand';
 import { Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Nav } from '@/components/layout/nav';
@@ -19,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'PawnTracker',
-  description: 'Professional pawn business loan and investor management',
+  title: APP_NAME,
+  description: 'Professional lending management for loans, investors, and cashflow',
 };
 
 async function AuthenticatedAppShell({

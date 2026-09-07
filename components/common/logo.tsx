@@ -1,5 +1,8 @@
+import { APP_NAME } from '@/lib/brand';
 import { cn } from '@/lib/utils';
 import { Landmark } from 'lucide-react';
+
+const [brandPrimary, brandAccent] = APP_NAME.split(' ');
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -65,7 +68,8 @@ export function Logo({
         </span>
       )}
       <span className={cn(gradient && 'bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent')}>
-        Pawn<span className="text-primary">Tracker</span>
+        {brandPrimary}
+        <span className="text-primary">{brandAccent ? ` ${brandAccent}` : ''}</span>
       </span>
     </span>
   );

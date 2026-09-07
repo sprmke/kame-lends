@@ -775,7 +775,7 @@ export default function LoansPage() {
     <div className="space-y-6">
       <PageHeader
         title="Loans"
-        description="Manage all your pawn loans"
+        description="Manage all your loans"
         actions={
           <>
             <ViewModeToggle

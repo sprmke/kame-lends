@@ -276,7 +276,7 @@ export function LoansPageSkeleton({
             Loans
           </h1>
           <p className="text-sm text-muted-foreground">
-            Manage all your pawn loans
+            Manage all your loans
           </p>
           <div className="flex flex-wrap gap-2 pt-2">
             <Skeleton className="h-9 w-28 rounded-2xl" />

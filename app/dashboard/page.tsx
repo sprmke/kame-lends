@@ -564,7 +564,7 @@ export default async function DashboardPage() {
 
       <PageHeader
         title="Dashboard"
-        description="Overview of your pawn business performance and upcoming activity."
+        description="Overview of your lending performance and upcoming activity."
         eyebrow="Welcome back"
       />
 
