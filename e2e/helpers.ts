@@ -43,3 +43,24 @@ export async function waitForLoansTable(page: Page) {
 	await expect(emptyState.or(interestHeader)).toBeVisible({ timeout: 20_000 });
 	return !(await emptyState.isVisible());
 }
+
+
+const e2eSecret = process.env.E2E_AUTH_SECRET ?? 'e2e-local-secret';
+
+/** Switch Auth.js session to an existing user by email (post-OAuth party state). */
+export async function switchE2ESession(
+	request: APIRequestContext,
+	email?: string
+): Promise<{ userId: string; email: string | null; role: string }> {
+	const response = await request.post('/api/e2e/session', {
+		headers: {
+			'x-e2e-auth-secret': e2eSecret,
+			'content-type': 'application/json'
+		},
+		data: email ? { email } : {}
+	});
+	if (!response.ok()) {
+		throw new Error(`E2E session failed: ${response.status()} ${await response.text()}`);
+	}
+	return (await response.json()) as { userId: string; email: string | null; role: string };
+}

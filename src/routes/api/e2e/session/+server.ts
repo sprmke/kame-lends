@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { sessions, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { normalizeEmail } from '$lib/loan-signing';
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 
@@ -23,10 +24,23 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	const email = env.E2E_USER_EMAIL?.trim();
+	let bodyEmail: string | undefined;
+	const contentType = request.headers.get('content-type') || '';
+	if (contentType.includes('application/json')) {
+		try {
+			const body = (await request.json()) as { email?: unknown };
+			if (typeof body.email === 'string') {
+				bodyEmail = normalizeEmail(body.email) || undefined;
+			}
+		} catch {
+			bodyEmail = undefined;
+		}
+	}
+
+	const email = bodyEmail || env.E2E_USER_EMAIL?.trim();
 	let user = email ? await db.query.users.findFirst({ where: eq(users.email, email) }) : null;
 
-	if (!user) {
+	if (!user && !bodyEmail) {
 		const candidates = await db.query.users.findMany({
 			where: eq(users.role, 'admin'),
 			with: { loans: { columns: { id: true } } }
@@ -56,11 +70,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		secure ? '; Secure' : ''
 	}`;
 
-	return new Response(JSON.stringify({ userId: user.id, email: user.email }), {
-		status: 200,
-		headers: {
-			'Content-Type': 'application/json',
-			'Set-Cookie': cookie
+	return new Response(
+		JSON.stringify({ userId: user.id, email: user.email, role: user.role }),
+		{
+			status: 200,
+			headers: {
+				'Content-Type': 'application/json',
+				'Set-Cookie': cookie
+			}
 		}
-	});
+	);
 };

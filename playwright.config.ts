@@ -44,6 +44,15 @@ export default defineConfig({
 				storageState: 'e2e/.auth/admin.json',
 				viewport: { width: 1440, height: 900 }
 			}
+		},
+		{
+			name: 'multi-role',
+			testMatch: /multi-role-access\.spec\.ts/,
+			dependencies: ['setup'],
+			use: {
+				...devices['Desktop Chrome'],
+				storageState: 'e2e/.auth/admin.json'
+			}
 		}
 	],
 	webServer: {
