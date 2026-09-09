@@ -177,10 +177,16 @@ export function applyContractCustomization(
 	data: LoanContractData,
 	customization: ContractCustomization
 ): LoanContractData {
+	const title =
+		typeof customization.contractTitle === 'string' ? customization.contractTitle.trim() : '';
+	const collateral =
+		typeof customization.collateralSummary === 'string'
+			? customization.collateralSummary.trim()
+			: '';
 	return {
 		...data,
-		contractTitle: customization.contractTitle.trim() || data.contractTitle,
-		collateralDescription: customization.collateralSummary.trim() || data.collateralDescription
+		contractTitle: title || data.contractTitle,
+		collateralDescription: collateral || data.collateralDescription
 	};
 }
 
