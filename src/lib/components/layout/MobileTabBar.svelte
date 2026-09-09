@@ -7,11 +7,20 @@
 	interface Props {
 		pathname: string;
 		primaryTabs: AppNavItem[];
+		/** Visual highlight when More destinations (or sheet) are active. */
 		moreActive?: boolean;
+		/** Sheet open state for aria-expanded only. */
+		moreOpen?: boolean;
 		onMoreClick: () => void;
 	}
 
-	let { pathname, primaryTabs, moreActive = false, onMoreClick }: Props = $props();
+	let {
+		pathname,
+		primaryTabs,
+		moreActive = false,
+		moreOpen = false,
+		onMoreClick
+	}: Props = $props();
 </script>
 
 <nav
@@ -50,7 +59,8 @@
 				moreActive ? 'text-primary' : 'text-muted-foreground'
 			)}
 			aria-label="More"
-			aria-expanded={moreActive}
+			aria-haspopup="dialog"
+			aria-expanded={moreOpen}
 			onclick={onMoreClick}
 		>
 			<div

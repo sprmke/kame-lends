@@ -81,6 +81,7 @@
 		{pathname}
 		primaryTabs={nav.primaryTabs}
 		{moreActive}
+		{moreOpen}
 		onMoreClick={() => (moreOpen = true)}
 	/>
 

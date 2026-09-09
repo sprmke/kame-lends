@@ -44,12 +44,13 @@
 
 	$effect(() => {
 		if (typeof window === 'undefined') return;
+		const mql = window.matchMedia('(max-width: 1023px)');
 		const update = () => {
-			isNarrow = window.innerWidth < 1024;
+			isNarrow = mql.matches;
 		};
 		update();
-		window.addEventListener('resize', update);
-		return () => window.removeEventListener('resize', update);
+		mql.addEventListener('change', update);
+		return () => mql.removeEventListener('change', update);
 	});
 
 	function toggleAll(checked: boolean) {

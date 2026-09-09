@@ -25,8 +25,9 @@ export interface AppNavItem {
   icon: Component;
 }
 
+/** Safe fallback when layout has not loaded capabilities yet (deny-by-default). */
 export const DEFAULT_NAV_CAPABILITIES: NavCapabilities = {
-  isAdminWorkspace: true,
+  isAdminWorkspace: false,
   hasInvestments: false,
   hasBorrowed: false,
   hasWitnessed: false,

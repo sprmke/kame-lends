@@ -71,7 +71,7 @@
 			{/each}
 		</nav>
 
-		<div class="border-t border-border/60 p-2 pb-safe">
+		<div class="border-t border-border/60 p-2">
 			<form method="POST" action="/auth/signout">
 				<button
 					type="submit"

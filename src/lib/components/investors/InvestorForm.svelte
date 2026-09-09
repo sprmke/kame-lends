@@ -100,7 +100,7 @@
 </script>
 
 <form bind:this={formRef} class="dashboard-form max-w-2xl" onsubmit={handleSubmit}>
-	{#if showFormHeader}
+		{#if showFormHeader}
 		<FormHeader
 			title={isEditMode ? (existingInvestor?.name ?? 'Investor') : 'Create Investor'}
 			description={isEditMode
@@ -117,6 +117,7 @@
 				: isEditMode
 					? 'Update Investor'
 					: 'Create Investor'}
+			variant="page"
 		/>
 	{/if}
 

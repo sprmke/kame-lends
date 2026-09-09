@@ -25,6 +25,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
+	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
 	import { formatCurrency, formatDateVeryShort, formatText, formatPercentage } from '$lib/format';
 	import { calculateTransactionStats, calculateLoanStats } from '$lib/calculations';
 	import { downloadLoansPdf } from '$lib/pdf-download';
@@ -130,7 +131,7 @@
 	}
 
 	function handleQuickView(loan: LoanWithInvestors) {
-		if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+		if (isMobileShellViewport()) {
 			goto(`/loans/${loan.id}`);
 			return;
 		}

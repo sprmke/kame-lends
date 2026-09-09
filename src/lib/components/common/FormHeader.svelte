@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { formatText } from '$lib/format';
+	import { cn } from '$lib/utils';
 
 	interface Props {
 		title: string;
@@ -11,6 +12,11 @@
 		isEditMode: boolean;
 		submitLabel?: string;
 		cancelLabel?: string;
+		/**
+		 * page: sticky bottom actions under the mobile tab bar (full routes).
+		 * embedded: inline actions for sheets/dialogs (never viewport-fixed).
+		 */
+		variant?: 'page' | 'embedded';
 	}
 
 	let {
@@ -21,10 +27,17 @@
 		isSubmitting,
 		isEditMode,
 		submitLabel,
-		cancelLabel = 'Cancel'
+		cancelLabel = 'Cancel',
+		variant = 'page'
 	}: Props = $props();
 
-	const formBtnClass = 'touch-target h-11 flex-1 px-3 text-sm md:h-8 md:flex-none md:text-sm';
+	const isEmbedded = $derived(variant === 'embedded');
+
+	const formBtnClass = $derived(
+		isEmbedded
+			? 'h-10 flex-1 px-3 text-sm lg:h-8 lg:flex-none'
+			: 'touch-target h-11 flex-1 px-3 text-sm lg:h-8 lg:flex-none lg:text-sm'
+	);
 
 	const defaultSubmitLabel = $derived(
 		isSubmitting ? (isEditMode ? 'Updating...' : 'Creating...') : isEditMode ? 'Update' : 'Create'
@@ -33,30 +46,73 @@
 	const displayTitle = $derived(isEditMode ? formatText(`Edit - ${title}`) : formatText(title));
 </script>
 
-<div class="mb-4 flex flex-col items-start justify-between gap-2.5 md:flex-row md:gap-3">
+<div
+	class={cn(
+		'mb-4 flex flex-col items-start justify-between gap-2.5',
+		isEmbedded ? 'gap-3' : 'lg:flex-row lg:gap-3'
+	)}
+>
 	<div class="flex-1">
-		<h1 class="text-lg font-semibold md:text-xl">{displayTitle}</h1>
+		{#if isEmbedded}
+			<p class="text-base font-semibold lg:text-lg">{displayTitle}</p>
+		{:else}
+			<h1 class="text-lg font-semibold lg:text-xl">{displayTitle}</h1>
+		{/if}
 		{#if description}
 			<p class="mt-1 text-sm text-muted-foreground">{formatText(description)}</p>
 		{/if}
 	</div>
-	<div
-		class="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-border/80 bg-card/95 p-3 mobile-sticky-actions-with-tabs backdrop-blur-md md:static md:z-auto md:w-auto md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none"
-	>
-		<Button
-			type="button"
-			variant="outline"
-			size="sm"
-			onclick={onCancel}
-			disabled={isSubmitting}
-			class={formBtnClass}
+
+	{#if isEmbedded}
+		<div class="flex w-full items-center gap-2">
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				onclick={onCancel}
+				disabled={isSubmitting}
+				class={formBtnClass}
+			>
+				{cancelLabel}
+			</Button>
+			<Button
+				type="button"
+				size="sm"
+				onclick={onSubmit}
+				disabled={isSubmitting}
+				class={formBtnClass}
+			>
+				{submitLabel ?? defaultSubmitLabel}
+			</Button>
+		</div>
+	{:else}
+		<div
+			class="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-border/80 bg-card/95 p-3 mobile-sticky-actions-with-tabs backdrop-blur-md lg:static lg:z-auto lg:w-auto lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
 		>
-			{cancelLabel}
-		</Button>
-		<Button type="button" size="sm" onclick={onSubmit} disabled={isSubmitting} class={formBtnClass}>
-			{submitLabel ?? defaultSubmitLabel}
-		</Button>
-	</div>
-	<!-- Spacer so content clears the sticky mobile bar -->
-	<div class="h-16 w-full md:hidden" aria-hidden="true"></div>
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				onclick={onCancel}
+				disabled={isSubmitting}
+				class={formBtnClass}
+			>
+				{cancelLabel}
+			</Button>
+			<Button
+				type="button"
+				size="sm"
+				onclick={onSubmit}
+				disabled={isSubmitting}
+				class={formBtnClass}
+			>
+				{submitLabel ?? defaultSubmitLabel}
+			</Button>
+		</div>
+		<div
+			class="w-full lg:hidden"
+			style="height: calc(var(--mobile-tab-height) + var(--safe-area-bottom) + 4.25rem)"
+			aria-hidden="true"
+		></div>
+	{/if}
 </div>

@@ -37,6 +37,8 @@
 
 	let { loan, kind, open, onOpenChange, onSuccess }: Props = $props();
 
+	let formEl = $state<HTMLFormElement | null>(null);
+
 	function createPaymentEntry(defaultInvestorId = ''): PaymentEntry {
 		return {
 			id: crypto.randomUUID(),
@@ -229,17 +231,14 @@
 			<Button
 				type="button"
 				disabled={!canSubmit || hasDuplicatePrincipalDates || isSubmitting}
-				onclick={() => {
-					const form = document.getElementById('loan-quick-payment-form') as HTMLFormElement | null;
-					form?.requestSubmit();
-				}}
+				onclick={() => formEl?.requestSubmit()}
 			>
 				{isSubmitting
 					? `Saving ${entries.length}...`
 					: `${title}${entries.length > 1 ? `s (${entries.length})` : ''}`}
 			</Button>
 		{/snippet}
-		<form id="loan-quick-payment-form" class="space-y-5" onsubmit={handleSubmit}>
+		<form bind:this={formEl} class="space-y-5" onsubmit={handleSubmit}>
 				<div class="space-y-4">
 					{#each entries as entry, index (entry.id)}
 						{@const context = getEntryContext(entry)}
