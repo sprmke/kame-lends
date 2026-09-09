@@ -6,6 +6,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Select from '$lib/components/ui/select';
+	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import { toast } from '$lib/toast';
 	import { toLocalDateString } from '$lib/date-utils';
 	import type { Investor } from '$lib/types';
@@ -18,6 +19,7 @@
 
 	let { investors = [], preselectedInvestorId, cancelHref = '/transactions' }: Props = $props();
 
+	let formRef = $state<HTMLFormElement | null>(null);
 	let name = $state('');
 	let direction = $state<'In' | 'Out'>('In');
 	let amount = $state('');
@@ -35,6 +37,10 @@
 		if (!investorId) next.investorId = 'Investor is required';
 		errors = next;
 		return Object.keys(next).length === 0;
+	}
+
+	function handleFormSubmit() {
+		formRef?.requestSubmit();
 	}
 
 	async function handleSubmit(event: Event) {
@@ -74,10 +80,20 @@
 	}
 </script>
 
-<form class="dashboard-form max-w-2xl" onsubmit={handleSubmit}>
+<form bind:this={formRef} class="dashboard-form max-w-2xl" onsubmit={handleSubmit}>
+	<FormHeader
+		title="Create Transaction"
+		onCancel={() => goto(cancelHref)}
+		onSubmit={handleFormSubmit}
+		{isSubmitting}
+		isEditMode={false}
+		submitLabel={isSubmitting ? 'Creating...' : 'Create'}
+		variant="page"
+	/>
+
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Create Transaction</Card.Title>
+			<Card.Title>Details</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-2">
@@ -141,19 +157,4 @@
 			</div>
 		</Card.Content>
 	</Card.Root>
-
-	<div class="flex flex-col gap-3 sm:flex-row">
-		<Button
-			type="button"
-			variant="outline"
-			class="flex-1"
-			href={cancelHref}
-			disabled={isSubmitting}
-		>
-			Cancel
-		</Button>
-		<Button type="submit" class="flex-1" disabled={isSubmitting}>
-			{isSubmitting ? 'Creating...' : 'Create Transaction'}
-		</Button>
-	</div>
 </form>

@@ -17,6 +17,7 @@
 		resolveMobilePageTitle,
 		type NavCapabilities
 	} from '$lib/nav/app-nav';
+	import { mobilePageTitle } from '$lib/stores/mobile-page-title.svelte';
 	import { ChevronLeft, ChevronRight, Landmark, LogOut } from 'lucide-svelte';
 
 	interface UserInfo {
@@ -45,13 +46,18 @@
 	const isSignPage = $derived(pathname.startsWith('/sign/'));
 	const isPublicChromeless = $derived(isLandingPage || isSignInPage || isSignPage);
 
-	const mobileTitle = $derived(resolveMobilePageTitle(pathname));
+	const mobileTitle = $derived(mobilePageTitle.override ?? resolveMobilePageTitle(pathname));
 	const showMobileBack = $derived(isDetailRoute(pathname));
 	const showMobileLogo = $derived(pathname === '/dashboard' || pathname === '/');
 
 	const moreActive = $derived(
 		moreOpen || nav.moreNavItems.some((item) => isNavActive(pathname, item.href))
 	);
+
+	$effect(() => {
+		void pathname;
+		moreOpen = false;
+	});
 
 	const userInitials = $derived(
 		user?.name
@@ -62,11 +68,6 @@
 					.toUpperCase()
 			: (user?.email?.[0]?.toUpperCase() ?? 'U')
 	);
-
-	$effect(() => {
-		void pathname;
-		moreOpen = false;
-	});
 </script>
 
 {#if user && !isPublicChromeless}
@@ -81,6 +82,7 @@
 		{pathname}
 		primaryTabs={nav.primaryTabs}
 		{moreActive}
+		{moreOpen}
 		onMoreClick={() => (moreOpen = true)}
 	/>
 

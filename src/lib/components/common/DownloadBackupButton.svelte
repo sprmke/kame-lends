@@ -50,7 +50,7 @@
 			window.URL.revokeObjectURL(url);
 
 			justDownloaded = true;
-			toast.success('Backup downloaded', `Saved as ${filename}`);
+			toast.success('Backup downloaded', { description: `Saved as ${filename}` });
 			setTimeout(() => {
 				justDownloaded = false;
 			}, 3000);
@@ -58,7 +58,7 @@
 			console.error('Error downloading backup:', error);
 			toast.error(
 				'Failed to download backup',
-				error instanceof Error ? error.message : 'Unknown error'
+				{ description: error instanceof Error ? error.message : 'Unknown error' }
 			);
 		} finally {
 			isDownloading = false;

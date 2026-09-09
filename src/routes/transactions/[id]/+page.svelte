@@ -7,6 +7,7 @@
 	import { cn } from '$lib/utils';
 	import { formatCurrency, formatDate, formatText } from '$lib/format';
 	import { getTransactionDirectionBadge, getTransactionTypeBadge } from '$lib/badge-config';
+	import { mobilePageTitle } from '$lib/stores/mobile-page-title.svelte';
 
 	function directionBadgeVariant(direction: 'In' | 'Out') {
 		const config = getTransactionDirectionBadge(direction);
@@ -17,13 +18,25 @@
 
 	const transaction = $derived(data.entity);
 	const title = $derived(transaction?.name ?? 'Transaction');
+
+	$effect(() => {
+		mobilePageTitle.set(title);
+		return () => mobilePageTitle.clear();
+	});
 </script>
 
 <svelte:head><title>{title}</title></svelte:head>
 
 <DashboardPage>
 	<PageHeader {title}>
-		<Button href="/transactions" variant="outline" size="sm">Back</Button>
+		<Button
+			href="/transactions"
+			variant="outline"
+			size="sm"
+			class="hidden touch-target lg:inline-flex"
+		>
+			Back
+		</Button>
 	</PageHeader>
 
 	{#if transaction}

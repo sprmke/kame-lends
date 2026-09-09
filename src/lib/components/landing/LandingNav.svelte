@@ -33,7 +33,7 @@
 
 <header
 	class={cn(
-		'fixed inset-x-0 top-0 z-50 transition-all duration-500',
+		'fixed inset-x-0 top-0 z-50 pt-safe transition-all duration-500',
 		scrolled
 			? 'border-b border-border/50 bg-background/75 py-3 shadow-sm backdrop-blur-xl'
 			: 'bg-transparent py-5'

@@ -68,6 +68,7 @@
 	}: Props = $props();
 
 	const isEditMode = $derived(Boolean(existingLoan));
+	const isModalMode = $derived(Boolean(onSuccess));
 
 	let borrowerList = $state<Borrower[]>([...initialBorrowers]);
 	let investorList = $state<Investor[]>([...investors]);
@@ -745,6 +746,7 @@
 		{isSubmitting}
 		{isEditMode}
 		submitLabel={submitButtonLabel}
+		variant={isModalMode ? 'embedded' : 'page'}
 	/>
 
 	<Card.Root>

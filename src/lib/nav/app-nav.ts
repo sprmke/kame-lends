@@ -1,4 +1,3 @@
-import type { Component } from "svelte";
 import {
   Home,
   FileText,
@@ -18,15 +17,19 @@ export interface NavCapabilities {
   hasWitnessed: boolean;
 }
 
+/** Lucide Svelte 5 icon constructors share one shape; `typeof Home` is the practical alias. */
+export type AppNavIcon = typeof Home;
+
 export interface AppNavItem {
   id: string;
   title: string;
   href: string;
-  icon: Component;
+  icon: AppNavIcon;
 }
 
+/** Safe fallback when layout has not loaded capabilities yet (deny-by-default). */
 export const DEFAULT_NAV_CAPABILITIES: NavCapabilities = {
-  isAdminWorkspace: true,
+  isAdminWorkspace: false,
   hasInvestments: false,
   hasBorrowed: false,
   hasWitnessed: false,

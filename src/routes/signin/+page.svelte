@@ -8,7 +8,7 @@
 
 <svelte:head><title>Sign In</title></svelte:head>
 
-<div class="relative flex min-h-screen items-center justify-center p-4">
+<div class="relative flex min-h-screen items-center justify-center p-4 pt-safe pb-safe">
 	<div class="absolute inset-0 -z-10 overflow-hidden">
 		<div
 			class="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-primary/6 blur-3xl"

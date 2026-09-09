@@ -100,7 +100,7 @@
 </script>
 
 <form bind:this={formRef} class="dashboard-form max-w-2xl" onsubmit={handleSubmit}>
-	{#if showFormHeader}
+		{#if showFormHeader}
 		<FormHeader
 			title={isEditMode ? (existingInvestor?.name ?? 'Investor') : 'Create Investor'}
 			description={isEditMode
@@ -117,6 +117,7 @@
 				: isEditMode
 					? 'Update Investor'
 					: 'Create Investor'}
+			variant="page"
 		/>
 	{/if}
 
@@ -146,18 +147,20 @@
 		</Card.Content>
 	</Card.Root>
 
-	<div class="flex flex-col gap-3 sm:flex-row">
-		<Button
-			type="button"
-			variant="outline"
-			class="flex-1"
-			disabled={isSubmitting}
-			onclick={() => (onCancel ? onCancel() : goto(cancelHref))}
-		>
-			Cancel
-		</Button>
-		<Button type="submit" class="flex-1" disabled={isSubmitting}>
-			{isSubmitting ? 'Saving...' : isEditMode ? 'Update Investor' : 'Create Investor'}
-		</Button>
-	</div>
+	{#if !showFormHeader}
+		<div class="mt-4 flex flex-col gap-3 sm:flex-row">
+			<Button
+				type="button"
+				variant="outline"
+				class="touch-target flex-1"
+				disabled={isSubmitting}
+				onclick={() => (onCancel ? onCancel() : goto(cancelHref))}
+			>
+				Cancel
+			</Button>
+			<Button type="submit" class="touch-target flex-1" disabled={isSubmitting}>
+				{isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
+			</Button>
+		</div>
+	{/if}
 </form>

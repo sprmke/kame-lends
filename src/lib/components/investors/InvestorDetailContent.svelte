@@ -22,6 +22,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import * as Tabs from '$lib/components/ui/tabs';
+	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
 	import {
 		calculateAverageRate,
 		calculateTotalInterest,
@@ -599,8 +600,11 @@
 			{:else}
 				<LoansTable
 					loans={filteredLoans}
-					investorId={investor.id}
 					onQuickView={(loan) => {
+						if (isMobileShellViewport()) {
+							goto(`/loans/${loan.id}`);
+							return;
+						}
 						selectedLoan = loan;
 						showLoanDetailModal = true;
 					}}
@@ -691,7 +695,11 @@
 					{/snippet}
 				</CardPagination>
 			{:else}
-				<DebtsTable debts={filteredDebts} itemsPerPage={10} />
+				<DebtsTable
+					debts={filteredDebts}
+					itemsPerPage={10}
+					onQuickView={(debt) => goto(`/debts/${debt.id}`)}
+				/>
 			{/if}
 		</Tabs.Content>
 	</Tabs.Root>

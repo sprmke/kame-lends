@@ -2,17 +2,17 @@
  * Business logic calculations for loans and investments
  */
 
-import {
+import type {
   LoanWithInvestors,
   InvestorWithLoans,
   LoanInvestor,
   Investor,
   Loan,
-} from './types';
+} from "./types";
 
 function safeParseFloat(value: string | number | null | undefined): number {
   if (value === null || value === undefined) return 0;
-  if (typeof value === 'number') return Number.isNaN(value) ? 0 : value;
+  if (typeof value === "number") return Number.isNaN(value) ? 0 : value;
   const n = parseFloat(value);
   return Number.isNaN(n) ? 0 : n;
 }
@@ -76,9 +76,11 @@ export function calculateTotalInterest(
       const investorInterest = transactionWithPeriods.interestPeriods.reduce(
         (periodSum, period) => {
           const rateValue = safeParseFloat(period.interestRate);
-          if (period.interestType === 'fixed') return periodSum + rateValue;
+          if (period.interestType === "fixed") return periodSum + rateValue;
           const baseAmount =
-            investorTotalCapital === 0 ? loanTotalPrincipal : investorTotalCapital;
+            investorTotalCapital === 0
+              ? loanTotalPrincipal
+              : investorTotalCapital;
           return periodSum + baseAmount * (rateValue / 100);
         },
         0,
@@ -89,11 +91,10 @@ export function calculateTotalInterest(
       transactions.forEach((li) => {
         const capital = safeParseFloat(li.amount);
         const rateValue = safeParseFloat(li.interestRate);
-        if (li.interestType === 'fixed') {
+        if (li.interestType === "fixed") {
           totalInterest += rateValue;
         } else {
-          const baseAmount =
-            capital === 0 ? loanTotalPrincipal : capital;
+          const baseAmount = capital === 0 ? loanTotalPrincipal : capital;
           totalInterest += baseAmount * (rateValue / 100);
         }
       });
@@ -162,7 +163,7 @@ export function calculateInterest(
 
   // If interestType is 'fixed', interestRate contains the fixed amount
   // If interestType is 'rate' or undefined (backward compatibility), it's a percentage
-  return interestType === 'fixed' ? rateValue : capital * (rateValue / 100);
+  return interestType === "fixed" ? rateValue : capital * (rateValue / 100);
 }
 
 /**
@@ -229,9 +230,7 @@ export function calculateAmountDueOnDate(
       const interest = transactions.reduce((sum, li) => {
         const capital = safeParseFloat(li.amount);
         const base = capital === 0 ? loanTotalPrincipal : capital;
-        return (
-          sum + calculateInterest(base, li.interestRate, li.interestType)
-        );
+        return sum + calculateInterest(base, li.interestRate, li.interestType);
       }, 0);
 
       totalAmount += investorTotalCapital + interest;
@@ -297,14 +296,14 @@ export function calculateOverdueAmount(
           new Date(b.dueDate || 0).getTime(),
       );
       const overduePeriods = periods.filter(
-        (p) => p.status === 'Overdue' || p.status === 'Incomplete',
+        (p) => p.status === "Overdue" || p.status === "Incomplete",
       );
 
       if (overduePeriods.length > 0) {
         const finalPeriod = periods[periods.length - 1];
         const isFinalPeriodOverdue =
-          finalPeriod.status === 'Overdue' ||
-          finalPeriod.status === 'Incomplete';
+          finalPeriod.status === "Overdue" ||
+          finalPeriod.status === "Incomplete";
         const base =
           investorTotalCapital === 0
             ? loanTotalPrincipal
@@ -325,9 +324,7 @@ export function calculateOverdueAmount(
       const interest = transactions.reduce((sum, li) => {
         const capital = safeParseFloat(li.amount);
         const base = capital === 0 ? loanTotalPrincipal : capital;
-        return (
-          sum + calculateInterest(base, li.interestRate, li.interestType)
-        );
+        return sum + calculateInterest(base, li.interestRate, li.interestType);
       }, 0);
 
       totalAmount += investorTotalCapital + interest;
@@ -442,14 +439,14 @@ export function calculateLoanDuration(
 ): string {
   // If no start date provided, use today's date (for backward compatibility)
   const start = startDate
-    ? typeof startDate === 'string'
+    ? typeof startDate === "string"
       ? new Date(startDate)
       : new Date(startDate)
     : new Date();
   start.setHours(0, 0, 0, 0); // Normalize to midnight
 
   const due =
-    typeof dueDate === 'string' ? new Date(dueDate) : new Date(dueDate);
+    typeof dueDate === "string" ? new Date(dueDate) : new Date(dueDate);
   due.setHours(0, 0, 0, 0); // Normalize to midnight
 
   // Calculate the difference in months using calendar months
@@ -478,16 +475,16 @@ export function calculateLoanDuration(
 
   const parts = [];
   if (months > 0) {
-    parts.push(`${months} ${months === 1 ? 'Month' : 'Months'}`);
+    parts.push(`${months} ${months === 1 ? "Month" : "Months"}`);
   }
   if (weeks > 0) {
-    parts.push(`${weeks} ${weeks === 1 ? 'Week' : 'Weeks'}`);
+    parts.push(`${weeks} ${weeks === 1 ? "Week" : "Weeks"}`);
   }
   if (days > 0) {
-    parts.push(`${days} ${days === 1 ? 'Day' : 'Days'}`);
+    parts.push(`${days} ${days === 1 ? "Day" : "Days"}`);
   }
 
-  return parts.length > 0 ? parts.join(', ') : '0 Days';
+  return parts.length > 0 ? parts.join(", ") : "0 Days";
 }
 
 /**
@@ -495,15 +492,15 @@ export function calculateLoanDuration(
  */
 export function getBalanceStatus(balance: number): {
   status: string;
-  variant: 'default' | 'secondary' | 'destructive';
+  variant: "default" | "secondary" | "destructive";
 } {
   if (balance > 100000) {
-    return { status: 'Can invest', variant: 'default' };
+    return { status: "Can invest", variant: "default" };
   }
   if (balance > 50000) {
-    return { status: 'Low funds', variant: 'secondary' };
+    return { status: "Low funds", variant: "secondary" };
   }
-  return { status: 'No funds', variant: 'destructive' };
+  return { status: "No funds", variant: "destructive" };
 }
 
 /**
@@ -574,16 +571,16 @@ export function calculateInvestorStats(investor: InvestorWithLoans): {
 
   const activeLoans = investor.loanInvestors.filter(
     (li) =>
-      li.loan.status === 'Fully Funded' ||
-      li.loan.status === 'Partially Funded',
+      li.loan.status === "Fully Funded" ||
+      li.loan.status === "Partially Funded",
   ).length;
 
   const completedLoans = investor.loanInvestors.filter(
-    (li) => li.loan.status === 'Completed',
+    (li) => li.loan.status === "Completed",
   ).length;
 
   const overdueLoans = investor.loanInvestors.filter(
-    (li) => li.loan.status === 'Overdue',
+    (li) => li.loan.status === "Overdue",
   ).length;
 
   // Get latest balance from transactions

@@ -5,7 +5,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Label } from '$lib/components/ui/label';
-	import * as Dialog from '$lib/components/ui/dialog';
+	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import SignaturePad from './SignaturePad.svelte';
 	import LoanContractPreview from './LoanContractPreview.svelte';
 	import { toast } from '$lib/toast';
@@ -216,22 +216,20 @@
 							</div>
 						</div>
 
-						<Dialog.Root bind:open={consentDetailsOpen}>
-							<Dialog.Content
-								class="max-h-[85vh] w-[calc(100vw-1.5rem)] max-w-xl overflow-y-auto p-5 sm:p-6"
-							>
-								<Dialog.Header>
-									<Dialog.Title class="text-xl">{consent.heading}</Dialog.Title>
-								</Dialog.Header>
-								<div class="space-y-4 pt-2">
-									{#each consent.body as paragraph}
-										<p class="text-sm leading-relaxed text-muted-foreground sm:text-base">
-											{paragraph}
-										</p>
-									{/each}
-								</div>
-							</Dialog.Content>
-						</Dialog.Root>
+						<ResponsiveModal
+							open={consentDetailsOpen}
+							onOpenChange={(open) => (consentDetailsOpen = open)}
+							title={consent.heading}
+							contentClass="sm:max-w-xl"
+						>
+							<div class="space-y-4">
+								{#each consent.body as paragraph}
+									<p class="text-sm leading-relaxed text-muted-foreground sm:text-base">
+										{paragraph}
+									</p>
+								{/each}
+							</div>
+						</ResponsiveModal>
 
 						<Button
 							type="button"

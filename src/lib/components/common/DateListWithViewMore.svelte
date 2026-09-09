@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import * as Dialog from '$lib/components/ui/dialog';
+	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import { formatCount, formatDateShort, formatText } from '$lib/format';
 
 	interface Props {
@@ -52,7 +52,7 @@
 		<Button
 			variant="link"
 			size="sm"
-			class="h-auto p-0 px-2 text-xs text-primary hover:underline"
+			class="h-auto min-h-11 p-0 px-2 text-xs text-primary hover:underline"
 			onclick={(event) => {
 				event.preventDefault();
 				event.stopPropagation();
@@ -64,17 +64,15 @@
 	{/if}
 </div>
 
-<Dialog.Root bind:open={showAllModal}>
-	<Dialog.Content class="max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>{dialogHeading}</Dialog.Title>
-		</Dialog.Header>
-		<div class="max-h-[400px] overflow-y-auto">
-			<div class="flex flex-col gap-2">
-				{#each dates as date, index (date.toISOString() + index)}
-					<span class={resolveClassName(date, index)}>{formatDateFn(date)}</span>
-				{/each}
-			</div>
-		</div>
-	</Dialog.Content>
-</Dialog.Root>
+<ResponsiveModal
+	open={showAllModal}
+	onOpenChange={(open) => (showAllModal = open)}
+	title={dialogHeading}
+	contentClass="sm:max-w-md"
+>
+	<div class="flex flex-col gap-2">
+		{#each dates as date, index (date.toISOString() + index)}
+			<span class={resolveClassName(date, index)}>{formatDateFn(date)}</span>
+		{/each}
+	</div>
+</ResponsiveModal>

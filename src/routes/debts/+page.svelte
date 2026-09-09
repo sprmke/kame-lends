@@ -16,6 +16,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Select from '$lib/components/ui/select';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
+	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
 	import { isCompletedDebt } from '$lib/debt-calculations';
 	import { toast } from '$lib/toast';
 	import { PlusCircle, X, Filter, Users } from 'lucide-svelte';
@@ -76,7 +77,7 @@
 	}
 
 	function handleQuickView(debt: DebtWithInvestor) {
-		if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+		if (isMobileShellViewport()) {
 			goto(`/debts/${debt.id}`);
 			return;
 		}

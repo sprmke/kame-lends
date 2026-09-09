@@ -31,11 +31,34 @@
 		footer
 	}: Props = $props();
 
-	const mobile = createIsMobileOverlay(false);
+	const mobile = createIsMobileOverlay(
+		typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false
+	);
+
+	/** Lock sheet vs dialog for the lifetime of an open overlay so resize does not remount forms. */
+	let presentation = $state<'sheet' | 'dialog'>(
+		typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
+			? 'sheet'
+			: 'dialog'
+	);
+	let lockedOpen = $state(false);
+
 	$effect(() => mobile.init());
+
+	$effect(() => {
+		if (open) {
+			if (!lockedOpen) {
+				presentation = mobile.matches ? 'sheet' : 'dialog';
+				lockedOpen = true;
+			}
+		} else {
+			lockedOpen = false;
+			presentation = mobile.matches ? 'sheet' : 'dialog';
+		}
+	});
 </script>
 
-{#if mobile.matches}
+{#if presentation === 'sheet'}
 	<Sheet.Root {open} {onOpenChange}>
 		<Sheet.Content
 			side={sheetSide}
@@ -43,7 +66,9 @@
 			class={cn('gap-0 overflow-hidden p-0', contentClass)}
 		>
 			{#if title || description}
-				<Sheet.Header class={cn(srOnlyHeader && 'sr-only', 'shrink-0 border-b border-border/60')}>
+				<Sheet.Header
+					class={cn(srOnlyHeader && 'sr-only', 'shrink-0 border-b border-border/60 pr-12')}
+				>
 					{#if title}<Sheet.Title>{title}</Sheet.Title>{/if}
 					{#if description}<Sheet.Description>{description}</Sheet.Description>{/if}
 				</Sheet.Header>
