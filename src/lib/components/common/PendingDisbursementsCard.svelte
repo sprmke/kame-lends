@@ -31,7 +31,7 @@
 	onViewAllClick={() => (window.location.href = '/loans?view=table')}
 >
 	{#if displayItems.length === 0}
-		<p class="py-6 text-center text-sm text-muted-foreground">No pending disbursements</p>
+		<p class="py-4 text-center text-sm text-muted-foreground">No pending disbursements</p>
 	{:else}
 		<div class="max-h-64 space-y-2 overflow-y-auto pr-1">
 			{#each displayItems.slice(0, 5) as item (item.id)}

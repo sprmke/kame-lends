@@ -27,7 +27,7 @@
 
 {#snippet listContent()}
 	{#if displayLoans.length === 0}
-		<p class="py-6 text-center text-sm text-muted-foreground">No overdue loans</p>
+		<p class="py-4 text-center text-sm text-muted-foreground">No overdue loans</p>
 	{:else}
 		<div class="max-h-64 space-y-2 overflow-y-auto pr-1">
 			{#each displayLoans.slice(0, 5) as loan (loan.id)}

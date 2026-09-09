@@ -21,7 +21,7 @@ Architecture index for agents and developers.
 
 ### Dashboard UI (authenticated)
 
-When a session exists, `+layout.svelte` adds `dashboard-shell` on `<html>`. That scopes a tighter visual system in `src/lib/styles/dashboard.css`: smaller radius (`--radius: 0.5rem`), reduced page padding (`dashboard-page`), flat cards (`surface-card`), and flush sidebar nav. Public routes (landing `/`, `/signin`, `/sign/[token]`) never get `dashboard-shell`; landing keeps the existing rounded marketing styles in `layout.css`.
+When a session exists, `+layout.svelte` adds `dashboard-shell` on `<html>`. That scopes a tighter visual system in `src/lib/styles/dashboard.css`: smaller radius (`--radius: 0.5rem`), reduced page padding (`dashboard-page`, `dashboard-stack`, `dashboard-form`), flat cards (`surface-card`), compact shadcn cards/tables/tabs/dialogs via `[data-slot]` overrides, utilities (`dashboard-metric-cell`, `dashboard-filter-panel`, `dashboard-empty`), and flush sidebar nav. Public routes (landing `/`, `/signin`, `/sign/[token]`) never get `dashboard-shell`; landing keeps the existing rounded marketing styles in `layout.css`.
 
 ## Repo layout
 

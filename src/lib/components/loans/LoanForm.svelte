@@ -749,7 +749,7 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title class="text-lg sm:text-xl">Loan Details</Card.Title>
+			<Card.Title class="dashboard-section-title">Loan Details</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
@@ -839,7 +839,7 @@
 
 	<Card.Root id="investors-section">
 		<Card.Header>
-			<Card.Title class="text-lg sm:text-xl">Investors</Card.Title>
+			<Card.Title class="dashboard-section-title">Investors</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-3">

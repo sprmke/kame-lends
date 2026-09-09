@@ -544,9 +544,7 @@
 			</div>
 
 			{#if showMoreLoanFilters}
-				<div
-					class="grid grid-cols-1 gap-3 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-4"
-				>
+				<div class="dashboard-filter-panel grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
 					<RangeFilter
 						label="Total Principal"
 						minValue={minPrincipal}
@@ -642,7 +640,7 @@
 			</div>
 
 			{#if showMoreDebtFilters}
-				<div class="rounded-lg border bg-muted/30 p-4">
+				<div class="dashboard-filter-panel">
 					<RangeFilter
 						label="Principal Amount"
 						minValue={minDebtAmount}

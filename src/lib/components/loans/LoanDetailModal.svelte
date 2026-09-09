@@ -183,7 +183,10 @@
 {#if loan}
 	{@const modalLoan = loan}
 	<Dialog.Root {open} onOpenChange={(next) => onOpenChange(next)}>
-		<Dialog.Content class="max-h-[90vh] max-w-4xl overflow-y-auto" showCloseButton={false}>
+		<Dialog.Content
+			class="dashboard-dialog-wide max-h-[90vh] overflow-y-auto"
+			showCloseButton={false}
+		>
 			{#if isEditing}
 				<Dialog.Header class="sr-only">
 					<Dialog.Title>Edit Loan - {formatText(modalLoan.loanName)}</Dialog.Title>

@@ -122,7 +122,7 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title class="text-lg sm:text-xl">Contact Details</Card.Title>
+			<Card.Title class="dashboard-section-title">Contact Details</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-2">

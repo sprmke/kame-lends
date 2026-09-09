@@ -336,7 +336,7 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title class="text-lg sm:text-xl">Select Investors</Card.Title>
+			<Card.Title class="dashboard-section-title">Select Investors</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-3">
 			<div class="flex items-center gap-2">
