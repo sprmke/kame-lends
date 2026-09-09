@@ -91,7 +91,7 @@
 	<header class="fixed top-0 right-0 left-0 z-50 h-12 border-b border-border/80 bg-card lg:hidden">
 		<div class="flex h-full items-center justify-between px-3">
 			<a href={user ? '/dashboard' : '/'} class="flex items-center space-x-2">
-				<Logo size="md" showIcon={true} />
+				<Logo size="md" showIcon={true} compactIcon={true} />
 			</a>
 			<div class="flex items-center gap-2">
 				{#if !user}
@@ -179,7 +179,7 @@
 			)}
 		>
 			{#if !isCollapsed}
-				<a href="/dashboard"><Logo size="md" showIcon={true} /></a>
+				<a href="/dashboard"><Logo size="md" showIcon={true} compactIcon={true} /></a>
 			{:else}
 				<a href="/dashboard" class="flex justify-center" title="Dashboard">
 					<span
