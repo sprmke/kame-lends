@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, type Page, test } from '@playwright/test';
+import { expect, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test';
 
 export async function gotoApp(page: Page, path: string) {
 	for (let attempt = 0; attempt < 3; attempt++) {
@@ -44,14 +44,24 @@ export async function waitForLoansTable(page: Page) {
 	return !(await emptyState.isVisible());
 }
 
-
 const e2eSecret = process.env.E2E_AUTH_SECRET ?? 'e2e-local-secret';
+
+async function clearAuthCookies(context: BrowserContext | APIRequestContext) {
+	if ('clearCookies' in context && typeof context.clearCookies === 'function') {
+		await context.clearCookies();
+		return;
+	}
+}
 
 /** Switch Auth.js session to an existing user by email (post-OAuth party state). */
 export async function switchE2ESession(
 	request: APIRequestContext,
-	email?: string
+	email?: string,
+	browserContext?: BrowserContext
 ): Promise<{ userId: string; email: string | null; role: string }> {
+	if (browserContext) {
+		await clearAuthCookies(browserContext);
+	}
 	const response = await request.post('/api/e2e/session', {
 		headers: {
 			'x-e2e-auth-secret': e2eSecret,
@@ -62,5 +72,9 @@ export async function switchE2ESession(
 	if (!response.ok()) {
 		throw new Error(`E2E session failed: ${response.status()} ${await response.text()}`);
 	}
-	return (await response.json()) as { userId: string; email: string | null; role: string };
+	const body = (await response.json()) as { userId: string; email: string | null; role: string };
+	if (email && (body.email || '').toLowerCase() !== email.toLowerCase()) {
+		throw new Error(`E2E session email mismatch: wanted ${email}, got ${body.email}`);
+	}
+	return body;
 }

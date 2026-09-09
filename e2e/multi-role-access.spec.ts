@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { gotoApp, skipIfNoDatabase, switchE2ESession } from "./helpers";
 import type {
   Borrower,
@@ -14,7 +14,7 @@ test.beforeEach(({}, testInfo) => {
 });
 
 async function cleanup(
-  request: APIRequestContext,
+  page: Page,
   ids: {
     loanId?: number;
     investorId?: number;
@@ -22,7 +22,8 @@ async function cleanup(
     witnessId?: number;
   },
 ) {
-  await switchE2ESession(request);
+  const request = page.request;
+  await switchE2ESession(request, undefined, page.context());
   if (ids.loanId) await request.delete(`/api/loans/${ids.loanId}`);
   if (ids.investorId) await request.delete(`/api/investors/${ids.investorId}`);
   if (ids.borrowerId) await request.delete(`/api/borrowers/${ids.borrowerId}`);
@@ -31,8 +32,8 @@ async function cleanup(
 
 test("multi-role parties can view loan; non-owners cannot edit shell", async ({
   page,
-  request,
 }) => {
+  const request = page.request;
   const stamp = Date.now();
   const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     .toISOString()
@@ -41,7 +42,8 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
   const borrowerEmail = `e2e-mr-bor-${stamp}@example.com`;
   const witnessEmail = `e2e-mr-wit-${stamp}@example.com`;
 
-  await switchE2ESession(request);
+  const admin = await switchE2ESession(request, undefined, page.context());
+  expect(admin.role === "admin" || admin.email).toBeTruthy();
 
   const investorRes = await request.post("/api/investors", {
     data: {
@@ -103,7 +105,6 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
   const loan = (await loanRes.json()) as LoanWithInvestors;
 
   try {
-    // Admin owns the loan and can edit.
     const adminPut = await request.put(`/api/loans/${loan.id}`, {
       data: {
         loanData: {
@@ -126,8 +127,14 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
     });
     expect(adminPut.ok(), await adminPut.text()).toBeTruthy();
 
-    // Investor: view ok, shell edit forbidden, investments list reachable.
-    await switchE2ESession(request, investorEmail);
+    const invSession = await switchE2ESession(
+      request,
+      investorEmail,
+      page.context(),
+    );
+    expect(invSession.email?.toLowerCase()).toBe(investorEmail);
+    expect(invSession.userId).not.toBe(admin.userId);
+
     const invGet = await request.get(`/api/loans/${loan.id}`);
     expect(invGet.ok(), await invGet.text()).toBeTruthy();
     const invPut = await request.put(`/api/loans/${loan.id}`, {
@@ -150,7 +157,7 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
         ],
       },
     });
-    expect(invPut.status()).toBe(403);
+    expect(invPut.status(), await invPut.text()).toBe(403);
 
     const invPage = await gotoApp(page, "/investments");
     expect(invPage?.status()).toBe(200);
@@ -171,8 +178,13 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
       timeout: 20_000,
     });
 
-    // Borrower: view ok, shell edit forbidden, borrowed list reachable.
-    await switchE2ESession(request, borrowerEmail);
+    const borSession = await switchE2ESession(
+      request,
+      borrowerEmail,
+      page.context(),
+    );
+    expect(borSession.email?.toLowerCase()).toBe(borrowerEmail);
+
     const borGet = await request.get(`/api/loans/${loan.id}`);
     expect(borGet.ok(), await borGet.text()).toBeTruthy();
     const borPut = await request.put(`/api/loans/${loan.id}`, {
@@ -195,7 +207,8 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
         ],
       },
     });
-    expect(borPut.status()).toBe(403);
+    expect(borPut.status(), await borPut.text()).toBe(403);
+
     const borPay = await request.post(
       `/api/loans/${loan.id}/received-payments`,
       {
@@ -217,8 +230,13 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
       timeout: 20_000,
     });
 
-    // Witness: view ok, shell edit forbidden, witnessed list reachable.
-    await switchE2ESession(request, witnessEmail);
+    const witSession = await switchE2ESession(
+      request,
+      witnessEmail,
+      page.context(),
+    );
+    expect(witSession.email?.toLowerCase()).toBe(witnessEmail);
+
     const witGet = await request.get(`/api/loans/${loan.id}`);
     expect(witGet.ok(), await witGet.text()).toBeTruthy();
     const witPut = await request.put(`/api/loans/${loan.id}`, {
@@ -241,7 +259,7 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
         ],
       },
     });
-    expect(witPut.status()).toBe(403);
+    expect(witPut.status(), await witPut.text()).toBe(403);
 
     const witPage = await gotoApp(page, "/witnessed");
     expect(witPage?.status()).toBe(200);
@@ -262,13 +280,12 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
       timeout: 20_000,
     });
 
-    // Calendar sync remains admin-only.
     const witSync = await request.post("/api/loans/sync-calendar", {
       data: { loanId: loan.id, action: "sync" },
     });
     expect([401, 403, 404]).toContain(witSync.status());
   } finally {
-    await cleanup(request, {
+    await cleanup(page, {
       loanId: loan.id,
       investorId: investor.id,
       borrowerId: borrower.id,
