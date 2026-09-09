@@ -44,12 +44,13 @@
 
 	$effect(() => {
 		if (typeof window === 'undefined') return;
+		const mql = window.matchMedia('(max-width: 1023px)');
 		const update = () => {
-			isNarrow = window.innerWidth < 1024;
+			isNarrow = mql.matches;
 		};
 		update();
-		window.addEventListener('resize', update);
-		return () => window.removeEventListener('resize', update);
+		mql.addEventListener('change', update);
+		return () => mql.removeEventListener('change', update);
 	});
 
 	function toggleAll(checked: boolean) {
@@ -131,9 +132,9 @@
 					</Table.Cell>
 					<Table.Cell class="text-right tabular-nums">
 						{formatCurrency(stats.totalPrincipal)}
-						{#if tx.averageInterestRate != null}
+						{#if tx.averageRate != null}
 							<p class="text-[10px] text-muted-foreground">
-								{formatPercentage(tx.averageInterestRate)}
+								{formatPercentage(tx.averageRate)}
 							</p>
 						{/if}
 					</Table.Cell>

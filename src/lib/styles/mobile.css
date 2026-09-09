@@ -42,7 +42,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   html.dashboard-shell [data-slot="button"]:not([data-size="icon-xs"]) {
     min-height: 44px;
   }

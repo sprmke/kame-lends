@@ -7,6 +7,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import ValidIdUpload from '$lib/components/common/ValidIdUpload.svelte';
 	import ESignatureUpload from '$lib/components/common/ESignatureUpload.svelte';
+	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import { toast } from '$lib/toast';
 	import { normalizeValidIdUrl, normalizeSignatureImageUrl } from '$lib/valid-id-document';
 	import type { Borrower } from '$lib/types';
@@ -17,6 +18,8 @@
 		successHref?: string;
 		onSuccess?: (borrower: Borrower) => void | Promise<void>;
 		onCancel?: () => void;
+		/** Use inline sheet actions (BorrowerFormModal). Full pages keep sticky FormHeader. */
+		embedded?: boolean;
 	}
 
 	let {
@@ -24,11 +27,14 @@
 		cancelHref = '/loans',
 		successHref,
 		onSuccess,
-		onCancel
+		onCancel,
+		embedded = false
 	}: Props = $props();
 
 	const isEditMode = $derived(!!existingBorrower);
+	const isModalMode = $derived(embedded);
 
+	let formRef = $state<HTMLFormElement | null>(null);
 	let name = $state(existingBorrower?.name ?? '');
 	let contactNumber = $state(existingBorrower?.contactNumber ?? '');
 	let email = $state(existingBorrower?.email ?? '');
@@ -49,6 +55,10 @@
 		}
 		errors = next;
 		return Object.keys(next).length === 0;
+	}
+
+	function handleFormSubmit() {
+		formRef?.requestSubmit();
 	}
 
 	async function handleSubmit(event: Event) {
@@ -105,7 +115,25 @@
 	}
 </script>
 
-<form class="dashboard-form max-w-2xl" onsubmit={handleSubmit}>
+<form bind:this={formRef} class="dashboard-form max-w-2xl" onsubmit={handleSubmit}>
+	{#if !isModalMode}
+		<FormHeader
+			title={isEditMode ? (existingBorrower?.name ?? 'Borrower') : 'Borrower'}
+			onCancel={handleCancel}
+			onSubmit={handleFormSubmit}
+			{isSubmitting}
+			{isEditMode}
+			submitLabel={isSubmitting
+				? isEditMode
+					? 'Updating...'
+					: 'Creating...'
+				: isEditMode
+					? 'Update'
+					: 'Create'}
+			variant="page"
+		/>
+	{/if}
+
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>{isEditMode ? existingBorrower?.name : 'Borrower Information'}</Card.Title>
@@ -156,24 +184,26 @@
 		</Card.Content>
 	</Card.Root>
 
-	<div class="flex flex-col gap-3 sm:flex-row">
-		<Button
-			type="button"
-			variant="outline"
-			class="flex-1"
-			disabled={isSubmitting}
-			onclick={handleCancel}
-		>
-			Cancel
-		</Button>
-		<Button type="submit" class="flex-1" disabled={isSubmitting}>
-			{isSubmitting
-				? isEditMode
-					? 'Updating...'
-					: 'Creating...'
-				: isEditMode
-					? 'Update Borrower'
-					: 'Create Borrower'}
-		</Button>
-	</div>
+	{#if isModalMode}
+		<div class="mt-4 flex flex-col gap-3 sm:flex-row">
+			<Button
+				type="button"
+				variant="outline"
+				class="touch-target flex-1"
+				disabled={isSubmitting}
+				onclick={handleCancel}
+			>
+				Cancel
+			</Button>
+			<Button type="submit" class="touch-target flex-1" disabled={isSubmitting}>
+				{isSubmitting
+					? isEditMode
+						? 'Updating...'
+						: 'Creating...'
+					: isEditMode
+						? 'Update'
+						: 'Create'}
+			</Button>
+		</div>
+	{/if}
 </form>

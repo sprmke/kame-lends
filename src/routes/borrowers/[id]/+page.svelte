@@ -44,9 +44,6 @@
 
 <DashboardPage class="max-w-3xl">
 	{#if isEditing && borrower}
-		<Button variant="ghost" size="sm" class="-ml-2 w-fit" onclick={() => (isEditing = false)}>
-			Back to Borrower
-		</Button>
 		<BorrowerForm
 			existingBorrower={borrower}
 			onSuccess={async () => {

@@ -20,7 +20,10 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export function createCalendarState(getEvents: () => CalendarEvent[]) {
   let currentDate = $state(new Date());
   let viewMode = $state<ViewMode>(
-    typeof window !== "undefined" && window.innerWidth < 768 ? "day" : "month",
+    typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 1023px)").matches
+      ? "day"
+      : "month",
   );
 
   function isToday(date: Date) {
@@ -191,7 +194,18 @@ export function createCalendarState(getEvents: () => CalendarEvent[]) {
   }
 
   function setViewMode(mode: ViewMode) {
-    viewMode = mode;
+    const shell =
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 1023px)").matches;
+    viewMode = shell && mode !== "day" ? "day" : mode;
+  }
+
+  if (typeof window !== "undefined") {
+    const mql = window.matchMedia("(max-width: 1023px)");
+    const onChange = () => {
+      if (mql.matches && viewMode !== "day") viewMode = "day";
+    };
+    mql.addEventListener("change", onChange);
   }
 
   return {

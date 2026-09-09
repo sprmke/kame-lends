@@ -4,6 +4,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import PriceVisibilityToggle from './PriceVisibilityToggle.svelte';
 	import { formatText } from '$lib/format';
+	import { mobilePageTitle } from '$lib/stores/mobile-page-title.svelte';
 	import {
 		ArrowLeft,
 		ArrowDownToLine,
@@ -103,6 +104,11 @@
 	let showCompleteConfirm = $state(false);
 	let isDeleting = $state(false);
 	let isCompleting = $state(false);
+
+	$effect(() => {
+		mobilePageTitle.set(formatText(title));
+		return () => mobilePageTitle.clear();
+	});
 
 	async function handleDelete() {
 		isDeleting = true;
@@ -210,13 +216,19 @@
 </script>
 
 <div class="flex flex-col gap-3">
-	<Button variant="ghost" size="sm" onclick={onBack} class="touch-target -ml-2 w-fit">
+	<Button
+		variant="ghost"
+		size="sm"
+		onclick={onBack}
+		class="touch-target -ml-2 hidden w-fit lg:inline-flex"
+	>
 		<ArrowLeft class="mr-2 h-4 w-4" />
 		{backLabel}
 	</Button>
 
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-		<div class="space-y-1">
+		<!-- Title lives in MobileTopBar under lg. -->
+		<div class="hidden min-w-0 space-y-1 lg:block">
 			<div class="flex flex-wrap items-center gap-2.5">
 				<h1 class="text-xl font-semibold tracking-tight">{formatText(title)}</h1>
 				{#if showPriceToggle}
@@ -228,7 +240,13 @@
 			{/if}
 		</div>
 
-		{#if actionItems.length > 0}
+		<div class="flex w-full items-center justify-end gap-1.5 lg:w-auto">
+			{#if showPriceToggle}
+				<div class="lg:hidden">
+					<PriceVisibilityToggle />
+				</div>
+			{/if}
+			{#if actionItems.length > 0}
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger>
 					{#snippet child({ props })}
@@ -277,7 +295,8 @@
 					{/each}
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>
-		{/if}
+			{/if}
+		</div>
 	</div>
 </div>
 

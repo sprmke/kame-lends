@@ -3,7 +3,7 @@
 	import * as Alert from '$lib/components/ui/alert';
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
-	import * as Dialog from '$lib/components/ui/dialog';
+	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import * as Select from '$lib/components/ui/select';
@@ -33,9 +33,20 @@
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
 		onSuccess?: () => void | Promise<void>;
+		/** When set, only these investor IDs appear as payment targets. */
+		allowedInvestorIds?: number[] | null;
 	}
 
-	let { loan, kind, open, onOpenChange, onSuccess }: Props = $props();
+	let {
+		loan,
+		kind,
+		open,
+		onOpenChange,
+		onSuccess,
+		allowedInvestorIds = null
+	}: Props = $props();
+
+	let formEl = $state<HTMLFormElement | null>(null);
 
 	function createPaymentEntry(defaultInvestorId = ''): PaymentEntry {
 		return {
@@ -55,7 +66,12 @@
 		const unique = new Map(
 			loan.loanInvestors.map((payment) => [payment.investor.id, payment.investor])
 		);
-		return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+		let list = Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+		if (allowedInvestorIds && allowedInvestorIds.length > 0) {
+			const allow = new Set(allowedInvestorIds);
+			list = list.filter((investor) => allow.has(investor.id));
+		}
+		return list;
 	});
 
 	let entries = $state<PaymentEntry[]>([createPaymentEntry()]);
@@ -208,29 +224,35 @@
 </script>
 
 {#if loan && kind}
-	<Dialog.Root {open} onOpenChange={(next) => !isSubmitting && onOpenChange(next)}>
-		<Dialog.Content class="max-h-[90vh] max-w-2xl overflow-y-auto">
-			<form class="space-y-5" onsubmit={handleSubmit}>
-				<Dialog.Header>
-					<div class="flex items-start gap-3 pr-8">
-						<div class="rounded-xl bg-primary/10 p-2.5 text-primary">
-							{#if isReceived}
-								<ArrowDownToLine class="h-5 w-5" />
-							{:else}
-								<ArrowUpFromLine class="h-5 w-5" />
-							{/if}
-						</div>
-						<div class="space-y-1 text-left">
-							<Dialog.Title>{title}</Dialog.Title>
-							<Dialog.Description>
-								{isReceived
-									? `Record money received from the borrower for ${loan.loanName}.`
-									: `Record an additional principal disbursement for ${loan.loanName}.`}
-							</Dialog.Description>
-						</div>
-					</div>
-				</Dialog.Header>
-
+	<ResponsiveModal
+		{open}
+		onOpenChange={(next) => !isSubmitting && onOpenChange(next)}
+		{title}
+		description={isReceived
+			? `Record money received from the borrower for ${loan.loanName}.`
+			: `Record an additional principal disbursement for ${loan.loanName}.`}
+		contentClass="sm:max-w-2xl"
+	>
+		{#snippet footer()}
+			<Button
+				type="button"
+				variant="outline"
+				disabled={isSubmitting}
+				onclick={() => onOpenChange(false)}
+			>
+				Cancel
+			</Button>
+			<Button
+				type="button"
+				disabled={!canSubmit || hasDuplicatePrincipalDates || isSubmitting}
+				onclick={() => formEl?.requestSubmit()}
+			>
+				{isSubmitting
+					? `Saving ${entries.length}...`
+					: `${title}${entries.length > 1 ? `s (${entries.length})` : ''}`}
+			</Button>
+		{/snippet}
+		<form bind:this={formEl} class="space-y-5" onsubmit={handleSubmit}>
 				<div class="space-y-4">
 					{#each entries as entry, index (entry.id)}
 						{@const context = getEntryContext(entry)}
@@ -444,22 +466,6 @@
 					{/if}
 				</div>
 
-				<Dialog.Footer>
-					<Button
-						type="button"
-						variant="outline"
-						disabled={isSubmitting}
-						onclick={() => onOpenChange(false)}
-					>
-						Cancel
-					</Button>
-					<Button type="submit" disabled={!canSubmit || hasDuplicatePrincipalDates || isSubmitting}>
-						{isSubmitting
-							? `Saving ${entries.length}...`
-							: `${title}${entries.length > 1 ? `s (${entries.length})` : ''}`}
-					</Button>
-				</Dialog.Footer>
 			</form>
-		</Dialog.Content>
-	</Dialog.Root>
+	</ResponsiveModal>
 {/if}

@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import * as Dialog from '$lib/components/ui/dialog';
+	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import * as Collapsible from '$lib/components/ui/collapsible';
 	import {
 		Wallet,
@@ -804,145 +804,136 @@
 	{/each}
 </div>
 
-<Dialog.Root
+<ResponsiveModal
 	open={!!completeModal}
 	onOpenChange={(open) => {
 		if (!open) completeModal = null;
 	}}
+	title="Record interest payment"
+	contentClass="sm:max-w-md"
 >
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>Record interest payment</Dialog.Title>
-		</Dialog.Header>
-		{#if completeModal}
-			<div class="space-y-3 py-1">
-				<div class="space-y-2">
-					<Label for="received-amount">Received amount</Label>
-					<Input
-						id="received-amount"
-						type="number"
-						step="0.01"
-						value={completeModal.amount}
-						oninput={(e) => {
-							if (completeModal) {
-								completeModal = { ...completeModal, amount: e.currentTarget.value };
-							}
-						}}
-					/>
-				</div>
-				<div class="space-y-2">
-					<Label for="received-date">Received date</Label>
-					<Input
-						id="received-date"
-						type="date"
-						value={completeModal.receivedDate}
-						oninput={(e) => {
-							if (completeModal) {
-								completeModal = { ...completeModal, receivedDate: e.currentTarget.value };
-							}
-						}}
-					/>
-				</div>
+	{#snippet footer()}
+		<Button
+			variant="outline"
+			onclick={() => (completeModal = null)}
+			disabled={!!completeModal && completingPeriods.has(completeModal.periodId)}
+		>
+			Cancel
+		</Button>
+		<Button
+			onclick={handleCompletePeriod}
+			disabled={!completeModal ||
+				!completeModal.amount?.trim() ||
+				!completeModal.receivedDate?.trim() ||
+				completingPeriods.has(completeModal.periodId)}
+		>
+			{#if completeModal && completingPeriods.has(completeModal.periodId)}
+				<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+				Saving…
+			{:else}
+				Confirm
+			{/if}
+		</Button>
+	{/snippet}
+	{#if completeModal}
+		<div class="space-y-3 py-1">
+			<div class="space-y-2">
+				<Label for="received-amount">Received amount</Label>
+				<Input
+					id="received-amount"
+					type="number"
+					step="0.01"
+					value={completeModal.amount}
+					oninput={(e) => {
+						if (completeModal) {
+							completeModal = { ...completeModal, amount: e.currentTarget.value };
+						}
+					}}
+				/>
 			</div>
-		{/if}
-		<Dialog.Footer>
-			<Button
-				variant="outline"
-				onclick={() => (completeModal = null)}
-				disabled={!!completeModal && completingPeriods.has(completeModal.periodId)}
-			>
-				Cancel
-			</Button>
-			<Button
-				onclick={handleCompletePeriod}
-				disabled={!completeModal ||
-					!completeModal.amount?.trim() ||
-					!completeModal.receivedDate?.trim() ||
-					completingPeriods.has(completeModal.periodId)}
-			>
-				{#if completeModal && completingPeriods.has(completeModal.periodId)}
-					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-					Saving…
-				{:else}
-					Confirm
-				{/if}
-			</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+			<div class="space-y-2">
+				<Label for="received-date">Received date</Label>
+				<Input
+					id="received-date"
+					type="date"
+					value={completeModal.receivedDate}
+					oninput={(e) => {
+						if (completeModal) {
+							completeModal = { ...completeModal, receivedDate: e.currentTarget.value };
+						}
+					}}
+				/>
+			</div>
+		</div>
+	{/if}
+</ResponsiveModal>
 
-<Dialog.Root
+<ResponsiveModal
 	open={!!editPaymentModal}
 	onOpenChange={(open) => {
 		if (!open) editPaymentModal = null;
 	}}
+	title="Edit payment"
+	description={editPaymentModal?.mode === 'consolidate'
+		? 'This replaces all payment lines for this period with a single entry using the amount and date below.'
+		: undefined}
+	contentClass="sm:max-w-md"
 >
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>Edit payment</Dialog.Title>
-			{#if editPaymentModal?.mode === 'consolidate'}
-				<p class="pt-1 text-sm font-normal text-muted-foreground">
-					This replaces all payment lines for this period with a single entry using the amount and
-					date below.
-				</p>
+	{#snippet footer()}
+		<Button
+			variant="outline"
+			onclick={() => (editPaymentModal = null)}
+			disabled={!!editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId)}
+		>
+			Cancel
+		</Button>
+		<Button
+			onclick={handleEditPaymentSave}
+			disabled={!editPaymentModal ||
+				!editPaymentModal.amount?.trim() ||
+				!editPaymentModal.receivedDate?.trim() ||
+				(editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId))}
+		>
+			{#if editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId)}
+				<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+				Saving…
+			{:else}
+				Save
 			{/if}
-		</Dialog.Header>
-		{#if editPaymentModal}
-			<div class="space-y-3 py-1">
-				<div class="space-y-2">
-					<Label for="edit-received-amount">Received amount</Label>
-					<Input
-						id="edit-received-amount"
-						type="number"
-						step="0.01"
-						value={editPaymentModal.amount}
-						oninput={(e) => {
-							if (editPaymentModal) {
-								editPaymentModal = { ...editPaymentModal, amount: e.currentTarget.value };
-							}
-						}}
-					/>
-					<p class="text-[11px] text-muted-foreground">
-						Max for this period: {formatCurrency(editPaymentModal.expectedInterest)}
-					</p>
-				</div>
-				<div class="space-y-2">
-					<Label for="edit-received-date">Received date</Label>
-					<Input
-						id="edit-received-date"
-						type="date"
-						value={editPaymentModal.receivedDate}
-						oninput={(e) => {
-							if (editPaymentModal) {
-								editPaymentModal = { ...editPaymentModal, receivedDate: e.currentTarget.value };
-							}
-						}}
-					/>
-				</div>
+		</Button>
+	{/snippet}
+	{#if editPaymentModal}
+		<div class="space-y-3 py-1">
+			<div class="space-y-2">
+				<Label for="edit-received-amount">Received amount</Label>
+				<Input
+					id="edit-received-amount"
+					type="number"
+					step="0.01"
+					value={editPaymentModal.amount}
+					oninput={(e) => {
+						if (editPaymentModal) {
+							editPaymentModal = { ...editPaymentModal, amount: e.currentTarget.value };
+						}
+					}}
+				/>
+				<p class="text-[11px] text-muted-foreground">
+					Max for this period: {formatCurrency(editPaymentModal.expectedInterest)}
+				</p>
 			</div>
-		{/if}
-		<Dialog.Footer>
-			<Button
-				variant="outline"
-				onclick={() => (editPaymentModal = null)}
-				disabled={!!editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId)}
-			>
-				Cancel
-			</Button>
-			<Button
-				onclick={handleEditPaymentSave}
-				disabled={!editPaymentModal ||
-					!editPaymentModal.amount?.trim() ||
-					!editPaymentModal.receivedDate?.trim() ||
-					(editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId))}
-			>
-				{#if editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId)}
-					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-					Saving…
-				{:else}
-					Save
-				{/if}
-			</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+			<div class="space-y-2">
+				<Label for="edit-received-date">Received date</Label>
+				<Input
+					id="edit-received-date"
+					type="date"
+					value={editPaymentModal.receivedDate}
+					oninput={(e) => {
+						if (editPaymentModal) {
+							editPaymentModal = { ...editPaymentModal, receivedDate: e.currentTarget.value };
+						}
+					}}
+				/>
+			</div>
+		</div>
+	{/if}
+</ResponsiveModal>

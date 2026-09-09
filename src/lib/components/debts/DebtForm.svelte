@@ -41,6 +41,7 @@
 	}: Props = $props();
 
 	const isEditMode = $derived(!!existingDebt);
+	const isModalMode = $derived(Boolean(onSuccess));
 	const baseId = `debt-form-${Math.random().toString(36).slice(2, 9)}`;
 	let entryCounter = 1;
 	let feeCounter = 0;
@@ -332,6 +333,7 @@
 			: isEditMode
 				? 'Save Changes'
 				: `Create Borrowing${entries.length > 1 ? 's' : ''}`}
+		variant={isModalMode ? 'embedded' : 'page'}
 	/>
 
 	<Card.Root>

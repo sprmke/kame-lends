@@ -1,9 +1,7 @@
 <script lang="ts">
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
 	import InvestorForm from '$lib/components/investors/InvestorForm.svelte';
 	import InvestorDetailContent from '$lib/components/investors/InvestorDetailContent.svelte';
-	import { Button } from '$lib/components/ui/button';
 	import type { InvestorWithLoans, LoanWithInvestors } from '$lib/types';
 
 	let { data } = $props();
@@ -19,13 +17,11 @@
 
 <DashboardPage>
 	{#if isEditing}
-		<PageHeader title="Edit Investor">
-			<Button variant="outline" size="sm" onclick={() => (isEditing = false)}>Cancel</Button>
-		</PageHeader>
 		<InvestorForm
 			existingInvestor={investor}
 			cancelHref="/investors/{investor.id}"
 			successHref="/investors/{investor.id}"
+			onCancel={() => (isEditing = false)}
 		/>
 	{:else}
 		<InvestorDetailContent {investor} {loans} onEdit={() => (isEditing = true)} />
