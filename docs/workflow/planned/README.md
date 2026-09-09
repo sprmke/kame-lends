@@ -4,5 +4,5 @@ Future feature plans. Move a plan to `../in-progress/` when execution starts, th
 
 | Plan                                                     | Summary                                                                                                          |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| [multi-role-loan-access.md](./multi-role-loan-access.md) | Moved to in-progress: see [`../in-progress/multi-role-loan-access.md`](../in-progress/multi-role-loan-access.md) |
+| [multi-role-loan-access.md](./multi-role-loan-access.md) | Shipped to done: [`../done/multi-role-loan-access.md`](../done/multi-role-loan-access.md); residual QA in [`../qa/multi-role-loan-access.md`](../qa/multi-role-loan-access.md) |
 | [mobile-native-redesign.md](./mobile-native-redesign.md) | Native mobile shell: bottom tabs, bottom sheets, safe areas, list→detail on phone                                |

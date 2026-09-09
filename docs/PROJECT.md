@@ -86,7 +86,7 @@ SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, i
 - Loan access is membership-based (`src/lib/server/access-control.ts`): owner full edit; investor own allocation/payments; borrower/witness read-only
 - Menus: `/loans` (owner), `/investments`, `/borrowed`, `/witnessed`
 - Contract signing: authenticated `/loans/[id]/sign` (Google email must match party). Legacy `/sign/[token]` redirects after login
-- Tracker: [`workflow/in-progress/multi-role-loan-access.md`](./workflow/in-progress/multi-role-loan-access.md). QA: [`workflow/qa/multi-role-loan-access.md`](./workflow/qa/multi-role-loan-access.md).
+- Tracker: [`workflow/done/multi-role-loan-access.md`](./workflow/done/multi-role-loan-access.md). QA: [`workflow/qa/multi-role-loan-access.md`](./workflow/qa/multi-role-loan-access.md).
 
 ## Database
 
