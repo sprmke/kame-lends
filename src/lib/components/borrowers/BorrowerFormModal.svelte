@@ -18,5 +18,9 @@
 </script>
 
 <ResponsiveModal {open} {onOpenChange} title="Add Borrower" contentClass="sm:max-w-lg">
-	<BorrowerForm onSuccess={handleSuccess} onCancel={() => onOpenChange(false)} />
+	<BorrowerForm
+		onSuccess={handleSuccess}
+		onCancel={() => onOpenChange(false)}
+		embedded={true}
+	/>
 </ResponsiveModal>

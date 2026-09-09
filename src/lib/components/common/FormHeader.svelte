@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { formatText } from '$lib/format';
 	import { cn } from '$lib/utils';
+	import { mobilePageTitle } from '$lib/stores/mobile-page-title.svelte';
 
 	interface Props {
 		title: string;
@@ -44,6 +45,12 @@
 	);
 
 	const displayTitle = $derived(isEditMode ? formatText(`Edit - ${title}`) : formatText(title));
+
+	$effect(() => {
+		if (isEmbedded) return;
+		mobilePageTitle.set(displayTitle);
+		return () => mobilePageTitle.clear();
+	});
 </script>
 
 <div
@@ -56,10 +63,13 @@
 		{#if isEmbedded}
 			<p class="text-base font-semibold lg:text-lg">{displayTitle}</p>
 		{:else}
-			<h1 class="text-lg font-semibold lg:text-xl">{displayTitle}</h1>
+			<!-- Title lives in MobileTopBar under lg. -->
+			<h1 class="hidden text-lg font-semibold lg:block lg:text-xl">{displayTitle}</h1>
 		{/if}
 		{#if description}
-			<p class="mt-1 text-sm text-muted-foreground">{formatText(description)}</p>
+			<p class={cn('mt-1 text-sm text-muted-foreground', !isEmbedded && 'hidden lg:block')}>
+				{formatText(description)}
+			</p>
 		{/if}
 	</div>
 

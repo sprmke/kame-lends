@@ -32,9 +32,9 @@ Phone layouts use a native-style shell instead of a hamburger drawer:
 - **Safe areas** via `src/lib/styles/mobile.css` and `viewport-fit=cover` in `app.html`.
 - **Overlays:** `ResponsiveModal` renders a bottom **Sheet** under `lg` and a centered **Dialog** at `lg+`. Presentation is locked while open so resize does not remount form state.
 - **List → detail:** loans, debts, party lists, and investor-detail loan rows navigate to detail pages under `lg` rather than opening large quick-view modals.
-- **Chrome:** `PageHeader` titles hide under `lg` (MobileTopBar owns the title); detail pages hide the duplicate Back button under `lg`.
+- **Chrome:** `PageHeader` / `DetailHeader` titles hide under `lg` (MobileTopBar owns the title via path fallback or `mobilePageTitle` override from detail/form chrome). Detail Back hides under `lg`.
 - **View mode / calendar:** cards (and day calendar) under `lg`; table and week/month calendar appear at `lg+`.
-- **Forms:** `FormHeader` uses sticky actions on full pages and inline `embedded` actions inside sheets/dialogs.
+- **Forms:** `FormHeader` uses sticky actions on full pages and inline `embedded` actions inside sheets/dialogs. Payment record/edit overlays use `ResponsiveModal`.
 - Desktop (`lg+`) keeps the left sidebar and centered dialogs.
 
 Light PWA installability: `static/manifest.webmanifest` + theme-color meta (no service worker).

@@ -51,5 +51,8 @@ Make the phone experience feel like a native app: persistent bottom navigation, 
 - [x] Overlay presentation lock + FormHeader embedded variant
 - [x] Unified `lg` breakpoint for shell, sheets, view mode, calendar, touch
 - [x] De-duplicated mobile titles / back chrome
+- [x] Entity titles in MobileTopBar via `mobilePageTitle` store
+- [x] Payment / date-list / signing consent overlays on ResponsiveModal
+- [x] Transaction / borrower / investor form sticky actions aligned
 - [ ] Full route-guide set (partial: dashboard + loans notes)
 - [ ] Device QA matrix signed off

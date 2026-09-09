@@ -147,18 +147,20 @@
 		</Card.Content>
 	</Card.Root>
 
-	<div class="flex flex-col gap-3 sm:flex-row">
-		<Button
-			type="button"
-			variant="outline"
-			class="flex-1"
-			disabled={isSubmitting}
-			onclick={() => (onCancel ? onCancel() : goto(cancelHref))}
-		>
-			Cancel
-		</Button>
-		<Button type="submit" class="flex-1" disabled={isSubmitting}>
-			{isSubmitting ? 'Saving...' : isEditMode ? 'Update Investor' : 'Create Investor'}
-		</Button>
-	</div>
+	{#if !showFormHeader}
+		<div class="mt-4 flex flex-col gap-3 sm:flex-row">
+			<Button
+				type="button"
+				variant="outline"
+				class="touch-target flex-1"
+				disabled={isSubmitting}
+				onclick={() => (onCancel ? onCancel() : goto(cancelHref))}
+			>
+				Cancel
+			</Button>
+			<Button type="submit" class="touch-target flex-1" disabled={isSubmitting}>
+				{isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
+			</Button>
+		</div>
+	{/if}
 </form>
