@@ -1,5 +1,6 @@
+/** Tailwind is provided by `@tailwindcss/vite` in vite.config.ts. */
 const config = {
-  plugins: ["@tailwindcss/postcss"],
+	plugins: []
 };
 
 export default config;
