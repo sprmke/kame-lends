@@ -276,11 +276,13 @@
 				sections={loanPDFSections}
 				onGeneratePDF={downloadLoansPdf}
 			/>
-			{#if canCreate}<SyncCalendarButton variant="outline" size="default" />
-			<Button class="h-9 px-3" onclick={() => openCreateModal()}>
-				<PlusCircle class="h-4 w-4 xl:mr-2" />
-				<span class="hidden xl:inline">New Loan</span>
-			</Button>
+			{#if canCreate}
+				<SyncCalendarButton variant="outline" size="default" />
+				<Button class="h-9 px-3" onclick={() => openCreateModal()}>
+					<PlusCircle class="h-4 w-4 xl:mr-2" />
+					<span class="hidden xl:inline">New Loan</span>
+				</Button>
+			{/if}
 		</PageHeader>
 
 		<div class="flex flex-col gap-2 sm:flex-row">
