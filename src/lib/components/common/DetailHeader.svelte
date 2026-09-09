@@ -210,7 +210,7 @@
 </script>
 
 <div class="flex flex-col gap-3">
-	<Button variant="ghost" size="sm" onclick={onBack} class="-ml-2 w-fit">
+	<Button variant="ghost" size="sm" onclick={onBack} class="touch-target -ml-2 w-fit">
 		<ArrowLeft class="mr-2 h-4 w-4" />
 		{backLabel}
 	</Button>
@@ -236,7 +236,7 @@
 							{...props}
 							variant="outline"
 							size="sm"
-							class="h-8 shrink-0 px-2 md:px-3"
+							class="touch-target h-10 shrink-0 px-2 md:h-8 md:px-3"
 							title="Actions"
 						>
 							<MoreVertical class="h-4 w-4" />

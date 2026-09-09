@@ -2,6 +2,7 @@
 
 Future feature plans. Move a plan to `../in-progress/` when execution starts, then to `../done/` when shipped.
 
-| Plan                                                     | Summary                                                                                                        |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Plan                                                     | Summary                                                                                                          |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | [multi-role-loan-access.md](./multi-role-loan-access.md) | Moved to in-progress: see [`../in-progress/multi-role-loan-access.md`](../in-progress/multi-role-loan-access.md) |
+| [mobile-native-redesign.md](./mobile-native-redesign.md) | Native mobile shell: bottom tabs, bottom sheets, safe areas, list→detail on phone                                |

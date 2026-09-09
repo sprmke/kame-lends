@@ -23,6 +23,19 @@ Architecture index for agents and developers.
 
 When a session exists, `+layout.svelte` adds `dashboard-shell` on `<html>`. That scopes a tighter visual system in `src/lib/styles/dashboard.css`: smaller radius (`--radius: 0.5rem`), reduced page padding (`dashboard-page`, `dashboard-stack`, `dashboard-form`), flat cards (`surface-card`), compact shadcn cards/tables/tabs/dialogs via `[data-slot]` overrides, utility classes (`dashboard-metric-cell`, `dashboard-filter-panel`, `dashboard-empty`), and flush sidebar nav. Public routes (landing `/`, `/signin`, `/sign/[token]`) never get `dashboard-shell`; landing keeps the existing rounded marketing styles in `layout.css`.
 
+### Mobile shell (authenticated, below `lg`)
+
+Phone layouts use a native-style shell instead of a hamburger drawer:
+
+- **Bottom tab bar** (`MobileTabBar`) with up to four primary destinations from `src/lib/nav/app-nav.ts`, plus **More** (settings, account, sign out, price visibility).
+- **Top bar** (`MobileTopBar`) with contextual title and back on detail routes.
+- **Safe areas** via `src/lib/styles/mobile.css` and `viewport-fit=cover` in `app.html`.
+- **Overlays:** `ResponsiveModal` renders a bottom **Sheet** below `md` and a centered **Dialog** at `md+`.
+- **List → detail:** loans and debts navigate to detail pages under `lg` rather than opening large quick-view modals.
+- Desktop (`lg+`) keeps the left sidebar and centered dialogs.
+
+Light PWA installability: `static/manifest.webmanifest` + theme-color meta (no service worker).
+
 ## Repo layout
 
 ```text
@@ -73,7 +86,7 @@ SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, i
 - Loan access is membership-based (`src/lib/server/access-control.ts`): owner full edit; investor own allocation/payments; borrower/witness read-only
 - Menus: `/loans` (owner), `/investments`, `/borrowed`, `/witnessed`
 - Contract signing: authenticated `/loans/[id]/sign` (Google email must match party). Legacy `/sign/[token]` redirects after login
-- Tracker: [`workflow/in-progress/multi-role-loan-access.md`](./workflow/in-progress/multi-role-loan-access.md)
+- Tracker: [`workflow/in-progress/multi-role-loan-access.md`](./workflow/in-progress/multi-role-loan-access.md). QA: [`workflow/qa/multi-role-loan-access.md`](./workflow/qa/multi-role-loan-access.md).
 
 ## Database
 
@@ -112,4 +125,4 @@ Pre-cutover snapshot: `docs/archive/operations/vercel-production-snapshot.md`
 - `bun run check:all` runs `svelte-check`, Prettier + ESLint, and Vitest.
 - `bun run build:clean` removes `.svelte-kit` and `.vercel/output`, then runs `svelte-kit sync` and `vite build` to avoid stale-cache and symlink build flakes from `adapter-vercel`.
 - Playwright E2E tests run against `bun run dev` on port 4174; the dev server is started and stopped automatically by `playwright.config.ts`.
-- E2E CRUD coverage creates and cleans up investors, transactions, borrowings, and loans (including a preselected investor, a borrower, principal, and due date), then verifies the generated signing link loads `/sign/[token]` successfully. It revealed and validated fixes for number-input validation in `TransactionForm.svelte` and `LoanForm.svelte` (`String(value).trim()` instead of assuming a string from `type="number"` inputs).
+- E2E CRUD coverage creates and cleans up investors, transactions, borrowings, and loans (including a preselected investor, a borrower, principal, and due date), then verifies the generated signing link is authenticated `/loans/{id}/sign` (legacy `/sign/[token]` redirects after login). It revealed and validated fixes for number-input validation in `TransactionForm.svelte` and `LoanForm.svelte` (`String(value).trim()` instead of assuming a string from `type="number"` inputs).

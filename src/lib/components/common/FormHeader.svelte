@@ -24,7 +24,7 @@
 		cancelLabel = 'Cancel'
 	}: Props = $props();
 
-	const formBtnClass = 'h-8 flex-1 px-3 text-xs md:flex-none md:text-sm';
+	const formBtnClass = 'touch-target h-11 flex-1 px-3 text-sm md:h-8 md:flex-none md:text-sm';
 
 	const defaultSubmitLabel = $derived(
 		isSubmitting ? (isEditMode ? 'Updating...' : 'Creating...') : isEditMode ? 'Update' : 'Create'
@@ -40,7 +40,9 @@
 			<p class="mt-1 text-sm text-muted-foreground">{formatText(description)}</p>
 		{/if}
 	</div>
-	<div class="flex w-full items-center gap-1.5 md:w-auto md:gap-2">
+	<div
+		class="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-border/80 bg-card/95 p-3 mobile-sticky-actions-with-tabs backdrop-blur-md md:static md:z-auto md:w-auto md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none"
+	>
 		<Button
 			type="button"
 			variant="outline"
@@ -55,4 +57,6 @@
 			{submitLabel ?? defaultSubmitLabel}
 		</Button>
 	</div>
+	<!-- Spacer so content clears the sticky mobile bar -->
+	<div class="h-16 w-full md:hidden" aria-hidden="true"></div>
 </div>

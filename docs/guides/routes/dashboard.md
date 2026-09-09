@@ -38,6 +38,7 @@ Admin and investor sessions can open `/dashboard`. Data is scoped to the signed-
 ## Edge cases
 
 - Empty activity hides the activity section below `2xl`; the skeleton always shows all four panels (data is unknown while loading).
+- On phone (`<lg`), chrome is the bottom tab bar + top bar (Dashboard is a primary tab). Content uses `pt-mobile-top` / `pb-mobile-tab` clearance.
 - Empty charts show the chart empty state, not the skeleton.
 - Summary stream failure shows `Dashboard failed to load`; chart stream failure shows `Charts failed to load` below a loaded summary.
 - Investor capital uses a horizontal grouped bar chart so names stay readable. Hover a bar for Capital and Interest amounts.

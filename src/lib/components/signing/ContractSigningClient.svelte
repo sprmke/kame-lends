@@ -265,7 +265,7 @@
 		</div>
 
 		<div
-			class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 backdrop-blur xl:hidden"
+			class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 pb-safe backdrop-blur xl:hidden"
 		>
 			<div class="mx-auto flex w-full max-w-7xl items-center gap-3">
 				<div class="min-w-0 flex-1">

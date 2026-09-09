@@ -1,0 +1,42 @@
+.chart-canvas {
+	--color-surface-100: var(--card);
+	--color-surface-200: var(--muted);
+	--color-surface-300: var(--muted);
+	--color-surface-content: var(--card-foreground);
+}
+
+.chart-canvas svg text {
+	font-size: 11px;
+}
+
+.chart-canvas svg .fill-foreground {
+	fill: var(--foreground);
+}
+
+.chart-canvas svg .fill-muted-foreground {
+	fill: var(--muted-foreground);
+}
+
+.chart-tooltip {
+	border-radius: 0.75rem;
+	border: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
+	background: var(--popover);
+	color: var(--popover-foreground);
+	padding: 0.5rem 0.75rem;
+	box-shadow: var(--shadow-elevated);
+	font-size: 0.75rem;
+	line-height: 1.25rem;
+}
+
+.chart-tooltip-title {
+	margin-bottom: 0.375rem;
+	font-weight: 600;
+	color: var(--popover-foreground);
+}
+
+.lc-tooltip-root {
+	--color-surface-100: var(--card);
+	--color-surface-200: var(--muted);
+	--color-surface-300: var(--muted);
+	--color-surface-content: var(--card-foreground);
+}

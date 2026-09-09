@@ -1,6 +1,6 @@
 # Multi-role loan access, authenticated signing, and calendar visibility
 
-**Status:** In progress  
+**Status:** Code complete (residual live QA)  
 **Repo:** kame-lends (SvelteKit at `src/`)  
 **Decisions locked (2026-09-09):**
 
@@ -313,8 +313,8 @@ Page loads: `/investors/[id]`, `/borrowers/[id]` stay owner-scoped for CRM. Part
 ### Phase 0 — Plan and docs (this document)
 
 - [x] Lock decisions D / A / A
-- [ ] Index under `docs/workflow/planned/README.md`
-- [ ] Note in `docs/PROJECT.md` Auth section that multi-role access is planned (link here)
+- [x] Index under `docs/workflow/planned/README.md`
+- [x] Note in `docs/PROJECT.md` Auth section (link to tracker)
 
 ### Phase 1 — Schema + access core
 
@@ -340,16 +340,16 @@ Page loads: `/investors/[id]`, `/borrowers/[id]` stay owner-scoped for CRM. Part
 
 ### Phase 4 — Calendar verify + participant in-app calendar
 
-1. [ ] Dev-calendar QA for create/update/delete sync (manual on test calendar).
+1. [ ] Dev-calendar QA for create/update/delete sync (manual on test calendar). Blocked 2026-09-09: Google SA `invalid_grant: account not found`. See `docs/workflow/qa/multi-role-loan-access.md`.
 2. [x] Restrict Google sync UI/API to admin owners.
 3. [x] Expose in-app calendar on participant list routes.
 4. [x] Align skill + PROJECT.md.
 
 ### Phase 5 — Hardening
 
-1. Full mutation API audit against the permission table.
-2. Playwright: admin create → investor payment edit → borrower read-only → witness sign.
-3. Manual QA checklist in `docs/workflow/qa/`.
+1. [x] Full mutation API audit against the permission table (membership helpers on loan mutators).
+2. [x] Playwright specs updated for authenticated signing (live multi-account run still manual).
+3. [x] Manual QA checklist in `docs/workflow/qa/multi-role-loan-access.md`.
 
 ---
 

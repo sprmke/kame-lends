@@ -130,6 +130,10 @@
 	}
 
 	function handleQuickView(loan: LoanWithInvestors) {
+		if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+			goto(`/loans/${loan.id}`);
+			return;
+		}
 		selectedLoan = loan;
 		isModalOpen = true;
 	}

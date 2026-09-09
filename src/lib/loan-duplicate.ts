@@ -1,0 +1,64 @@
+import type { ContractCustomization } from '$lib/loan-contract-customization';
+import type { InterestPeriodStatus, InterestType, LoanWithInvestors } from '$lib/types';
+
+export interface DuplicateLoanData {
+	name: string;
+	borrowerId: number | null;
+	type: 'Lot Title' | 'OR/CR' | 'Agent';
+	dueDate: string | Date;
+	freeLotSqm: number | null;
+	notes: string | null;
+	contractCustomization?: ContractCustomization;
+	loanInvestors: Array<{
+		investorId: number;
+		amount: string;
+		interestRate: string;
+		interestType: InterestType;
+		sentDate: string | Date;
+		isPaid: boolean;
+		hasMultipleInterest: boolean;
+		interestPeriods?: Array<{
+			dueDate: string | Date;
+			interestRate: string;
+			interestType: InterestType;
+			status: InterestPeriodStatus;
+		}>;
+	}>;
+}
+
+export function createDuplicateDataFromLoan(loan: LoanWithInvestors): DuplicateLoanData {
+	const storedCustomization = loan.loanContract?.customization as ContractCustomization | undefined;
+
+	return {
+		name: loan.loanName,
+		borrowerId: loan.borrowerId,
+		type: loan.type,
+		dueDate: loan.dueDate,
+		freeLotSqm: loan.freeLotSqm,
+		notes: loan.notes,
+		contractCustomization: storedCustomization
+			? {
+					...storedCustomization,
+					borrowerDateSigned: '',
+					lenderDateSigned: {},
+					witness1DateSigned: '',
+					witness2DateSigned: ''
+				}
+			: undefined,
+		loanInvestors: loan.loanInvestors.map((li) => ({
+			investorId: li.investorId,
+			amount: li.amount,
+			interestRate: li.interestRate,
+			interestType: li.interestType,
+			sentDate: li.sentDate,
+			isPaid: li.isPaid,
+			hasMultipleInterest: li.hasMultipleInterest,
+			interestPeriods: li.interestPeriods?.map((ip) => ({
+				dueDate: ip.dueDate,
+				interestRate: ip.interestRate,
+				interestType: ip.interestType,
+				status: ip.status
+			}))
+		}))
+	};
+}

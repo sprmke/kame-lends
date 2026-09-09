@@ -33,18 +33,9 @@
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
 		onSuccess?: () => void | Promise<void>;
-		allowedInvestorIds?: number[] | null;
 	}
 
-	let { loan, kind, open, onOpenChange, onSuccess, allowedInvestorIds = null }: Props = $props();
-
-	const visibleLoanInvestors = $derived(
-		!loan
-			? []
-			: allowedInvestorIds == null
-				? loan.loanInvestors
-				: loan.loanInvestors.filter((li) => allowedInvestorIds.includes(li.investorId))
-	);
+	let { loan, kind, open, onOpenChange, onSuccess }: Props = $props();
 
 	function createPaymentEntry(defaultInvestorId = ''): PaymentEntry {
 		return {
@@ -218,7 +209,7 @@
 
 {#if loan && kind}
 	<Dialog.Root {open} onOpenChange={(next) => !isSubmitting && onOpenChange(next)}>
-		<Dialog.Content class="dashboard-dialog-calendar max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+		<Dialog.Content class="max-h-[90vh] max-w-2xl overflow-y-auto">
 			<form class="space-y-5" onsubmit={handleSubmit}>
 				<Dialog.Header>
 					<div class="flex items-start gap-3 pr-8">

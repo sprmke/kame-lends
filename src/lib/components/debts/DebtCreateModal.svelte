@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as Dialog from '$lib/components/ui/dialog';
+	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import DebtForm from '$lib/components/debts/DebtForm.svelte';
 	import { Loader2 } from 'lucide-svelte';
 	import type { Investor } from '$lib/types';
@@ -40,23 +40,24 @@
 	}
 </script>
 
-<Dialog.Root {open} {onOpenChange}>
-	<Dialog.Content class="dashboard-dialog-wide max-h-[90vh] overflow-y-auto">
-		<Dialog.Header class="sr-only">
-			<Dialog.Title>Create Borrowing</Dialog.Title>
-		</Dialog.Header>
-		{#if isLoading}
-			<div class="flex h-[60vh] flex-col items-center justify-center gap-4">
-				<Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
-			</div>
-		{:else}
-			<DebtForm
-				{investors}
-				{preselectedInvestorId}
-				cancelHref="#"
-				onSuccess={handleSuccess}
-				onCancel={() => onOpenChange(false)}
-			/>
-		{/if}
-	</Dialog.Content>
-</Dialog.Root>
+<ResponsiveModal
+	{open}
+	{onOpenChange}
+	title="Create Borrowing"
+	srOnlyHeader={true}
+	contentClass="dashboard-dialog-wide sm:max-w-4xl"
+>
+	{#if isLoading}
+		<div class="flex h-[60vh] flex-col items-center justify-center gap-4">
+			<Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+		</div>
+	{:else}
+		<DebtForm
+			{investors}
+			{preselectedInvestorId}
+			cancelHref="#"
+			onSuccess={handleSuccess}
+			onCancel={() => onOpenChange(false)}
+		/>
+	{/if}
+</ResponsiveModal>

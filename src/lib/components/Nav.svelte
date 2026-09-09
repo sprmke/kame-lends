@@ -6,39 +6,23 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Avatar from '$lib/components/ui/avatar';
-	import { SHOW_TRANSACTIONS_UI } from '$lib/feature-flags';
+	import MobileTabBar from '$lib/components/layout/MobileTabBar.svelte';
+	import MobileTopBar from '$lib/components/layout/MobileTopBar.svelte';
+	import MobileMoreSheet from '$lib/components/layout/MobileMoreSheet.svelte';
 	import {
-		Home,
-		FileText,
-		Users,
-		Menu,
-		X,
-		ChevronLeft,
-		ChevronRight,
-		ArrowLeftRight,
-		LogOut,
-		Settings,
-		HandCoins,
-		PiggyBank,
-		Eye
-	} from 'lucide-svelte';
-	interface NavItem {
-		title: string;
-		href: string;
-		icon: typeof Home;
-	}
+		buildAppNav,
+		DEFAULT_NAV_CAPABILITIES,
+		isDetailRoute,
+		isNavActive,
+		resolveMobilePageTitle,
+		type NavCapabilities
+	} from '$lib/nav/app-nav';
+	import { ChevronLeft, ChevronRight, Landmark, LogOut } from 'lucide-svelte';
 
 	interface UserInfo {
 		name?: string | null;
 		email?: string | null;
 		image?: string | null;
-	}
-
-	interface NavCapabilities {
-		isAdminWorkspace: boolean;
-		hasInvestments: boolean;
-		hasBorrowed: boolean;
-		hasWitnessed: boolean;
 	}
 
 	interface Props {
@@ -50,41 +34,24 @@
 	let { user = null, navCapabilities = null, children }: Props = $props();
 
 	let isCollapsed = $state(false);
-	let isMobileMenuOpen = $state(false);
+	let moreOpen = $state(false);
 
-	const caps = $derived(
-		navCapabilities ?? {
-			isAdminWorkspace: true,
-			hasInvestments: false,
-			hasBorrowed: false,
-			hasWitnessed: false
-		}
-	);
-
-	const navItems = $derived(
-		(
-			[
-				{ title: 'Dashboard', href: '/dashboard', icon: Home },
-				...(caps.isAdminWorkspace ? [{ title: 'Loans', href: '/loans', icon: FileText }] : []),
-				...(caps.hasInvestments
-					? [{ title: 'Investments', href: '/investments', icon: PiggyBank }]
-					: []),
-				...(caps.hasBorrowed ? [{ title: 'Borrowed', href: '/borrowed', icon: HandCoins }] : []),
-				...(caps.hasWitnessed ? [{ title: 'Witnessed', href: '/witnessed', icon: Eye }] : []),
-				...(caps.isAdminWorkspace && SHOW_TRANSACTIONS_UI
-					? [{ title: 'Transactions', href: '/transactions', icon: ArrowLeftRight }]
-					: []),
-				...(caps.isAdminWorkspace ? [{ title: 'Borrowings', href: '/debts', icon: HandCoins }] : []),
-				...(caps.isAdminWorkspace ? [{ title: 'Investors', href: '/investors', icon: Users }] : []),
-				{ title: 'Settings', href: '/settings', icon: Settings }
-			] as NavItem[]
-		)
-	);
+	const caps = $derived(navCapabilities ?? DEFAULT_NAV_CAPABILITIES);
+	const nav = $derived(buildAppNav(caps));
 
 	const pathname = $derived(page.url.pathname);
 	const isLandingPage = $derived(!user && pathname === '/');
 	const isSignInPage = $derived(!user && pathname === '/signin');
-	const isPublicChromeless = $derived(isLandingPage || isSignInPage);
+	const isSignPage = $derived(pathname.startsWith('/sign/'));
+	const isPublicChromeless = $derived(isLandingPage || isSignInPage || isSignPage);
+
+	const mobileTitle = $derived(resolveMobilePageTitle(pathname));
+	const showMobileBack = $derived(isDetailRoute(pathname));
+	const showMobileLogo = $derived(pathname === '/dashboard' || pathname === '/');
+
+	const moreActive = $derived(
+		moreOpen || nav.moreNavItems.some((item) => isNavActive(pathname, item.href))
+	);
 
 	const userInitials = $derived(
 		user?.name
@@ -96,102 +63,34 @@
 			: (user?.email?.[0]?.toUpperCase() ?? 'U')
 	);
 
-	function isActive(href: string) {
-		return pathname === href || (href !== '/' && pathname.startsWith(href + '/'));
-	}
-
-	$effect(() => {
-		if (isMobileMenuOpen) {
-			document.body.style.overflow = 'hidden';
-		} else {
-			document.body.style.overflow = 'unset';
-		}
-	});
-
 	$effect(() => {
 		void pathname;
-		isMobileMenuOpen = false;
+		moreOpen = false;
 	});
 </script>
 
-{#if !isPublicChromeless}
-	<header class="fixed top-0 right-0 left-0 z-50 h-12 border-b border-border/80 bg-card lg:hidden">
-		<div class="flex h-full items-center justify-between px-3">
-			<a href={user ? '/dashboard' : '/'} class="flex items-center space-x-2">
-				<Logo size="md" showIcon={true} compactIcon={true} />
-			</a>
-			<div class="flex items-center gap-2">
-				{#if !user}
-					<Button href="/signin" size="sm">Login</Button>
-				{:else}
-					<button
-						type="button"
-						class="rounded-md p-2 transition-colors hover:bg-accent"
-						aria-label="Toggle menu"
-						onclick={() => (isMobileMenuOpen = !isMobileMenuOpen)}
-					>
-						{#if isMobileMenuOpen}<X class="h-5 w-5" />{:else}<Menu class="h-5 w-5" />{/if}
-					</button>
-				{/if}
-			</div>
-		</div>
-	</header>
-{/if}
+{#if user && !isPublicChromeless}
+	<MobileTopBar
+		title={mobileTitle}
+		showBack={showMobileBack}
+		showLogo={showMobileLogo && !showMobileBack}
+		backHref=".."
+	/>
 
-{#if user && isMobileMenuOpen}
-	<div
-		class="fixed inset-0 top-12 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden"
-		role="button"
-		tabindex="0"
-		onclick={() => (isMobileMenuOpen = false)}
-		onkeydown={() => {}}
-	></div>
-{/if}
+	<MobileTabBar
+		{pathname}
+		primaryTabs={nav.primaryTabs}
+		{moreActive}
+		onMoreClick={() => (moreOpen = true)}
+	/>
 
-{#if user}
-	<aside
-		class={cn(
-			'fixed right-0 bottom-0 left-0 z-40 flex flex-col border-t border-border/80 bg-card transition-all duration-200 lg:hidden',
-			isMobileMenuOpen ? 'top-12 translate-x-0 opacity-100' : 'top-12 translate-x-full opacity-0'
-		)}
-	>
-		<nav class="flex-1 space-y-0.5 overflow-y-auto p-2">
-			{#each navItems as item}
-				<a
-					href={item.href}
-					data-sveltekit-preload-data="hover"
-					data-sveltekit-preload-code="hover"
-					class={cn(
-						'flex items-center space-x-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors',
-						isActive(item.href)
-							? 'nav-item-active'
-							: 'text-muted-foreground hover:bg-accent hover:text-foreground'
-					)}
-				>
-					<div
-						class={cn(
-							'flex h-7 w-7 items-center justify-center rounded-md',
-							isActive(item.href) ? 'nav-item-active-icon' : 'bg-muted'
-						)}
-					>
-						<item.icon class="h-3.5 w-3.5" />
-					</div>
-					<span>{item.title}</span>
-				</a>
-			{/each}
-		</nav>
-		<div class="mt-auto border-t border-border/80">
-			<form method="POST" action="/auth/signout">
-				<button
-					type="submit"
-					class="flex w-full items-center justify-center space-x-2 px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/5"
-				>
-					<LogOut class="h-4 w-4" />
-					<span>Sign Out</span>
-				</button>
-			</form>
-		</div>
-	</aside>
+	<MobileMoreSheet
+		open={moreOpen}
+		onOpenChange={(open) => (moreOpen = open)}
+		{pathname}
+		moreNavItems={nav.moreNavItems}
+		{user}
+	/>
 
 	<aside
 		class={cn(
@@ -231,7 +130,7 @@
 			</button>
 		</div>
 		<nav class={cn('flex-1 space-y-0.5 overflow-y-auto py-2', isCollapsed ? 'px-1.5' : 'px-2')}>
-			{#each navItems as item}
+			{#each nav.sidebarItems as item (item.id)}
 				<a
 					href={item.href}
 					data-sveltekit-preload-data="hover"
@@ -239,7 +138,7 @@
 					title={isCollapsed ? item.title : undefined}
 					class={cn(
 						'group relative flex items-center rounded-md py-2 text-sm font-medium transition-colors',
-						isActive(item.href)
+						isNavActive(pathname, item.href)
 							? 'nav-item-active'
 							: 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
 						isCollapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5'
@@ -248,7 +147,9 @@
 					<div
 						class={cn(
 							'flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors',
-							isActive(item.href) ? 'nav-item-active-icon' : 'bg-muted/80 group-hover:bg-primary/10'
+							isNavActive(pathname, item.href)
+								? 'nav-item-active-icon'
+								: 'bg-muted/80 group-hover:bg-primary/10'
 						)}
 					>
 						<item.icon class="h-3.5 w-3.5" />
@@ -257,66 +158,64 @@
 				</a>
 			{/each}
 		</nav>
-		{#if user}
-			<div class="border-t border-border/80 p-2">
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger
-						class={cn(
-							'flex w-full items-center rounded-md py-1.5 text-sm font-medium transition-colors hover:bg-accent',
-							isCollapsed ? 'justify-center px-1' : 'gap-2.5 px-2'
-						)}
-					>
-						<Avatar.Root class="h-8 w-8 ring-1 ring-border">
-							<Avatar.Image src={user.image ?? undefined} alt={user.name ?? 'User'} />
-							<Avatar.Fallback class="bg-primary text-xs font-semibold text-primary-foreground">
-								{userInitials}
-							</Avatar.Fallback>
-						</Avatar.Root>
-						{#if !isCollapsed}
-							<div class="min-w-0 flex-1 overflow-hidden text-left">
-								<p class="truncate text-sm font-medium">{user.name ?? 'User'}</p>
-								<p class="truncate text-xs text-muted-foreground">{user.email}</p>
-							</div>
-						{/if}
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end" class="w-56">
-						<DropdownMenu.Label>My Account</DropdownMenu.Label>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item>
-							<form method="POST" action="/auth/signout" class="w-full">
-								<button type="submit" class="flex w-full items-center text-destructive">
-									<LogOut class="mr-2 h-4 w-4" />
-									Sign out
-								</button>
-							</form>
-						</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
-			</div>
-		{/if}
+		<div class="border-t border-border/80 p-2">
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger
+					class={cn(
+						'flex w-full items-center rounded-md py-1.5 text-sm font-medium transition-colors hover:bg-accent',
+						isCollapsed ? 'justify-center px-1' : 'gap-2.5 px-2'
+					)}
+				>
+					<Avatar.Root class="h-8 w-8 ring-1 ring-border">
+						<Avatar.Image src={user.image ?? undefined} alt={user.name ?? 'User'} />
+						<Avatar.Fallback class="bg-primary text-xs font-semibold text-primary-foreground">
+							{userInitials}
+						</Avatar.Fallback>
+					</Avatar.Root>
+					{#if !isCollapsed}
+						<div class="min-w-0 flex-1 overflow-hidden text-left">
+							<p class="truncate text-sm font-medium">{user.name ?? 'User'}</p>
+							<p class="truncate text-xs text-muted-foreground">{user.email}</p>
+						</div>
+					{/if}
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end" class="w-56">
+					<DropdownMenu.Label>My Account</DropdownMenu.Label>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item>
+						<form method="POST" action="/auth/signout" class="w-full">
+							<button type="submit" class="flex w-full items-center text-destructive">
+								<LogOut class="mr-2 h-4 w-4" />
+								Sign out
+							</button>
+						</form>
+					</DropdownMenu.Item>
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
+		</div>
 	</aside>
 {:else if !isPublicChromeless}
 	<header
-		class="fixed top-0 right-0 left-0 z-50 hidden h-14 border-b bg-card/80 backdrop-blur-xl lg:block"
+		class="fixed top-0 right-0 left-0 z-50 h-12 border-b border-border/80 bg-card pt-safe lg:h-14"
 	>
-		<div class="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
-			<a href="/"><Logo size="md" showIcon={true} /></a>
-			<Button href="/signin">Login</Button>
+		<div
+			class="flex h-12 items-center justify-between px-3 lg:mx-auto lg:h-14 lg:max-w-7xl lg:px-6"
+		>
+			<a href="/"><Logo size="md" showIcon={true} compactIcon={true} /></a>
+			<Button href="/signin" size="sm" class="touch-target lg:h-8">Login</Button>
 		</div>
 	</header>
 {/if}
 
 <div
 	class={cn(
-		'min-h-screen transition-[margin] duration-200',
-		isPublicChromeless ? 'pt-0' : 'pt-12',
-		user && !isCollapsed
-			? 'lg:ml-56 lg:pt-0'
-			: user && isCollapsed
-				? 'lg:ml-[4.25rem] lg:pt-0'
-				: isPublicChromeless
-					? 'lg:ml-0 lg:pt-0'
-					: 'lg:ml-0 lg:pt-14'
+		'min-h-screen transition-[margin,padding] duration-200',
+		isPublicChromeless
+			? 'pt-0'
+			: user
+				? 'pt-mobile-top pb-mobile-tab lg:pt-0 lg:pb-0'
+				: 'pt-12 lg:pt-14',
+		user && !isCollapsed ? 'lg:ml-56' : user && isCollapsed ? 'lg:ml-[4.25rem]' : 'lg:ml-0'
 	)}
 >
 	{@render children()}

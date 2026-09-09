@@ -1,0 +1,54 @@
+# Local development database
+
+Optional **Docker Postgres** for fast iteration. It is completely separate from Neon production.
+
+## What is safe
+
+| Action                                            | Touches prod?                                              |
+| ------------------------------------------------- | ---------------------------------------------------------- |
+| `bun run db:local:start` / `db:local:stop`        | No — runs Docker on your machine only                      |
+| `bun run db:local:push` / `db:local:migrate`      | No — `scripts/db/local-db-push.sh` → `127.0.0.1:5433` only |
+| `bun run db:local:studio`                         | No — same hardcoded local URL                              |
+| Pointing `.env.local` at `127.0.0.1:5433`         | No — app reads/writes local DB only                        |
+| Performance code (pool driver, caches, streaming) | No — connection and read-path only; no schema wipes        |
+
+## What can affect prod
+
+Only if **`DATABASE_URL` points at Neon prod** and you run:
+
+- `bun run db:push` (blocked without **`lendwave`** in the command)
+- `bun run db:migrate` (applies pending SQL migrations — review files first)
+- Normal app writes (loans, payments, overdue status updates)
+
+Back up before prod schema work: `bun run backup:neon`.
+
+## Quick start (empty local DB)
+
+```bash
+bun run db:local:start
+bun run db:local:push
+```
+
+`db:local:push` applies `schema.ts` to the empty local database. `db:local:migrate` is an alias. Do not paste shell comments on the same line as the command (e.g. `# only hits …` breaks `drizzle-kit`).
+
+In `.env.local` (your choice — does not change Vercel prod env):
+
+```env
+DATABASE_URL=postgresql://kame_lends:kame_lends@127.0.0.1:5433/kame_lends
+```
+
+Restart `bun dev`.
+
+Local Postgres starts **empty**. It does not copy prod data automatically. To test with real-shaped data, restore a Neon backup into local Postgres manually, or use a Neon **dev branch** URL in `.env.local` (still remote, not prod).
+
+## Stop local Postgres
+
+```bash
+bun run db:local:stop
+```
+
+`docker compose down` keeps the volume. `docker compose down -v` deletes **local** data only.
+
+## Switch back to Neon
+
+Restore your Neon `DATABASE_URL` in `.env.local` and restart dev. Prod data is unchanged.

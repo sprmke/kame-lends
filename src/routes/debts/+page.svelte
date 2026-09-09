@@ -76,6 +76,10 @@
 	}
 
 	function handleQuickView(debt: DebtWithInvestor) {
+		if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+			goto(`/debts/${debt.id}`);
+			return;
+		}
 		selectedDebt = debt;
 		showDebtModal = true;
 	}
