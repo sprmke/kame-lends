@@ -177,5 +177,7 @@
 		investorsWithTransactions={investorGroups}
 		loanId={loanId ?? loan.id}
 		{onRefresh}
+		{readOnly}
+		{editableInvestorIds}
 	/>
 </div>

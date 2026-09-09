@@ -336,7 +336,7 @@ Page loads: `/investors/[id]`, `/borrowers/[id]` stay owner-scoped for CRM. Part
 1. [x] New `/loans/[id]/sign` (+ API) with email/role detection.
 2. [x] Stop token generation; update admin signing panel.
 3. [x] Migrate/redirect legacy `/sign/[token]`.
-4. [ ] Update E2E Playwright for authenticated signing.
+4. [x] Update E2E Playwright for authenticated signing.
 
 ### Phase 4 — Calendar verify + participant in-app calendar
 
