@@ -10,10 +10,18 @@
 		onChange: (value: string | null) => void;
 		disabled?: boolean;
 		label?: string;
+		buttonLabel?: string;
 		idPrefix?: string;
 	}
 
-	let { value = null, onChange, disabled = false, label = 'Valid ID', idPrefix }: Props = $props();
+	let {
+		value = null,
+		onChange,
+		disabled = false,
+		label = 'Valid ID',
+		buttonLabel = 'Upload valid ID',
+		idPrefix
+	}: Props = $props();
 
 	let inputRef = $state<HTMLInputElement | null>(null);
 	let isProcessing = $state(false);
@@ -29,7 +37,9 @@
 		try {
 			onChange(await readValidIdFileAsDataUrl(file));
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : 'Failed to upload valid ID.');
+			toast.error(
+				error instanceof Error ? error.message : `Failed to upload ${label.toLowerCase()}.`
+			);
 		} finally {
 			isProcessing = false;
 		}
@@ -42,7 +52,7 @@
 	{#if value}
 		<div class="space-y-2">
 			<div class="overflow-hidden rounded-md border border-border bg-muted/20">
-				<img src={value} alt="Valid ID preview" class="max-h-48 w-full object-contain" />
+				<img src={value} alt="{label} preview" class="max-h-48 w-full object-contain" />
 			</div>
 			<div class="flex gap-2">
 				<Button
@@ -75,7 +85,7 @@
 			onclick={() => inputRef?.click()}
 		>
 			<Upload class="mr-2 h-4 w-4" />
-			{isProcessing ? 'Processing...' : 'Upload valid ID'}
+			{isProcessing ? 'Processing...' : buttonLabel}
 		</Button>
 	{/if}
 

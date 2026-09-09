@@ -2,9 +2,7 @@
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import * as Card from '$lib/components/ui/card';
-	import DownloadBackupButton from '$lib/components/common/DownloadBackupButton.svelte';
-	import FixReceivedPaymentsButton from '$lib/components/common/FixReceivedPaymentsButton.svelte';
-	import SyncLoanDueDatesButton from '$lib/components/common/SyncLoanDueDatesButton.svelte';
+	import PaymentMethodsManager from '$lib/components/settings/PaymentMethodsManager.svelte';
 	import SyncCalendarButton from '$lib/components/common/SyncCalendarButton.svelte';
 
 	let { data } = $props();
@@ -25,14 +23,13 @@
 	</Card.Root>
 
 	{#if isAdminWorkspace}
+		<PaymentMethodsManager initialMethods={data.paymentMethods ?? []} />
+
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>Data & maintenance</Card.Title>
 			</Card.Header>
 			<Card.Content class="flex flex-wrap gap-1.5 p-3 pt-0">
-				<SyncLoanDueDatesButton />
-				<FixReceivedPaymentsButton />
-				<DownloadBackupButton />
 				<SyncCalendarButton />
 			</Card.Content>
 		</Card.Root>

@@ -13,7 +13,7 @@
 	import { downloadLoanContract } from '$lib/download-loan-contract';
 	import { formatText } from '$lib/format';
 	import { toast } from '$lib/toast';
-	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
+	import type { Borrower, Investor, LoanWithInvestors, PaymentMethod } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 
 	interface Props {
@@ -23,6 +23,7 @@
 		onUpdate?: () => void | Promise<void>;
 		onDuplicate?: (duplicateData: DuplicateLoanData) => void | Promise<void>;
 		startInEditMode?: boolean;
+		readOnly?: boolean;
 	}
 
 	let {
@@ -31,10 +32,12 @@
 		onOpenChange,
 		onUpdate,
 		onDuplicate,
-		startInEditMode = false
+		startInEditMode = false,
+		readOnly = false
 	}: Props = $props();
 
 	let loan = $state<LoanWithInvestors | null>(initialLoan);
+	let paymentMethods = $state<PaymentMethod[]>([]);
 	let loanFetchKey = $state(0);
 	let isEditing = $state(false);
 	let showDeleteDialog = $state(false);
@@ -65,7 +68,12 @@
 		try {
 			const response = await fetch(`/api/loans/${loanId}`);
 			if (!response.ok) throw new Error('Failed to fetch loan');
-			loan = (await response.json()) as LoanWithInvestors;
+			const payload = (await response.json()) as LoanWithInvestors & {
+				paymentMethods?: PaymentMethod[];
+			};
+			const { paymentMethods: nextMethods, ...rest } = payload;
+			loan = rest;
+			paymentMethods = Array.isArray(nextMethods) ? nextMethods : [];
 			loanFetchKey += 1;
 		} catch (error) {
 			console.error('Error fetching loan:', error);
@@ -199,16 +207,20 @@
 							onDelete={() => (showDeleteDialog = true)}
 							onClose={() => onOpenChange(false)}
 							onPayBalance={handlePayBalance}
-							showPayBalance={isPartiallyFunded}
+							showPayBalance={!readOnly && isPartiallyFunded}
 							onComplete={() => (showCompleteDialog = true)}
-							showComplete={isOverdue}
+							showComplete={!readOnly && isOverdue}
 							onDuplicate={handleDuplicate}
-							showDuplicate={true}
+							showDuplicate={!readOnly}
 							onDownloadContract={handleDownloadContract}
 							showDownloadContract={true}
 							{isDownloadingContract}
-							onAddPayment={() => (quickPaymentKind = 'payment')}
-							onAddReceivedPayment={() => (quickPaymentKind = 'received')}
+							canEdit={!readOnly}
+							canDelete={!readOnly}
+							onAddPayment={readOnly ? undefined : () => (quickPaymentKind = 'payment')}
+							onAddReceivedPayment={
+								readOnly ? undefined : () => (quickPaymentKind = 'received')
+							}
 						/>
 					</div>
 				</Dialog.Header>
@@ -236,23 +248,29 @@
 							showHeader={false}
 							onRefresh={refreshLoan}
 							loanId={modalLoan.id}
+							readOnly={readOnly}
+							{paymentMethods}
 						/>
-						<LoanSigningSection loanId={modalLoan.id} refreshKey={loanFetchKey} />
+						{#if !readOnly}
+							<LoanSigningSection loanId={modalLoan.id} refreshKey={loanFetchKey} />
+						{/if}
 					</div>
 				{/if}
 			</div>
 		</Dialog.Content>
 	</Dialog.Root>
 
-	<LoanQuickPaymentDialog
-		loan={modalLoan}
-		kind={quickPaymentKind}
-		open={quickPaymentKind !== null}
-		onOpenChange={(nextOpen) => {
-			if (!nextOpen) quickPaymentKind = null;
-		}}
-		onSuccess={refreshLoan}
-	/>
+	{#if !readOnly}
+		<LoanQuickPaymentDialog
+			loan={modalLoan}
+			kind={quickPaymentKind}
+			open={quickPaymentKind !== null}
+			onOpenChange={(nextOpen) => {
+				if (!nextOpen) quickPaymentKind = null;
+			}}
+			onSuccess={refreshLoan}
+		/>
+	{/if}
 
 	<AlertDialog.Root open={showDeleteDialog} onOpenChange={(v) => (showDeleteDialog = v)}>
 		<AlertDialog.Content>

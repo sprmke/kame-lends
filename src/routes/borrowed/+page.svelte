@@ -552,6 +552,7 @@
 			onDuplicate={async (duplicateData) => {
 				await openCreateModal(duplicateData);
 			}}
+			readOnly={!canManage}
 		/>
 
 		<LoanQuickPaymentDialog

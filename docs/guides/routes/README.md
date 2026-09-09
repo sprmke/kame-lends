@@ -9,4 +9,6 @@ Per-page behavior specs mirroring SvelteKit URLs under `src/routes/`.
 | `/investments`     | [investments.md](./investments.md) | Documented |
 | `/borrowed`        | [borrowed.md](./borrowed.md)       | Documented |
 | `/witnessed`       | [witnessed.md](./witnessed.md)     | Documented |
+| `/settings`        | [settings.md](./settings.md)       | Documented |
+| `/loans/[id]`       | [loans-detail.md](./loans-detail.md) | Documented |
 | `/loans/[id]/sign` | [sign.md](./sign.md)               | Documented |

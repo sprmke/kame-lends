@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { loans } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { getLoanAccessContext } from '$lib/server/access-control';
+import { listPaymentMethodsForBorrowerLoanView } from '$lib/server/payment-methods';
 import { requireUserSession } from '$lib/server/request-auth';
 
 async function fetchOne(id: number, userId: string) {
@@ -18,7 +19,8 @@ async function fetchOne(id: number, userId: string) {
 		}
 	});
 	if (!entity) return null;
-	return { entity, access };
+	const paymentMethods = await listPaymentMethodsForBorrowerLoanView(entity.userId, access);
+	return { entity, access, paymentMethods };
 }
 
 export const load: PageServerLoad = async (event) => {

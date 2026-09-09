@@ -383,6 +383,25 @@ export const users = pgTable('user', {
 	role: userRoleEnum('role').notNull().default('admin')
 });
 
+/** Bank / QR details for receiving loan payments. Visible to borrowers on loan detail only. */
+export const paymentMethods = pgTable(
+	'payment_methods',
+	{
+		id: serial('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		bankName: text('bank_name').notNull(),
+		accountNumber: text('account_number').notNull(),
+		qrCodeUrl: text('qr_code_url'),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at').defaultNow().notNull()
+	},
+	(table) => ({
+		userIdIdx: index('payment_methods_user_id_idx').on(table.userId)
+	})
+);
+
 export const accounts = pgTable(
 	'account',
 	{
@@ -592,7 +611,15 @@ export const usersRelations = relations(users, ({ many }) => ({
 	borrowers: many(borrowers),
 	loans: many(loans),
 	transactions: many(transactions),
-	debts: many(debts)
+	debts: many(debts),
+	paymentMethods: many(paymentMethods)
+}));
+
+export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({
+	user: one(users, {
+		fields: [paymentMethods.userId],
+		references: [users.id]
+	})
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({

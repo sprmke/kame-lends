@@ -8,6 +8,7 @@
 
 	const loan = $derived(data.entity as LoanWithInvestors);
 	const access = $derived(data.access);
+	const paymentMethods = $derived(data.paymentMethods ?? []);
 	const title = $derived(loan?.loanName ?? 'Loan');
 
 	let investors = $state<Investor[]>([]);
@@ -26,7 +27,7 @@
 			]);
 			const investorData = await investorRes.json();
 			const borrowerData = await borrowerRes.json();
-			if (Array.isArray(investorData)) investors = investorData;
+		if (Array.isArray(investorData)) investors = investorData;
 			if (Array.isArray(borrowerData)) borrowers = borrowerData;
 		} catch (error) {
 			console.error('Failed to load form data', error);
@@ -39,5 +40,5 @@
 <svelte:head><title>{title}</title></svelte:head>
 
 <DashboardPage>
-	<LoanDetailClient {loan} {investors} {borrowers} {loadingFormData} {access} />
+	<LoanDetailClient {loan} {investors} {borrowers} {loadingFormData} {access} {paymentMethods} />
 </DashboardPage>

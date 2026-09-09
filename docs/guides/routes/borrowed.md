@@ -9,9 +9,13 @@ Lists loans where the signed-in user is the borrower (`borrowers.borrower_user_i
 
 Read-only list and loan detail. Sign CTA when a borrower signature slot is open: `/loans/[id]/sign`.
 
+Loan detail shows the loan owner’s **payment methods** (bank name, account number, QR) when the owner has configured them in Settings. Owners, investors, and witnesses do not see this section.
+
 ## Load
 
 [`src/routes/borrowed/+page.server.ts`](../../../src/routes/borrowed/+page.server.ts) → `getCachedLoansByScope(userId, 'borrowed', 'list')`.
+
+Loan modal refresh uses `GET /api/loans/[id]`, which includes `paymentMethods` only for borrower membership.
 
 ## Permissions
 

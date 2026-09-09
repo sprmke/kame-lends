@@ -1,0 +1,242 @@
+<script lang="ts">
+	import * as Card from '$lib/components/ui/card';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
+	import ValidIdUpload from '$lib/components/common/ValidIdUpload.svelte';
+	import { toast } from '$lib/toast';
+	import { normalizeValidIdUrl } from '$lib/valid-id-document';
+	import type { PaymentMethod } from '$lib/types';
+	import { Pencil, Plus, Trash2 } from 'lucide-svelte';
+
+	interface Props {
+		initialMethods?: PaymentMethod[];
+	}
+
+	let { initialMethods = [] }: Props = $props();
+
+	let methods = $state<PaymentMethod[]>([...initialMethods]);
+	let isFormOpen = $state(false);
+	let editingId = $state<number | null>(null);
+	let bankName = $state('');
+	let accountNumber = $state('');
+	let qrCodeUrl = $state<string | null>(null);
+	let isSubmitting = $state(false);
+	let deleteTarget = $state<PaymentMethod | null>(null);
+	let isDeleting = $state(false);
+	let fieldErrors = $state<Record<string, string>>({});
+
+	function resetForm() {
+		editingId = null;
+		bankName = '';
+		accountNumber = '';
+		qrCodeUrl = null;
+		fieldErrors = {};
+		isFormOpen = false;
+	}
+
+	function openCreate() {
+		editingId = null;
+		bankName = '';
+		accountNumber = '';
+		qrCodeUrl = null;
+		fieldErrors = {};
+		isFormOpen = true;
+	}
+
+	function openEdit(method: PaymentMethod) {
+		editingId = method.id;
+		bankName = method.bankName;
+		accountNumber = method.accountNumber;
+		qrCodeUrl = method.qrCodeUrl;
+		fieldErrors = {};
+		isFormOpen = true;
+	}
+
+	function validate() {
+		const next: Record<string, string> = {};
+		if (!bankName.trim()) next.bankName = 'Required';
+		if (!accountNumber.trim()) next.accountNumber = 'Required';
+		fieldErrors = next;
+		return Object.keys(next).length === 0;
+	}
+
+	async function handleSubmit(event: Event) {
+		event.preventDefault();
+		if (!validate()) return;
+
+		isSubmitting = true;
+		try {
+			const isEdit = editingId != null;
+			const url = isEdit ? `/api/payment-methods/${editingId}` : '/api/payment-methods';
+			const response = await fetch(url, {
+				method: isEdit ? 'PUT' : 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					bankName: bankName.trim(),
+					accountNumber: accountNumber.trim(),
+					qrCodeUrl: normalizeValidIdUrl(qrCodeUrl)
+				})
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error || 'Save failed');
+			}
+
+			const saved = (await response.json()) as PaymentMethod;
+			if (isEdit) {
+				methods = methods.map((m) => (m.id === saved.id ? saved : m));
+				toast.success('Payment method updated');
+			} else {
+				methods = [...methods, saved];
+				toast.success('Payment method added');
+			}
+			resetForm();
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'Save failed');
+		} finally {
+			isSubmitting = false;
+		}
+	}
+
+	async function handleDelete() {
+		if (!deleteTarget) return;
+		isDeleting = true;
+		try {
+			const response = await fetch(`/api/payment-methods/${deleteTarget.id}`, {
+				method: 'DELETE'
+			});
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error || 'Delete failed');
+			}
+			methods = methods.filter((m) => m.id !== deleteTarget!.id);
+			toast.success('Payment method deleted');
+			deleteTarget = null;
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'Delete failed');
+		} finally {
+			isDeleting = false;
+		}
+	}
+</script>
+
+<Card.Root>
+	<Card.Header class="flex flex-row items-center justify-between gap-2 space-y-0">
+		<Card.Title>Payment methods</Card.Title>
+		{#if !isFormOpen}
+			<Button type="button" variant="outline" size="sm" onclick={openCreate}>
+				<Plus class="mr-1 h-3.5 w-3.5" />
+				Add
+			</Button>
+		{/if}
+	</Card.Header>
+	<Card.Content class="space-y-3 p-3 pt-0">
+		{#if isFormOpen}
+			<form class="space-y-3 rounded-md border border-border p-3" onsubmit={handleSubmit}>
+				<div class="space-y-1.5">
+					<Label for="pm-bank-name">Bank name</Label>
+					<Input id="pm-bank-name" bind:value={bankName} disabled={isSubmitting} />
+					{#if fieldErrors.bankName}
+						<p class="text-destructive text-xs">{fieldErrors.bankName}</p>
+					{/if}
+				</div>
+				<div class="space-y-1.5">
+					<Label for="pm-account-number">Account number</Label>
+					<Input id="pm-account-number" bind:value={accountNumber} disabled={isSubmitting} />
+					{#if fieldErrors.accountNumber}
+						<p class="text-destructive text-xs">{fieldErrors.accountNumber}</p>
+					{/if}
+				</div>
+				<ValidIdUpload
+					label="QR code"
+					buttonLabel="Upload QR code"
+					value={qrCodeUrl}
+					onChange={(value) => (qrCodeUrl = value)}
+					disabled={isSubmitting}
+					idPrefix="pm-qr"
+				/>
+				<div class="flex flex-wrap gap-1.5">
+					<Button type="submit" size="sm" disabled={isSubmitting}>
+						{isSubmitting ? 'Saving...' : editingId != null ? 'Save' : 'Add'}
+					</Button>
+					<Button type="button" variant="ghost" size="sm" disabled={isSubmitting} onclick={resetForm}>
+						Cancel
+					</Button>
+				</div>
+			</form>
+		{/if}
+
+		{#if methods.length === 0 && !isFormOpen}
+			<p class="text-muted-foreground text-sm">No payment methods</p>
+		{:else}
+			<ul class="space-y-2">
+				{#each methods as method (method.id)}
+					<li class="flex items-start justify-between gap-2 rounded-md border border-border p-2.5">
+						<div class="min-w-0 space-y-1">
+							<p class="text-sm font-medium">{method.bankName}</p>
+							<p class="text-muted-foreground text-sm break-all">{method.accountNumber}</p>
+							{#if method.qrCodeUrl}
+								<img
+									src={method.qrCodeUrl}
+									alt="QR code"
+									class="mt-1 max-h-20 rounded border border-border object-contain"
+								/>
+							{/if}
+						</div>
+						<div class="flex shrink-0 gap-1">
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon"
+								class="h-8 w-8"
+								aria-label="Edit payment method"
+								onclick={() => openEdit(method)}
+							>
+								<Pencil class="h-3.5 w-3.5" />
+							</Button>
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon"
+								class="h-8 w-8"
+								aria-label="Delete payment method"
+								onclick={() => (deleteTarget = method)}
+							>
+								<Trash2 class="h-3.5 w-3.5" />
+							</Button>
+						</div>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</Card.Content>
+</Card.Root>
+
+<AlertDialog.Root
+	open={deleteTarget !== null}
+	onOpenChange={(open) => {
+		if (!open) deleteTarget = null;
+	}}
+>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Delete payment method</AlertDialog.Title>
+			<AlertDialog.Description>
+				Remove {deleteTarget?.bankName ?? 'this'} account from your payment methods?
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel disabled={isDeleting}>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Action
+				class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+				disabled={isDeleting}
+				onclick={handleDelete}
+			>
+				{isDeleting ? 'Deleting...' : 'Delete'}
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
