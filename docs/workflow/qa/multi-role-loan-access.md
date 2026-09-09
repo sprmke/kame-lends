@@ -6,7 +6,8 @@ Use Neon branch **`dev-sveltekit-migration`** only. Do not point at prod.
 
 - [x] `bun run test:unit` (access-control + unit suite)
 - [x] Migration `db/migrations/0013_multi_role_loan_access.sql` applied on `dev-sveltekit-migration`
-- [x] E2E specs updated for authenticated `/loans/[id]/sign` (run with Google e2e session when secrets allow)
+- [x] E2E specs updated for authenticated `/loans/[id]/sign`
+- [x] `bun run test:e2e -- --project=multi-role` (investor/borrower/witness session switch + edit denials)
 
 ## Google Calendar (admin shared calendar)
 

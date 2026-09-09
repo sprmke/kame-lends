@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
 	const mockInnerJoin = vi.fn();
 	const mockFrom = vi.fn();
 	const mockSelect = vi.fn();
+	const mockFindFirst = vi.fn();
 
 	mockLimit.mockReturnValue([]);
 	mockWhere.mockReturnValue({ limit: mockLimit });
@@ -19,13 +20,27 @@ const mocks = vi.hoisted(() => {
 	mockInnerJoin.mockReturnValue(joinTarget);
 	mockFrom.mockReturnValue(joinTarget);
 	mockSelect.mockReturnValue({ from: mockFrom });
+	mockFindFirst.mockResolvedValue(null);
 
-	return { mockLimit, mockWhere, mockLeftJoin, mockInnerJoin, mockFrom, mockSelect };
+	return {
+		mockLimit,
+		mockWhere,
+		mockLeftJoin,
+		mockInnerJoin,
+		mockFrom,
+		mockSelect,
+		mockFindFirst
+	};
 });
 
 vi.mock('$lib/server/db', () => ({
 	db: {
-		select: mocks.mockSelect
+		select: mocks.mockSelect,
+		query: {
+			users: {
+				findFirst: mocks.mockFindFirst
+			}
+		}
 	}
 }));
 
@@ -49,6 +64,7 @@ describe('access-control', () => {
 		mocks.mockInnerJoin.mockReturnValue(joinTarget);
 		mocks.mockFrom.mockReturnValue(joinTarget);
 		mocks.mockSelect.mockReturnValue({ from: mocks.mockFrom });
+		mocks.mockFindFirst.mockResolvedValue(null);
 	});
 
 	it('grants loan access when a matching row exists', async () => {
