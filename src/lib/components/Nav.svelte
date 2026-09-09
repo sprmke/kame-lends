@@ -16,10 +16,11 @@
 		ChevronLeft,
 		ChevronRight,
 		ArrowLeftRight,
-		Landmark,
 		LogOut,
 		Settings,
-		HandCoins
+		HandCoins,
+		PiggyBank,
+		Eye
 	} from 'lucide-svelte';
 	interface NavItem {
 		title: string;
@@ -33,26 +34,52 @@
 		image?: string | null;
 	}
 
+	interface NavCapabilities {
+		isAdminWorkspace: boolean;
+		hasInvestments: boolean;
+		hasBorrowed: boolean;
+		hasWitnessed: boolean;
+	}
+
 	interface Props {
 		user?: UserInfo | null;
+		navCapabilities?: NavCapabilities | null;
 		children: Snippet;
 	}
 
-	let { user = null, children }: Props = $props();
+	let { user = null, navCapabilities = null, children }: Props = $props();
 
 	let isCollapsed = $state(false);
 	let isMobileMenuOpen = $state(false);
 
-	const navItems = [
-		{ title: 'Dashboard', href: '/dashboard', icon: Home },
-		{ title: 'Loans', href: '/loans', icon: FileText },
-		...(SHOW_TRANSACTIONS_UI
-			? [{ title: 'Transactions', href: '/transactions', icon: ArrowLeftRight }]
-			: []),
-		{ title: 'Borrowings', href: '/debts', icon: HandCoins },
-		{ title: 'Investors', href: '/investors', icon: Users },
-		{ title: 'Settings', href: '/settings', icon: Settings }
-	] satisfies NavItem[];
+	const caps = $derived(
+		navCapabilities ?? {
+			isAdminWorkspace: true,
+			hasInvestments: false,
+			hasBorrowed: false,
+			hasWitnessed: false
+		}
+	);
+
+	const navItems = $derived(
+		(
+			[
+				{ title: 'Dashboard', href: '/dashboard', icon: Home },
+				...(caps.isAdminWorkspace ? [{ title: 'Loans', href: '/loans', icon: FileText }] : []),
+				...(caps.hasInvestments
+					? [{ title: 'Investments', href: '/investments', icon: PiggyBank }]
+					: []),
+				...(caps.hasBorrowed ? [{ title: 'Borrowed', href: '/borrowed', icon: HandCoins }] : []),
+				...(caps.hasWitnessed ? [{ title: 'Witnessed', href: '/witnessed', icon: Eye }] : []),
+				...(caps.isAdminWorkspace && SHOW_TRANSACTIONS_UI
+					? [{ title: 'Transactions', href: '/transactions', icon: ArrowLeftRight }]
+					: []),
+				...(caps.isAdminWorkspace ? [{ title: 'Borrowings', href: '/debts', icon: HandCoins }] : []),
+				...(caps.isAdminWorkspace ? [{ title: 'Investors', href: '/investors', icon: Users }] : []),
+				{ title: 'Settings', href: '/settings', icon: Settings }
+			] as NavItem[]
+		)
+	);
 
 	const pathname = $derived(page.url.pathname);
 	const isLandingPage = $derived(!user && pathname === '/');

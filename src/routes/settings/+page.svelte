@@ -8,16 +8,13 @@
 	import SyncCalendarButton from '$lib/components/common/SyncCalendarButton.svelte';
 
 	let { data } = $props();
+	const isAdminWorkspace = $derived(Boolean(data.isAdminWorkspace));
 </script>
 
 <svelte:head><title>Settings</title></svelte:head>
 
 <DashboardPage>
-	<PageHeader
-		title="Settings"
-		description="Maintenance tools and data exports for your workspace."
-		showPriceToggle={false}
-	/>
+	<PageHeader title="Settings" description="" showPriceToggle={false} />
 
 	<Card.Root>
 		<Card.Content class="space-y-1.5 p-3">
@@ -27,20 +24,17 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Data & maintenance</Card.Title>
-			<Card.Description class="max-w-3xl">
-				Fix Payments inserts missing received-payment rows for completed interest periods and
-				removes legacy orphan rows for multi-interest loans. It restores period links before
-				deleting anything.
-			</Card.Description>
-		</Card.Header>
-		<Card.Content class="flex flex-wrap gap-1.5 p-3 pt-0">
-			<SyncLoanDueDatesButton />
-			<FixReceivedPaymentsButton />
-			<DownloadBackupButton />
-			<SyncCalendarButton />
-		</Card.Content>
-	</Card.Root>
+	{#if isAdminWorkspace}
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Data & maintenance</Card.Title>
+			</Card.Header>
+			<Card.Content class="flex flex-wrap gap-1.5 p-3 pt-0">
+				<SyncLoanDueDatesButton />
+				<FixReceivedPaymentsButton />
+				<DownloadBackupButton />
+				<SyncCalendarButton />
+			</Card.Content>
+		</Card.Root>
+	{/if}
 </DashboardPage>

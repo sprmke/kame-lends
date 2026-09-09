@@ -68,9 +68,12 @@ SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, i
 
 - Google sign-in via Auth.js
 - Custom UI: `/signin` (`src/routes/signin/`). Auth.js endpoints stay at `/auth/*` (callback, session, csrf). Do not host the custom page at `/auth/signin` (Auth.js owns that path).
-- `admin`: full workspace
-- `investor`: shared loans via `investors.investor_user_id`
-- **Planned:** borrower/witness login linkage, membership-scoped menus, authenticated signing (no token URLs), in-app calendar for all loan parties. See [`workflow/planned/multi-role-loan-access.md`](./workflow/planned/multi-role-loan-access.md).
+- `admin`: workspace owner (full edit on owned loans)
+- `investor` / `borrower` / `witness`: party roles linked via `investors.investor_user_id`, `borrowers.borrower_user_id`, `witnesses.witness_user_id`
+- Loan access is membership-based (`src/lib/server/access-control.ts`): owner full edit; investor own allocation/payments; borrower/witness read-only
+- Menus: `/loans` (owner), `/investments`, `/borrowed`, `/witnessed`
+- Contract signing: authenticated `/loans/[id]/sign` (Google email must match party). Legacy `/sign/[token]` redirects after login
+- Tracker: [`workflow/in-progress/multi-role-loan-access.md`](./workflow/in-progress/multi-role-loan-access.md)
 
 ## Database
 

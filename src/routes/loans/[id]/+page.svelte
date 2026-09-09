@@ -7,6 +7,7 @@
 	let { data } = $props();
 
 	const loan = $derived(data.entity as LoanWithInvestors);
+	const access = $derived(data.access);
 	const title = $derived(loan?.loanName ?? 'Loan');
 
 	let investors = $state<Investor[]>([]);
@@ -14,6 +15,10 @@
 	let loadingFormData = $state(true);
 
 	onMount(async () => {
+		if (!access?.canAdminEdit) {
+			loadingFormData = false;
+			return;
+		}
 		try {
 			const [investorRes, borrowerRes] = await Promise.all([
 				fetch('/api/investors?simple=true'),
@@ -34,5 +39,5 @@
 <svelte:head><title>{title}</title></svelte:head>
 
 <DashboardPage>
-	<LoanDetailClient {loan} {investors} {borrowers} {loadingFormData} />
+	<LoanDetailClient {loan} {investors} {borrowers} {loadingFormData} {access} />
 </DashboardPage>

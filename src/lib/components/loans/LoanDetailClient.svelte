@@ -15,17 +15,21 @@
 	import { encodeJsonForUrl } from '$lib/base64-url';
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
+	import type { LoanAccessContext } from '$lib/loan-access';
 
 	interface Props {
 		loan: LoanWithInvestors;
 		investors: Investor[];
 		borrowers: Borrower[];
 		loadingFormData: boolean;
+		access: LoanAccessContext;
 	}
 
-	let { loan, investors, borrowers, loadingFormData }: Props = $props();
+	let { loan, investors, borrowers, loadingFormData, access }: Props = $props();
 
-	let isEditing = $state(page.url.searchParams.get('edit') === '1');
+	let isEditing = $state(
+		page.url.searchParams.get('edit') === '1' && access.canAdminEdit
+	);
 	let isDownloadingContract = $state(false);
 	let quickPaymentKind = $state<LoanQuickPaymentKind | null>(null);
 
@@ -116,38 +120,64 @@
 	<div class="dashboard-stack">
 		<DetailHeader
 			title={loan.loanName}
-			description="View and manage loan details"
-			backLabel="Back to Loans"
+			description=""
+			backLabel="Back"
 			onBack={() => goto('/loans')}
 			onEdit={() => (isEditing = true)}
 			onDelete={handleDelete}
+			canEdit={access.canAdminEdit}
+			canDelete={access.canAdminEdit}
 			deleteTitle="Delete Loan"
-			deleteDescription="Are you sure you want to delete this loan? This action cannot be undone and will remove all associated investor allocations."
-			showPayBalance={isPartiallyFunded}
+			deleteDescription="Delete this loan and its investor allocations?"
+			showPayBalance={access.canAdminEdit && isPartiallyFunded}
 			onPayBalance={handlePayBalance}
-			showComplete={isOverdue}
+			showComplete={access.canAdminEdit && isOverdue}
 			onComplete={handleComplete}
-			showDuplicate={true}
+			showDuplicate={access.canAdminEdit}
 			onDuplicate={handleDuplicate}
 			showDownloadContract={true}
 			onDownloadContract={handleDownloadContract}
 			{isDownloadingContract}
-			onAddPayment={() => (quickPaymentKind = 'payment')}
-			onAddReceivedPayment={() => (quickPaymentKind = 'received')}
+			onAddPayment={
+				access.canAdminEdit || access.editableInvestorIds.length > 0
+					? () => (quickPaymentKind = 'payment')
+					: undefined
+			}
+			onAddReceivedPayment={
+				access.canAdminEdit || access.editableInvestorIds.length > 0
+					? () => (quickPaymentKind = 'received')
+					: undefined
+			}
 		/>
 
-		<LoanSigningSection loanId={loan.id} highlight={highlightSigning} />
+		{#if access.canAdminEdit}
+			<LoanSigningSection loanId={loan.id} highlight={highlightSigning} />
+		{:else if access.signingPartyRoles.length > 0}
+			<div class="flex justify-end">
+				<Button href={`/loans/${loan.id}/sign`} variant="outline" size="sm">Sign contract</Button>
+			</div>
+		{/if}
 
-		<LoanDetailContent {loan} showHeader={false} onRefresh={handleRefresh} loanId={loan.id} />
-
-		<LoanQuickPaymentDialog
+		<LoanDetailContent
 			{loan}
-			kind={quickPaymentKind}
-			open={quickPaymentKind !== null}
-			onOpenChange={(open) => {
-				if (!open) quickPaymentKind = null;
-			}}
-			onSuccess={handleRefresh}
+			showHeader={false}
+			onRefresh={handleRefresh}
+			loanId={loan.id}
+			readOnly={!access.canAdminEdit}
+			editableInvestorIds={access.editableInvestorIds}
 		/>
+
+		{#if access.canAdminEdit || access.editableInvestorIds.length > 0}
+			<LoanQuickPaymentDialog
+				{loan}
+				kind={quickPaymentKind}
+				open={quickPaymentKind !== null}
+				onOpenChange={(open) => {
+					if (!open) quickPaymentKind = null;
+				}}
+				onSuccess={handleRefresh}
+				allowedInvestorIds={access.canAdminEdit ? null : access.editableInvestorIds}
+			/>
+		{/if}
 	</div>
 {/if}

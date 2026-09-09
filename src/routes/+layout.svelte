@@ -27,6 +27,9 @@
 	const streamableRoutes = new Set([
 		'/dashboard',
 		'/loans',
+		'/investments',
+		'/borrowed',
+		'/witnessed',
 		'/investors',
 		'/debts',
 		'/transactions'
@@ -57,7 +60,7 @@
 
 <NavigationProgress />
 
-<Nav user={data.session?.user}>
+<Nav user={data.session?.user} navCapabilities={data.navCapabilities}>
 	<PriceVisibilityShell>
 		{#if showDashboardSkeleton}
 			<div class="dashboard-page">

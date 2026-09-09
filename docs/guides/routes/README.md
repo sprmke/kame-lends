@@ -1,0 +1,11 @@
+# Route guides
+
+Per-page behavior specs mirroring SvelteKit URLs under `src/routes/`.
+
+| Route              | Guide                              | Status     |
+| ------------------ | ---------------------------------- | ---------- |
+| `/dashboard`       | [dashboard.md](./dashboard.md)     | Documented |
+| `/investments`     | [investments.md](./investments.md) | Documented |
+| `/borrowed`        | [borrowed.md](./borrowed.md)       | Documented |
+| `/witnessed`       | [witnessed.md](./witnessed.md)     | Documented |
+| `/loans/[id]/sign` | [sign.md](./sign.md)               | Documented |

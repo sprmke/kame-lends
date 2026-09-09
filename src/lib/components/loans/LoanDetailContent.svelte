@@ -21,9 +21,18 @@
 		showHeader?: boolean;
 		onRefresh?: () => void | Promise<void>;
 		loanId?: number;
+		readOnly?: boolean;
+		editableInvestorIds?: number[];
 	}
 
-	let { loan, showHeader = true, onRefresh, loanId }: Props = $props();
+	let {
+		loan,
+		showHeader = true,
+		onRefresh,
+		loanId,
+		readOnly = false,
+		editableInvestorIds = []
+	}: Props = $props();
 
 	const totalPrincipal = $derived(calculateTotalPrincipal(loan.loanInvestors));
 	const totalInterest = $derived(calculateTotalInterest(loan.loanInvestors));
