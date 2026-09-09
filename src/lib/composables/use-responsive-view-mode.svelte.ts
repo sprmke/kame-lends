@@ -12,7 +12,7 @@ export function createResponsiveViewMode(
   const {
     defaultDesktopMode = "table",
     defaultMobileMode = "cards",
-    mobileBreakpoint = 768,
+    mobileBreakpoint = 1024,
   } = options;
 
   let isReady = $state(false);

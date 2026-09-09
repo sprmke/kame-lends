@@ -210,7 +210,12 @@
 </script>
 
 <div class="flex flex-col gap-3">
-	<Button variant="ghost" size="sm" onclick={onBack} class="touch-target -ml-2 w-fit">
+	<Button
+		variant="ghost"
+		size="sm"
+		onclick={onBack}
+		class="touch-target -ml-2 hidden w-fit lg:inline-flex"
+	>
 		<ArrowLeft class="mr-2 h-4 w-4" />
 		{backLabel}
 	</Button>

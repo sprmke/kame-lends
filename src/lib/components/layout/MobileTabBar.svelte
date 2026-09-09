@@ -37,7 +37,7 @@
 				data-sveltekit-preload-code="hover"
 				aria-current={active ? 'page' : undefined}
 				class={cn(
-					'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors',
+					'flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors',
 					active ? 'text-primary' : 'text-muted-foreground'
 				)}
 			>
@@ -55,7 +55,7 @@
 		<button
 			type="button"
 			class={cn(
-				'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors',
+				'flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors',
 				moreActive ? 'text-primary' : 'text-muted-foreground'
 			)}
 			aria-label="More"

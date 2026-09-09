@@ -31,7 +31,7 @@
 	/>
 
 	{#if calendar.viewMode === 'week' || calendar.viewMode === 'month'}
-		<div class="rounded-lg bg-muted/30 py-1 text-center text-xs text-muted-foreground md:hidden">
+		<div class="hidden rounded-lg bg-muted/30 py-1 text-center text-xs text-muted-foreground lg:block">
 			← Swipe to scroll horizontally →
 		</div>
 	{/if}

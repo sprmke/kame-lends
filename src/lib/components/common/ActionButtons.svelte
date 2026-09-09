@@ -34,7 +34,8 @@
 	}: Props = $props();
 
 	const isCardSize = $derived(size === 'md');
-	const tableActionButtonClass = 'h-7 text-xs px-2 gap-1 [&_svg]:size-3';
+	const tableActionButtonClass =
+		'touch-target h-9 text-xs px-2.5 gap-1 [&_svg]:size-3.5 lg:h-7 lg:px-2 lg:[&_svg]:size-3';
 	const cardActionButtonClass =
 		'h-9 min-h-9 w-full flex-1 rounded-none px-4 text-xs font-medium gap-1.5 hover:bg-muted/60 shadow-none [&_svg]:size-3.5 only:rounded-b-3xl first:rounded-bl-3xl last:rounded-br-3xl';
 </script>

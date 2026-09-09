@@ -27,8 +27,8 @@
 			size="sm"
 			onclick={() => hasData && onViewModeChange(id)}
 			class={cn(
-				'h-7 rounded-md px-2.5',
-				hidden && 'hidden md:flex',
+				'touch-target h-9 rounded-md px-2.5',
+				hidden && 'hidden lg:flex',
 				viewMode === id && 'shadow-none'
 			)}
 			title="{label} view"

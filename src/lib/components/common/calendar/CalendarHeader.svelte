@@ -61,40 +61,42 @@
 					{/if}
 					<div class="flex flex-col items-center justify-center gap-2 sm:flex-row sm:justify-end">
 						<div class="flex items-center rounded-md border p-0.5">
-							<Button
-								variant={viewMode === 'day' ? 'secondary' : 'ghost'}
-								size="sm"
-								onclick={() => onViewModeChange('day')}
-								class="h-7 px-2 text-xs"
-							>
-								Day
-							</Button>
-							<Button
-								variant={viewMode === 'week' ? 'secondary' : 'ghost'}
-								size="sm"
-								onclick={() => onViewModeChange('week')}
-								class="h-7 px-2 text-xs"
-							>
-								Week
-							</Button>
-							<Button
-								variant={viewMode === 'month' ? 'secondary' : 'ghost'}
-								size="sm"
-								onclick={() => onViewModeChange('month')}
-								class="h-7 px-2 text-xs"
-							>
-								Month
-							</Button>
-						</div>
-						<div class="flex items-center gap-2">
-							<Button variant="outline" size="sm" onclick={onToday}>Today</Button>
-							<Button variant="outline" size="sm" onclick={onPrevious}>
-								<ChevronLeft class="h-4 w-4" />
-							</Button>
-							<Button variant="outline" size="sm" onclick={onNext}>
-								<ChevronRight class="h-4 w-4" />
-							</Button>
-						</div>
+						<Button
+							variant={viewMode === 'day' ? 'secondary' : 'ghost'}
+							size="sm"
+							onclick={() => onViewModeChange('day')}
+							class="touch-target h-9 px-3 text-xs lg:h-7 lg:px-2"
+						>
+							Day
+						</Button>
+						<Button
+							variant={viewMode === 'week' ? 'secondary' : 'ghost'}
+							size="sm"
+							onclick={() => onViewModeChange('week')}
+							class="touch-target hidden h-9 px-3 text-xs lg:inline-flex lg:h-7 lg:px-2"
+						>
+							Week
+						</Button>
+						<Button
+							variant={viewMode === 'month' ? 'secondary' : 'ghost'}
+							size="sm"
+							onclick={() => onViewModeChange('month')}
+							class="touch-target hidden h-9 px-3 text-xs lg:inline-flex lg:h-7 lg:px-2"
+						>
+							Month
+						</Button>
+					</div>
+					<div class="flex items-center gap-2">
+						<Button variant="outline" size="sm" class="touch-target lg:h-8" onclick={onToday}
+							>Today</Button
+						>
+						<Button variant="outline" size="sm" class="touch-target lg:h-8" onclick={onPrevious}>
+							<ChevronLeft class="h-4 w-4" />
+						</Button>
+						<Button variant="outline" size="sm" class="touch-target lg:h-8" onclick={onNext}>
+							<ChevronRight class="h-4 w-4" />
+						</Button>
+					</div>
 					</div>
 				</div>
 			</div>

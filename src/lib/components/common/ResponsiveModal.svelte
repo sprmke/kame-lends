@@ -32,12 +32,12 @@
 	}: Props = $props();
 
 	const mobile = createIsMobileOverlay(
-		typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
+		typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false
 	);
 
 	/** Lock sheet vs dialog for the lifetime of an open overlay so resize does not remount forms. */
 	let presentation = $state<'sheet' | 'dialog'>(
-		typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+		typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
 			? 'sheet'
 			: 'dialog'
 	);

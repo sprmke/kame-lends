@@ -1,5 +1,5 @@
 <script lang="ts">
-	import * as Dialog from '$lib/components/ui/dialog';
+	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import DetailModalHeader from '$lib/components/common/DetailModalHeader.svelte';
 	import LoanDetailContent from './LoanDetailContent.svelte';
@@ -182,67 +182,63 @@
 
 {#if loan}
 	{@const modalLoan = loan}
-	<Dialog.Root {open} onOpenChange={(next) => onOpenChange(next)}>
-		<Dialog.Content class="max-h-[90vh] max-w-4xl overflow-y-auto" showCloseButton={false}>
-			{#if isEditing}
-				<Dialog.Header class="sr-only">
-					<Dialog.Title>Edit Loan - {formatText(modalLoan.loanName)}</Dialog.Title>
-				</Dialog.Header>
-			{:else}
-				<Dialog.Header>
-					<div class="flex flex-col items-start justify-between gap-3 md:flex-row md:gap-4">
-						<Dialog.Title class="line-clamp-2 text-lg font-semibold md:line-clamp-none md:text-xl">
-							{formatText(modalLoan.loanName)}
-						</Dialog.Title>
-						<DetailModalHeader
-							onEdit={enterEditMode}
-							onDelete={() => (showDeleteDialog = true)}
-							onClose={() => onOpenChange(false)}
-							onPayBalance={handlePayBalance}
-							showPayBalance={isPartiallyFunded}
-							onComplete={() => (showCompleteDialog = true)}
-							showComplete={isOverdue}
-							onDuplicate={handleDuplicate}
-							showDuplicate={true}
-							onDownloadContract={handleDownloadContract}
-							showDownloadContract={true}
-							{isDownloadingContract}
-							onAddPayment={() => (quickPaymentKind = 'payment')}
-							onAddReceivedPayment={() => (quickPaymentKind = 'received')}
-						/>
-					</div>
-				</Dialog.Header>
-			{/if}
-
-			<div class={isEditing ? '' : 'mt-3'}>
-				{#if isEditing}
-					{#if loadingFormData}
-						<FormPageSkeleton />
-					{:else}
-						{#key `loan-form-edit-${modalLoan.id}-${loanFetchKey}`}
-							<LoanForm
-								{investors}
-								{borrowers}
-								existingLoan={modalLoan}
-								onSuccess={handleEditSuccess}
-								onCancel={() => (isEditing = false)}
-							/>
-						{/key}
-					{/if}
-				{:else}
-					<div class="dashboard-stack">
-						<LoanDetailContent
-							loan={modalLoan}
-							showHeader={false}
-							onRefresh={refreshLoan}
-							loanId={modalLoan.id}
-						/>
-						<LoanSigningSection loanId={modalLoan.id} refreshKey={loanFetchKey} />
-					</div>
-				{/if}
+	<ResponsiveModal
+		{open}
+		onOpenChange={(next) => onOpenChange(next)}
+		title={formatText(modalLoan.loanName)}
+		srOnlyHeader={isEditing}
+		showCloseButton={false}
+		contentClass="dashboard-dialog-wide sm:max-w-4xl"
+	>
+		{#if !isEditing}
+			<div class="mb-3 flex flex-col items-start justify-between gap-3 md:flex-row md:gap-4">
+				<DetailModalHeader
+					onEdit={enterEditMode}
+					onDelete={() => (showDeleteDialog = true)}
+					onClose={() => onOpenChange(false)}
+					onPayBalance={handlePayBalance}
+					showPayBalance={isPartiallyFunded}
+					onComplete={() => (showCompleteDialog = true)}
+					showComplete={isOverdue}
+					onDuplicate={handleDuplicate}
+					showDuplicate={true}
+					onDownloadContract={handleDownloadContract}
+					showDownloadContract={true}
+					{isDownloadingContract}
+					onAddPayment={() => (quickPaymentKind = 'payment')}
+					onAddReceivedPayment={() => (quickPaymentKind = 'received')}
+				/>
 			</div>
-		</Dialog.Content>
-	</Dialog.Root>
+		{/if}
+
+		<div>
+			{#if isEditing}
+				{#if loadingFormData}
+					<FormPageSkeleton />
+				{:else}
+					{#key `loan-form-edit-${modalLoan.id}-${loanFetchKey}`}
+						<LoanForm
+							{investors}
+							{borrowers}
+							existingLoan={modalLoan}
+							onSuccess={handleEditSuccess}
+							onCancel={() => (isEditing = false)}
+						/>
+					{/key}
+				{/if}
+			{:else}
+				<div class="dashboard-stack">
+					<LoanDetailContent
+						loan={modalLoan}
+						showHeader={false}
+						onRefresh={refreshLoan}
+						loanId={modalLoan.id}
+					/>
+					<LoanSigningSection loanId={modalLoan.id} refreshKey={loanFetchKey} />
+				</div>
+			{/if}
+		</div>
+	</ResponsiveModal>
 
 	<LoanQuickPaymentDialog
 		loan={modalLoan}

@@ -105,6 +105,10 @@
 	}
 
 	async function openCreateModal(duplicateData: DuplicateLoanData | null = null) {
+		if (isMobileShellViewport() && !duplicateData) {
+			await goto('/loans/new');
+			return;
+		}
 		createModalDuplicateData = duplicateData;
 		showCreateModal = true;
 		await loadCreateFormData();

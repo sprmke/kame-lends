@@ -29,7 +29,7 @@
 			<Card.Header>
 				<Card.Title>Data & maintenance</Card.Title>
 			</Card.Header>
-			<Card.Content class="flex flex-wrap gap-1.5 p-3 pt-0">
+			<Card.Content class="grid grid-cols-1 gap-2 p-3 pt-0 sm:grid-cols-2">
 				<SyncLoanDueDatesButton />
 				<FixReceivedPaymentsButton />
 				<DownloadBackupButton />
