@@ -1,4 +1,3 @@
-import type { Component } from "svelte";
 import {
   Home,
   FileText,
