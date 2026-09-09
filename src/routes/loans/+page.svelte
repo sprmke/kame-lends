@@ -337,9 +337,7 @@
 		</div>
 
 		{#if showMoreFilters}
-			<div
-				class="animate-in space-y-3 rounded-lg border bg-muted/30 p-4 duration-200 slide-in-from-top-2"
-			>
+			<div class="dashboard-filter-panel animate-in duration-200 slide-in-from-top-2">
 				<div class="grid grid-cols-2 gap-3 border-b pb-3 xl:hidden">
 					<div>
 						<p class="mb-2 block text-xs font-semibold">Status</p>
@@ -423,7 +421,7 @@
 
 		{#if loans.length === 0}
 			<Card.Root>
-				<Card.Content class="flex flex-col items-center justify-center py-12">
+				<Card.Content class="dashboard-empty">
 					<p class="mb-4 text-muted-foreground">No loans found</p>
 					<Button href="/loans/new">
 						<PlusCircle class="mr-2 h-4 w-4" />
@@ -433,7 +431,7 @@
 			</Card.Root>
 		{:else if filteredLoans.length === 0}
 			<Card.Root>
-				<Card.Content class="flex flex-col items-center justify-center py-12">
+				<Card.Content class="dashboard-empty">
 					<p class="mb-4 text-muted-foreground">No loans match your filters</p>
 					<Button variant="outline" onclick={clearFilters}>
 						<X class="mr-2 h-4 w-4" />
@@ -463,7 +461,7 @@
 						{#each cardLoans as loan (loan.id)}
 							{@const stats = calculateTransactionStats(loan.loanInvestors)}
 							<Card.Root
-								class="flex h-full flex-col overflow-hidden transition-shadow hover:shadow-lg"
+								class="flex h-full flex-col overflow-hidden transition-colors hover:border-primary/20"
 							>
 								<Card.Header class="px-4 pt-4 pb-1">
 									<div class="flex items-start justify-between gap-2">
@@ -488,19 +486,19 @@
 								</Card.Header>
 								<Card.Content class="flex-1 space-y-3 px-4 pt-0 pb-3">
 									<div class="grid grid-cols-2 gap-2">
-										<div class="rounded-lg bg-muted/50 p-2">
+										<div class="dashboard-metric-cell p-2">
 											<p class="text-caption mb-1">Principal</p>
 											<p class="text-sm font-medium">{formatCurrency(stats.totalPrincipal)}</p>
 										</div>
-										<div class="rounded-lg bg-muted/50 p-2">
+										<div class="dashboard-metric-cell p-2">
 											<p class="text-caption mb-1">Rate</p>
 											<p class="text-sm font-medium">{formatPercentage(stats.averageRate)}</p>
 										</div>
-										<div class="rounded-lg bg-muted/50 p-2">
+										<div class="dashboard-metric-cell p-2">
 											<p class="text-caption mb-1">Due</p>
 											<p class="text-sm font-medium">{formatDateVeryShort(loan.dueDate)}</p>
 										</div>
-										<div class="rounded-lg bg-muted/50 p-2">
+										<div class="dashboard-metric-cell p-2">
 											<p class="text-caption mb-1">Interest</p>
 											<p class="text-sm font-medium">{formatCurrency(stats.totalInterest)}</p>
 										</div>

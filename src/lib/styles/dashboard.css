@@ -35,6 +35,14 @@ html.dashboard-shell.dark {
 		}
 	}
 
+	html.dashboard-shell .dashboard-stack {
+		@apply space-y-4;
+	}
+
+	html.dashboard-shell .dashboard-form {
+		@apply mx-auto space-y-4;
+	}
+
 	html.dashboard-shell .dashboard-section {
 		@apply space-y-3;
 	}
@@ -92,6 +100,18 @@ html.dashboard-shell.dark {
 		@apply rounded-md border border-dashed border-border/60 bg-muted/30 px-4 py-8 text-center;
 	}
 
+	html.dashboard-shell .dashboard-empty {
+		@apply flex flex-col items-center justify-center py-8;
+	}
+
+	html.dashboard-shell .dashboard-metric-cell {
+		@apply min-w-0 rounded-md bg-muted/70 p-2.5;
+	}
+
+	html.dashboard-shell .dashboard-filter-panel {
+		@apply space-y-2.5 rounded-md border border-border/60 bg-muted/30 p-3;
+	}
+
 	html.dashboard-shell .nav-item-active {
 		background: oklch(0.67 0.17 52);
 		color: oklch(0.99 0 0);
@@ -108,5 +128,53 @@ html.dashboard-shell.dark {
 
 	html.dashboard-shell .dashboard-panel-stripe {
 		@apply absolute inset-x-0 top-0 h-0.5 rounded-t-lg;
+	}
+
+	/* shadcn card density */
+	html.dashboard-shell [data-slot='card'] {
+		--card-spacing: 0.75rem;
+	}
+
+	html.dashboard-shell [data-slot='card-header'] {
+		@apply gap-0.5;
+	}
+
+	html.dashboard-shell [data-slot='card-title'] {
+		@apply text-sm font-medium;
+	}
+
+	/* tables */
+	html.dashboard-shell [data-slot='table-head'] {
+		@apply h-8 px-2 text-xs font-medium text-muted-foreground;
+	}
+
+	html.dashboard-shell [data-slot='table-cell'] {
+		@apply px-2 py-1.5 text-sm;
+	}
+
+	html.dashboard-shell [data-slot='table-container'] {
+		@apply rounded-md border border-border/60;
+	}
+
+	/* dialogs & sheets */
+	html.dashboard-shell [data-slot='dialog-content'] {
+		@apply gap-3 rounded-lg p-3 sm:max-w-lg;
+	}
+
+	html.dashboard-shell [data-slot='alert-dialog-content'] {
+		@apply gap-3 rounded-lg p-3;
+	}
+
+	/* tabs */
+	html.dashboard-shell [data-slot='tabs-list'] {
+		@apply h-8 rounded-md p-0.5;
+	}
+
+	html.dashboard-shell [data-slot='tabs-trigger'] {
+		@apply h-7 rounded-sm px-2.5 text-xs;
+	}
+
+	html.dashboard-shell [data-slot='tabs-content'] {
+		@apply mt-3 space-y-4;
 	}
 }
