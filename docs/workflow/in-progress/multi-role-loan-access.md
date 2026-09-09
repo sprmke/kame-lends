@@ -325,25 +325,25 @@ Page loads: `/investors/[id]`, `/borrowers/[id]` stay owner-scoped for CRM. Part
 
 ### Phase 2 — Nav + list routes + read-only UI
 
-1. Layout capabilities + role-aware `Nav.svelte`.
-2. Add `/investments`, `/borrowed`, `/witnessed` list pages (reuse loans table/cards).
-3. Pass access context into loan detail; hide edit/delete for non-owners; investor partial edit on own cards.
-4. Restrict settings tools to admin.
-5. Route guides: `docs/guides/routes/` for new pages + update loans/sign/dashboard.
+1. [x] Layout capabilities + role-aware `Nav.svelte`.
+2. [x] Add `/investments`, `/borrowed`, `/witnessed` list pages.
+3. [x] Pass access context into loan detail; hide edit/delete for non-owners; investor partial edit on own cards.
+4. [x] Restrict settings tools to admin.
+5. [x] Route guides for new pages + sign.
 
 ### Phase 3 — Authenticated signing
 
-1. New `/loans/[id]/sign` (+ API) with email/role detection.
-2. Stop token generation; update admin signing panel.
-3. Migrate/redirect legacy `/sign/[token]`.
-4. Update E2E and consent copy only where needed (minimal UI text).
+1. [x] New `/loans/[id]/sign` (+ API) with email/role detection.
+2. [x] Stop token generation; update admin signing panel.
+3. [x] Migrate/redirect legacy `/sign/[token]`.
+4. [ ] Update E2E Playwright for authenticated signing.
 
 ### Phase 4 — Calendar verify + participant in-app calendar
 
-1. Dev-calendar QA for create/update/delete sync; fix regressions.
-2. Restrict Google sync UI/API to admin owners.
-3. Expose in-app calendar on participant list routes; confirm events for investor/borrower/witness test users.
-4. Align `google-calendar-integration` skill + `docs/PROJECT.md` with “no attendees / shared calendar admin-only / in-app for parties”.
+1. [ ] Dev-calendar QA for create/update/delete sync (manual on test calendar).
+2. [x] Restrict Google sync UI/API to admin owners.
+3. [x] Expose in-app calendar on participant list routes.
+4. [x] Align skill + PROJECT.md.
 
 ### Phase 5 — Hardening
 
