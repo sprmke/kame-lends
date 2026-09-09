@@ -1,4 +1,5 @@
 import type { Component } from "svelte";
+import type { IconProps } from "lucide-svelte";
 import {
   Home,
   FileText,
@@ -22,7 +23,7 @@ export interface AppNavItem {
   id: string;
   title: string;
   href: string;
-  icon: Component;
+  icon: Component<IconProps>;
 }
 
 /** Safe fallback when layout has not loaded capabilities yet (deny-by-default). */
