@@ -1,0 +1,112 @@
+/**
+ * Dashboard-only visual system. Applied via `dashboard-shell` on <html> when authenticated.
+ * Public landing, sign-in, and contract signing pages are unaffected.
+ */
+html.dashboard-shell {
+	--radius: 0.5rem;
+	--shadow-elevated: 0 1px 2px oklch(0.18 0.02 55 / 0.05);
+	--shadow-elevated-lg:
+		0 1px 3px oklch(0.18 0.02 55 / 0.08), 0 4px 16px -4px oklch(0.18 0.02 55 / 0.1);
+	--shadow-soft: 0 2px 8px -2px oklch(0.67 0.17 52 / 0.12);
+
+	--background: oklch(0.985 0.003 75);
+	--border: oklch(0.9 0.006 70);
+}
+
+html.dashboard-shell.dark {
+	--background: oklch(0.15 0.014 55);
+	--border: oklch(0.3 0.018 55);
+}
+
+@layer utilities {
+	html.dashboard-shell .dashboard-page {
+		@apply container mx-auto space-y-4 p-3;
+	}
+
+	@media (width >= theme(--breakpoint-md)) {
+		html.dashboard-shell .dashboard-page {
+			@apply space-y-5 p-4;
+		}
+	}
+
+	@media (width >= theme(--breakpoint-lg)) {
+		html.dashboard-shell .dashboard-page {
+			@apply p-5;
+		}
+	}
+
+	html.dashboard-shell .dashboard-section {
+		@apply space-y-3;
+	}
+
+	html.dashboard-shell .dashboard-section-header {
+		@apply flex items-baseline justify-between gap-2;
+	}
+
+	html.dashboard-shell .dashboard-section-title {
+		@apply text-base font-semibold tracking-tight;
+	}
+
+	html.dashboard-shell .section-eyebrow {
+		@apply text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase;
+	}
+
+	html.dashboard-shell .surface-card {
+		@apply rounded-lg border border-border bg-card text-card-foreground shadow-none;
+	}
+
+	html.dashboard-shell .surface-card-interactive {
+		@apply rounded-lg border border-border bg-card text-card-foreground shadow-none transition-colors duration-150;
+	}
+
+	html.dashboard-shell .surface-card-interactive:hover {
+		@apply border-border bg-card;
+		box-shadow: var(--shadow-elevated);
+		transform: none;
+	}
+
+	html.dashboard-shell .surface-muted {
+		@apply rounded-md border border-border/60 bg-muted/50;
+	}
+
+	html.dashboard-shell .icon-well,
+	html.dashboard-shell .icon-well-sm,
+	html.dashboard-shell .icon-well-md,
+	html.dashboard-shell .icon-well-lg {
+		@apply rounded-md;
+	}
+
+	html.dashboard-shell .icon-well-sm {
+		@apply h-8 w-8;
+	}
+
+	html.dashboard-shell .icon-well-md {
+		@apply h-9 w-9;
+	}
+
+	html.dashboard-shell .pill-segment {
+		@apply rounded-md border border-border/60 bg-muted/60 p-0.5;
+	}
+
+	html.dashboard-shell .empty-state-well {
+		@apply rounded-md border border-dashed border-border/60 bg-muted/30 px-4 py-8 text-center;
+	}
+
+	html.dashboard-shell .nav-item-active {
+		background: oklch(0.67 0.17 52);
+		color: oklch(0.99 0 0);
+		box-shadow: none;
+	}
+
+	html.dashboard-shell .nav-item-active-icon {
+		background: oklch(1 0 0 / 0.18);
+	}
+
+	html.dashboard-shell .dashboard-activity-item {
+		@apply flex flex-col gap-1.5 rounded-md border border-border/60 bg-muted/30 p-2.5 transition-colors hover:border-primary/25 hover:bg-background;
+	}
+
+	html.dashboard-shell .dashboard-panel-stripe {
+		@apply absolute inset-x-0 top-0 h-0.5 rounded-t-lg;
+	}
+}
