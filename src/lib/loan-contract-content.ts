@@ -8,8 +8,7 @@ import {
 } from "./loan-contract-customization";
 import type { LoanType } from "./types";
 
-export const CONTRACT_DISPUTE_VENUE =
-  process.env.NEXT_PUBLIC_CONTRACT_DISPUTE_VENUE ?? "Pampanga, Philippines";
+export const CONTRACT_DISPUTE_VENUE = "Pampanga, Philippines";
 
 export function getContractTitle(loanType: LoanType): string {
   switch (loanType) {
