@@ -21,7 +21,7 @@ Architecture index for agents and developers.
 
 ### Dashboard UI (authenticated)
 
-When a session exists, `+layout.svelte` adds `dashboard-shell` on `<html>`. That scopes a tighter visual system in `src/lib/styles/dashboard.css`: smaller radius (`--radius: 0.5rem`), reduced page padding (`dashboard-page`), flat cards (`surface-card`), and flush sidebar nav. Public routes (landing `/`, `/signin`, `/sign/[token]`) never get `dashboard-shell`; landing keeps the existing rounded marketing styles in `layout.css`.
+When a session exists, `+layout.svelte` adds `dashboard-shell` on `<html>`. That scopes a tighter visual system in `src/lib/styles/dashboard.css`: smaller radius (`--radius: 0.5rem`), reduced page padding (`dashboard-page`, `dashboard-stack`, `dashboard-form`), flat cards (`surface-card`), compact shadcn cards/tables/tabs/dialogs via `[data-slot]` overrides, utility classes (`dashboard-metric-cell`, `dashboard-filter-panel`, `dashboard-empty`), and flush sidebar nav. Public routes (landing `/`, `/signin`, `/sign/[token]`) never get `dashboard-shell`; landing keeps the existing rounded marketing styles in `layout.css`.
 
 ## Repo layout
 
@@ -70,6 +70,7 @@ SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, i
 - Custom UI: `/signin` (`src/routes/signin/`). Auth.js endpoints stay at `/auth/*` (callback, session, csrf). Do not host the custom page at `/auth/signin` (Auth.js owns that path).
 - `admin`: full workspace
 - `investor`: shared loans via `investors.investor_user_id`
+- **Planned:** borrower/witness login linkage, membership-scoped menus, authenticated signing (no token URLs), in-app calendar for all loan parties. See [`workflow/planned/multi-role-loan-access.md`](./workflow/planned/multi-role-loan-access.md).
 
 ## Database
 
