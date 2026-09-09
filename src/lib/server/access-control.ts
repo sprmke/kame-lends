@@ -43,13 +43,33 @@ export async function hasLoanViewAccess(loanId: number, userId: string): Promise
 		.limit(1);
 	if (asBorrower.length > 0) return true;
 
-	const asWitness = await db
+	const asWitnessById = await db
 		.select({ id: loanSigningInvitations.id })
 		.from(loanSigningInvitations)
 		.innerJoin(witnesses, eq(witnesses.id, loanSigningInvitations.witnessId))
 		.where(and(eq(loanSigningInvitations.loanId, loanId), eq(witnesses.witnessUserId, userId)))
 		.limit(1);
-	return asWitness.length > 0;
+	if (asWitnessById.length > 0) return true;
+
+	const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+	const email = normalizeEmail(user?.email);
+	if (!email) return false;
+
+	const asWitnessByEmail = await db
+		.select({ id: loanSigningInvitations.id })
+		.from(loanSigningInvitations)
+		.where(
+			and(
+				eq(loanSigningInvitations.loanId, loanId),
+				eq(loanSigningInvitations.partyEmail, email),
+				or(
+					eq(loanSigningInvitations.partyRole, 'witness_1'),
+					eq(loanSigningInvitations.partyRole, 'witness_2')
+				)
+			)
+		)
+		.limit(1);
+	return asWitnessByEmail.length > 0;
 }
 
 export async function hasLoanAdminAccess(loanId: number, userId: string): Promise<boolean> {

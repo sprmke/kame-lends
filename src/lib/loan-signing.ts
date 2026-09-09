@@ -302,17 +302,17 @@ export function buildSigningInvitationsForLoan(
 			contractId,
 			partyRole: 'witness_1',
 			partyName: getWitnessInvitationPartyName('witness_1', customization),
-			partyEmail: customization.witness1Email?.trim() || null,
+			partyEmail: normalizeEmail(customization.witness1Email) || null,
 			witnessId: customization.witness1Id ?? null
 		});
 
 		const includeSecond =
 			customization.includeSecondWitness ||
 			Boolean(
-				customization.witness2Name.trim() ||
-				customization.witness2Address.trim() ||
-				customization.witness2ValidIdUrl.trim() ||
-				customization.witness2ESignatureUrl.trim()
+				(customization.witness2Name || '').trim() ||
+				(customization.witness2Address || '').trim() ||
+				(customization.witness2ValidIdUrl || '').trim() ||
+				(customization.witness2ESignatureUrl || '').trim()
 			);
 
 		if (includeSecond) {
@@ -321,7 +321,7 @@ export function buildSigningInvitationsForLoan(
 				contractId,
 				partyRole: 'witness_2',
 				partyName: getWitnessInvitationPartyName('witness_2', customization),
-				partyEmail: customization.witness2Email?.trim() || null,
+				partyEmail: normalizeEmail(customization.witness2Email) || null,
 				witnessId: customization.witness2Id ?? null
 			});
 		}

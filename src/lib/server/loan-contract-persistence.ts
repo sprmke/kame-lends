@@ -20,8 +20,10 @@ export async function saveLoanContractAndInvitations(
 	customizationInput?: ContractCustomization | null
 ) {
 	const contractData = buildLoanContractData(loan);
-	const customization =
-		customizationInput ?? buildDefaultContractCustomizationFromLoan(contractData);
+	const defaults = buildDefaultContractCustomizationFromLoan(contractData);
+	const customization = customizationInput
+		? ({ ...defaults, ...customizationInput } as ContractCustomization)
+		: defaults;
 
 	const [contract] = await db
 		.insert(loanContracts)
