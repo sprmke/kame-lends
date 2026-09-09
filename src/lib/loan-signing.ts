@@ -237,10 +237,9 @@ export function getWitnessInvitationPartyName(
 	witnessRole: 'witness_1' | 'witness_2',
 	customization: ContractCustomization
 ): string {
-	const name =
-		witnessRole === 'witness_1'
-			? customization.witness1Name.trim()
-			: customization.witness2Name.trim();
+	const raw =
+		witnessRole === 'witness_1' ? customization.witness1Name : customization.witness2Name;
+	const name = typeof raw === 'string' ? raw.trim() : '';
 
 	if (name) {
 		return name;
