@@ -4,8 +4,12 @@
  * and which sections are rendered in the PDF.
  */
 
-import { PDFSection } from './pdf-export';
-import { LoanWithInvestors, InvestorWithLoans, TransactionWithInvestor } from './types';
+import type { PDFSection } from "./pdf-export";
+import type {
+  LoanWithInvestors,
+  InvestorWithLoans,
+  TransactionWithInvestor,
+} from "./types";
 
 /**
  * Sections for the Loans PDF export.
@@ -14,34 +18,34 @@ import { LoanWithInvestors, InvestorWithLoans, TransactionWithInvestor } from '.
  */
 export const loanPDFSections: PDFSection<LoanWithInvestors>[] = [
   {
-    key: 'financial_summary',
-    header: 'Financial Summary',
-    description: 'Total principal, interest, and combined amount',
+    key: "financial_summary",
+    header: "Financial Summary",
+    description: "Total principal, interest, and combined amount",
   },
   {
-    key: 'investors',
-    header: 'Investor Breakdown',
-    description: 'Per-investor disbursement amounts, rates, and interests',
+    key: "investors",
+    header: "Investor Breakdown",
+    description: "Per-investor disbursement amounts, rates, and interests",
   },
   {
-    key: 'interest_periods',
-    header: 'Interest Periods',
-    description: 'Multiple interest period schedule and statuses',
+    key: "interest_periods",
+    header: "Interest Periods",
+    description: "Multiple interest period schedule and statuses",
   },
   {
-    key: 'received_payments',
-    header: 'Received Payments',
-    description: 'Payment history and received amounts',
+    key: "received_payments",
+    header: "Received Payments",
+    description: "Payment history and received amounts",
   },
   {
-    key: 'free_lot',
-    header: 'Free Lot',
-    description: 'Free lot square meters collateral (if applicable)',
+    key: "free_lot",
+    header: "Free Lot",
+    description: "Free lot square meters collateral (if applicable)",
   },
   {
-    key: 'notes',
-    header: 'Notes',
-    description: 'Loan remarks and notes (formatting preserved)',
+    key: "notes",
+    header: "Notes",
+    description: "Loan remarks and notes (formatting preserved)",
   },
 ];
 
@@ -50,19 +54,19 @@ export const loanPDFSections: PDFSection<LoanWithInvestors>[] = [
  */
 export const investorPDFSections: PDFSection<InvestorWithLoans>[] = [
   {
-    key: 'contact',
-    header: 'Contact Info',
-    description: 'Email address and contact number',
+    key: "contact",
+    header: "Contact Info",
+    description: "Email address and contact number",
   },
   {
-    key: 'financial_stats',
-    header: 'Financial Stats',
-    description: 'Total capital, interest, current balance, and gain',
+    key: "financial_stats",
+    header: "Financial Stats",
+    description: "Total capital, interest, current balance, and gain",
   },
   {
-    key: 'loan_counts',
-    header: 'Loan Summary',
-    description: 'Active, completed, overdue, and total loan counts',
+    key: "loan_counts",
+    header: "Loan Summary",
+    description: "Active, completed, overdue, and total loan counts",
   },
 ];
 
@@ -71,23 +75,23 @@ export const investorPDFSections: PDFSection<InvestorWithLoans>[] = [
  */
 export const transactionPDFSections: PDFSection<TransactionWithInvestor>[] = [
   {
-    key: 'investor',
-    header: 'Investor',
-    description: 'Investor associated with the transaction',
+    key: "investor",
+    header: "Investor",
+    description: "Investor associated with the transaction",
   },
   {
-    key: 'type_direction',
-    header: 'Type & Direction',
-    description: 'Transaction type (Loan/Investment) and direction (In/Out)',
+    key: "type_direction",
+    header: "Type & Direction",
+    description: "Transaction type (Loan/Investment) and direction (In/Out)",
   },
   {
-    key: 'amount',
-    header: 'Amount',
-    description: 'Transaction amount',
+    key: "amount",
+    header: "Amount",
+    description: "Transaction amount",
   },
   {
-    key: 'notes',
-    header: 'Notes',
-    description: 'Transaction notes and remarks (formatting preserved)',
+    key: "notes",
+    header: "Notes",
+    description: "Transaction notes and remarks (formatting preserved)",
   },
 ];

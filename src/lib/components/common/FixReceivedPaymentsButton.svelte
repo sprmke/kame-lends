@@ -32,10 +32,9 @@
 			justDone = true;
 
 			if (data.createdPayments === 0 && data.orphanedPaymentsRemoved === 0) {
-				toast.success(
-					'All payments are consistent',
-					'No missing or orphaned received payments found.'
-				);
+				toast.success('All payments are consistent', {
+					description: 'No missing or orphaned received payments found.'
+				});
 			} else {
 				const parts: string[] = [];
 				if (data.createdPayments > 0) {
@@ -44,12 +43,11 @@
 				if (data.orphanedPaymentsRemoved > 0) {
 					parts.push(`Removed ${data.orphanedPaymentsRemoved} orphaned payment(s)`);
 				}
-				toast.success(
-					'Payments repaired',
-					data.fixedLoans?.length
+				toast.success('Payments repaired', {
+					description: data.fixedLoans?.length
 						? `${parts.join(', ')} across: ${data.fixedLoans.join(', ')}`
 						: parts.join(', ')
-				);
+				});
 			}
 
 			setTimeout(() => {
@@ -57,7 +55,7 @@
 			}, 4000);
 		} catch (error) {
 			console.error('Error fixing received payments:', error);
-			toast.error('Repair failed', error instanceof Error ? error.message : 'Unknown error');
+			toast.error('Repair failed', { description: error instanceof Error ? error.message : 'Unknown error' });
 		} finally {
 			isRunning = false;
 		}

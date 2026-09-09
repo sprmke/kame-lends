@@ -599,7 +599,6 @@
 			{:else}
 				<LoansTable
 					loans={filteredLoans}
-					investorId={investor.id}
 					onQuickView={(loan) => {
 						selectedLoan = loan;
 						showLoanDetailModal = true;

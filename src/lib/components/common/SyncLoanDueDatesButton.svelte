@@ -32,15 +32,15 @@
 			justDone = true;
 
 			if (data.updatedCount === 0) {
-				toast.success(
-					'Due dates already up to date',
-					'All loan due dates match their last interest period.'
-				);
+				toast.success('Due dates already up to date', {
+					description: 'All loan due dates match their last interest period.'
+				});
 			} else {
-				toast.success(
-					`Updated ${data.updatedCount} loan due date(s)`,
-					data.updatedLoans?.length ? `Updated: ${data.updatedLoans.join(', ')}` : data.message
-				);
+				toast.success(`Updated ${data.updatedCount} loan due date(s)`, {
+					description: data.updatedLoans?.length
+						? `Updated: ${data.updatedLoans.join(', ')}`
+						: data.message
+				});
 			}
 
 			setTimeout(() => {
@@ -48,7 +48,7 @@
 			}, 4000);
 		} catch (error) {
 			console.error('Error syncing loan due dates:', error);
-			toast.error('Sync failed', error instanceof Error ? error.message : 'Unknown error');
+			toast.error('Sync failed', { description: error instanceof Error ? error.message : 'Unknown error' });
 		} finally {
 			isRunning = false;
 		}

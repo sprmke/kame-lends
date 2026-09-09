@@ -33,9 +33,18 @@
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
 		onSuccess?: () => void | Promise<void>;
+		/** When set, only these investor IDs appear as payment targets. */
+		allowedInvestorIds?: number[] | null;
 	}
 
-	let { loan, kind, open, onOpenChange, onSuccess }: Props = $props();
+	let {
+		loan,
+		kind,
+		open,
+		onOpenChange,
+		onSuccess,
+		allowedInvestorIds = null
+	}: Props = $props();
 
 	let formEl = $state<HTMLFormElement | null>(null);
 
@@ -57,7 +66,12 @@
 		const unique = new Map(
 			loan.loanInvestors.map((payment) => [payment.investor.id, payment.investor])
 		);
-		return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+		let list = Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+		if (allowedInvestorIds && allowedInvestorIds.length > 0) {
+			const allow = new Set(allowedInvestorIds);
+			list = list.filter((investor) => allow.has(investor.id));
+		}
+		return list;
 	});
 
 	let entries = $state<PaymentEntry[]>([createPaymentEntry()]);

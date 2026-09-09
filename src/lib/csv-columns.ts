@@ -2,47 +2,47 @@
  * CSV Column Definitions for different data types
  */
 
-import {
+import type {
   LoanWithInvestors,
   InvestorWithLoans,
   TransactionWithInvestor,
-} from './types';
+} from "./types";
 import {
   formatDateForCSV,
   formatCurrencyForCSV,
   formatTextForCSV,
   formatRateForCSV,
   formatCountForCSV,
-  CSVColumn,
-} from './csv-export';
+} from "./csv-export";
+import type { CSVColumn } from "./csv-export";
 import {
   calculateLoanStats,
   calculateInvestorStats,
   calculateAverageRate,
-} from './calculations';
+} from "./calculations";
 
 /**
  * CSV columns for Loans export
  */
 export const loansCSVColumns: CSVColumn<LoanWithInvestors>[] = [
   {
-    header: 'Loan Name',
+    header: "Loan Name",
     accessor: (loan) => formatTextForCSV(loan.loanName),
   },
   {
-    header: 'Type',
+    header: "Type",
     accessor: (loan) => formatTextForCSV(loan.type),
   },
   {
-    header: 'Status',
+    header: "Status",
     accessor: (loan) => formatTextForCSV(loan.status),
   },
   {
-    header: 'Due Date',
+    header: "Due Date",
     accessor: (loan) => formatDateForCSV(loan.dueDate),
   },
   {
-    header: 'Total Principal',
+    header: "Total Principal",
     accessor: (loan) => {
       const stats = calculateLoanStats(loan);
       return formatCurrencyForCSV(stats.totalPrincipal);
@@ -50,14 +50,14 @@ export const loansCSVColumns: CSVColumn<LoanWithInvestors>[] = [
     summable: true,
   },
   {
-    header: 'Average Rate (%)',
+    header: "Average Rate (%)",
     accessor: (loan) => {
       const stats = calculateLoanStats(loan);
       return formatRateForCSV(stats.avgRate);
     },
   },
   {
-    header: 'Total Interest',
+    header: "Total Interest",
     accessor: (loan) => {
       const stats = calculateLoanStats(loan);
       return formatCurrencyForCSV(stats.totalInterest);
@@ -65,7 +65,7 @@ export const loansCSVColumns: CSVColumn<LoanWithInvestors>[] = [
     summable: true,
   },
   {
-    header: 'Total Amount',
+    header: "Total Amount",
     accessor: (loan) => {
       const stats = calculateLoanStats(loan);
       return formatCurrencyForCSV(stats.totalAmount);
@@ -73,32 +73,32 @@ export const loansCSVColumns: CSVColumn<LoanWithInvestors>[] = [
     summable: true,
   },
   {
-    header: 'Free Lot (sqm)',
+    header: "Free Lot (sqm)",
     accessor: (loan) =>
-      loan.freeLotSqm != null ? formatCountForCSV(loan.freeLotSqm) : '',
+      loan.freeLotSqm != null ? formatCountForCSV(loan.freeLotSqm) : "",
     summable: true,
   },
   {
-    header: 'Investors',
+    header: "Investors",
     accessor: (loan) => {
       // Get unique investor names
       const uniqueInvestors = Array.from(
         new Set(loan.loanInvestors.map((li) => li.investor.name)),
       ).sort();
-      return formatTextForCSV(uniqueInvestors.join(', '));
+      return formatTextForCSV(uniqueInvestors.join(", "));
     },
   },
   {
-    header: 'Sent Dates',
+    header: "Sent Dates",
     accessor: (loan) => {
       const uniqueDates = Array.from(
         new Set(loan.loanInvestors.map((li) => formatDateForCSV(li.sentDate))),
       ).sort();
-      return uniqueDates.join('; ');
+      return uniqueDates.join("; ");
     },
   },
   {
-    header: 'All Due Dates',
+    header: "All Due Dates",
     accessor: (loan) => {
       const dueDateSet = new Set<string>();
 
@@ -114,12 +114,12 @@ export const loansCSVColumns: CSVColumn<LoanWithInvestors>[] = [
         }
       });
 
-      return Array.from(dueDateSet).sort().join('; ');
+      return Array.from(dueDateSet).sort().join("; ");
     },
   },
   {
-    header: 'Notes',
-    accessor: (loan) => formatTextForCSV(loan.notes || ''),
+    header: "Notes",
+    accessor: (loan) => formatTextForCSV(loan.notes || ""),
   },
 ];
 
@@ -128,19 +128,19 @@ export const loansCSVColumns: CSVColumn<LoanWithInvestors>[] = [
  */
 export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
   {
-    header: 'Name',
+    header: "Name",
     accessor: (investor) => formatTextForCSV(investor.name),
   },
   {
-    header: 'Email',
+    header: "Email",
     accessor: (investor) => formatTextForCSV(investor.email),
   },
   {
-    header: 'Contact Number',
-    accessor: (investor) => formatTextForCSV(investor.contactNumber || ''),
+    header: "Contact Number",
+    accessor: (investor) => formatTextForCSV(investor.contactNumber || ""),
   },
   {
-    header: 'Total Capital',
+    header: "Total Capital",
     accessor: (investor) => {
       const stats = calculateInvestorStats(investor);
       return formatCurrencyForCSV(stats.totalCapital);
@@ -148,14 +148,14 @@ export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
     summable: true,
   },
   {
-    header: 'Average Rate (%)',
+    header: "Average Rate (%)",
     accessor: (investor) => {
       const avgRate = calculateAverageRate(investor.loanInvestors);
       return formatRateForCSV(avgRate);
     },
   },
   {
-    header: 'Total Interest',
+    header: "Total Interest",
     accessor: (investor) => {
       const stats = calculateInvestorStats(investor);
       return formatCurrencyForCSV(stats.totalInterest);
@@ -163,7 +163,7 @@ export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
     summable: true,
   },
   {
-    header: 'Total Amount',
+    header: "Total Amount",
     accessor: (investor) => {
       const stats = calculateInvestorStats(investor);
       return formatCurrencyForCSV(stats.totalCapital + stats.totalInterest);
@@ -171,7 +171,7 @@ export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
     summable: true,
   },
   {
-    header: 'Current Balance',
+    header: "Current Balance",
     accessor: (investor) => {
       const stats = calculateInvestorStats(investor);
       return formatCurrencyForCSV(stats.currentBalance);
@@ -179,7 +179,7 @@ export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
     summable: true,
   },
   {
-    header: 'Total Gain',
+    header: "Total Gain",
     accessor: (investor) => {
       const stats = calculateInvestorStats(investor);
       return formatCurrencyForCSV(stats.totalGain);
@@ -187,7 +187,7 @@ export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
     summable: true,
   },
   {
-    header: 'Active Loans',
+    header: "Active Loans",
     accessor: (investor) => {
       const stats = calculateInvestorStats(investor);
       return formatCountForCSV(stats.activeLoans);
@@ -195,7 +195,7 @@ export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
     summable: true,
   },
   {
-    header: 'Completed Loans',
+    header: "Completed Loans",
     accessor: (investor) => {
       const stats = calculateInvestorStats(investor);
       return formatCountForCSV(stats.completedLoans);
@@ -203,7 +203,7 @@ export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
     summable: true,
   },
   {
-    header: 'Overdue Loans',
+    header: "Overdue Loans",
     accessor: (investor) => {
       const stats = calculateInvestorStats(investor);
       return formatCountForCSV(stats.overdueLoans);
@@ -211,7 +211,7 @@ export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
     summable: true,
   },
   {
-    header: 'Total Loans',
+    header: "Total Loans",
     accessor: (investor) => {
       const stats = calculateInvestorStats(investor);
       return formatCountForCSV(stats.totalLoans);
@@ -225,32 +225,32 @@ export const investorsCSVColumns: CSVColumn<InvestorWithLoans>[] = [
  */
 export const transactionsCSVColumns: CSVColumn<TransactionWithInvestor>[] = [
   {
-    header: 'Date',
+    header: "Date",
     accessor: (transaction) => formatDateForCSV(transaction.date),
   },
   {
-    header: 'Name',
+    header: "Name",
     accessor: (transaction) => formatTextForCSV(transaction.name),
   },
   {
-    header: 'Investor',
+    header: "Investor",
     accessor: (transaction) => formatTextForCSV(transaction.investor.name),
   },
   {
-    header: 'Type',
+    header: "Type",
     accessor: (transaction) => formatTextForCSV(transaction.type),
   },
   {
-    header: 'Direction',
+    header: "Direction",
     accessor: (transaction) => formatTextForCSV(transaction.direction),
   },
   {
-    header: 'Amount',
+    header: "Amount",
     accessor: (transaction) => formatCurrencyForCSV(transaction.amount),
     summable: true,
   },
   {
-    header: 'Notes',
-    accessor: (transaction) => formatTextForCSV(transaction.notes || ''),
+    header: "Notes",
+    accessor: (transaction) => formatTextForCSV(transaction.notes || ""),
   },
 ];

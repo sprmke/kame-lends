@@ -132,9 +132,9 @@
 					</Table.Cell>
 					<Table.Cell class="text-right tabular-nums">
 						{formatCurrency(stats.totalPrincipal)}
-						{#if tx.averageInterestRate != null}
+						{#if tx.averageRate != null}
 							<p class="text-[10px] text-muted-foreground">
-								{formatPercentage(tx.averageInterestRate)}
+								{formatPercentage(tx.averageRate)}
 							</p>
 						{/if}
 					</Table.Cell>
