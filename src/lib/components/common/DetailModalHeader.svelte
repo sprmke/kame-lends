@@ -40,6 +40,7 @@
 		onDelete: () => void;
 		onClose?: () => void;
 		canEdit?: boolean;
+		canDelete?: boolean;
 		onComplete?: () => void;
 		showComplete?: boolean;
 		onPayBalance?: () => void;
@@ -60,6 +61,7 @@
 		onDelete,
 		onClose,
 		canEdit = true,
+		canDelete = true,
 		onComplete,
 		showComplete = false,
 		onPayBalance,
@@ -127,13 +129,15 @@
 		if (showViewLoan && onViewLoan) {
 			items.push({ label: 'View Loan', onclick: onViewLoan, icon: 'view' });
 		}
-		items.push({
-			label: 'Delete',
-			onclick: onDelete,
-			icon: 'delete',
-			destructive: true,
-			separatorBefore: true
-		});
+		if (canDelete) {
+			items.push({
+				label: 'Delete',
+				onclick: onDelete,
+				icon: 'delete',
+				destructive: true,
+				separatorBefore: true
+			});
+		}
 
 		return items;
 	});

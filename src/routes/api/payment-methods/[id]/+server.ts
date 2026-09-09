@@ -93,7 +93,7 @@ export const DELETE: RequestHandler = async (event) => {
           eq(paymentMethods.userId, session.user.id),
         ),
       )
-      .returning({ id: paymentMethods.id });
+      .returning();
 
     if (!deleted) {
       return json({ error: "Not found" }, { status: 404 });
