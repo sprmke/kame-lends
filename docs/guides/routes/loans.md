@@ -6,7 +6,7 @@
 ## Behavior
 
 - Lists loans with search, filters, cards/table/calendar view modes.
-- **Phone (`<lg`):** card/row open navigates to `/loans/[id]` (native stack). Create / quick-pay / export use bottom sheets via `ResponsiveModal` where applicable.
+- **Phone (`<lg`):** card/row open navigates to `/loans/[id]` (native stack) via `isMobileShellViewport()`. Create / quick-pay / export use bottom sheets via `ResponsiveModal` (presentation locked while open). Modal create forms use `FormHeader variant="embedded"`.
 - **Desktop (`lg+`):** row quick-view may open `LoanDetailModal`; sidebar nav remains.
 - Primary destinations live in the bottom tab bar; Settings is under More.
 
