@@ -9,6 +9,7 @@
 	import { normalizeValidIdUrl } from '$lib/valid-id-document';
 	import type { PaymentMethod } from '$lib/types';
 	import { Pencil, Plus, Trash2 } from 'lucide-svelte';
+	import { MAX_PAYMENT_METHODS_PER_USER } from '$lib/payment-methods';
 
 	interface Props {
 		initialMethods?: PaymentMethod[];
@@ -26,6 +27,15 @@
 	let deleteTarget = $state<PaymentMethod | null>(null);
 	let isDeleting = $state(false);
 	let fieldErrors = $state<Record<string, string>>({});
+	let bankInputEl = $state<HTMLInputElement | null>(null);
+
+	const visibleMethods = $derived(
+		isFormOpen && editingId != null ? methods.filter((m) => m.id !== editingId) : methods
+	);
+
+	$effect(() => {
+		methods = [...initialMethods];
+	});
 
 	function resetForm() {
 		editingId = null;
@@ -43,6 +53,7 @@
 		qrCodeUrl = null;
 		fieldErrors = {};
 		isFormOpen = true;
+		queueMicrotask(() => bankInputEl?.focus());
 	}
 
 	function openEdit(method: PaymentMethod) {
@@ -52,6 +63,7 @@
 		qrCodeUrl = method.qrCodeUrl;
 		fieldErrors = {};
 		isFormOpen = true;
+		queueMicrotask(() => bankInputEl?.focus());
 	}
 
 	function validate() {
@@ -112,7 +124,9 @@
 				const errorData = await response.json().catch(() => ({}));
 				throw new Error(errorData.error || 'Delete failed');
 			}
-			methods = methods.filter((m) => m.id !== deleteTarget!.id);
+			const deletedId = deleteTarget.id;
+			methods = methods.filter((m) => m.id !== deletedId);
+			if (editingId === deletedId) resetForm();
 			toast.success('Payment method deleted');
 			deleteTarget = null;
 		} catch (error) {
@@ -127,7 +141,14 @@
 	<Card.Header class="flex flex-row items-center justify-between gap-2 space-y-0">
 		<Card.Title>Payment methods</Card.Title>
 		{#if !isFormOpen}
-			<Button type="button" variant="outline" size="sm" onclick={openCreate}>
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				class="h-9"
+				disabled={methods.length >= MAX_PAYMENT_METHODS_PER_USER}
+				onclick={openCreate}
+			>
 				<Plus class="mr-1 h-3.5 w-3.5" />
 				Add
 			</Button>
@@ -138,14 +159,26 @@
 			<form class="space-y-3 rounded-md border border-border p-3" onsubmit={handleSubmit}>
 				<div class="space-y-1.5">
 					<Label for="pm-bank-name">Bank name</Label>
-					<Input id="pm-bank-name" bind:value={bankName} disabled={isSubmitting} />
+					<Input
+						id="pm-bank-name"
+						bind:ref={bankInputEl}
+						bind:value={bankName}
+						autocomplete="organization"
+						disabled={isSubmitting}
+					/>
 					{#if fieldErrors.bankName}
 						<p class="text-destructive text-xs">{fieldErrors.bankName}</p>
 					{/if}
 				</div>
 				<div class="space-y-1.5">
 					<Label for="pm-account-number">Account number</Label>
-					<Input id="pm-account-number" bind:value={accountNumber} disabled={isSubmitting} />
+					<Input
+						id="pm-account-number"
+						bind:value={accountNumber}
+						inputmode="numeric"
+						autocomplete="off"
+						disabled={isSubmitting}
+					/>
 					{#if fieldErrors.accountNumber}
 						<p class="text-destructive text-xs">{fieldErrors.accountNumber}</p>
 					{/if}
@@ -159,21 +192,28 @@
 					idPrefix="pm-qr"
 				/>
 				<div class="flex flex-wrap gap-1.5">
-					<Button type="submit" size="sm" disabled={isSubmitting}>
+					<Button type="submit" size="sm" class="h-9" disabled={isSubmitting}>
 						{isSubmitting ? 'Saving...' : editingId != null ? 'Save' : 'Add'}
 					</Button>
-					<Button type="button" variant="ghost" size="sm" disabled={isSubmitting} onclick={resetForm}>
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						class="h-9"
+						disabled={isSubmitting}
+						onclick={resetForm}
+					>
 						Cancel
 					</Button>
 				</div>
 			</form>
 		{/if}
 
-		{#if methods.length === 0 && !isFormOpen}
+		{#if visibleMethods.length === 0 && !isFormOpen}
 			<p class="text-muted-foreground text-sm">No payment methods</p>
-		{:else}
+		{:else if visibleMethods.length > 0}
 			<ul class="space-y-2">
-				{#each methods as method (method.id)}
+				{#each visibleMethods as method (method.id)}
 					<li class="flex items-start justify-between gap-2 rounded-md border border-border p-2.5">
 						<div class="min-w-0 space-y-1">
 							<p class="text-sm font-medium">{method.bankName}</p>
@@ -182,7 +222,7 @@
 								<img
 									src={method.qrCodeUrl}
 									alt="QR code"
-									class="mt-1 max-h-20 rounded border border-border object-contain"
+									class="mt-1 max-h-24 rounded border border-border bg-white object-contain p-1"
 								/>
 							{/if}
 						</div>
@@ -191,8 +231,9 @@
 								type="button"
 								variant="ghost"
 								size="icon"
-								class="h-8 w-8"
+								class="h-9 w-9"
 								aria-label="Edit payment method"
+								disabled={isFormOpen}
 								onclick={() => openEdit(method)}
 							>
 								<Pencil class="h-3.5 w-3.5" />
@@ -201,7 +242,7 @@
 								type="button"
 								variant="ghost"
 								size="icon"
-								class="h-8 w-8"
+								class="h-9 w-9"
 								aria-label="Delete payment method"
 								onclick={() => (deleteTarget = method)}
 							>
@@ -218,7 +259,7 @@
 <AlertDialog.Root
 	open={deleteTarget !== null}
 	onOpenChange={(open) => {
-		if (!open) deleteTarget = null;
+		if (!open && !isDeleting) deleteTarget = null;
 	}}
 >
 	<AlertDialog.Content>
@@ -233,7 +274,10 @@
 			<AlertDialog.Action
 				class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 				disabled={isDeleting}
-				onclick={handleDelete}
+				onclick={(event) => {
+					event.preventDefault();
+					void handleDelete();
+				}}
 			>
 				{isDeleting ? 'Deleting...' : 'Delete'}
 			</AlertDialog.Action>

@@ -4,8 +4,12 @@ import { db } from "$lib/server/db";
 import { paymentMethods } from "$lib/server/db/schema";
 import { getSession } from "$lib/server/session";
 import {
+  MAX_PAYMENT_METHODS_PER_USER,
+  canManagePaymentMethods,
+  countPaymentMethodsForUser,
   listPaymentMethodsForUser,
   parsePaymentMethodInput,
+  readJsonBody,
   toPublicPaymentMethod,
 } from "$lib/server/payment-methods";
 
@@ -14,6 +18,10 @@ export const GET: RequestHandler = async (event) => {
     const session = await getSession(event);
     if (!session?.user?.id) {
       return json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!(await canManagePaymentMethods(session.user.id))) {
+      return json({ error: "Forbidden" }, { status: 403 });
     }
 
     const methods = await listPaymentMethodsForUser(session.user.id);
@@ -31,10 +39,30 @@ export const POST: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await event.request.json();
-    const parsed = parsePaymentMethodInput(body);
+    if (!(await canManagePaymentMethods(session.user.id))) {
+      return json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const bodyResult = await readJsonBody(event.request);
+    if (!bodyResult.ok) {
+      return json({ error: bodyResult.error }, { status: 400 });
+    }
+
+    const parsed = parsePaymentMethodInput(
+      (bodyResult.data && typeof bodyResult.data === "object"
+        ? bodyResult.data
+        : {}) as Record<string, unknown>,
+    );
     if ("error" in parsed) {
       return json({ error: parsed.error }, { status: 400 });
+    }
+
+    const existingCount = await countPaymentMethodsForUser(session.user.id);
+    if (existingCount >= MAX_PAYMENT_METHODS_PER_USER) {
+      return json(
+        { error: `Limit is ${MAX_PAYMENT_METHODS_PER_USER} payment methods` },
+        { status: 400 },
+      );
     }
 
     const [created] = await db

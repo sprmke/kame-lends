@@ -23,9 +23,9 @@ Full loan detail for any party with membership (owner, investor, borrower, witne
 
 ## Permissions
 
-| Membership | Payment methods on detail |
-| ---------- | ------------------------- |
-| Borrower   | Yes (owner’s methods)     |
-| Owner      | No (manage in Settings)   |
-| Investor   | No                        |
-| Witness    | No                        |
+| Membership | Payment methods on detail                           |
+| ---------- | --------------------------------------------------- |
+| Borrower   | Yes (owner’s methods; copy bank/account; larger QR) |
+| Owner      | No (manage in Settings)                             |
+| Investor   | No                                                  |
+| Witness    | No                                                  |

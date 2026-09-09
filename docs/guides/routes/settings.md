@@ -9,8 +9,8 @@ Account summary (name, email, role).
 
 Admin workspace owners also get:
 
-- **Payment methods** — bank name, account number, optional QR image. Borrowers see these on loan detail only.
-- **Data & maintenance** — sync/calendar tools when those controls are available.
+- **Payment methods** — bank name, account number, optional QR image (up to 10). Borrowers see these on loan detail only.
+- **Data & maintenance** — sync/calendar/backup tools.
 
 ## Load
 

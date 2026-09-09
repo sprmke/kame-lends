@@ -1,9 +1,22 @@
 import { db } from "$lib/server/db";
 import { paymentMethods } from "$lib/server/db/schema";
-import { eq, asc } from "drizzle-orm";
-import { normalizeValidIdUrl } from "$lib/valid-id-document";
+import { eq, asc, count } from "drizzle-orm";
 import type { LoanAccessContext } from "$lib/loan-access";
 import type { PaymentMethod } from "$lib/types";
+import { getNavCapabilities } from "$lib/server/access-control";
+import {
+  MAX_PAYMENT_METHODS_PER_USER,
+  parsePaymentMethodId,
+  parsePaymentMethodInput,
+  type PaymentMethodInput,
+} from "$lib/payment-methods";
+
+export {
+  MAX_PAYMENT_METHODS_PER_USER,
+  parsePaymentMethodId,
+  parsePaymentMethodInput,
+  type PaymentMethodInput,
+};
 
 export type PaymentMethodRow = typeof paymentMethods.$inferSelect;
 
@@ -40,33 +53,30 @@ export async function listPaymentMethodsForBorrowerLoanView(
   return listPaymentMethodsForUser(loanOwnerUserId);
 }
 
-export type PaymentMethodInput = {
-  bankName?: unknown;
-  accountNumber?: unknown;
-  qrCodeUrl?: unknown;
-};
+/** Owners who run an admin workspace may manage payment methods. */
+export async function canManagePaymentMethods(
+  userId: string,
+): Promise<boolean> {
+  const caps = await getNavCapabilities(userId);
+  return caps.isAdminWorkspace;
+}
 
-export function parsePaymentMethodInput(body: PaymentMethodInput):
-  | {
-      bankName: string;
-      accountNumber: string;
-      qrCodeUrl: string | null;
-    }
-  | { error: string } {
-  const bankName =
-    typeof body.bankName === "string" ? body.bankName.trim() : "";
-  const accountNumber =
-    typeof body.accountNumber === "string" ? body.accountNumber.trim() : "";
+export async function countPaymentMethodsForUser(
+  userId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(paymentMethods)
+    .where(eq(paymentMethods.userId, userId));
+  return Number(row?.value ?? 0);
+}
 
-  if (!bankName) return { error: "Bank name is required" };
-  if (bankName.length > 120) return { error: "Bank name is too long" };
-  if (!accountNumber) return { error: "Account number is required" };
-  if (accountNumber.length > 64) return { error: "Account number is too long" };
-
-  const qrCodeUrl = normalizeValidIdUrl(body.qrCodeUrl);
-  if (body.qrCodeUrl != null && String(body.qrCodeUrl).trim() && !qrCodeUrl) {
-    return { error: "QR code must be a JPEG, PNG, or WebP image" };
+export async function readJsonBody(
+  request: Request,
+): Promise<{ ok: true; data: unknown } | { ok: false; error: string }> {
+  try {
+    return { ok: true, data: await request.json() };
+  } catch {
+    return { ok: false, error: "Invalid JSON body" };
   }
-
-  return { bankName, accountNumber, qrCodeUrl };
 }

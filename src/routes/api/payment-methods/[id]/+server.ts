@@ -5,7 +5,10 @@ import { paymentMethods } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import {
+  canManagePaymentMethods,
+  parsePaymentMethodId,
   parsePaymentMethodInput,
+  readJsonBody,
   toPublicPaymentMethod,
 } from "$lib/server/payment-methods";
 
@@ -16,13 +19,25 @@ export const PUT: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const id = Number(event.params.id);
-    if (!Number.isFinite(id)) {
+    if (!(await canManagePaymentMethods(session.user.id))) {
+      return json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const id = parsePaymentMethodId(event.params.id);
+    if (id == null) {
       return json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const body = await event.request.json();
-    const parsed = parsePaymentMethodInput(body);
+    const bodyResult = await readJsonBody(event.request);
+    if (!bodyResult.ok) {
+      return json({ error: bodyResult.error }, { status: 400 });
+    }
+
+    const parsed = parsePaymentMethodInput(
+      (bodyResult.data && typeof bodyResult.data === "object"
+        ? bodyResult.data
+        : {}) as Record<string, unknown>,
+    );
     if ("error" in parsed) {
       return json({ error: parsed.error }, { status: 400 });
     }
@@ -61,8 +76,12 @@ export const DELETE: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const id = Number(event.params.id);
-    if (!Number.isFinite(id)) {
+    if (!(await canManagePaymentMethods(session.user.id))) {
+      return json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const id = parsePaymentMethodId(event.params.id);
+    if (id == null) {
       return json({ error: "Invalid id" }, { status: 400 });
     }
 

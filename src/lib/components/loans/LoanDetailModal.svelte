@@ -53,12 +53,16 @@
 	$effect(() => {
 		if (!open || !initialLoan?.id) return;
 		loan = initialLoan;
+		paymentMethods = [];
 		isEditing = startInEditMode;
 		void fetchLoanData(initialLoan.id);
 	});
 
 	$effect(() => {
-		if (!open) isEditing = false;
+		if (!open) {
+			isEditing = false;
+			paymentMethods = [];
+		}
 	});
 
 	const isOverdue = $derived(loan?.status === 'Overdue');
