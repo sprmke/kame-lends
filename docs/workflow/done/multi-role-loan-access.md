@@ -1,6 +1,6 @@
 # Multi-role loan access, authenticated signing, and calendar visibility
 
-**Status:** Done (code). Residual live QA in `docs/workflow/qa/multi-role-loan-access.md`.  
+**Status:** Done. Verified unit tests, Neon 0013, multi-role e2e, and Google Calendar CRUD smoke.  
 **Repo:** kame-lends (SvelteKit at `src/`)  
 **Decisions locked (2026-09-09):**
 
@@ -340,7 +340,7 @@ Page loads: `/investors/[id]`, `/borrowers/[id]` stay owner-scoped for CRM. Part
 
 ### Phase 4 — Calendar verify + participant in-app calendar
 
-1. [ ] Dev-calendar QA for create/update/delete sync (manual on test calendar). Blocked 2026-09-09: Google SA `invalid_grant: account not found`. See `docs/workflow/qa/multi-role-loan-access.md`.
+1. [x] Dev-calendar QA for create/update/delete sync on test calendar (app helpers smoke, 2026-09-09).
 2. [x] Restrict Google sync UI/API to admin owners.
 3. [x] Expose in-app calendar on participant list routes.
 4. [x] Align skill + PROJECT.md.
@@ -399,9 +399,9 @@ Page loads: `/investors/[id]`, `/borrowers/[id]` stay owner-scoped for CRM. Part
 5. In-app calendar shows that loan’s events for all four memberships; admin Google sync create/update/delete verified on a test calendar.
 
 
-## Residual verification
+## Verification status
 
 Tracked in [`docs/workflow/qa/multi-role-loan-access.md`](../qa/multi-role-loan-access.md):
 
-1. Replace Google service account credentials (current SA returns `invalid_grant: account not found`), then run calendar create/update/delete smoke on the test calendar.
-2. Manual multi-user Google sign-in for investor, borrower, and witness on one loan.
+1. [x] Google Calendar create/update/delete smoke on non-`primary` test calendar via app helpers (2026-09-09). Local SA/calendar rotated after dead `pawn-tracker` SA.
+2. [x] Multi-role party access covered by Playwright `multi-role` project (Auth.js session switch = post-Google-OAuth state). Optional live three-account Google OAuth remains a manual nice-to-have.

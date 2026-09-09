@@ -11,9 +11,10 @@ Use Neon branch **`dev-sveltekit-migration`** only. Do not point at prod.
 
 ## Google Calendar (admin shared calendar)
 
-- [ ] Live create / update / delete on the **test** calendar in `.env.local` (`GOOGLE_CALENDAR_ID` must not be `primary`)
-- Manual runner: `bun run test:unit src/lib/server/google-calendar.smoke.manual.ts`
-- **2026-09-09:** smoke blocked with Google `invalid_grant: account not found` for `GOOGLE_SERVICE_ACCOUNT_EMAIL`. Replace the service account key and re-share the test calendar, then re-run.
+- [x] Live create / update / delete on the **test** calendar in `.env.local` (`GOOGLE_CALENDAR_ID` must not be `primary`)
+- Verified through app helpers `createCalendarEvent` / `updateCalendarEvent` / `deleteCalendarEvent` (Vitest smoke)
+- **2026-09-09:** old `pawn-tracker@...` SA returned `invalid_grant: account not found`. Local `.env.local` was rotated to a working service account and a new non-`primary` QA calendar (`Kame Lends QA Test Calendar`). Secrets stay in `.env.local` only.
+- Manual runner: copy `google-calendar.smoke.manual.ts` to `*.test.ts` (or include it) and run with Vitest
 
 ## Manual multi-user Google sign-in
 
