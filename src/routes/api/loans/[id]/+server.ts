@@ -4,7 +4,8 @@ import { db } from '$lib/server/db';
 import { loans, loanInvestors, interestPeriods, receivedPayments } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getSession } from '$lib/server/session';
-import { hasLoanAccess, hasLoanAdminAccess } from '$lib/server/access-control';
+import { getLoanAccessContext, hasLoanAdminAccess } from '$lib/server/access-control';
+import { listPaymentMethodsForBorrowerLoanView } from '$lib/server/payment-methods';
 import { invalidateLoanData } from '$lib/server/cache-invalidation';
 import {
 	syncSigningInvitationsForLoan,
@@ -13,7 +14,7 @@ import {
 import type { ContractCustomization } from '$lib/loan-contract-customization';
 
 export const GET: RequestHandler = async (event) => {
-	const { params, request } = event;
+	const { params } = event;
 	try {
 		const session = await getSession(event);
 		if (!session?.user?.id) {
@@ -23,9 +24,8 @@ export const GET: RequestHandler = async (event) => {
 		const { id } = params;
 		const loanId = parseInt(id);
 
-		// Check if user has access to this loan
-		const hasAccess = await hasLoanAccess(loanId, session.user.id);
-		if (!hasAccess) {
+		const access = await getLoanAccessContext(loanId, session.user.id);
+		if (!access.canView) {
 			return json({ error: 'Loan not found' }, { status: 404 });
 		}
 
@@ -51,7 +51,12 @@ export const GET: RequestHandler = async (event) => {
 			return json({ error: 'Loan not found' }, { status: 404 });
 		}
 
-		return json(loan);
+		const paymentMethods = await listPaymentMethodsForBorrowerLoanView(loan.userId, access);
+
+		return json({
+			...loan,
+			...(access.memberships.includes('borrower') ? { paymentMethods } : {})
+		});
 	} catch (error) {
 		console.error('Error fetching loan:', error);
 		return json({ error: 'Failed to fetch loan' }, { status: 500 });

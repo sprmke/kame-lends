@@ -3,6 +3,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import LoanSummarySection from './LoanSummarySection.svelte';
 	import LoanInvestorsSection from './LoanInvestorsSection.svelte';
+	import LoanPaymentMethodsSection from './LoanPaymentMethodsSection.svelte';
 	import { formatDate, formatText, formatSqm } from '$lib/format';
 	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
 	import {
@@ -14,7 +15,7 @@
 		groupByInvestor,
 		calculateLoanDuration
 	} from '$lib/calculations';
-	import type { LoanWithInvestors } from '$lib/types';
+	import type { LoanWithInvestors, PaymentMethod } from '$lib/types';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -23,6 +24,7 @@
 		loanId?: number;
 		readOnly?: boolean;
 		editableInvestorIds?: number[];
+		paymentMethods?: PaymentMethod[];
 	}
 
 	let {
@@ -31,7 +33,8 @@
 		onRefresh,
 		loanId,
 		readOnly = false,
-		editableInvestorIds = []
+		editableInvestorIds = [],
+		paymentMethods = []
 	}: Props = $props();
 
 	const totalPrincipal = $derived(calculateTotalPrincipal(loan.loanInvestors));
@@ -118,6 +121,8 @@
 		status={loan.status}
 		{balance}
 	/>
+
+	<LoanPaymentMethodsSection {paymentMethods} />
 
 	<Card.Root>
 		<Card.Header>

@@ -6,6 +6,7 @@
 	import FixReceivedPaymentsButton from '$lib/components/common/FixReceivedPaymentsButton.svelte';
 	import SyncLoanDueDatesButton from '$lib/components/common/SyncLoanDueDatesButton.svelte';
 	import SyncCalendarButton from '$lib/components/common/SyncCalendarButton.svelte';
+	import PaymentMethodsManager from '$lib/components/settings/PaymentMethodsManager.svelte';
 
 	let { data } = $props();
 	const isAdminWorkspace = $derived(Boolean(data.isAdminWorkspace));
@@ -25,6 +26,8 @@
 	</Card.Root>
 
 	{#if isAdminWorkspace}
+		<PaymentMethodsManager initialMethods={data.paymentMethods ?? []} />
+
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>Data & maintenance</Card.Title>

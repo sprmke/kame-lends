@@ -75,7 +75,7 @@ During local SvelteKit QA, `DATABASE_URL` must use the **`dev-sveltekit-migratio
 
 ## API routes
 
-SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, investors, borrowers, debts, transactions, signing, cron backup, witnesses, interest periods).
+SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, investors, borrowers, debts, transactions, signing, cron backup, witnesses, interest periods, payment methods).
 
 ## Auth & roles
 
@@ -86,11 +86,12 @@ SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, i
 - Loan access is membership-based (`src/lib/server/access-control.ts`): owner full edit; investor own allocation/payments; borrower/witness read-only
 - Menus: `/loans` (owner), `/investments`, `/borrowed`, `/witnessed`
 - Contract signing: authenticated `/loans/[id]/sign` (Google email must match party). Legacy `/sign/[token]` redirects after login
+- Payment methods: owners manage bank/QR in `/settings`. Loan detail APIs return them only when the viewer has borrower membership on that loan.
 - Tracker: [`workflow/done/multi-role-loan-access.md`](./workflow/done/multi-role-loan-access.md). QA: [`workflow/qa/multi-role-loan-access.md`](./workflow/qa/multi-role-loan-access.md).
 
 ## Database
 
-- Schema: `src/lib/server/db/schema.ts`
+- Schema: `src/lib/server/db/schema.ts` (includes `payment_methods` for owner bank/QR details)
 - Client: `src/lib/server/db/index.ts` — **local** URLs (`localhost` / `127.0.0.1`) use `postgres.js`; **Neon** URLs use a WebSocket `Pool` (`drizzle-orm/neon-serverless`), not one HTTP round-trip per query.
 - Commands: `bun run db:generate`, `db:migrate`, `db:studio`
 - **Local dev (low latency):** `bun run db:local:start` → `bun run db:local:push` → set `DATABASE_URL=postgresql://kame_lends:kame_lends@127.0.0.1:5433/kame_lends` in `.env.local`. See [`archive/operations/local-development-database.md`](./archive/operations/local-development-database.md).
@@ -126,3 +127,5 @@ Pre-cutover snapshot: `docs/archive/operations/vercel-production-snapshot.md`
 - `bun run build:clean` removes `.svelte-kit` and `.vercel/output`, then runs `svelte-kit sync` and `vite build` to avoid stale-cache and symlink build flakes from `adapter-vercel`.
 - Playwright E2E tests run against `bun run dev` on port 4174; the dev server is started and stopped automatically by `playwright.config.ts`.
 - E2E CRUD coverage creates and cleans up investors, transactions, borrowings, and loans (including a preselected investor, a borrower, principal, and due date), then verifies the generated signing link is authenticated `/loans/{id}/sign` (legacy `/sign/[token]` redirects after login). It revealed and validated fixes for number-input validation in `TransactionForm.svelte` and `LoanForm.svelte` (`String(value).trim()` instead of assuming a string from `type="number"` inputs).
+- E2E advanced-controls coverage verifies the settings maintenance controls, the new-borrower modal from the loan form, the valid signing page controls, and loan duplication from the detail page. The duplication test exposed a UTF-8 `btoa` crash when duplicate data contained non-Latin1 characters; it now uses `src/lib/base64-url.ts` helpers for safe encoding/decoding.
+- Inline edit forms on detail pages are keyed by entity ID so client-side navigation between different investors/borrowers/debts/loans resets form state instead of showing stale data from the previously viewed entity.

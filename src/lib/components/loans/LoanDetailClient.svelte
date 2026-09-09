@@ -14,7 +14,7 @@
 	import { downloadLoanContract } from '$lib/download-loan-contract';
 	import { encodeJsonForUrl } from '$lib/base64-url';
 	import { toast } from '$lib/toast';
-	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
+	import type { Borrower, Investor, LoanWithInvestors, PaymentMethod } from '$lib/types';
 	import type { LoanAccessContext } from '$lib/loan-access';
 
 	interface Props {
@@ -23,9 +23,11 @@
 		borrowers: Borrower[];
 		loadingFormData: boolean;
 		access: LoanAccessContext;
+		paymentMethods?: PaymentMethod[];
 	}
 
-	let { loan, investors, borrowers, loadingFormData, access }: Props = $props();
+	let { loan, investors, borrowers, loadingFormData, access, paymentMethods = [] }: Props =
+		$props();
 
 	let isEditing = $state(
 		page.url.searchParams.get('edit') === '1' && access.canAdminEdit
@@ -165,6 +167,7 @@
 			loanId={loan.id}
 			readOnly={!access.canAdminEdit}
 			editableInvestorIds={access.editableInvestorIds}
+			{paymentMethods}
 		/>
 
 		{#if access.canAdminEdit || access.editableInvestorIds.length > 0}
