@@ -10,7 +10,7 @@ describe("DashboardSkeleton", () => {
   it("mirrors the full dashboard layout", () => {
     const { body } = render(DashboardSkeleton);
     const cards = body.match(/data-slot="card"/g) ?? [];
-    const summaryCount = 5;
+    const summaryCount = 4;
     const activityCount = 4;
     const analyticsCount = SHOW_TRANSACTIONS_UI ? 2 : 1;
     const portfolioCount = 2;
@@ -18,17 +18,20 @@ describe("DashboardSkeleton", () => {
       summaryCount + activityCount + analyticsCount + portfolioCount,
     );
     expect(body).toContain('aria-label="Loading dashboard"');
-    expect(body).toContain("grid-cols-2 md:grid-cols-3 2xl:grid-cols-5");
+    expect(body).toContain("grid-cols-2 lg:grid-cols-4");
     expect(body).toContain("md:grid-cols-2 md:gap-5 2xl:grid-cols-4");
     expect(body).toContain("lg:grid-cols-2");
   });
 });
 
 describe("ListPageSkeleton", () => {
-  it("renders loans table columns", () => {
+  it("renders loans table columns and summary cards", () => {
     const { body } = render(ListPageSkeleton, { props: { variant: "loans" } });
     expect(body).toContain("grow-[12]");
     expect(body).toContain('aria-label="Loading page"');
+    expect(body).toContain("skeleton-toolbar");
+    expect(body).toContain("surface-card");
+    expect(body).toContain("grid-cols-2 lg:grid-cols-4");
   });
 
   it("renders investors table columns", () => {
@@ -36,6 +39,7 @@ describe("ListPageSkeleton", () => {
       props: { variant: "investors" },
     });
     expect(body).toContain("grow-[18]");
+    expect(body).toContain("skeleton-toolbar");
   });
 });
 
@@ -50,6 +54,7 @@ describe("DetailPageSkeleton", () => {
       props: { variant: "investor" },
     });
     expect(body).toContain('aria-label="Loading investor details"');
+    expect(body).toContain("skeleton-toolbar");
   });
 });
 

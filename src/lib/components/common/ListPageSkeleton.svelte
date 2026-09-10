@@ -2,6 +2,7 @@
 	import DataTableSkeleton from './page-skeletons/DataTableSkeleton.svelte';
 	import ListPageFiltersSkeleton from './page-skeletons/ListPageFiltersSkeleton.svelte';
 	import ListPageHeaderSkeleton from './page-skeletons/ListPageHeaderSkeleton.svelte';
+	import SkeletonMetricGrid from './page-skeletons/SkeletonMetricGrid.svelte';
 	import {
 		DEBTS_TABLE_COLUMNS,
 		INVESTORS_TABLE_COLUMNS,
@@ -31,6 +32,7 @@
 				return {
 					actionCount: 5,
 					showMoreFilters: true,
+					showSummary: true,
 					columns: LOANS_TABLE_COLUMNS,
 					tallRows: true
 				};
@@ -38,6 +40,7 @@
 				return {
 					actionCount: 1,
 					showMoreFilters: false,
+					showSummary: false,
 					columns: INVESTORS_TABLE_COLUMNS,
 					tallRows: false
 				};
@@ -45,6 +48,7 @@
 				return {
 					actionCount: 2,
 					showMoreFilters: false,
+					showSummary: false,
 					columns: BORROWERS_TABLE_COLUMNS,
 					tallRows: false
 				};
@@ -52,6 +56,7 @@
 				return {
 					actionCount: 2,
 					showMoreFilters: false,
+					showSummary: false,
 					columns: WITNESSES_TABLE_COLUMNS,
 					tallRows: false
 				};
@@ -59,6 +64,7 @@
 				return {
 					actionCount: 2,
 					showMoreFilters: true,
+					showSummary: false,
 					columns: DEBTS_TABLE_COLUMNS,
 					tallRows: false
 				};
@@ -66,6 +72,7 @@
 				return {
 					actionCount: 4,
 					showMoreFilters: true,
+					showSummary: false,
 					columns: TRANSACTIONS_TABLE_COLUMNS,
 					tallRows: false
 				};
@@ -75,6 +82,9 @@
 
 <div aria-busy="true" aria-label="Loading page" class="dashboard-page" role="status">
 	<ListPageHeaderSkeleton actionCount={config.actionCount} />
+	{#if config.showSummary}
+		<SkeletonMetricGrid count={4} />
+	{/if}
 	<ListPageFiltersSkeleton showMoreFilters={config.showMoreFilters} />
 	<DataTableSkeleton columns={config.columns} tallRows={config.tallRows} />
 </div>

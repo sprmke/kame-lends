@@ -8,7 +8,7 @@
 		<Skeleton class="h-4 w-32 max-w-[70%]" />
 	</div>
 	<div class="flex shrink-0 items-center gap-1">
-		<Skeleton class="h-9 w-9 rounded-md" />
-		<Skeleton class="h-9 w-9 rounded-md" />
+		<Skeleton class="h-9 w-9 rounded-2xl" />
+		<Skeleton class="h-9 w-9 rounded-2xl" />
 	</div>
 </div>

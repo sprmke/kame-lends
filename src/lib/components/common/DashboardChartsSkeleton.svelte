@@ -19,7 +19,7 @@
 			{/if}
 		</Card.Header>
 		<Card.Content>
-			<Skeleton class="w-full rounded-md" style="height: {CHART_HEIGHT}px" />
+			<Skeleton class="w-full rounded-2xl" style="height: {CHART_HEIGHT}px" />
 		</Card.Content>
 	</Card.Root>
 {/snippet}

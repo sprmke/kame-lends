@@ -4,13 +4,14 @@ export interface TableColumnSkeleton {
   cellWidth?: string;
   cellHeight?: string;
   pill?: boolean;
+  identity?: boolean;
   visibility?: string;
 }
 
 export const HIDDEN_BELOW_2XL = "hidden 2xl:block";
 
 export const LOANS_TABLE_COLUMNS: TableColumnSkeleton[] = [
-  { grow: "grow-[12]", headerWidth: "w-1/2", cellWidth: "w-4/5" },
+  { grow: "grow-[12]", headerWidth: "w-1/2", identity: true },
   { grow: "grow-[7]", pill: true, visibility: HIDDEN_BELOW_2XL },
   { grow: "grow-[7]", pill: true, visibility: HIDDEN_BELOW_2XL },
   { grow: "grow-[8]", cellHeight: "h-8", visibility: HIDDEN_BELOW_2XL },
@@ -30,7 +31,7 @@ export const LOANS_TABLE_COLUMNS: TableColumnSkeleton[] = [
 
 export const DEBTS_TABLE_COLUMNS: TableColumnSkeleton[] = [
   { grow: "grow-[10]", cellWidth: "w-3/4" },
-  { grow: "grow-[18]", headerWidth: "w-1/2", cellWidth: "w-4/5" },
+  { grow: "grow-[18]", headerWidth: "w-1/2", identity: true },
   { grow: "grow-[14]", cellWidth: "w-2/3", visibility: "hidden md:block" },
   { grow: "grow-[12]", cellWidth: "w-3/4" },
   { grow: "grow-[8]", cellWidth: "w-2/3", visibility: "hidden lg:block" },
@@ -40,7 +41,7 @@ export const DEBTS_TABLE_COLUMNS: TableColumnSkeleton[] = [
 
 export const TRANSACTIONS_TABLE_COLUMNS: TableColumnSkeleton[] = [
   { grow: "grow-[12]", cellWidth: "w-3/4" },
-  { grow: "grow-[22]", headerWidth: "w-1/3", cellWidth: "w-4/5" },
+  { grow: "grow-[22]", headerWidth: "w-1/3", identity: true },
   { grow: "grow-[18]", headerWidth: "w-2/5", cellWidth: "w-2/3" },
   { grow: "grow-[12]", pill: true, visibility: HIDDEN_BELOW_2XL },
   { grow: "grow-[12]", pill: true },
@@ -54,7 +55,7 @@ export const TRANSACTIONS_TABLE_COLUMNS: TableColumnSkeleton[] = [
 ];
 
 export const INVESTORS_TABLE_COLUMNS: TableColumnSkeleton[] = [
-  { grow: "grow-[18]", headerWidth: "w-1/2", cellWidth: "w-4/5" },
+  { grow: "grow-[18]", headerWidth: "w-1/2", identity: true },
   { grow: "grow-[16]", cellWidth: "w-3/4" },
   { grow: "grow-[10]", cellWidth: "w-2/3", visibility: HIDDEN_BELOW_2XL },
   { grow: "grow-[10]", cellWidth: "w-3/4" },
@@ -69,7 +70,7 @@ export const INVESTORS_TABLE_COLUMNS: TableColumnSkeleton[] = [
 ];
 
 export const BORROWERS_TABLE_COLUMNS: TableColumnSkeleton[] = [
-  { grow: "grow-[18]", headerWidth: "w-1/2", cellWidth: "w-4/5" },
+  { grow: "grow-[18]", headerWidth: "w-1/2", identity: true },
   { grow: "grow-[16]", cellWidth: "w-3/4", visibility: "hidden md:block" },
   { grow: "grow-[12]", cellWidth: "w-2/3", visibility: "hidden lg:block" },
   { grow: "grow-[8]", cellWidth: "w-2/3" },
@@ -77,7 +78,7 @@ export const BORROWERS_TABLE_COLUMNS: TableColumnSkeleton[] = [
 ];
 
 export const WITNESSES_TABLE_COLUMNS: TableColumnSkeleton[] = [
-  { grow: "grow-[18]", headerWidth: "w-1/2", cellWidth: "w-4/5" },
+  { grow: "grow-[18]", headerWidth: "w-1/2", identity: true },
   { grow: "grow-[16]", cellWidth: "w-3/4", visibility: "hidden md:block" },
   { grow: "grow-[12]", cellWidth: "w-2/3", visibility: "hidden lg:block" },
   { grow: "grow-[8]", cellWidth: "w-2/3" },
