@@ -22,10 +22,12 @@
 		matchesLoanActivityFilter,
 		type LoanActivityFilter
 	} from '$lib/list-filters';
-	import { PlusCircle, X } from 'lucide-svelte';
+	import { ContactRound, PlusCircle, X } from 'lucide-svelte';
 	import type { BorrowerWithLoans } from '$lib/types';
 
 	let { data } = $props();
+	const canCreate = $derived((data as { canCreate?: boolean }).canCreate !== false);
+	const canManage = $derived((data as { canManage?: boolean }).canManage !== false);
 
 	let items = $state<BorrowerWithLoans[] | null>(null);
 
@@ -116,11 +118,17 @@
 	<ListPageSkeleton variant="borrowers" />
 {:else}
 	<DashboardPage>
-		<PageHeader title="Borrowers" showPriceToggle={false}>
-			<Button size="sm" aria-label="Add Borrower" onclick={openCreateModal}>
-				<PlusCircle class="h-4 w-4 lg:mr-2" />
-				<span class="hidden lg:inline">Add Borrower</span>
-			</Button>
+		<PageHeader
+			title="Borrowers"
+			description="Borrowers linked to your loans"
+			showPriceToggle={false}
+		>
+			{#if canCreate}
+				<Button size="sm" aria-label="Add Borrower" onclick={openCreateModal}>
+					<PlusCircle class="h-4 w-4 lg:mr-2" />
+					<span class="hidden lg:inline">Add Borrower</span>
+				</Button>
+			{/if}
 		</PageHeader>
 
 		<ListPageToolbar
@@ -150,14 +158,15 @@
 					? 'No borrowers yet.'
 					: 'No borrowers match your filters.'}
 				onQuickView={handleQuickView}
-				onEdit={handleRowEdit}
-				onDelete={(borrower) => (borrowerPendingDeletion = borrower)}
+				onEdit={canManage ? handleRowEdit : undefined}
+				onDelete={canManage ? (borrower) => (borrowerPendingDeletion = borrower) : undefined}
 			/>
 		{:else if filteredBorrowers.length === 0}
 			<ListEmptyState
 				message={(items?.length ?? 0) === 0
-					? 'No borrowers yet.'
+					? 'No borrowers yet'
 					: 'No borrowers match your filters.'}
+				icon={ContactRound}
 			>
 				{#if hasActiveFilters}
 					{#snippet actions()}
@@ -176,8 +185,8 @@
 							<BorrowerCard
 								{borrower}
 								onQuickView={() => handleQuickView(borrower)}
-								onEdit={handleRowEdit}
-								onDelete={(item) => (borrowerPendingDeletion = item)}
+								onEdit={canManage ? handleRowEdit : undefined}
+								onDelete={canManage ? (item) => (borrowerPendingDeletion = item) : undefined}
 							/>
 						{/each}
 					</div>
@@ -198,6 +207,7 @@
 			}
 		}}
 		onUpdate={refreshBorrowers}
+		readOnly={!canManage}
 	/>
 
 	<BorrowerCreateModal

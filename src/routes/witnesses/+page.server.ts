@@ -1,9 +1,14 @@
 import type { PageServerLoad } from "./$types";
 import { getCachedWitnesses } from "$lib/server/cached-data";
-import { requireUserSession } from "$lib/server/request-auth";
+import { requireWorkspaceAdminPage } from "$lib/server/workspace-admin";
 
 export const load: PageServerLoad = async (event) => {
-  const session = requireUserSession(event);
+  const session = await requireWorkspaceAdminPage(event, "/dashboard");
   event.depends("app:witnesses");
-  return { items: getCachedWitnesses(session.user.id, "list") };
+  const { navCapabilities } = await event.parent();
+  return {
+    items: getCachedWitnesses(session.user.id, "list"),
+    canCreate: navCapabilities.isAdminWorkspace,
+    canManage: navCapabilities.isAdminWorkspace,
+  };
 };

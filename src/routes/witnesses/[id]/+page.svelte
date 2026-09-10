@@ -12,5 +12,5 @@
 <svelte:head><title>{title}</title></svelte:head>
 
 <DashboardPage>
-	<WitnessDetailClient initialWitness={witness} />
+	<WitnessDetailClient initialWitness={witness} canManage={Boolean(data.canManage)} />
 </DashboardPage>

@@ -26,10 +26,12 @@
 		type LoanActivityFilter,
 		type WitnessSigningFilter
 	} from '$lib/list-filters';
-	import { PlusCircle, X } from 'lucide-svelte';
+	import { PlusCircle, UserCheck, X } from 'lucide-svelte';
 	import type { WitnessWithLoans } from '$lib/types';
 
 	let { data } = $props();
+	const canCreate = $derived((data as { canCreate?: boolean }).canCreate !== false);
+	const canManage = $derived((data as { canManage?: boolean }).canManage !== false);
 
 	let items = $state<WitnessWithLoans[] | null>(null);
 
@@ -127,11 +129,17 @@
 	<ListPageSkeleton variant="witnesses" />
 {:else}
 	<DashboardPage>
-		<PageHeader title="Witnesses" showPriceToggle={false}>
-			<Button size="sm" aria-label="Add Witness" onclick={openCreateModal}>
-				<PlusCircle class="h-4 w-4 lg:mr-2" />
-				<span class="hidden lg:inline">Add Witness</span>
-			</Button>
+		<PageHeader
+			title="Witnesses"
+			description="Contract witnesses for your loans"
+			showPriceToggle={false}
+		>
+			{#if canCreate}
+				<Button size="sm" aria-label="Add Witness" onclick={openCreateModal}>
+					<PlusCircle class="h-4 w-4 lg:mr-2" />
+					<span class="hidden lg:inline">Add Witness</span>
+				</Button>
+			{/if}
 		</PageHeader>
 
 		<ListPageToolbar
@@ -166,14 +174,15 @@
 					? 'No witnesses yet.'
 					: 'No witnesses match your filters.'}
 				onQuickView={handleQuickView}
-				onEdit={handleRowEdit}
-				onDelete={(witness) => (witnessPendingDeletion = witness)}
+				onEdit={canManage ? handleRowEdit : undefined}
+				onDelete={canManage ? (witness) => (witnessPendingDeletion = witness) : undefined}
 			/>
 		{:else if filteredWitnesses.length === 0}
 			<ListEmptyState
 				message={(items?.length ?? 0) === 0
-					? 'No witnesses yet.'
+					? 'No witnesses yet'
 					: 'No witnesses match your filters.'}
+				icon={UserCheck}
 			>
 				{#if hasActiveFilters}
 					{#snippet actions()}
@@ -192,8 +201,8 @@
 							<WitnessCard
 								{witness}
 								onQuickView={() => handleQuickView(witness)}
-								onEdit={handleRowEdit}
-								onDelete={(item) => (witnessPendingDeletion = item)}
+								onEdit={canManage ? handleRowEdit : undefined}
+								onDelete={canManage ? (item) => (witnessPendingDeletion = item) : undefined}
 							/>
 						{/each}
 					</div>
@@ -214,6 +223,7 @@
 			}
 		}}
 		onUpdate={refreshWitnesses}
+		readOnly={!canManage}
 	/>
 
 	<WitnessCreateModal
