@@ -15,14 +15,14 @@
 	bind:ref
 	data-slot="dropdown-menu-radio-item"
 	class={cn(
-		"gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 [&_svg:not([class*='size-'])]:size-4 relative flex cursor-default items-center outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+		"relative flex min-h-11 cursor-pointer items-center gap-3 rounded-lg py-2.5 pr-10 pl-3.5 text-sm whitespace-nowrap outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-8 [&_svg:not([class*='size-'])]:size-4 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 		className
 	)}
 	{...restProps}
 >
 	{#snippet children({ checked })}
 		<span
-			class="absolute right-2 flex items-center justify-center pointer-events-none"
+			class="absolute right-3 flex items-center justify-center pointer-events-none"
 			data-slot="dropdown-menu-radio-item-indicator"
 		>
 			{#if checked}
