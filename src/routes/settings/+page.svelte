@@ -8,10 +8,12 @@
 	import SyncCalendarButton from '$lib/components/common/SyncCalendarButton.svelte';
 	import PaymentMethodsManager from '$lib/components/settings/PaymentMethodsManager.svelte';
 	import PartyIdentityDocumentsManager from '$lib/components/settings/PartyIdentityDocumentsManager.svelte';
+	import { formatAccountRoles } from '$lib/account-roles';
 
 	let { data } = $props();
 	const isAdminWorkspace = $derived(Boolean(data.isAdminWorkspace));
 	const hasPartyLinks = $derived(Boolean(data.hasPartyLinks));
+	const rolesLabel = $derived(formatAccountRoles(data.accountRoles ?? []));
 </script>
 
 <svelte:head><title>Settings</title></svelte:head>
@@ -30,13 +32,13 @@
 			<Card.Title>Account</Card.Title>
 		</Card.Header>
 		<Card.Content>
-			<dl class="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[4.5rem_1fr]">
+			<dl class="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[5rem_1fr]">
 				<dt class="text-muted-foreground">Name</dt>
 				<dd class="min-w-0 font-medium">{data.user?.name}</dd>
 				<dt class="text-muted-foreground">Email</dt>
 				<dd class="min-w-0 break-all font-medium">{data.user?.email}</dd>
-				<dt class="text-muted-foreground">Role</dt>
-				<dd class="min-w-0 font-medium capitalize">{data.user?.role}</dd>
+				<dt class="text-muted-foreground">Roles</dt>
+				<dd class="min-w-0 font-medium">{rolesLabel}</dd>
 			</dl>
 		</Card.Content>
 	</Card.Root>

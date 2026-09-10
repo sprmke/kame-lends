@@ -2,9 +2,27 @@ import { sequence } from "@sveltejs/kit/hooks";
 import { redirect, type Handle } from "@sveltejs/kit";
 import { handle as authHandle } from "$lib/server/auth";
 
+/** Auth.js and Drizzle both wrap errors; the connection failure is at the bottom. */
+function rootCauseMessage(error: unknown): string {
+  let current = error;
+  let message = String(error);
+  for (let depth = 0; depth < 5 && current instanceof Error; depth += 1) {
+    message = current.message;
+    if (!(current.cause instanceof Error)) break;
+    current = current.cause;
+    message = `${message} <- ${current.message}`;
+  }
+  return message;
+}
+
 /** One session lookup per request instead of hooks + layout + page each calling auth(). */
 const resolveSession: Handle = async ({ event, resolve }) => {
-  event.locals.session = (await event.locals.auth?.()) ?? null;
+  try {
+    event.locals.session = (await event.locals.auth?.()) ?? null;
+  } catch (error) {
+    console.error("[auth] session lookup failed:", rootCauseMessage(error));
+    event.locals.session = null;
+  }
   return resolve(event);
 };
 

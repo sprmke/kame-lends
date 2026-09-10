@@ -35,6 +35,9 @@
 			</div>
 		</Card.Header>
 		<Card.Content class="mt-5 space-y-5 px-8 pb-8">
+			{#if data.error}
+				<p class="text-center text-sm text-destructive">{data.error}</p>
+			{/if}
 			<form method="POST" action="?/signIn" class="space-y-5">
 				<input type="hidden" name="providerId" value="google" />
 				<input type="hidden" name="callbackUrl" value={data.callbackUrl} />

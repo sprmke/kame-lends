@@ -4,6 +4,7 @@ Per-page behavior specs mirroring SvelteKit URLs under `src/routes/`.
 
 | Route              | Guide                                        | Status     |
 | ------------------ | -------------------------------------------- | ---------- |
+| `/signin`          | [signin.md](./signin.md)                     | Documented |
 | `/dashboard`       | [dashboard.md](./dashboard.md)               | Documented |
 | `/loans`           | [loans.md](./loans.md)                       | Documented |
 | `/investments`     | [investments.md](./investments.md)           | Documented |
@@ -17,3 +18,4 @@ Per-page behavior specs mirroring SvelteKit URLs under `src/routes/`.
 | `/settings`        | [settings.md](./settings.md)                 | Documented |
 | `/loans/[id]`      | [loans-detail.md](./loans-detail.md)         | Documented |
 | `/loans/[id]/sign` | [sign.md](./sign.md)                         | Documented |
+| Any failing route  | [errors.md](./errors.md)                     | Documented |
