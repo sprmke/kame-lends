@@ -14,6 +14,7 @@ Full loan detail for any party with membership (owner, investor, borrower, witne
 - Create/edit loan form: **Contract Preview** collapsible uses tabs (Parties & signatures, Contract terms, Contract preview). The live document preview is only on the preview tab.
 - **Desktop (`lg+`):** floating sidebar; list View / row click opens this content in `LoanDetailModal` with a `text-base font-medium` title and the same control chrome as the last Next.js app. Visual snapshots live in `e2e/visual-parity.spec.ts`.
 - **Phone (`<lg`):** `LoanSummarySection` is a 2-column metric grid. When the tile count is odd, the last tile spans full width only while the grid is 2 columns (below `lg`). Desktop `lg+` stays 4 columns with no stretch. Edit and duplicate open a bottom sheet over the detail (`EditFormSheet` / `LoanCreateModal`). Cancel / submit scroll with the form.
+- **Loading:** `LoanDetailSkeleton` mirrors the page: header, summary metric grid in a card, payment-method tiles, signing party rows, and investor sections. Signing status uses the same card + identity rows while `/api/loans/[id]/signing` loads.
 
 ## Load
 
@@ -32,3 +33,5 @@ Full loan detail for any party with membership (owner, investor, borrower, witne
 | Owner      | No (manage in Settings)                             |
 | Investor   | No                                                  |
 | Witness    | No                                                  |
+
+No view access returns 404 and renders `+error.svelte` ("Loan not available"). `?edit=1` without admin rights returns 403 ("View only access") with a link to the read-only page. See [errors.md](./errors.md).

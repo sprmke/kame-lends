@@ -68,6 +68,17 @@ bun run db:local:stop
 
 `docker compose down` keeps the volume. `docker compose down -v` deletes **local** data only.
 
+## Exported DATABASE_URL wins over `.env.local`
+
+`$env/dynamic/private` reads `process.env` first, and `bun dev` inherits the shell. If a terminal exported `DATABASE_URL` (for example a placeholder pasted from `.env.example`), the app ignores `.env.local` and every Auth.js query fails with `AdapterError` / `SessionTokenError`.
+
+```bash
+# in the terminal running the dev server
+unset DATABASE_URL
+```
+
+Then restart `bun dev`. Placeholder values are now ignored with a `[db] Ignoring placeholder DATABASE_URL` warning, but a real wrong URL is still used as given.
+
 ## Switch back to Neon
 
 Restore your Neon `DATABASE_URL` in `.env.local` and restart dev. Prod data is unchanged.

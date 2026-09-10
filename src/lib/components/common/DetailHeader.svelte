@@ -130,6 +130,7 @@
 					variant="outline"
 					size="sm"
 					class="touch-target h-10 shrink-0 px-2 md:h-8 md:px-3"
+					adaptToMobileHero
 					title="Actions"
 					aria-label="Actions"
 				>

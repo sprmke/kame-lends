@@ -326,7 +326,7 @@
 			/>
 			{#if canCreate}
 				<SyncCalendarButton variant="outline" size="default" />
-				<Button class="px-3" onclick={() => openCreateModal()} aria-label="New Loan">
+				<Button class="px-3" adaptToMobileHero onclick={() => openCreateModal()} aria-label="New Loan">
 					<PlusCircle class="h-4 w-4 xl:mr-2" />
 					<span class="hidden xl:inline">New Loan</span>
 				</Button>

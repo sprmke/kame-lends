@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import { users } from "$lib/server/db/schema";
 import { normalizeEmail } from "$lib/loan-signing";
+import { findUserByNormalizedEmail } from "$lib/server/auth-sign-in";
 
 export type PartyUserRole = "investor" | "borrower" | "witness";
 
@@ -18,9 +19,7 @@ export async function findOrCreatePartyUser(input: {
   const email = normalizeEmail(input.email);
   if (!email) return null;
 
-  const existing = await db.query.users.findFirst({
-    where: eq(users.email, email),
-  });
+  const existing = await findUserByNormalizedEmail(email);
 
   if (existing) {
     if (existing.role === "admin") {

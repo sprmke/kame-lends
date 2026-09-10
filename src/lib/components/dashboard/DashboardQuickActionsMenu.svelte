@@ -28,7 +28,7 @@
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger>
 			{#snippet child({ props })}
-				<Button size="sm" {...props} aria-label="Create new">
+				<Button size="sm" {...props} adaptToMobileHero aria-label="Create new">
 					<PlusCircle class="h-4 w-4 lg:mr-1.5" />
 					<span class="hidden lg:inline">New</span>
 					<ChevronDown class="h-4 w-4 opacity-70" />

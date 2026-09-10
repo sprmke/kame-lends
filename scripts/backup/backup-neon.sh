@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Read-only Neon Postgres backup (custom format). Writes OUTSIDE the repo.
-# Usage: bun run backup:neon   (loads .env.local for DATABASE_URL)
+# Usage:
+#   bun run backup:neon
+#     Uses DATABASE_URL from the environment, else .env.local DATABASE_URL.
+#   DATABASE_URL='postgresql://...' bun run backup:neon
+#     One-off backup (e.g. legacy Pawn Tracker us-east-1 before project delete).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-if [[ -f .env.local ]]; then
+if [[ -z "${DATABASE_URL:-}" && -f .env.local ]]; then
   DATABASE_URL="$(grep -E '^DATABASE_URL=' .env.local | head -1 | cut -d= -f2- | tr -d '"')"
   export DATABASE_URL
 fi

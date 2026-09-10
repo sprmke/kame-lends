@@ -25,9 +25,9 @@
 	{open}
 	{onOpenChange}
 	title="Events for {formatDate(date)}"
-	contentClass="dashboard-dialog-calendar flex max-h-[85vh] flex-col overflow-hidden sm:max-w-lg"
+	contentClass="dashboard-dialog-calendar flex h-auto max-h-[min(85dvh,85vh)] flex-col overflow-hidden sm:max-w-lg"
 >
-	<div class="flex min-h-0 flex-1 flex-col gap-3">
+	<div class="flex min-h-0 flex-col gap-3">
 		<div class="shrink-0">
 			<DailySummary
 				{events}
@@ -36,12 +36,12 @@
 			/>
 		</div>
 
-		<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+		<div class="flex min-h-0 flex-col overflow-hidden">
 			<h3 class="mb-2 shrink-0 text-xs font-semibold text-muted-foreground">
 				All Events ({events.length})
 			</h3>
 			{#if events.length > 0}
-				<div class="flex-1 overflow-y-auto pr-1">
+				<div class="min-h-0 overflow-y-auto pr-1">
 					<div class="space-y-2">
 						{#if config.eventCard}
 							{#each events as event, eventIndex (eventIndex)}

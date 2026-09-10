@@ -114,14 +114,18 @@
 
 	$effect(() => {
 		if (mode !== 'multiple') return;
+		const principal = parseFloat(amount) || 0;
+		if (principal <= 0) return;
+		let changed = false;
 		const updated = periods.map((period) => {
-			const principal = parseFloat(amount) || 0;
+			if (period.interestType !== 'rate') return period;
 			const rate = parseFloat(period.interestRate) || 0;
-			if (period.interestType === 'rate' && principal > 0) {
-				return { ...period, interestAmount: (principal * (rate / 100)).toFixed(2) };
-			}
-			return period;
+			const interestAmount = (principal * (rate / 100)).toFixed(2);
+			if (period.interestAmount === interestAmount) return period;
+			changed = true;
+			return { ...period, interestAmount };
 		});
+		if (!changed) return;
 		periods = updated;
 		onPeriodsChange(updated);
 	});

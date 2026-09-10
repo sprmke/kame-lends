@@ -94,6 +94,7 @@
 					{variant}
 					{size}
 					class={className}
+					adaptToMobileHero
 					disabled={isGenerating}
 					aria-label="Export PDF"
 				>
@@ -133,6 +134,7 @@
 		{variant}
 		{size}
 		class={className}
+		adaptToMobileHero
 		onclick={() => handleExportClick('all')}
 		disabled={isGenerating}
 		aria-label="Export PDF"

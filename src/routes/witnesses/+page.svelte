@@ -135,7 +135,7 @@
 			showPriceToggle={false}
 		>
 			{#if canCreate}
-				<Button size="sm" aria-label="Add Witness" onclick={openCreateModal}>
+				<Button size="sm" adaptToMobileHero aria-label="Add Witness" onclick={openCreateModal}>
 					<PlusCircle class="h-4 w-4 lg:mr-2" />
 					<span class="hidden lg:inline">Add Witness</span>
 				</Button>

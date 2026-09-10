@@ -124,7 +124,7 @@
 			showPriceToggle={false}
 		>
 			{#if canCreate}
-				<Button size="sm" aria-label="Add Borrower" onclick={openCreateModal}>
+				<Button size="sm" adaptToMobileHero aria-label="Add Borrower" onclick={openCreateModal}>
 					<PlusCircle class="h-4 w-4 lg:mr-2" />
 					<span class="hidden lg:inline">Add Borrower</span>
 				</Button>

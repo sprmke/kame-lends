@@ -70,9 +70,20 @@
 </script>
 
 {#if isLoading}
-	<div class="space-y-3">
-		<Skeleton class="h-6 w-48" />
-		<Skeleton class="h-24 w-full" />
+	<div class="surface-card space-y-3 p-4" aria-busy="true" aria-label="Loading signing status" role="status">
+		<Skeleton class="h-5 w-40" />
+		{#each Array.from({ length: 3 }) as _, index (index)}
+			<div class="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-muted/20 p-3">
+				<div class="flex min-w-0 items-center gap-3">
+					<Skeleton class="h-8 w-8 shrink-0 rounded-full" />
+					<div class="min-w-0 flex-1 space-y-1.5">
+						<Skeleton class="h-4 w-32" />
+						<Skeleton class="h-3 w-24" />
+					</div>
+				</div>
+				<Skeleton class="h-5 w-16 shrink-0 rounded-full" />
+			</div>
+		{/each}
 	</div>
 {:else if invitations.length > 0}
 	<div

@@ -68,7 +68,7 @@
 			side={sheetSide}
 			{showCloseButton}
 			class={cn(
-				'responsive-modal-shell flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0',
+				'responsive-modal-shell flex h-auto max-h-[min(90dvh,90vh)] flex-col gap-0 overflow-hidden p-0',
 				contentClass
 			)}
 		>
@@ -84,13 +84,13 @@
 					{#if description}<Sheet.Description>{description}</Sheet.Description>{/if}
 				</Sheet.Header>
 			{/if}
-			<div class={cn('min-h-0 flex-1 overflow-y-auto px-5 py-4', bodyClass)}>
+			<div class={cn('min-h-0 overflow-y-auto px-5 py-4', bodyClass)}>
 				{@render children()}
 			</div>
 			{#if footer}
 				<div
 					data-slot="responsive-modal-footer"
-					class="sheet-modal-footer mt-auto flex shrink-0 flex-col-reverse gap-3 border-t border-border/60 bg-background px-5 pt-4 pb-safe"
+					class="sheet-modal-footer flex shrink-0 flex-col-reverse gap-3 border-t border-border/60 bg-background px-5 pt-4 pb-safe"
 				>
 					{@render footer()}
 				</div>

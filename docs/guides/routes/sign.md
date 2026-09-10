@@ -11,6 +11,8 @@ Legacy `/sign/[token]` requires login and redirects to `/loans/[id]/sign`.
 
 No expiry on new invitations. Tokens are not issued for new loans.
 
+Access failures render `+error.svelte`, not a bare 404: no signature slot for the account returns 403 ("You can't sign this contract"), an unknown or invisible loan returns 404 ("Contract not available"), and an unknown token on `/sign/[token]` returns 404 ("Signing link not found"). See [errors.md](./errors.md).
+
 ### Layout
 
 - Uses `DashboardPage` shell padding like other authenticated routes.

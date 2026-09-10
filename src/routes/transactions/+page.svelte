@@ -5,7 +5,6 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
-	import ViewModeToggle from '$lib/components/common/ViewModeToggle.svelte';
 	import ListPageSkeleton from '$lib/components/common/ListPageSkeleton.svelte';
 	import ListEmptyState from '$lib/components/common/ListEmptyState.svelte';
 	import TransactionsTable from '$lib/components/transactions/TransactionsTable.svelte';
@@ -119,14 +118,10 @@
 			description="View and manage all transactions"
 			showPriceToggle={true}
 		>
-			<ViewModeToggle
-				viewMode={viewModeState.viewMode}
-				onViewModeChange={(mode) => viewModeState.setViewMode(mode)}
-				hasData={(items?.length ?? 0) > 0}
-			/>
 			{#if SHOW_TRANSACTIONS_UI && canCreate}
 				<Button
 					size="sm"
+					adaptToMobileHero
 					aria-label="Add Transaction"
 					onclick={() => {
 						if (isMobileShellViewport()) {

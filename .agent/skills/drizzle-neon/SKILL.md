@@ -4,12 +4,12 @@ Use for schema, queries, and migrations.
 
 ## Layout
 
-| Path                          | Purpose                                                                  |
-| ----------------------------- | ------------------------------------------------------------------------ |
-| `src/lib/server/db/schema.ts` | Drizzle schema                                                           |
-| `src/lib/server/db/index.ts`  | DB client — local URLs use `postgres.js`; Neon URLs use WebSocket `Pool` |
-| `drizzle.config.ts`           | Kit config (`schema` points at `src/lib/server/db/schema.ts`)            |
-| `db/migrations/*.sql`         | Shipped SQL migrations                                                   |
+| Path                          | Purpose                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------- |
+| `src/lib/server/db/schema.ts` | Drizzle schema                                                                                    |
+| `src/lib/server/db/index.ts`  | DB client — local URLs use `postgres.js`; Neon URLs use WebSocket `Pool` (reused on `globalThis`) |
+| `drizzle.config.ts`           | Kit config (`schema` points at `src/lib/server/db/schema.ts`)                                     |
+| `db/migrations/*.sql`         | Shipped SQL migrations                                                                            |
 
 ## Rules
 

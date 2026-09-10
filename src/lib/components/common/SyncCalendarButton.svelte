@@ -70,6 +70,7 @@
 		{size}
 		disabled={loading}
 		class="touch-target"
+		adaptToMobileHero
 		aria-label="Calendar"
 		onclick={() => (sheetOpen = true)}
 	>
@@ -81,7 +82,7 @@
 	</Button>
 
 	<Sheet.Root open={sheetOpen} onOpenChange={(open) => (sheetOpen = open)}>
-		<Sheet.Content side="bottom" class="gap-0 p-0">
+		<Sheet.Content side="bottom" class="h-auto gap-0 p-0">
 			<Sheet.Header class="border-b border-border/60 px-4 py-3">
 				<Sheet.Title class="text-sm font-semibold">Calendar</Sheet.Title>
 			</Sheet.Header>
@@ -118,6 +119,7 @@
 					{size}
 					disabled={loading}
 					class="touch-target"
+					adaptToMobileHero
 					aria-label="Calendar"
 				>
 					{#if loading}

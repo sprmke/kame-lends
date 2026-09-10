@@ -1,12 +1,12 @@
 # Witness detail (`/witnesses/[id]`)
 
 **Status:** Documented  
-**Updated:** 2026-09-10
+**Updated:** 2026-09-11
 
 ## Behavior
 
 - Shows contact info and witnessed loans (party role, signed date, type/status/due + Open).
-- Edit via header or `?edit=1` (workspace admin only). Uses shared `PartyUserEditForm` (same as borrowers/investors). On phone that opens `EditFormSheet` over the detail.
+- Edit via header or `?edit=1` (workspace admin only). Uses shared `PartyUserEditForm` (same as borrowers/investors). Hover (or tap on phone) an ID or signature preview to Replace or Remove. On phone that opens `EditFormSheet` over the detail.
 - Delete requires zero signing invitations.
 - Desktop list quick-view uses the same content inside `WitnessDetailModal`, including in-modal edit.
 

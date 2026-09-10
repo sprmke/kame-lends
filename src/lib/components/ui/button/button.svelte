@@ -14,6 +14,7 @@
 				secondary:
 					"border border-border/50 bg-card text-muted-foreground surface-control hover:bg-muted/40",
 				ghost: "hover:bg-accent hover:text-accent-foreground",
+				hero: "border-0 bg-white/15 text-white shadow-[0_0_0_1px_oklch(1_0_0/0.25)] hover:bg-white/25 hover:text-white [&_.lucide-chevron-down]:hidden",
 				destructive:
 					"bg-destructive text-destructive-foreground shadow-sm shadow-destructive/25 hover:bg-destructive/90 hover:shadow-md",
 				link: "text-primary underline-offset-4 hover:underline",
@@ -46,14 +47,19 @@
 		WithElementRef<HTMLAnchorAttributes> & {
 			variant?: ButtonVariant;
 			size?: ButtonSize;
+			/** Frosted icon well when rendered in the mobile brand header. */
+			adaptToMobileHero?: boolean;
 		};
 </script>
 
 <script lang="ts">
+	import { createIsMobileShell } from "$lib/composables/use-media-query.svelte";
+
 	let {
 		class: className,
 		variant = "default",
 		size = "default",
+		adaptToMobileHero = false,
 		ref = $bindable(null),
 		href = undefined,
 		type = "button",
@@ -61,14 +67,32 @@
 		children,
 		...restProps
 	}: ButtonProps = $props();
+
+	const mobileShell = createIsMobileShell(
+		adaptToMobileHero &&
+			typeof window !== "undefined" &&
+			window.matchMedia("(max-width: 1023px)").matches,
+	);
+
+	$effect(() => {
+		if (!adaptToMobileHero) return;
+		return mobileShell.init();
+	});
+
+	const useHero = $derived(adaptToMobileHero && mobileShell.matches);
+	const resolvedVariant = $derived(useHero ? "hero" : variant);
+	const resolvedSize = $derived(useHero ? "icon-sm" : size);
+	const resolvedClass = $derived(
+		useHero ? cn(className, "size-9 rounded-full p-0") : className
+	);
 </script>
 
 {#if href}
 	<a
 		bind:this={ref}
 		data-slot="button"
-		data-size={size}
-		class={cn(buttonVariants({ variant, size }), className)}
+		data-size={resolvedSize}
+		class={cn(buttonVariants({ variant: resolvedVariant, size: resolvedSize }), resolvedClass)}
 		href={disabled ? undefined : href}
 		aria-disabled={disabled}
 		role={disabled ? "link" : undefined}
@@ -81,8 +105,8 @@
 	<button
 		bind:this={ref}
 		data-slot="button"
-		data-size={size}
-		class={cn(buttonVariants({ variant, size }), className)}
+		data-size={resolvedSize}
+		class={cn(buttonVariants({ variant: resolvedVariant, size: resolvedSize }), resolvedClass)}
 		{type}
 		{disabled}
 		{...restProps}

@@ -37,7 +37,7 @@ The loans table shows this investor's **capital per loan** in the Principal colu
 
 ## Edit
 
-Workspace admin: header **Edit** or list quick-edit opens `PartyUserEditForm` (contact details, valid ID, e-signature, payment methods). Saves via `PUT /api/party-profiles/investor/[id]` and syncs shared fields across all investor/borrower/witness CRM rows for the same linked party user.
+Workspace admin: header **Edit** or list quick-edit opens `PartyUserEditForm` (contact details, valid ID, e-signature upload or draw, payment methods). Hover (or tap on phone) an ID, signature, or QR preview to Replace or Remove. Saves via `PUT /api/party-profiles/investor/[id]` and syncs shared fields across all investor/borrower/witness CRM rows for the same linked party user.
 
 ## Permissions
 
