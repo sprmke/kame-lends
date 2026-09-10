@@ -3,8 +3,58 @@ import {
   DEFAULT_NAV_CAPABILITIES,
   buildAppNav,
   buildDestinationItems,
+  buildSidebarGroups,
+  flattenNavItems,
   resolveMobileDockHighlight,
 } from "$lib/nav/app-nav";
+
+describe("buildSidebarGroups", () => {
+  it("uses one flat group for party-only sessions", () => {
+    const groups = buildSidebarGroups(DEFAULT_NAV_CAPABILITIES);
+    expect(groups).toEqual([
+      {
+        id: "main",
+        items: expect.any(Array),
+      },
+    ]);
+    expect(flattenNavItems(groups).map((item) => item.id)).toEqual([
+      "dashboard",
+      "investments",
+      "borrowed",
+      "witnessed",
+      "settings",
+    ]);
+  });
+
+  it("groups admin workspace links into overview, roles, workspace, and settings", () => {
+    const groups = buildSidebarGroups({
+      isAdminWorkspace: true,
+      hasInvestments: true,
+      hasBorrowed: true,
+      hasWitnessed: true,
+    });
+    expect(groups.map((group) => group.id)).toEqual([
+      "overview",
+      "your-roles",
+      "workspace",
+      "settings",
+    ]);
+    expect(groups[1]?.label).toBe("Your roles");
+    expect(groups[1]?.items.map((item) => item.id)).toEqual([
+      "investments",
+      "borrowed",
+      "witnessed",
+    ]);
+    expect(groups[2]?.label).toBe("Workspace");
+    expect(groups[2]?.items.map((item) => item.id)).toEqual([
+      "loans",
+      "debts",
+      "investors",
+      "borrowers",
+      "witnesses",
+    ]);
+  });
+});
 
 describe("buildDestinationItems", () => {
   it("shows party views only for a normal user session", () => {
@@ -52,6 +102,7 @@ describe("buildAppNav", () => {
       "settings",
     ]);
     expect(nav.sidebarItems).toEqual(nav.moreNavItems);
+    expect(nav.sidebarGroups).toHaveLength(1);
   });
 
   it("lists every workspace-admin link in the More sheet", () => {
@@ -80,6 +131,12 @@ describe("buildAppNav", () => {
       "settings",
     ]);
     expect(nav.sidebarItems).toEqual(nav.moreNavItems);
+    expect(nav.sidebarGroups.map((group) => group.id)).toEqual([
+      "overview",
+      "your-roles",
+      "workspace",
+      "settings",
+    ]);
   });
 });
 

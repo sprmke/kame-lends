@@ -3,7 +3,7 @@
 	import * as Avatar from '$lib/components/ui/avatar';
 	import PriceVisibilityToggle from '$lib/components/common/PriceVisibilityToggle.svelte';
 	import ThemeToggle from '$lib/components/theme/ThemeToggle.svelte';
-	import { isNavActive, type AppNavItem } from '$lib/nav/app-nav';
+	import { isNavActive, type AppNavGroup } from '$lib/nav/app-nav';
 	import { cn } from '$lib/utils';
 	import { LogOut } from 'lucide-svelte';
 
@@ -17,11 +17,13 @@
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
 		pathname: string;
-		moreNavItems: AppNavItem[];
+		moreNavGroups: AppNavGroup[];
 		user: UserInfo;
 	}
 
-	let { open, onOpenChange, pathname, moreNavItems, user }: Props = $props();
+	let { open, onOpenChange, pathname, moreNavGroups, user }: Props = $props();
+
+	const moreNavItems = $derived(moreNavGroups.flatMap((group) => group.items));
 
 	const userInitials = $derived(
 		user.name
@@ -47,26 +49,40 @@
 		<div class="flex min-h-0 flex-col">
 			{#if moreNavItems.length > 0}
 				<nav
-					class="min-h-0 space-y-0.5 overflow-y-auto overscroll-contain px-3 pt-2 pb-2 pr-12 [-webkit-overflow-scrolling:touch]"
+					class="min-h-0 overflow-y-auto overscroll-contain px-3 pt-2 pb-2 pr-12 [-webkit-overflow-scrolling:touch]"
 					aria-label="More"
 				>
-					{#each moreNavItems as item (item.id)}
-						{@const active = isNavActive(pathname, item.href)}
-						<a
-							href={item.href}
-							data-sveltekit-preload-data="hover"
-							aria-current={active ? 'page' : undefined}
-							class={cn(
-								'native-press flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium leading-snug transition-colors',
-								active
-									? 'bg-primary/10 text-primary'
-									: 'text-foreground hover:bg-muted/60 active:bg-muted'
-							)}
-							onclick={() => onOpenChange(false)}
-						>
-							<item.icon class="size-4 shrink-0 opacity-90" strokeWidth={1.75} />
-							<span class="min-w-0 truncate">{item.title}</span>
-						</a>
+					{#each moreNavGroups as group, groupIndex (group.id)}
+						{#if groupIndex > 0}
+							<div class="my-2 border-t border-border/50" role="separator"></div>
+						{/if}
+						{#if group.label}
+							<p
+								class="mb-1 px-2.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
+							>
+								{group.label}
+							</p>
+						{/if}
+						<div class="space-y-0.5">
+							{#each group.items as item (item.id)}
+								{@const active = isNavActive(pathname, item.href)}
+								<a
+									href={item.href}
+									data-sveltekit-preload-data="hover"
+									aria-current={active ? 'page' : undefined}
+									class={cn(
+										'native-press flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium leading-snug transition-colors',
+										active
+											? 'bg-primary/10 text-primary'
+											: 'text-foreground hover:bg-muted/60 active:bg-muted'
+									)}
+									onclick={() => onOpenChange(false)}
+								>
+									<item.icon class="size-4 shrink-0 opacity-90" strokeWidth={1.75} />
+									<span class="min-w-0 truncate">{item.title}</span>
+								</a>
+							{/each}
+						</div>
 					{/each}
 				</nav>
 			{/if}

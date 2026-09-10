@@ -94,7 +94,7 @@
 		open={moreOpen}
 		onOpenChange={(open) => (moreOpen = open)}
 		{pathname}
-		moreNavItems={nav.moreNavItems}
+		moreNavGroups={nav.sidebarGroups}
 		{user}
 	/>
 
@@ -134,33 +134,51 @@
 					/>{/if}
 			</button>
 		</div>
-		<nav class={cn('flex-1 space-y-1.5 overflow-y-auto', isCollapsed ? 'p-2.5' : 'p-4')}>
-			{#each nav.sidebarItems as item (item.id)}
-				<a
-					href={item.href}
-					data-sveltekit-preload-data="hover"
-					data-sveltekit-preload-code="hover"
-					title={isCollapsed ? item.title : undefined}
-					class={cn(
-						'group relative mb-0.5 flex items-center rounded-2xl py-2.5 text-sm font-medium transition-all duration-200',
-						isNavActive(pathname, item.href)
-							? 'nav-item-active'
-							: 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
-						isCollapsed ? 'justify-center px-2' : 'gap-3 px-3.5'
-					)}
-				>
+		<nav class={cn('flex-1 overflow-y-auto', isCollapsed ? 'p-2.5' : 'p-4')}>
+			{#each nav.sidebarGroups as group, groupIndex (group.id)}
+				{#if groupIndex > 0}
 					<div
 						class={cn(
-							'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
-							isNavActive(pathname, item.href)
-								? 'nav-item-active-icon'
-								: 'bg-muted/80 group-hover:bg-primary/10'
+							'border-t border-border/40',
+							isCollapsed ? 'my-2.5' : 'my-3 first:mt-0'
 						)}
-					>
-						<item.icon class="h-4 w-4" />
-					</div>
-					{#if !isCollapsed}<span class="truncate font-medium">{item.title}</span>{/if}
-				</a>
+						role="separator"
+					></div>
+				{/if}
+				{#if group.label && !isCollapsed}
+					<p class="mb-1.5 px-3.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+						{group.label}
+					</p>
+				{/if}
+				<div class="space-y-1.5">
+					{#each group.items as item (item.id)}
+						<a
+							href={item.href}
+							data-sveltekit-preload-data="hover"
+							data-sveltekit-preload-code="hover"
+							title={isCollapsed ? item.title : undefined}
+							class={cn(
+								'group relative mb-0.5 flex items-center rounded-2xl py-2.5 text-sm font-medium transition-all duration-200',
+								isNavActive(pathname, item.href)
+									? 'nav-item-active'
+									: 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+								isCollapsed ? 'justify-center px-2' : 'gap-3 px-3.5'
+							)}
+						>
+							<div
+								class={cn(
+									'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
+									isNavActive(pathname, item.href)
+										? 'nav-item-active-icon'
+										: 'bg-muted/80 group-hover:bg-primary/10'
+								)}
+							>
+								<item.icon class="h-4 w-4" />
+							</div>
+							{#if !isCollapsed}<span class="truncate font-medium">{item.title}</span>{/if}
+						</a>
+					{/each}
+				</div>
 			{/each}
 		</nav>
 		<div class="border-t border-border/50 p-4">

@@ -15,7 +15,7 @@ Load is split into two streamed promises:
 
 While summary loads, `DashboardSummarySkeleton` renders the page chrome: `PageHeader`-shaped title row, 4 summary metric cards, and 4 activity panels (each with grouped loan rows). Charts show `DashboardChartsSkeleton` (section heading + chart cards) until the second promise resolves. Skeletons use the same card and toolbar surfaces as the loaded page. No orphan bars.
 
-**Admin workspace:** `PageHeader` includes a **New** dropdown (`DashboardQuickActionsMenu`) for create flows: Loan, Borrowing, Investor, Borrower, Witness, and Transaction (when transactions UI is enabled). Each item navigates to the matching `/…/new` route. Party-only sessions do not show the menu. Party users see Dashboard, Investments, Borrowed, Witnessed, and Settings in the sidebar. Workspace admins also see Loans, Borrowings, Investors, Borrowers, and Witnesses.
+**Admin workspace:** `PageHeader` includes a **New** dropdown (`DashboardQuickActionsMenu`) for create flows: Loan, Borrowing, Investor, Borrower, Witness, and Transaction (when transactions UI is enabled). Each item navigates to the matching `/…/new` route. Party-only sessions do not show the menu. Party users see Dashboard, Investments, Borrowed, Witnessed, and Settings in the sidebar (single group). Workspace admins see the same personal links under **Your roles**, CRM links under **Workspace** (Loans, Borrowings, Investors, Borrowers, Witnesses), then Settings. The phone More sheet uses the same grouping.
 
 On client navigation to `/dashboard`, the layout swaps in `DashboardSkeleton` (summary + charts) until navigation completes. `NavigationProgress` runs on every client-side route change.
 

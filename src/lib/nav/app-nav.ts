@@ -29,6 +29,13 @@ export interface AppNavItem {
   icon: AppNavIcon;
 }
 
+export interface AppNavGroup {
+  id: string;
+  /** Shown on desktop sidebar and phone More sheet when expanded. */
+  label?: string;
+  items: AppNavItem[];
+}
+
 /** Safe fallback when layout has not loaded capabilities yet (deny-by-default). */
 export const DEFAULT_NAV_CAPABILITIES: NavCapabilities = {
   isAdminWorkspace: false,
@@ -37,74 +44,142 @@ export const DEFAULT_NAV_CAPABILITIES: NavCapabilities = {
   hasWitnessed: false,
 };
 
-export function buildDestinationItems(
-  caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES,
-): AppNavItem[] {
+const DASHBOARD_ITEM: AppNavItem = {
+  id: "dashboard",
+  title: "Dashboard",
+  href: "/dashboard",
+  icon: Home,
+};
+
+const PARTY_ITEMS: AppNavItem[] = [
+  {
+    id: "investments",
+    title: "Investments",
+    href: "/investments",
+    icon: PiggyBank,
+  },
+  {
+    id: "borrowed",
+    title: "Borrowed",
+    href: "/borrowed",
+    icon: HandCoins,
+  },
+  {
+    id: "witnessed",
+    title: "Witnessed",
+    href: "/witnessed",
+    icon: Eye,
+  },
+];
+
+function settingsItem(): AppNavItem {
+  return {
+    id: "settings",
+    title: "Settings",
+    href: "/settings",
+    icon: Settings,
+  };
+}
+
+function buildWorkspaceItems(): AppNavItem[] {
   const items: AppNavItem[] = [
-    { id: "dashboard", title: "Dashboard", href: "/dashboard", icon: Home },
+    { id: "loans", title: "Loans", href: "/loans", icon: FileText },
   ];
 
-  if (caps.isAdminWorkspace) {
-    items.push({ id: "loans", title: "Loans", href: "/loans", icon: FileText });
+  if (SHOW_TRANSACTIONS_UI) {
+    items.push({
+      id: "transactions",
+      title: "Transactions",
+      href: "/transactions",
+      icon: ArrowLeftRight,
+    });
   }
 
   items.push(
     {
-      id: "investments",
-      title: "Investments",
-      href: "/investments",
-      icon: PiggyBank,
-    },
-    {
-      id: "borrowed",
-      title: "Borrowed",
-      href: "/borrowed",
+      id: "debts",
+      title: "Borrowings",
+      href: "/debts",
       icon: HandCoins,
     },
     {
-      id: "witnessed",
-      title: "Witnessed",
-      href: "/witnessed",
-      icon: Eye,
+      id: "investors",
+      title: "Investors",
+      href: "/investors",
+      icon: Users,
+    },
+    {
+      id: "borrowers",
+      title: "Borrowers",
+      href: "/borrowers",
+      icon: ContactRound,
+    },
+    {
+      id: "witnesses",
+      title: "Witnesses",
+      href: "/witnesses",
+      icon: UserCheck,
     },
   );
 
-  if (caps.isAdminWorkspace) {
-    if (SHOW_TRANSACTIONS_UI) {
-      items.push({
-        id: "transactions",
-        title: "Transactions",
-        href: "/transactions",
-        icon: ArrowLeftRight,
-      });
-    }
+  return items;
+}
 
-    items.push(
+export function flattenNavItems(groups: AppNavGroup[]): AppNavItem[] {
+  return groups.flatMap((group) => group.items);
+}
+
+const PARTY_ITEM_IDS = new Set(PARTY_ITEMS.map((item) => item.id));
+
+/** Sidebar / More sheet groups. Admin workspace splits personal vs CRM links. */
+export function buildSidebarGroups(
+  caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES,
+): AppNavGroup[] {
+  const destinations = buildDestinationItems(caps);
+
+  if (!caps.isAdminWorkspace) {
+    return [
       {
-        id: "debts",
-        title: "Borrowings",
-        href: "/debts",
-        icon: HandCoins,
+        id: "main",
+        items: [...destinations, settingsItem()],
       },
-      {
-        id: "investors",
-        title: "Investors",
-        href: "/investors",
-        icon: Users,
-      },
-      {
-        id: "borrowers",
-        title: "Borrowers",
-        href: "/borrowers",
-        icon: ContactRound,
-      },
-      {
-        id: "witnesses",
-        title: "Witnesses",
-        href: "/witnesses",
-        icon: UserCheck,
-      },
-    );
+    ];
+  }
+
+  const workspaceItems = destinations.filter(
+    (item) => item.id !== "dashboard" && !PARTY_ITEM_IDS.has(item.id),
+  );
+
+  return [
+    { id: "overview", items: [DASHBOARD_ITEM] },
+    {
+      id: "your-roles",
+      label: "Your roles",
+      items: destinations.filter((item) => PARTY_ITEM_IDS.has(item.id)),
+    },
+    { id: "workspace", label: "Workspace", items: workspaceItems },
+    { id: "settings", items: [settingsItem()] },
+  ];
+}
+
+export function buildDestinationItems(
+  caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES,
+): AppNavItem[] {
+  const items: AppNavItem[] = [DASHBOARD_ITEM];
+
+  if (caps.isAdminWorkspace) {
+    items.push({
+      id: "loans",
+      title: "Loans",
+      href: "/loans",
+      icon: FileText,
+    });
+  }
+
+  items.push(...PARTY_ITEMS);
+
+  if (caps.isAdminWorkspace) {
+    items.push(...buildWorkspaceItems().filter((item) => item.id !== "loans"));
   }
 
   return items;
@@ -117,20 +192,15 @@ export function buildAppNav(caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES): {
   primaryTabs: AppNavItem[];
   moreNavItems: AppNavItem[];
   sidebarItems: AppNavItem[];
+  sidebarGroups: AppNavGroup[];
 } {
   const destinations = buildDestinationItems(caps);
-  const settings: AppNavItem = {
-    id: "settings",
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-  };
-
-  const sidebarItems = [...destinations, settings];
+  const sidebarGroups = buildSidebarGroups(caps);
+  const sidebarItems = [...destinations, settingsItem()];
   const primaryTabs = destinations.slice(0, MOBILE_DOCK_MAX_PRIMARY_TABS);
   const moreNavItems = sidebarItems;
 
-  return { primaryTabs, moreNavItems, sidebarItems };
+  return { primaryTabs, moreNavItems, sidebarItems, sidebarGroups };
 }
 
 export function isNavActive(pathname: string, href: string): boolean {
