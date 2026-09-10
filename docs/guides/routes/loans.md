@@ -14,6 +14,7 @@
 - **Desktop (`lg+`):** floating sidebar; row click and calendar event cards open `LoanDetailModal` (same `handleQuickView` path as the table). Search, filters, and the loans table sit on white card surfaces (`bg-card` / `.surface-card`) matching dashboard cards. Week/month calendar grids are fluid (seven equal columns, no horizontal scroll); event cards and daily totals truncate on narrow desktop widths beside the sidebar. Calendar and row-action dropdowns use the shared menu primitive (`min-w` 15rem, `min-h-11` items, labels do not wrap). `ResponsiveModal` (`responsive-modal-shell`) keeps a fixed header and footer; only the body scrolls. Quick-view: title left (`text-base font-medium`), `DetailModalHeader` actions top-right. Create / edit loan: `FormHeader` (`variant="embedded"`) in the fixed header with Cancel / submit wired via `form` attribute; form fields scroll below. Shell padding is `0` (header uses `px-5 md:px-6` / `pt-6 pb-4`, body uses `px-5 py-4 md:px-6 md:py-5`). Create Loan modal is `max-w-4xl` with no extra close X; Cancel / submit live only in the fixed header (no duplicate footer actions in the scroll body). Nested form card titles use the default `text-base font-medium`. Inputs and selects are `h-11` / `rounded-2xl` with `bg-card`. Subtitle is `Manage all your loans`. Visual layout is asserted by `e2e/visual-parity.spec.ts`.
 - **Admin:** sees workspace-owned loans. New Loan and row edit/delete only when `isAdminWorkspace`.
 - **Party users:** same page, usually empty. No create/edit/delete.
+- **Loading:** `ListPageSkeleton` mirrors the loaded chrome: header, 4 summary metric cards, search/filter toolbar on a card surface, and a table card with identity cells (avatar + name) plus pagination. Same pattern on `/investments`, `/borrowed`, and `/witnessed`.
 
 ## Implementation
 
@@ -28,6 +29,7 @@
 | Participant filters | `src/lib/composables/use-loan-list-participant-filters.svelte.ts`                                      |
 | Filter options      | `src/lib/list-filters.ts`                                                                              |
 | Page                | `src/routes/loans/+page.svelte`                                                                        |
+| List skeleton       | `src/lib/components/common/ListPageSkeleton.svelte`                                                    |
 | Table               | `src/lib/components/loans/LoansTable.svelte`                                                           |
 | Card                | `src/lib/components/loans/LoanCard.svelte`                                                             |
 | Create overlay      | `src/lib/components/loans/LoanCreateModal.svelte`                                                      |

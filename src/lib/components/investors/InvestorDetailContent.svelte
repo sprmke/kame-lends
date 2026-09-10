@@ -471,54 +471,58 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="loans" class="mt-6 space-y-4">
-			<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+			<div class="mobile-list-toolbar">
 				<SearchFilter
 					value={loanSearchQuery}
 					onChange={(v) => (loanSearchQuery = v)}
 					placeholder="Search loans by name or notes..."
+					class="min-w-0 flex-1 lg:min-w-[12rem]"
 				/>
-				<MultiSelectFilter
-					options={LOAN_TYPE_OPTIONS}
-					selected={loanTypeFilter}
-					onChange={(v) => (loanTypeFilter = v)}
-					placeholder="Select Type"
-					allLabel="All Types"
-					triggerClassName="hidden xl:flex w-full xl:w-[180px]"
-				/>
-				<MultiSelectFilter
-					options={LOAN_STATUS_OPTIONS}
-					selected={loanStatusFilter}
-					onChange={(v) => (loanStatusFilter = v)}
-					placeholder="Select Status"
-					allLabel="All Status"
-					triggerClassName="hidden xl:flex w-full xl:w-[180px]"
-				/>
-				<Button
-					variant={showMoreLoanFilters ? 'secondary' : 'outline'}
-					size="sm"
-					onclick={() => (showMoreLoanFilters = !showMoreLoanFilters)}
-				>
-					<Filter class="h-4 w-4 xl:mr-2" />
-					<span class="hidden xl:inline">{showMoreLoanFilters ? 'Less' : 'More'} Filters</span>
-				</Button>
-				{#if hasActiveLoanFilters}
-					<Button variant="outline" size="sm" onclick={clearLoanFilters}>
-						<X class="h-4 w-4 xl:mr-2" />
-						<span class="hidden xl:inline">Clear All</span>
+				<div class="mobile-list-toolbar-controls">
+					<MultiSelectFilter
+						options={LOAN_TYPE_OPTIONS}
+						selected={loanTypeFilter}
+						onChange={(v) => (loanTypeFilter = v)}
+						placeholder="Select Type"
+						allLabel="All Types"
+						triggerClassName="hidden xl:flex w-full xl:w-[180px]"
+					/>
+					<MultiSelectFilter
+						options={LOAN_STATUS_OPTIONS}
+						selected={loanStatusFilter}
+						onChange={(v) => (loanStatusFilter = v)}
+						placeholder="Select Status"
+						allLabel="All Status"
+						triggerClassName="hidden xl:flex w-full xl:w-[180px]"
+					/>
+					<Button
+						variant={showMoreLoanFilters ? 'secondary' : 'outline'}
+						size="sm"
+						class="shrink-0"
+						onclick={() => (showMoreLoanFilters = !showMoreLoanFilters)}
+					>
+						<Filter class="h-4 w-4 xl:mr-2" />
+						<span class="hidden xl:inline">{showMoreLoanFilters ? 'Less' : 'More'} Filters</span>
 					</Button>
-				{/if}
-				<ExportButton
-					data={loans}
-					filteredData={filteredLoans}
-					sections={loanPDFSections}
-					onGeneratePDF={(data, keys) => downloadLoansPdf(data, keys, investor.id)}
-				/>
-				{#if canManage}
-				<Button size="sm" onclick={() => openLoanCreate()}>
-					<Plus class="h-3 w-3 xl:mr-1" />
-					<span class="hidden xl:inline">Add Loan</span>
-				</Button>
-				{/if}
+					{#if hasActiveLoanFilters}
+						<Button variant="outline" size="sm" class="shrink-0" onclick={clearLoanFilters}>
+							<X class="h-4 w-4 xl:mr-2" />
+							<span class="hidden xl:inline">Clear All</span>
+						</Button>
+					{/if}
+					<ExportButton
+						data={loans}
+						filteredData={filteredLoans}
+						sections={loanPDFSections}
+						onGeneratePDF={(data, keys) => downloadLoansPdf(data, keys, investor.id)}
+					/>
+					{#if canManage}
+						<Button size="sm" class="shrink-0" onclick={() => openLoanCreate()}>
+							<Plus class="h-3 w-3 xl:mr-1" />
+							<span class="hidden xl:inline">Add Loan</span>
+						</Button>
+					{/if}
+				</div>
 			</div>
 
 			{#if showMoreLoanFilters}
@@ -590,37 +594,42 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="debts" class="mt-6 space-y-4">
-			<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+			<div class="mobile-list-toolbar">
 				<SearchFilter
 					value={debtSearchQuery}
 					onChange={(v) => (debtSearchQuery = v)}
 					placeholder="Search borrowings..."
+					class="min-w-0 flex-1 lg:min-w-[12rem]"
 				/>
-				<Button
-					variant={showMoreDebtFilters ? 'secondary' : 'outline'}
-					size="sm"
-					onclick={() => (showMoreDebtFilters = !showMoreDebtFilters)}
-				>
-					<Filter class="h-4 w-4 xl:mr-2" />
-					<span class="hidden xl:inline">{showMoreDebtFilters ? 'Less' : 'More'} Filters</span>
-				</Button>
-				{#if hasActiveDebtFilters}
-					<Button variant="outline" size="sm" onclick={clearDebtFilters}>
-						<X class="h-4 w-4 xl:mr-2" />
-						<span class="hidden xl:inline">Clear All</span>
+				<div class="mobile-list-toolbar-controls">
+					<Button
+						variant={showMoreDebtFilters ? 'secondary' : 'outline'}
+						size="sm"
+						class="shrink-0"
+						onclick={() => (showMoreDebtFilters = !showMoreDebtFilters)}
+					>
+						<Filter class="h-4 w-4 xl:mr-2" />
+						<span class="hidden xl:inline">{showMoreDebtFilters ? 'Less' : 'More'} Filters</span>
 					</Button>
-				{/if}
-				<ViewModeToggle
-					viewMode={debtsViewMode.viewMode}
-					onViewModeChange={debtsViewMode.setViewMode}
-					hasData={filteredDebts.length > 0}
-				/>
-				{#if canManage}
-				<Button size="sm" onclick={() => (showDebtModal = true)}>
-					<Plus class="h-3 w-3 xl:mr-1" />
-					<span class="hidden xl:inline">Add Borrowing</span>
-				</Button>
-				{/if}
+					{#if hasActiveDebtFilters}
+						<Button variant="outline" size="sm" class="shrink-0" onclick={clearDebtFilters}>
+							<X class="h-4 w-4 xl:mr-2" />
+							<span class="hidden xl:inline">Clear All</span>
+						</Button>
+					{/if}
+					<ViewModeToggle
+						viewMode={debtsViewMode.viewMode}
+						onViewModeChange={debtsViewMode.setViewMode}
+						hasData={filteredDebts.length > 0}
+						class="shrink-0"
+					/>
+					{#if canManage}
+						<Button size="sm" class="shrink-0" onclick={() => (showDebtModal = true)}>
+							<Plus class="h-3 w-3 xl:mr-1" />
+							<span class="hidden xl:inline">Add Borrowing</span>
+						</Button>
+					{/if}
+				</div>
 			</div>
 
 			{#if showMoreDebtFilters}

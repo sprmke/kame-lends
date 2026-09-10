@@ -375,7 +375,20 @@
     box-shadow: var(--shadow-elevated);
   }
 
-  .mobile-list-toolbar,
+  .mobile-list-toolbar {
+    @apply flex flex-row flex-nowrap items-center gap-2;
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-list-toolbar {
+      @apply flex-wrap;
+    }
+  }
+
+  .mobile-list-toolbar-controls {
+    @apply flex shrink-0 flex-nowrap items-center gap-2;
+  }
+
   .page-header-actions {
     @apply items-center;
   }

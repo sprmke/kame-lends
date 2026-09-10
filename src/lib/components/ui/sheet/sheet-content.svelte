@@ -46,7 +46,7 @@
 		{...restProps}
 	>
 		{#if side === 'bottom'}
-			<div class="flex shrink-0 justify-center pt-3 pb-1" aria-hidden="true">
+			<div class="flex shrink-0 justify-center pt-3 pb-2.5" aria-hidden="true">
 				<div class="h-1 w-10 rounded-full bg-muted-foreground/35"></div>
 			</div>
 		{/if}
@@ -56,7 +56,7 @@
 				{#snippet child({ props })}
 					<Button
 						variant="ghost"
-						class="touch-target absolute top-2 right-2"
+						class="touch-target absolute top-3 right-3"
 						size="icon"
 						{...props}
 					>

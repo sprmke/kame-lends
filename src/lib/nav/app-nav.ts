@@ -37,8 +37,6 @@ export const DEFAULT_NAV_CAPABILITIES: NavCapabilities = {
   hasWitnessed: false,
 };
 
-const MAX_PRIMARY_TABS = 4;
-
 export function buildDestinationItems(
   caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES,
 ): AppNavItem[] {
@@ -112,6 +110,9 @@ export function buildDestinationItems(
   return items;
 }
 
+/** Phone dock shows up to four destination shortcuts plus More; the sheet lists every nav link. */
+export const MOBILE_DOCK_MAX_PRIMARY_TABS = 4;
+
 export function buildAppNav(caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES): {
   primaryTabs: AppNavItem[];
   moreNavItems: AppNavItem[];
@@ -125,16 +126,33 @@ export function buildAppNav(caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES): {
     icon: Settings,
   };
 
-  const primaryTabs = destinations.slice(0, MAX_PRIMARY_TABS);
-  const overflow = destinations.slice(MAX_PRIMARY_TABS);
-  const moreNavItems = [...overflow, settings];
   const sidebarItems = [...destinations, settings];
+  const primaryTabs = destinations.slice(0, MOBILE_DOCK_MAX_PRIMARY_TABS);
+  const moreNavItems = sidebarItems;
 
   return { primaryTabs, moreNavItems, sidebarItems };
 }
 
 export function isNavActive(pathname: string, href: string): boolean {
   return pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+}
+
+/** One dock highlight at a time: primary shortcut, or More when the sheet is open / route is sheet-only. */
+export function resolveMobileDockHighlight(
+  pathname: string,
+  primaryTabs: AppNavItem[],
+  moreNavItems: AppNavItem[],
+  moreOpen: boolean,
+): { moreActive: boolean } {
+  const activePrimaryTab = primaryTabs.find((item) =>
+    isNavActive(pathname, item.href),
+  );
+  const moreActive =
+    moreOpen ||
+    (!activePrimaryTab &&
+      moreNavItems.some((item) => isNavActive(pathname, item.href)));
+
+  return { moreActive };
 }
 
 export function resolveMobilePageTitle(pathname: string): string {

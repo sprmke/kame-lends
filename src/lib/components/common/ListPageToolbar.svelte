@@ -47,14 +47,14 @@
 </script>
 
 <div class={cn('flex flex-col gap-3', className)}>
-<div class="mobile-list-toolbar flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+<div class="mobile-list-toolbar">
 	<SearchFilter
 		value={searchValue}
 		onChange={onSearchChange}
 		placeholder={searchPlaceholder}
-		class="min-w-0 w-full lg:flex-1 lg:min-w-[12rem]"
+		class="min-w-0 flex-1 lg:min-w-[12rem]"
 	/>
-	<div class="mobile-list-toolbar-controls flex flex-wrap items-center gap-2">
+	<div class="mobile-list-toolbar-controls">
 		{#if showViewToggle && viewMode && onViewModeChange && hasData}
 			<ViewModeToggle
 				{viewMode}

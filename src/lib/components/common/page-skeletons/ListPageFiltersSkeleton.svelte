@@ -8,13 +8,16 @@
 	let { showMoreFilters = true }: Props = $props();
 </script>
 
-<div class="flex flex-col gap-2">
-	<div class="flex flex-col gap-2 sm:flex-row">
-		<Skeleton class="h-11 min-w-0 flex-1 rounded-2xl" />
-		<Skeleton class="hidden h-11 w-[180px] rounded-2xl xl:block" />
-		<Skeleton class="hidden h-11 w-[180px] rounded-2xl xl:block" />
-		{#if showMoreFilters}
-			<Skeleton class="h-11 w-[130px] rounded-2xl" />
-		{/if}
+<div class="skeleton-toolbar">
+	<div class="mobile-list-toolbar">
+		<Skeleton class="h-11 min-w-0 flex-1 rounded-2xl lg:min-w-[12rem]" />
+		<div class="mobile-list-toolbar-controls">
+			<Skeleton class="h-11 w-24 rounded-2xl lg:hidden" />
+			<Skeleton class="hidden h-11 w-[180px] rounded-2xl xl:block" />
+			<Skeleton class="hidden h-11 w-[180px] rounded-2xl xl:block" />
+			{#if showMoreFilters}
+				<Skeleton class="h-11 w-11 rounded-2xl xl:w-[130px]" />
+			{/if}
+		</div>
 	</div>
 </div>

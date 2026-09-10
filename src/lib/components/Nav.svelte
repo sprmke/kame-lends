@@ -16,6 +16,7 @@
 		buildAppNav,
 		DEFAULT_NAV_CAPABILITIES,
 		isNavActive,
+		resolveMobileDockHighlight,
 		type NavCapabilities
 	} from '$lib/nav/app-nav';
 	import { THEME_COLOR_DASHBOARD } from '$lib/theme/preferences';
@@ -47,8 +48,8 @@
 	const isSignPage = $derived(pathname.startsWith('/sign/'));
 	const isPublicChromeless = $derived(isLandingPage || isSignInPage || isSignPage);
 
-	const moreActive = $derived(
-		moreOpen || nav.moreNavItems.some((item) => isNavActive(pathname, item.href))
+	const { moreActive } = $derived(
+		resolveMobileDockHighlight(pathname, nav.primaryTabs, nav.moreNavItems, moreOpen)
 	);
 
 	$effect(() => {

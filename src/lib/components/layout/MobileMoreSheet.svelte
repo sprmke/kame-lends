@@ -38,39 +38,51 @@
 	<Sheet.Content
 		side="bottom"
 		showCloseButton={true}
-		class="h-[92dvh]! max-h-[92dvh]! gap-0 overflow-hidden p-0 pb-0!"
+		class="gap-0 overflow-hidden p-0 pb-0!"
 	>
 		<Sheet.Header class="sr-only">
 			<Sheet.Title>More</Sheet.Title>
 		</Sheet.Header>
 
-		<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<nav
-				class="min-h-0 flex-[1_1_0] space-y-0.5 overflow-y-auto overscroll-contain px-3 py-1 [-webkit-overflow-scrolling:touch]"
-				aria-label="More"
-			>
-				{#each moreNavItems as item (item.id)}
-					{@const active = isNavActive(pathname, item.href)}
-					<a
-						href={item.href}
-						data-sveltekit-preload-data="hover"
-						aria-current={active ? 'page' : undefined}
-						class={cn(
-							'native-press flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium leading-snug transition-colors',
-							active
-								? 'bg-primary/10 text-primary'
-								: 'text-foreground hover:bg-muted/60 active:bg-muted'
-						)}
-						onclick={() => onOpenChange(false)}
-					>
-						<item.icon class="size-4 shrink-0 opacity-90" strokeWidth={1.75} />
-						<span class="min-w-0 truncate">{item.title}</span>
-					</a>
-				{/each}
-			</nav>
+		<div class="flex min-h-0 flex-col">
+			{#if moreNavItems.length > 0}
+				<nav
+					class="min-h-0 space-y-0.5 overflow-y-auto overscroll-contain px-3 pt-2 pb-2 pr-12 [-webkit-overflow-scrolling:touch]"
+					aria-label="More"
+				>
+					{#each moreNavItems as item (item.id)}
+						{@const active = isNavActive(pathname, item.href)}
+						<a
+							href={item.href}
+							data-sveltekit-preload-data="hover"
+							aria-current={active ? 'page' : undefined}
+							class={cn(
+								'native-press flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium leading-snug transition-colors',
+								active
+									? 'bg-primary/10 text-primary'
+									: 'text-foreground hover:bg-muted/60 active:bg-muted'
+							)}
+							onclick={() => onOpenChange(false)}
+						>
+							<item.icon class="size-4 shrink-0 opacity-90" strokeWidth={1.75} />
+							<span class="min-w-0 truncate">{item.title}</span>
+						</a>
+					{/each}
+				</nav>
+			{/if}
 
-			<div class="shrink-0 bg-popover px-3 pb-[max(0.75rem,var(--safe-area-bottom))]">
-				<div class="space-y-1.5 border-t border-border/60 pt-2.5">
+			<div
+				class={cn(
+					'shrink-0 bg-popover px-3 pb-[max(1rem,var(--safe-area-bottom))]',
+					moreNavItems.length === 0 && 'pt-2 pr-12'
+				)}
+			>
+				<div
+					class={cn(
+						'flex flex-col gap-3.5 pt-4',
+						moreNavItems.length > 0 && 'border-t border-border/60'
+					)}
+				>
 					<div class="flex min-h-11 items-center gap-1">
 						<div class="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 px-2 py-1.5">
 							<Avatar.Root class="size-8 shrink-0 ring-2 ring-background">
@@ -102,7 +114,7 @@
 					<form method="POST" action="/auth/signout?/signOut">
 						<button
 							type="submit"
-							class="native-press mt-0.5 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+							class="native-press flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
 						>
 							<LogOut class="size-3.5 shrink-0" strokeWidth={1.75} />
 							Sign out
