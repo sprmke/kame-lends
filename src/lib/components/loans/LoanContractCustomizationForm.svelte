@@ -4,14 +4,16 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Tabs from '$lib/components/ui/tabs';
+	import LoanContractDocumentBody from '$lib/components/loans/LoanContractDocumentBody.svelte';
 	import LoanContractParticipantsEditor from '$lib/components/loans/LoanContractParticipantsEditor.svelte';
 	import type { ContractCustomization } from '$lib/loan-contract-customization';
-	import type { ContractLender } from '$lib/loan-contract-data';
+	import type { ContractLender, LoanContractData } from '$lib/loan-contract-data';
 	import type { Borrower, Investor } from '$lib/types';
-	import { FileText, RotateCcw, UsersRound } from 'lucide-svelte';
+	import { Eye, FileText, RotateCcw, UsersRound } from 'lucide-svelte';
 
 	interface Props {
 		value: ContractCustomization;
+		contractData: LoanContractData;
 		borrowerName: string;
 		borrowerHasSignature: boolean;
 		lenders: ContractLender[];
@@ -27,6 +29,7 @@
 
 	let {
 		value,
+		contractData,
 		borrowerName,
 		borrowerHasSignature,
 		lenders,
@@ -48,14 +51,21 @@
 	</div>
 
 	<Tabs.Root value="participants" class="p-4">
-		<Tabs.List class="grid h-auto w-full grid-cols-2">
-			<Tabs.Trigger value="participants" class="gap-2 py-2">
-				<UsersRound class="h-4 w-4" />
-				Parties & signatures
+		<Tabs.List class="grid h-auto w-full grid-cols-3 gap-1">
+			<Tabs.Trigger value="participants" class="gap-1.5 px-2 py-2 text-xs sm:gap-2 sm:text-sm">
+				<UsersRound class="h-4 w-4 shrink-0" />
+				<span class="hidden min-w-0 truncate sm:inline">Parties & signatures</span>
+				<span class="sm:hidden">Parties</span>
 			</Tabs.Trigger>
-			<Tabs.Trigger value="terms" class="gap-2 py-2">
-				<FileText class="h-4 w-4" />
-				Contract terms
+			<Tabs.Trigger value="terms" class="gap-1.5 px-2 py-2 text-xs sm:gap-2 sm:text-sm">
+				<FileText class="h-4 w-4 shrink-0" />
+				<span class="hidden min-w-0 truncate sm:inline">Contract terms</span>
+				<span class="sm:hidden">Terms</span>
+			</Tabs.Trigger>
+			<Tabs.Trigger value="preview" class="gap-1.5 px-2 py-2 text-xs sm:gap-2 sm:text-sm">
+				<Eye class="h-4 w-4 shrink-0" />
+				<span class="hidden min-w-0 truncate sm:inline">Contract preview</span>
+				<span class="sm:hidden">Preview</span>
 			</Tabs.Trigger>
 		</Tabs.List>
 
@@ -122,6 +132,14 @@
 							rows={4}
 						/>
 					</div>
+				</div>
+			</div>
+		</Tabs.Content>
+
+		<Tabs.Content value="preview" class="mt-4">
+			<div class="overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+				<div class="max-h-[min(720px,70vh)] overflow-y-auto">
+					<LoanContractDocumentBody data={contractData} customization={value} />
 				</div>
 			</div>
 		</Tabs.Content>

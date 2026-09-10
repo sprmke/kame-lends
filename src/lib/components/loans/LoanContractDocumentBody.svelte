@@ -240,7 +240,7 @@
 						partyIsActive(party)
 							? 'bg-primary/5 ring-2 ring-primary/60'
 							: isSigned
-								? 'bg-green-50/60'
+								? 'bg-chart-2/10'
 								: ''
 					)}
 				>
@@ -252,7 +252,7 @@
 							<span
 								class={cn(
 									'rounded-full px-2 py-0.5 text-xs font-medium',
-									isSigned ? 'bg-green-100 text-green-800' : 'bg-muted text-muted-foreground'
+									isSigned ? 'bg-chart-2/15 text-chart-2' : 'bg-muted text-muted-foreground'
 								)}
 							>
 								{isSigned ? 'Signed' : 'Pending'}

@@ -51,17 +51,17 @@
 
 	const classes = $derived(sizeClasses[size]);
 	const colorClasses = $derived(
-		isFuture ? 'border-amber-300 text-amber-500' : 'border-rose-400 text-rose-500'
+		isFuture ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'
 	);
 </script>
 
 <button
 	type="button"
 	{onclick}
-	class="w-full cursor-pointer rounded-md border border-l-4 border-border/60 bg-muted/30 text-left transition-colors hover:border-primary/25 hover:bg-background {classes.container} {colorClasses}"
+	class="w-full min-w-0 cursor-pointer rounded-md border border-border/60 bg-muted/30 text-left transition-colors hover:border-primary/25 hover:bg-background {classes.container} {colorClasses}"
 >
-	<div class="flex flex-col space-y-2">
-		<div class="flex space-x-1">
+	<div class="flex min-w-0 flex-col space-y-2">
+		<div class="flex flex-wrap gap-1">
 			<Badge
 				variant={getLoanTypeBadge(loan.type).variant}
 				class={cn(classes.badge, 'leading-none', getLoanTypeBadge(loan.type).className)}
@@ -75,21 +75,27 @@
 				{formatText(loan.status)}
 			</Badge>
 		</div>
-		<p class="truncate font-bold text-gray-900 {classes.title}">{formatText(loan.loanName)}</p>
+		<p class="truncate font-bold text-foreground {classes.title}">{formatText(loan.loanName)}</p>
 		<div class={size === 'sm' ? 'space-y-1' : 'space-y-1 pl-8'}>
-			<div class="space-y-0.5 text-gray-700 {classes.investor}">
+			<div class="space-y-0.5 text-muted-foreground {classes.investor}">
 				{#each investors as inv, idx (idx)}
-					<div class="flex items-start gap-1">
-						<span class="font-bold {isFuture ? 'text-amber-500' : 'text-rose-500'}">•</span>
-						<span class="truncate">
+					<div class="flex min-w-0 items-start gap-1">
+						<span
+							class="shrink-0 font-bold {isFuture
+								? 'text-amber-600 dark:text-amber-400'
+								: 'text-rose-600 dark:text-rose-400'}">•</span
+						>
+						<span class="min-w-0 truncate">
 							<span class="font-semibold">{formatText(inv.name)}:</span>
-							{formatCurrency(inv.amount)}
+							<span class="tabular-nums">{formatCurrency(inv.amount)}</span>
 						</span>
 					</div>
 				{/each}
 			</div>
 		</div>
-		<div class="border-t pt-2 font-bold text-rose-600 dark:text-rose-400 {classes.total}">
+		<div
+			class="truncate border-t pt-2 font-bold text-rose-600 tabular-nums dark:text-rose-400 {classes.total}"
+		>
 			-{formatCurrency(totalAmount)}
 		</div>
 	</div>

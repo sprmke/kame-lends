@@ -253,7 +253,7 @@
 									</p>
 								</div>
 								{#if contact.eSignatureUrl}
-									<Check class="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+									<Check class="mt-1 h-4 w-4 shrink-0 text-chart-2" />
 								{/if}
 							</button>
 						{/each}

@@ -2,15 +2,17 @@
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import DetailModalHeader from '$lib/components/common/DetailModalHeader.svelte';
+	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import LoanDetailContent from './LoanDetailContent.svelte';
-	import LoanSigningSection from './LoanSigningSection.svelte';
+	import LoanContractDetailsModal from './LoanContractDetailsModal.svelte';
 	import LoanForm from './LoanForm.svelte';
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
+	import DetailModalHeaderSkeleton from '$lib/components/common/page-skeletons/DetailModalHeaderSkeleton.svelte';
+	import LoanDetailSkeleton from '$lib/components/common/page-skeletons/LoanDetailSkeleton.svelte';
 	import LoanQuickPaymentDialog, {
 		type LoanQuickPaymentKind
 	} from './LoanQuickPaymentDialog.svelte';
 	import { createDuplicateDataFromLoan } from '$lib/loan-duplicate';
-	import { downloadLoanContract } from '$lib/download-loan-contract';
 	import { formatText } from '$lib/format';
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, LoanWithInvestors, PaymentMethod } from '$lib/types';
@@ -44,17 +46,26 @@
 	let showCompleteDialog = $state(false);
 	let isDeleting = $state(false);
 	let isCompleting = $state(false);
-	let isDownloadingContract = $state(false);
+	let showContractDetailsModal = $state(false);
 	let quickPaymentKind = $state<LoanQuickPaymentKind | null>(null);
 	let investors = $state<Investor[]>([]);
 	let borrowers = $state<Borrower[]>([]);
 	let loadingFormData = $state(false);
+	let isLoadingLoan = $state(false);
+	let isSubmitting = $state(false);
+
+	$effect.pre(() => {
+		if (initialLoan) loan = initialLoan;
+	});
 
 	$effect(() => {
-		if (!open || !initialLoan?.id) return;
-		loan = initialLoan;
+		if (!open || !initialLoan?.id) {
+			if (!open) isLoadingLoan = false;
+			return;
+		}
 		paymentMethods = [];
-		isEditing = startInEditMode;
+		isEditing = startInEditMode && !readOnly;
+		isLoadingLoan = true;
 		void fetchLoanData(initialLoan.id);
 	});
 
@@ -67,6 +78,8 @@
 
 	const isOverdue = $derived(loan?.status === 'Overdue');
 	const isPartiallyFunded = $derived(loan?.status === 'Partially Funded');
+	const editFormId = $derived(loan ? `loan-edit-form-${loan.id}` : undefined);
+	const editSubmitLabel = $derived(isSubmitting ? 'Updating...' : 'Update Loan');
 
 	async function fetchLoanData(loanId: number) {
 		try {
@@ -81,6 +94,8 @@
 			loanFetchKey += 1;
 		} catch (error) {
 			console.error('Error fetching loan:', error);
+		} finally {
+			isLoadingLoan = false;
 		}
 	}
 
@@ -139,16 +154,6 @@
 		}
 	}
 
-	async function handleDownloadContract() {
-		if (!loan) return;
-		isDownloadingContract = true;
-		try {
-			await downloadLoanContract(loan);
-		} finally {
-			isDownloadingContract = false;
-		}
-	}
-
 	async function handleDelete() {
 		if (!loan) return;
 		isDeleting = true;
@@ -192,39 +197,59 @@
 	}
 </script>
 
-{#if loan}
-	{@const modalLoan = loan}
-	<ResponsiveModal
-		{open}
-		onOpenChange={(next) => onOpenChange(next)}
-		title={formatText(modalLoan.loanName)}
-		srOnlyHeader={isEditing}
-		showCloseButton={false}
-		contentClass="dashboard-dialog-wide sm:max-w-4xl"
-	>
-		{#if !isEditing}
-			<div class="mb-3 flex flex-col items-start justify-between gap-3 md:flex-row md:gap-4">
-				<DetailModalHeader
-					onEdit={enterEditMode}
-					onDelete={() => (showDeleteDialog = true)}
-					onClose={() => onOpenChange(false)}
-					onPayBalance={handlePayBalance}
-					showPayBalance={!readOnly && isPartiallyFunded}
-					onComplete={() => (showCompleteDialog = true)}
-					showComplete={!readOnly && isOverdue}
-					onDuplicate={handleDuplicate}
-					showDuplicate={!readOnly}
-					onDownloadContract={handleDownloadContract}
-					showDownloadContract={true}
-					{isDownloadingContract}
-					canEdit={!readOnly}
-					canDelete={!readOnly}
-					onAddPayment={readOnly ? undefined : () => (quickPaymentKind = 'payment')}
-					onAddReceivedPayment={readOnly ? undefined : () => (quickPaymentKind = 'received')}
+<ResponsiveModal
+	{open}
+	onOpenChange={(next) => onOpenChange(next)}
+	showCloseButton={false}
+	contentClass="dashboard-dialog-wide !max-w-4xl"
+>
+	{#snippet header()}
+		{#if isLoadingLoan && !isEditing}
+			<DetailModalHeaderSkeleton />
+		{:else if loan}
+			{#if isEditing}
+				<FormHeader
+					title={formatText(loan.loanName)}
+					description="Update loan details and investor allocations"
+					formId={editFormId}
+					onCancel={() => (isEditing = false)}
+					{isSubmitting}
+					isEditMode={true}
+					submitLabel={editSubmitLabel}
+					variant="embedded"
 				/>
-			</div>
+			{:else}
+				<div class="flex items-start justify-between gap-3 md:gap-4">
+					<h2
+						class="min-w-0 flex-1 text-base font-medium tracking-tight line-clamp-2 md:line-clamp-none"
+					>
+						{formatText(loan.loanName)}
+					</h2>
+					<DetailModalHeader
+						onEdit={enterEditMode}
+						onDelete={() => (showDeleteDialog = true)}
+						onClose={() => onOpenChange(false)}
+						onPayBalance={handlePayBalance}
+						showPayBalance={!readOnly && isPartiallyFunded}
+						onComplete={() => (showCompleteDialog = true)}
+						showComplete={!readOnly && isOverdue}
+						onDuplicate={handleDuplicate}
+						showDuplicate={!readOnly}
+						onContractDetails={() => (showContractDetailsModal = true)}
+						canEdit={!readOnly}
+						canDelete={!readOnly}
+						onAddPayment={readOnly ? undefined : () => (quickPaymentKind = 'payment')}
+						onAddReceivedPayment={readOnly ? undefined : () => (quickPaymentKind = 'received')}
+					/>
+				</div>
+			{/if}
 		{/if}
+	{/snippet}
 
+	{#if isLoadingLoan && !isEditing}
+		<LoanDetailSkeleton />
+	{:else if loan}
+		{@const modalLoan = loan}
 		<div>
 			{#if isEditing}
 				{#if loadingFormData}
@@ -235,6 +260,9 @@
 							{investors}
 							{borrowers}
 							existingLoan={modalLoan}
+							formId={editFormId}
+							showFormHeader={false}
+							bind:isSubmitting
 							onSuccess={handleEditSuccess}
 							onCancel={() => (isEditing = false)}
 						/>
@@ -250,17 +278,27 @@
 						readOnly={readOnly}
 						{paymentMethods}
 					/>
-					{#if !readOnly}
-						<LoanSigningSection loanId={modalLoan.id} refreshKey={loanFetchKey} />
-					{/if}
 				</div>
 			{/if}
 		</div>
-	</ResponsiveModal>
+	{/if}
+</ResponsiveModal>
 
-	{#if !readOnly}
+	{#if loan}
+		<LoanContractDetailsModal
+			loan={loan}
+			open={showContractDetailsModal}
+			onOpenChange={(next) => (showContractDetailsModal = next)}
+			canEdit={!readOnly}
+			{borrowers}
+			{investors}
+			onSaved={refreshLoan}
+		/>
+	{/if}
+
+	{#if loan && !readOnly}
 		<LoanQuickPaymentDialog
-			loan={modalLoan}
+			loan={loan}
 			kind={quickPaymentKind}
 			open={quickPaymentKind !== null}
 			onOpenChange={(nextOpen) => {
@@ -304,7 +342,7 @@
 			<AlertDialog.Footer>
 				<AlertDialog.Cancel disabled={isCompleting}>Cancel</AlertDialog.Cancel>
 				<AlertDialog.Action
-					class="bg-green-600 hover:bg-green-700"
+					class="bg-chart-2 text-white hover:bg-chart-2/90"
 					disabled={isCompleting}
 					onclick={handleComplete}
 				>
@@ -313,4 +351,4 @@
 			</AlertDialog.Footer>
 		</AlertDialog.Content>
 	</AlertDialog.Root>
-{/if}
+

@@ -45,7 +45,7 @@
 									type="button"
 									variant="ghost"
 									size="icon"
-									class="h-9 w-9 shrink-0"
+									class="shrink-0"
 									aria-label="Copy bank name"
 									onclick={() => copyText(`bank-${method.id}`, method.bankName, 'Bank name')}
 								>
@@ -67,7 +67,7 @@
 									type="button"
 									variant="ghost"
 									size="icon"
-									class="h-9 w-9 shrink-0"
+									class="shrink-0"
 									aria-label="Copy account number"
 									onclick={() =>
 										copyText(`acct-${method.id}`, method.accountNumber, 'Account number')}

@@ -383,7 +383,7 @@
 											<div class="flex shrink-0 items-center gap-2">
 												{#if isUnpaid}
 													<Badge
-														class="h-4 border-amber-200 bg-amber-100 px-1.5 py-0 text-[10px] text-amber-700"
+														class="h-4 border-amber-200 bg-amber-100 px-1.5 py-0 text-[10px] text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
 													>
 														Pending
 													</Badge>

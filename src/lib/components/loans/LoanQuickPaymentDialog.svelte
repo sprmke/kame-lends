@@ -6,7 +6,7 @@
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import * as Select from '$lib/components/ui/select';
+	import SearchableSelect from '$lib/components/common/SearchableSelect.svelte';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { calculateTotalAmount } from '$lib/calculations';
 	import { toLocalDateString } from '$lib/date-utils';
@@ -143,6 +143,10 @@
 		const selectedLenderIds = new Set(entries.map((entry) => entry.investorId).filter(Boolean));
 		return lenders.filter((lender) => !selectedLenderIds.has(String(lender.id)));
 	});
+
+	const lenderOptions = $derived(
+		lenders.map((lender) => ({ value: String(lender.id), label: lender.name }))
+	);
 
 	function updateEntry(id: string, changes: Partial<PaymentEntry>) {
 		entries = entries.map((entry) => (entry.id === id ? { ...entry, ...changes } : entry));
@@ -281,24 +285,18 @@
 
 							<div class="space-y-2">
 								<Label for="{kind}-lender-{entry.id}">Lender</Label>
-								<Select.Root
-									type="single"
+								<SearchableSelect
+									id="{kind}-lender-{entry.id}"
+									options={lenderOptions}
 									value={entry.investorId}
 									onValueChange={(investorId) =>
-										investorId &&
 										updateEntry(entry.id, { investorId, interestPeriodId: 'general' })}
+									placeholder="Select a lender..."
+									searchPlaceholder="Search lenders..."
+									searchable={true}
 									disabled={isSubmitting}
-								>
-									<Select.Trigger id="{kind}-lender-{entry.id}" class="w-full">
-										{lenders.find((l) => String(l.id) === entry.investorId)?.name ??
-											'Select a lender...'}
-									</Select.Trigger>
-									<Select.Content>
-										{#each lenders as lender (lender.id)}
-											<Select.Item value={String(lender.id)}>{lender.name}</Select.Item>
-										{/each}
-									</Select.Content>
-								</Select.Root>
+									triggerClassName="w-full"
+								/>
 							</div>
 
 							{#if isReceived && entry.investorId}
@@ -343,32 +341,26 @@
 							</div>
 
 							{#if isReceived && context.periods.length}
+								{@const periodOptions = [
+									{ value: 'general', label: 'General loan balance' },
+									...context.periods.map((period) => ({
+										value: String(period.id),
+										label: `Interest due ${formatDate(period.dueDate)}`
+									}))
+								]}
 								<div class="space-y-2">
 									<Label for="received-period-{entry.id}">Apply payment to</Label>
-									<Select.Root
-										type="single"
+									<SearchableSelect
+										id="received-period-{entry.id}"
+										options={periodOptions}
 										value={entry.interestPeriodId}
 										onValueChange={(interestPeriodId) =>
-											interestPeriodId && updateEntry(entry.id, { interestPeriodId })}
+											updateEntry(entry.id, { interestPeriodId })}
+										placeholder="Select period..."
+										searchPlaceholder="Search periods..."
 										disabled={isSubmitting}
-									>
-										<Select.Trigger id="received-period-{entry.id}" class="w-full">
-											{entry.interestPeriodId === 'general'
-												? 'General loan balance'
-												: `Interest due ${formatDate(
-														context.periods.find((p) => String(p.id) === entry.interestPeriodId)
-															?.dueDate ?? ''
-													)}`}
-										</Select.Trigger>
-										<Select.Content>
-											<Select.Item value="general">General loan balance</Select.Item>
-											{#each context.periods as period (period.id)}
-												<Select.Item value={String(period.id)}>
-													Interest due {formatDate(period.dueDate)}
-												</Select.Item>
-											{/each}
-										</Select.Content>
-									</Select.Root>
+										triggerClassName="w-full"
+									/>
 								</div>
 							{/if}
 

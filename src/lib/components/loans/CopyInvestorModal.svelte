@@ -112,6 +112,19 @@
 	description={`Select investors to copy all configurations from ${sourceInvestor.name}. This copies principal payments, received payments, interest settings, and multiple interest periods.`}
 	contentClass="sm:max-w-[500px]"
 >
+	{#snippet footer()}
+		<Button type="button" variant="outline" class="min-h-11" onclick={handleCancel}>Cancel</Button>
+		<Button
+			type="button"
+			class="min-h-11"
+			disabled={checkedInvestorIds.length === 0}
+			onclick={handleCopy}
+		>
+			<Copy class="mr-2 h-4 w-4" />
+			Copy to {checkedInvestorIds.length} investor{checkedInvestorIds.length !== 1 ? 's' : ''}
+		</Button>
+	{/snippet}
+
 	<div class="space-y-4">
 		<div class="space-y-2">
 			<Label class="text-sm font-semibold">Select Investors</Label>
@@ -143,12 +156,12 @@
 									<div class="flex flex-wrap items-center gap-2">
 										<span>{investor.name}</span>
 										{#if isAlreadyAdded}
-											<span class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">
+											<span class="rounded bg-chart-5/12 px-1.5 py-0.5 text-[10px] text-chart-5">
 												Added
 											</span>
 										{/if}
 										{#if currentlyMatches && isChecked}
-											<span class="rounded bg-green-100 px-1.5 py-0.5 text-[10px] text-green-700">
+											<span class="rounded bg-chart-2/12 px-1.5 py-0.5 text-[10px] text-chart-2">
 												Same config
 											</span>
 										{/if}
@@ -162,19 +175,6 @@
 					</div>
 				</ScrollArea.Root>
 			{/if}
-		</div>
-
-		<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-			<Button type="button" variant="outline" class="min-h-11" onclick={handleCancel}>Cancel</Button>
-			<Button
-				type="button"
-				class="min-h-11"
-				disabled={checkedInvestorIds.length === 0}
-				onclick={handleCopy}
-			>
-				<Copy class="mr-2 h-4 w-4" />
-				Copy to {checkedInvestorIds.length} investor{checkedInvestorIds.length !== 1 ? 's' : ''}
-			</Button>
 		</div>
 	</div>
 </ResponsiveModal>

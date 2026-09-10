@@ -55,10 +55,10 @@
 <button
 	type="button"
 	{onclick}
-	class="w-full cursor-pointer rounded-md border border-l-4 border-border/60 border-l-emerald-400 bg-muted/30 text-left transition-colors hover:border-primary/25 hover:bg-background {classes.container}"
+	class="w-full min-w-0 cursor-pointer rounded-md border border-border/60 bg-muted/30 text-left transition-colors hover:border-primary/25 hover:bg-background {classes.container}"
 >
-	<div class="flex flex-col space-y-2">
-		<div class="flex space-x-1">
+	<div class="flex min-w-0 flex-col space-y-2">
+		<div class="flex flex-wrap gap-1">
 			<Badge
 				variant={getLoanTypeBadge(loan.type).variant}
 				class={cn(classes.badge, 'leading-none', getLoanTypeBadge(loan.type).className)}
@@ -72,20 +72,26 @@
 				{formatText(loan.status)}
 			</Badge>
 		</div>
-		<p class="truncate font-bold text-gray-900 {classes.title}">{formatText(loan.loanName)}</p>
+		<p class="truncate font-bold text-foreground {classes.title}">{formatText(loan.loanName)}</p>
 		<div class={size === 'sm' ? 'space-y-1' : 'space-y-1 pl-8'}>
-			<div class="space-y-0.5 text-gray-700 {classes.detail}">
-				<div class="flex items-center {size === 'sm' ? 'gap-1' : 'justify-between'}">
-					<span class="font-medium">Principal:</span>
-					<span class="font-semibold">{formatCurrency(totalPrincipal)}</span>
+			<div class="space-y-0.5 text-muted-foreground {classes.detail}">
+				<div
+					class="flex min-w-0 items-center gap-1 {size === 'sm' ? '' : 'justify-between'}"
+				>
+					<span class="shrink-0 font-medium">Principal:</span>
+					<span class="truncate font-semibold tabular-nums">{formatCurrency(totalPrincipal)}</span>
 				</div>
-				<div class="flex items-center {size === 'sm' ? 'gap-1' : 'justify-between'}">
-					<span class="font-medium">Interest:</span>
-					<span class="font-semibold">{formatCurrency(totalInterest)}</span>
+				<div
+					class="flex min-w-0 items-center gap-1 {size === 'sm' ? '' : 'justify-between'}"
+				>
+					<span class="shrink-0 font-medium">Interest:</span>
+					<span class="truncate font-semibold tabular-nums">{formatCurrency(totalInterest)}</span>
 				</div>
 			</div>
 		</div>
-		<div class="border-t pt-2 font-bold text-emerald-600 dark:text-emerald-400 {classes.total}">
+		<div
+			class="truncate border-t pt-2 font-bold text-emerald-600 tabular-nums dark:text-emerald-400 {classes.total}"
+		>
 			+{formatCurrency(totalAmount)}
 		</div>
 	</div>

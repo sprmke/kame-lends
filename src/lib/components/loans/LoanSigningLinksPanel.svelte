@@ -11,9 +11,10 @@
 	interface Props {
 		invitations: SigningInvitationSummary[];
 		loanId: number;
+		variant?: 'card' | 'plain';
 	}
 
-	let { invitations, loanId }: Props = $props();
+	let { invitations, loanId, variant = 'card' }: Props = $props();
 
 	let copiedId = $state<number | null>(null);
 
@@ -36,68 +37,76 @@
 	const signedCount = $derived(invitations.filter((item) => item.signedAt).length);
 </script>
 
-{#if invitations.length > 0}
-	<Card.Root>
-		<Card.Header class="pb-3">
-			<div class="flex flex-wrap items-center justify-between gap-2">
-				<Card.Title class="flex items-center gap-2 text-base">
-					<Link2 class="h-4 w-4 text-primary" />
-					Contract signing
-				</Card.Title>
-				<Badge variant="secondary">{signedCount} of {invitations.length} signed</Badge>
-			</div>
-		</Card.Header>
-		<Card.Content class="pt-0">
-			<ul class="divide-y divide-border rounded-lg border border-border">
-				{#each invitations as invitation (invitation.id)}
-					{@const isSigned = Boolean(invitation.signedAt)}
-					{@const isCopied = copiedId === invitation.id}
-					{@const roleLabel = getSigningPartyRoleLabel(invitation.partyRole)}
-					{@const showRoleSubtitle = roleLabel !== invitation.partyName}
-					<li
-						class="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4"
-					>
-						<div class="min-w-0 flex-1">
-							<p class="truncate font-medium">{invitation.partyName}</p>
-							{#if showRoleSubtitle}
-								<p class="truncate text-xs text-muted-foreground">
-									{roleLabel}{invitation.partyEmail ? ` · ${invitation.partyEmail}` : ''}
-								</p>
-							{:else if invitation.partyEmail}
-								<p class="truncate text-xs text-muted-foreground">{invitation.partyEmail}</p>
-							{/if}
-						</div>
+{#snippet invitationList(listClass: string)}
+	<ul class={listClass}>
+		{#each invitations as invitation (invitation.id)}
+			{@const isSigned = Boolean(invitation.signedAt)}
+			{@const isCopied = copiedId === invitation.id}
+			{@const roleLabel = getSigningPartyRoleLabel(invitation.partyRole)}
+			{@const showRoleSubtitle = roleLabel !== invitation.partyName}
+			<li
+				class="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4"
+			>
+				<div class="min-w-0 flex-1">
+					<p class="truncate font-medium">{invitation.partyName}</p>
+					{#if showRoleSubtitle}
+						<p class="truncate text-xs text-muted-foreground">
+							{roleLabel}{invitation.partyEmail ? ` · ${invitation.partyEmail}` : ''}
+						</p>
+					{:else if invitation.partyEmail}
+						<p class="truncate text-xs text-muted-foreground">{invitation.partyEmail}</p>
+					{/if}
+				</div>
 
-						<div class="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-							{#if isSigned}
-								<Badge class="bg-green-100 text-green-800 hover:bg-green-100">
-									<CheckCircle2 class="mr-1 h-3 w-3" />
-									Signed {formatDate(invitation.signedAt!)}
-								</Badge>
+				<div class="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+					{#if isSigned}
+						<Badge class="border-chart-2/25 bg-chart-2/12 text-chart-2 hover:bg-chart-2/12">
+							<CheckCircle2 class="mr-1 h-3 w-3" />
+							Signed {formatDate(invitation.signedAt!)}
+						</Badge>
+					{:else}
+						<Badge variant="outline" class="hidden sm:inline-flex">
+							<Clock class="mr-1 h-3 w-3" />
+							Pending
+						</Badge>
+						<Button
+							type="button"
+							variant={isCopied ? 'secondary' : 'outline'}
+							size="sm"
+							onclick={() => copyLink(invitation)}
+						>
+							{#if isCopied}
+								<Check class="mr-1.5 h-3.5 w-3.5" />
+								Copied
 							{:else}
-								<Badge variant="outline" class="hidden sm:inline-flex">
-									<Clock class="mr-1 h-3 w-3" />
-									Pending
-								</Badge>
-								<Button
-									type="button"
-									variant={isCopied ? 'secondary' : 'outline'}
-									size="sm"
-									onclick={() => copyLink(invitation)}
-								>
-									{#if isCopied}
-										<Check class="mr-1.5 h-3.5 w-3.5" />
-										Copied
-									{:else}
-										<Copy class="mr-1.5 h-3.5 w-3.5" />
-										Copy link
-									{/if}
-								</Button>
+								<Copy class="mr-1.5 h-3.5 w-3.5" />
+								Copy link
 							{/if}
-						</div>
-					</li>
-				{/each}
-			</ul>
-		</Card.Content>
-	</Card.Root>
+						</Button>
+					{/if}
+				</div>
+			</li>
+		{/each}
+	</ul>
+{/snippet}
+
+{#if invitations.length > 0}
+	{#if variant === 'card'}
+		<Card.Root>
+			<Card.Header class="pb-3">
+				<div class="flex flex-wrap items-center justify-between gap-2">
+					<Card.Title class="flex items-center gap-2 text-base">
+						<Link2 class="h-4 w-4 text-primary" />
+						Contract signing
+					</Card.Title>
+					<Badge variant="secondary">{signedCount} of {invitations.length} signed</Badge>
+				</div>
+			</Card.Header>
+			<Card.Content class="pt-0">
+				{@render invitationList('divide-y divide-border rounded-lg border border-border')}
+			</Card.Content>
+		</Card.Root>
+	{:else}
+		{@render invitationList('divide-y divide-border rounded-xl border border-border bg-card')}
+	{/if}
 {/if}

@@ -3,10 +3,17 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
-	import { createRowActionItems } from '$lib/components/common/action-buttons';
+	import TableEmptyRow from '$lib/components/common/TableEmptyRow.svelte';
+	import { createLoanActionItems } from '$lib/components/common/action-buttons';
 	import { formatCurrency, formatDateVeryShort, formatText, formatPercentage } from '$lib/format';
-	import { calculateLoanStats, calculateTransactionStats } from '$lib/calculations';
+	import {
+		calculateAverageRate,
+		calculateLoanStats,
+		calculateTotalPrincipal,
+		calculateTransactionStats
+	} from '$lib/calculations';
 	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
+	import { TABLE_ROW_CLICKABLE } from '$lib/table-styles';
 	import { cn } from '$lib/utils';
 	import type { LoanWithInvestors } from '$lib/types';
 
@@ -20,14 +27,17 @@
 		onAddPayment?: (loan: LoanWithInvestors) => void;
 		onAddReceivedPayment?: (loan: LoanWithInvestors) => void;
 		onDuplicate?: (loan: LoanWithInvestors) => void;
-		onDownloadContract?: (loan: LoanWithInvestors) => void;
-		downloadingContractLoanId?: number | null;
+		onContractDetails?: (loan: LoanWithInvestors) => void;
 		onDelete?: (loan: LoanWithInvestors) => void;
+		emptyMessage?: string;
+		/** When set, Principal shows this investor's allocation on each loan (not full loan principal). */
+		investorId?: number;
 	}
 
 	let {
 		loans,
 		enableRowSelection = false,
+		emptyMessage = 'No loans found.',
 		selectedRowIds = new Set(),
 		onSelectedRowIdsChange,
 		onQuickView,
@@ -35,23 +45,17 @@
 		onAddPayment,
 		onAddReceivedPayment,
 		onDuplicate,
-		onDownloadContract,
-		downloadingContractLoanId = null,
-		onDelete
+		onContractDetails,
+		onDelete,
+		investorId
 	}: Props = $props();
 
-	let isNarrow = $state(false);
-
-	$effect(() => {
-		if (typeof window === 'undefined') return;
-		const mql = window.matchMedia('(max-width: 1023px)');
-		const update = () => {
-			isNarrow = mql.matches;
-		};
-		update();
-		mql.addEventListener('change', update);
-		return () => mql.removeEventListener('change', update);
-	});
+	function investorEntriesForLoan(loan: LoanWithInvestors) {
+		if (investorId == null) return null;
+		return (loan.loanInvestors ?? []).filter(
+			(li) => (li.investor?.id ?? li.investorId) === investorId
+		);
+	}
 
 	function toggleAll(checked: boolean) {
 		const next = checked ? new Set(loans.map((l) => l.id)) : new Set<string | number>();
@@ -88,14 +92,25 @@
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
+			{#if loans.length === 0}
+				<TableEmptyRow
+					colspan={enableRowSelection ? 8 : 7}
+					message={emptyMessage}
+				/>
+			{:else}
 			{#each loans as loan (loan.id)}
-				{@const stats = calculateLoanStats(loan)}
-				{@const tx = calculateTransactionStats(loan.loanInvestors)}
+				{@const scopedEntries = investorEntriesForLoan(loan)}
+				{@const principal =
+					scopedEntries != null
+						? calculateTotalPrincipal(scopedEntries)
+						: calculateLoanStats(loan).totalPrincipal}
+				{@const averageRate =
+					scopedEntries != null
+						? calculateAverageRate(scopedEntries)
+						: calculateTransactionStats(loan.loanInvestors).averageRate}
 				<Table.Row
-					class={cn(onQuickView && 'cursor-pointer')}
-					onclick={() => {
-						if (onQuickView && isNarrow) onQuickView(loan);
-					}}
+					class={cn(onQuickView && TABLE_ROW_CLICKABLE)}
+					onclick={() => onQuickView?.(loan)}
 				>
 					{#if enableRowSelection}
 						<Table.Cell onclick={(e) => e.stopPropagation()}>
@@ -131,10 +146,10 @@
 						</Badge>
 					</Table.Cell>
 					<Table.Cell class="text-right tabular-nums">
-						{formatCurrency(stats.totalPrincipal)}
-						{#if tx.averageRate != null}
+						{formatCurrency(principal)}
+						{#if principal > 0}
 							<p class="text-[10px] text-muted-foreground">
-								{formatPercentage(tx.averageRate)}
+								{formatPercentage(averageRate)}
 							</p>
 						{/if}
 					</Table.Cell>
@@ -144,24 +159,25 @@
 					<Table.Cell onclick={(e) => e.stopPropagation()}>
 						<ActionButtons
 							viewHref={`/loans/${loan.id}`}
-							onQuickView={onQuickView ? () => onQuickView(loan) : undefined}
-							actionItems={createRowActionItems({
+							showView={false}
+							actionItems={createLoanActionItems({
 								onEdit: onEdit ? () => onEdit(loan) : undefined,
 								onAddPayment: onAddPayment ? () => onAddPayment(loan) : undefined,
 								onAddReceivedPayment: onAddReceivedPayment
 									? () => onAddReceivedPayment(loan)
 									: undefined,
 								onDuplicate: onDuplicate ? () => onDuplicate(loan) : undefined,
-								onDownloadContract: onDownloadContract
-									? () => onDownloadContract(loan)
+								showDuplicate: Boolean(onDuplicate),
+								onContractDetails: onContractDetails
+									? () => onContractDetails(loan)
 									: undefined,
-								isDownloadingContract: downloadingContractLoanId === loan.id,
 								onDelete: onDelete ? () => onDelete(loan) : undefined
 							})}
 						/>
 					</Table.Cell>
 				</Table.Row>
 			{/each}
+			{/if}
 		</Table.Body>
 	</Table.Root>
 </div>

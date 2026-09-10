@@ -57,9 +57,9 @@
 <button
 	type="button"
 	{onclick}
-	class="w-full cursor-pointer rounded-md border border-l-4 border-border/60 border-l-sky-400 bg-muted/30 text-left transition-colors hover:border-primary/25 hover:bg-background {classes.container}"
+	class="w-full min-w-0 cursor-pointer rounded-md border border-border/60 bg-muted/30 text-left transition-colors hover:border-primary/25 hover:bg-background {classes.container}"
 >
-	<div class="space-y-2">
+	<div class="min-w-0 space-y-2">
 		<div class="flex items-center gap-2">
 			<div class="min-w-0 flex-1 space-y-1">
 				<div class="flex flex-wrap gap-1">
@@ -76,22 +76,32 @@
 						{formatText(loan.status)}
 					</Badge>
 				</div>
-				<div class="font-bold text-gray-900 {classes.title}">{formatText(loan.loanName)}</div>
+				<div class="truncate font-bold text-foreground {classes.title}">
+					{formatText(loan.loanName)}
+				</div>
 			</div>
 		</div>
 		<div class={size === 'sm' ? 'space-y-1' : 'space-y-1 pl-8'}>
-			<div class="font-semibold text-gray-700 {classes.detail}">{formatText(investorName)}</div>
-			<div class="inline-block rounded bg-white/60 font-bold text-gray-900 {classes.total}">
+			<div class="truncate font-semibold text-muted-foreground {classes.detail}">
+				{formatText(investorName)}
+			</div>
+			<div
+				class="max-w-full truncate rounded bg-card/80 font-bold text-foreground tabular-nums {classes.total}"
+			>
 				Interest Due: {formatCurrency(totalAmount)}
 			</div>
-			<div class="space-y-0.5 text-gray-700 {classes.detail}">
-				<div class="flex items-center {size === 'sm' ? 'gap-1' : 'justify-between'}">
-					<span class="font-medium">Principal:</span>
-					<span class="font-semibold">{formatCurrency(principal)}</span>
+			<div class="space-y-0.5 text-muted-foreground {classes.detail}">
+				<div
+					class="flex min-w-0 items-center gap-1 {size === 'sm' ? '' : 'justify-between'}"
+				>
+					<span class="shrink-0 font-medium">Principal:</span>
+					<span class="truncate font-semibold tabular-nums">{formatCurrency(principal)}</span>
 				</div>
-				<div class="flex items-center {size === 'sm' ? 'gap-1' : 'justify-between'}">
-					<span class="font-medium">Interest:</span>
-					<span class="font-semibold">{formatCurrency(interest)}</span>
+				<div
+					class="flex min-w-0 items-center gap-1 {size === 'sm' ? '' : 'justify-between'}"
+				>
+					<span class="shrink-0 font-medium">Interest:</span>
+					<span class="truncate font-semibold tabular-nums">{formatCurrency(interest)}</span>
 				</div>
 			</div>
 		</div>

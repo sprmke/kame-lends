@@ -2,7 +2,6 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Collapsible from '$lib/components/ui/collapsible';
 	import LoanContractCustomizationForm from '$lib/components/loans/LoanContractCustomizationForm.svelte';
-	import LoanContractDocumentBody from '$lib/components/loans/LoanContractDocumentBody.svelte';
 	import {
 		buildLoanContractDataFromDraft,
 		type LoanContractDraftInput
@@ -106,9 +105,9 @@
 					<FileText class="h-4 w-4" />
 				</div>
 				<div class="space-y-1">
-					<Card.Title class="text-lg sm:text-xl">Contract Preview</Card.Title>
+					<Card.Title>Contract Preview</Card.Title>
 					{#if !draft.loanId}
-						<p class="text-xs text-amber-600">
+						<p class="text-xs text-chart-5">
 							The final contract number will be assigned after the loan is saved.
 						</p>
 					{/if}
@@ -122,6 +121,7 @@
 			<Card.Content class="space-y-4">
 				<LoanContractCustomizationForm
 					value={customization}
+					contractData={contractData}
 					borrowerName={contractData.borrowerName}
 					borrowerHasSignature={Boolean(contractData.borrowerESignatureUrl)}
 					lenders={contractData.lenders}
@@ -131,12 +131,6 @@
 					onChanges={handleFieldsChange}
 					onReset={handleReset}
 				/>
-
-				<div class="overflow-hidden rounded-xl border border-border bg-muted/20 shadow-sm">
-					<div class="max-h-[720px] overflow-y-auto">
-						<LoanContractDocumentBody data={contractData} {customization} />
-					</div>
-				</div>
 			</Card.Content>
 		</Collapsible.Content>
 	</Collapsible.Root>

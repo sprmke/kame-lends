@@ -13,6 +13,8 @@
 	import BorrowerFormModal from '$lib/components/borrowers/BorrowerFormModal.svelte';
 	import InvestorFormModal from '$lib/components/investors/InvestorFormModal.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
+	import FormActions from '$lib/components/common/FormActions.svelte';
+	import SearchableSelect from '$lib/components/common/SearchableSelect.svelte';
 	import CopyInvestorModal from '$lib/components/loans/CopyInvestorModal.svelte';
 	import { toInvestorConfiguration } from '$lib/components/loans/copy-investor-utils';
 	import LoanContractDraftPreview from '$lib/components/loans/LoanContractDraftPreview.svelte';
@@ -28,10 +30,10 @@
 		buildAllocationsFromDuplicateData,
 		buildAllocationsFromExistingLoan
 	} from '$lib/components/loans/loan-form-allocations';
-	import LoanSigningSection from '$lib/components/loans/LoanSigningSection.svelte';
 	import { downloadLoanContractPdf } from '$lib/pdf-download';
 	import type { ContractCustomization } from '$lib/loan-contract-customization';
 	import * as Collapsible from '$lib/components/ui/collapsible';
+	import { cn } from '$lib/utils';
 	import { toast } from '$lib/toast';
 	import { formatCurrency } from '$lib/format';
 	import { getTodayAtMidnight, normalizeToMidnight, toLocalDateString } from '$lib/date-utils';
@@ -54,6 +56,10 @@
 		cancelHref?: string;
 		onSuccess?: () => void | Promise<void>;
 		onCancel?: () => void;
+		/** When false, parent renders FormHeader in a fixed modal shell. */
+		showFormHeader?: boolean;
+		formId?: string;
+		isSubmitting?: boolean;
 	}
 
 	let {
@@ -64,7 +70,10 @@
 		existingLoan,
 		cancelHref = '/loans',
 		onSuccess,
-		onCancel
+		onCancel,
+		showFormHeader = true,
+		formId,
+		isSubmitting = $bindable(false)
 	}: Props = $props();
 
 	const isEditMode = $derived(Boolean(existingLoan));
@@ -156,7 +165,6 @@
 	);
 	let selectedInvestors = $state<SelectedInvestorAllocation[]>(buildInitialAllocations());
 	let investorSelectValue = $state('');
-	let isSubmitting = $state(false);
 	let errors = $state<Record<string, string>>({});
 	let initializedFromDuplicate = $state(false);
 	let contractCustomization = $state<ContractCustomization | null>(
@@ -204,6 +212,14 @@
 
 	const availableInvestors = $derived(
 		investorList.filter((inv) => !selectedInvestors.some((si) => si.investor.id === inv.id))
+	);
+
+	const borrowerOptions = $derived(
+		borrowerList.map((borrower) => ({ value: String(borrower.id), label: borrower.name }))
+	);
+
+	const availableInvestorOptions = $derived(
+		availableInvestors.map((investor) => ({ value: String(investor.id), label: investor.name }))
 	);
 
 	const totalPrincipal = $derived(
@@ -737,51 +753,59 @@
 	);
 </script>
 
-<form bind:this={formRef} class="dashboard-form max-w-4xl" onsubmit={handleSubmit}>
-	<FormHeader
-		title={formTitle}
-		description={formDescription}
-		onCancel={handleCancel}
-		onSubmit={handleFormSubmit}
-		{isSubmitting}
-		{isEditMode}
-		submitLabel={submitButtonLabel}
-		variant={isModalMode ? 'embedded' : 'page'}
-	/>
+	<form
+		bind:this={formRef}
+		id={formId}
+		class={cn('dashboard-form w-full min-w-0', isModalMode ? 'max-w-none' : 'max-w-4xl')}
+		onsubmit={handleSubmit}
+	>
+	{#if showFormHeader}
+		<FormHeader
+			title={formTitle}
+			description={formDescription}
+			onCancel={handleCancel}
+			onSubmit={handleFormSubmit}
+			{formId}
+			{isSubmitting}
+			{isEditMode}
+			submitLabel={submitButtonLabel}
+			variant={isModalMode ? 'embedded' : 'page'}
+		/>
+	{/if}
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title class="text-lg sm:text-xl">Loan Details</Card.Title>
+			<Card.Title>Loan Details</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
 				<div class="space-y-2">
 					<Label for="borrowerId">Borrower *</Label>
-					<Select.Root
-						type="single"
+					<SearchableSelect
+						id="borrowerId"
+						options={borrowerOptions}
 						value={borrowerSelectValue}
 						onValueChange={handleBorrowerSelect}
+						placeholder="Select a borrower..."
+						searchPlaceholder="Search borrowers..."
+						searchable={true}
 						disabled={isSubmitting}
+						triggerClassName="w-full"
 					>
-						<Select.Trigger id="borrowerId" class="w-full">
-							{borrowerList.find((b) => String(b.id) === borrowerId)?.name ??
-								'Select a borrower...'}
-						</Select.Trigger>
-						<Select.Content>
-							<Select.Item value="new" class="font-medium text-primary">
-								<span class="flex items-center gap-2">
-									<UserPlus class="h-4 w-4" />
-									Add New Borrower
-								</span>
-							</Select.Item>
+						{#snippet header({ select })}
+							<button
+								type="button"
+								class="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-primary hover:bg-accent"
+								onclick={() => select('new')}
+							>
+								<UserPlus class="h-4 w-4" />
+								Add New Borrower
+							</button>
 							{#if borrowerList.length > 0}
 								<div class="my-1 h-px bg-border"></div>
 							{/if}
-							{#each borrowerList as borrower}
-								<Select.Item value={String(borrower.id)}>{borrower.name}</Select.Item>
-							{/each}
-						</Select.Content>
-					</Select.Root>
+						{/snippet}
+					</SearchableSelect>
 					{#if errors.borrowerId}<p class="text-sm text-destructive">{errors.borrowerId}</p>{/if}
 				</div>
 				<div class="space-y-2">
@@ -841,38 +865,35 @@
 
 	<Card.Root id="investors-section">
 		<Card.Header>
-			<Card.Title class="text-lg sm:text-xl">Investors</Card.Title>
+			<Card.Title>Investors</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-3">
 				<Label>Add Investor</Label>
-				<Select.Root
-					type="single"
+				<SearchableSelect
+					options={availableInvestorOptions}
 					value={investorSelectValue}
 					onValueChange={handleInvestorSelect}
+					placeholder="Select an investor..."
+					searchPlaceholder="Search investors..."
+					searchable={true}
 					disabled={isSubmitting}
+					triggerClassName="w-full"
 				>
-					<Select.Trigger class="w-full">
-						{investorSelectValue
-							? (investorList.find((inv) => String(inv.id) === investorSelectValue)?.name ??
-								'Select an investor...')
-							: 'Select an investor...'}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Item value="new" class="font-medium text-primary">
-							<span class="flex items-center gap-2">
-								<UserPlus class="h-4 w-4" />
-								Add New Investor
-							</span>
-						</Select.Item>
+					{#snippet header({ select })}
+						<button
+							type="button"
+							class="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-primary hover:bg-accent"
+							onclick={() => select('new')}
+						>
+							<UserPlus class="h-4 w-4" />
+							Add New Investor
+						</button>
 						{#if availableInvestors.length > 0}
 							<div class="my-1 h-px bg-border"></div>
 						{/if}
-						{#each availableInvestors as investor}
-							<Select.Item value={String(investor.id)}>{investor.name}</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
+					{/snippet}
+				</SearchableSelect>
 			</div>
 
 			{#if errors.investors}<p class="text-sm text-destructive">{errors.investors}</p>{/if}
@@ -906,7 +927,7 @@
 								</DropdownMenu.Trigger>
 								<DropdownMenu.Content align="end">
 									<DropdownMenu.Item onclick={() => handleCopy(si.investor.id)}>
-										<Copy class="mr-2 h-4 w-4" />
+										<Copy class="h-4 w-4" />
 										Copy
 									</DropdownMenu.Item>
 								</DropdownMenu.Content>
@@ -924,7 +945,7 @@
 					</div>
 
 					<Tabs.Root value="principal" class="w-full">
-						<Tabs.List class="grid h-9 w-full grid-cols-2">
+						<Tabs.List class="grid h-11 w-full grid-cols-2">
 							<Tabs.Trigger value="principal" class="text-xs sm:text-sm">
 								Principal Disbursement
 							</Tabs.Trigger>
@@ -1179,9 +1200,9 @@
 	{#if selectedInvestors.length > 0}
 		<Collapsible.Root open>
 			<Card.Root>
-				<Card.Content class="p-3">
+				<Card.Content class="p-6">
 					<Collapsible.Trigger class="group flex w-full items-center justify-between p-0">
-						<h4 class="text-lg font-bold tracking-tight sm:text-xl">Loan Preview</h4>
+						<h4 class="text-base font-medium tracking-tight">Loan Preview</h4>
 						<ChevronDown
 							class="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180"
 						/>
@@ -1197,56 +1218,38 @@
 				</Card.Content>
 			</Card.Root>
 		</Collapsible.Root>
-
-		<LoanSummarySection
-			totalPrincipal={loanSummary.totalCapital}
-			averageRate={loanSummary.averageRate}
-			totalInterest={loanSummary.totalInterest}
-			totalAmount={loanSummary.totalAmount}
-			totalReceived={loanSummary.totalReceived}
-			totalBalance={loanSummary.totalBalance}
-			uniqueInvestors={loanSummary.uniqueInvestors}
-			balance={loanSummary.balance}
-		/>
-
-		<LoanContractDraftPreview
-			draft={contractDraft}
-			customization={contractCustomization}
-			preserveCustomization={Boolean(
-				duplicateData?.contractCustomization || existingLoan?.loanContract?.customization
-			)}
-			borrowers={borrowerList}
-			investors={investorList}
-			onCustomizationChange={(next) => (contractCustomization = next)}
-		/>
 	{/if}
 
-	{#if isEditMode && existingLoan}
-		<LoanSigningSection loanId={existingLoan.id} />
-	{/if}
+	<LoanSummarySection
+		totalPrincipal={loanSummary.totalCapital}
+		averageRate={loanSummary.averageRate}
+		totalInterest={loanSummary.totalInterest}
+		totalAmount={loanSummary.totalAmount}
+		totalReceived={loanSummary.totalReceived}
+		totalBalance={loanSummary.totalBalance}
+		uniqueInvestors={loanSummary.uniqueInvestors}
+		balance={loanSummary.balance}
+	/>
 
-	<div class="flex flex-col gap-3 sm:flex-row">
-		<Button
-			type="button"
-			variant="outline"
-			class="flex-1"
-			disabled={isSubmitting}
-			onclick={handleCancel}
-		>
-			Cancel
-		</Button>
-		<Button type="submit" class="flex-1" disabled={isSubmitting}>
-			{isSubmitting
-				? isEditMode
-					? 'Updating...'
-					: 'Creating...'
-				: isEditMode
-					? 'Update Loan'
-					: duplicateData
-						? 'Duplicate Loan'
-						: 'Create Loan'}
-		</Button>
-	</div>
+	<LoanContractDraftPreview
+		draft={contractDraft}
+		customization={contractCustomization}
+		preserveCustomization={Boolean(
+			duplicateData?.contractCustomization || existingLoan?.loanContract?.customization
+		)}
+		borrowers={borrowerList}
+		investors={investorList}
+		onCustomizationChange={(next) => (contractCustomization = next)}
+	/>
+
+	<FormActions
+		onCancel={handleCancel}
+		{formId}
+		{isSubmitting}
+		submitLabel={submitButtonLabel}
+		layout={isModalMode ? 'stacked' : 'responsive'}
+		class={isModalMode ? 'md:hidden' : 'lg:hidden'}
+	/>
 </form>
 
 <BorrowerFormModal

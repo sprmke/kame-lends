@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Calendar } from '$lib/components/common/calendar';
+	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
+	import LoanDetailModal from './LoanDetailModal.svelte';
 	import type {
 		CalendarConfig,
 		CalendarEvent,
@@ -18,18 +20,26 @@
 	interface Props {
 		loans: LoanWithInvestors[];
 		onLoanClick?: (loan: LoanWithInvestors) => void;
+		onUpdate?: () => void | Promise<void>;
 	}
 
-	let { loans, onLoanClick }: Props = $props();
+	let { loans, onLoanClick, onUpdate }: Props = $props();
 
 	const calendarEvents = $derived(buildLoanCalendarEvents(loans));
+	let selectedLoan = $state<LoanWithInvestors | null>(null);
+	let isDetailModalOpen = $state(false);
 
 	function handleLoanClick(loan: LoanWithInvestors) {
 		if (onLoanClick) {
 			onLoanClick(loan);
-		} else {
-			goto(`/loans/${loan.id}`);
+			return;
 		}
+		if (isMobileShellViewport()) {
+			goto(`/loans/${loan.id}`);
+			return;
+		}
+		selectedLoan = loan;
+		isDetailModalOpen = true;
 	}
 
 	const calendarConfig: CalendarConfig = {
@@ -47,15 +57,15 @@
 			{
 				title: 'Out',
 				items: [
-					{ label: 'Sent', color: 'bg-rose-400' },
-					{ label: 'Scheduled', color: 'bg-amber-300' }
+					{ label: 'Sent', color: 'bg-chart-3' },
+					{ label: 'Scheduled', color: 'bg-chart-5' }
 				]
 			},
 			{
 				title: 'In',
 				items: [
-					{ label: 'Interest Due', color: 'bg-sky-400' },
-					{ label: 'Due Date', color: 'bg-emerald-400' }
+					{ label: 'Interest Due', color: 'bg-chart-4' },
+					{ label: 'Due Date', color: 'bg-chart-2' }
 				]
 			}
 		]
@@ -107,3 +117,15 @@
 		eventCard
 	}}
 />
+
+{#if !onLoanClick}
+	<LoanDetailModal
+		loan={selectedLoan}
+		open={isDetailModalOpen}
+		onOpenChange={(open) => {
+			isDetailModalOpen = open;
+			if (!open) selectedLoan = null;
+		}}
+		{onUpdate}
+	/>
+{/if}

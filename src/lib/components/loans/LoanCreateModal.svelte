@@ -1,9 +1,10 @@
 <script lang="ts">
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
+	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import LoanForm from '$lib/components/loans/LoanForm.svelte';
 	import type { Borrower, Investor } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
-	import { Loader2 } from 'lucide-svelte';
+	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
 
 	interface Props {
 		open: boolean;
@@ -27,25 +28,47 @@
 		loadingFormData = false
 	}: Props = $props();
 
+	let isSubmitting = $state(false);
+
+	const formId = 'loan-create-form';
+
+	const formTitle = $derived(duplicateData ? 'Duplicate Loan' : 'Create Loan');
+	const formDescription = 'Add a new loan with investor allocations';
+	const submitLabel = $derived(
+		isSubmitting
+			? 'Creating...'
+			: duplicateData
+				? 'Duplicate Loan'
+				: 'Create Loan'
+	);
+
 	async function handleSuccess() {
 		onOpenChange(false);
 		await onSuccess?.();
 	}
-
-	const title = $derived(duplicateData ? 'Duplicate Loan' : 'Create New Loan');
 </script>
 
 <ResponsiveModal
 	{open}
 	{onOpenChange}
-	{title}
-	srOnlyHeader={true}
-	contentClass="dashboard-dialog-wide sm:max-w-4xl"
+	showCloseButton={false}
+	contentClass="dashboard-dialog-wide !max-w-4xl"
 >
+	{#snippet header()}
+		<FormHeader
+			title={formTitle}
+			description={formDescription}
+			{formId}
+			onCancel={() => onOpenChange(false)}
+			{isSubmitting}
+			isEditMode={false}
+			{submitLabel}
+			variant="embedded"
+		/>
+	{/snippet}
+
 	{#if loadingFormData}
-		<div class="flex h-[60vh] flex-col items-center justify-center gap-4">
-			<Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
-		</div>
+		<FormPageSkeleton />
 	{:else}
 		{#key duplicateData ? `dup-${duplicateData.name}` : 'new'}
 			<LoanForm
@@ -53,6 +76,9 @@
 				{borrowers}
 				{preselectedInvestorId}
 				{duplicateData}
+				{formId}
+				showFormHeader={false}
+				bind:isSubmitting
 				onSuccess={handleSuccess}
 				onCancel={() => onOpenChange(false)}
 			/>
