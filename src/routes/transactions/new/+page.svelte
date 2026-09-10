@@ -26,7 +26,7 @@
 <svelte:head><title>New Transaction</title></svelte:head>
 
 <DashboardPage>
-	<PageHeader title="New Transaction">
+	<PageHeader title="New Transaction" description="Record money in or out">
 		<Button href="/transactions" variant="outline" size="sm">Back</Button>
 	</PageHeader>
 	{#if loading}
