@@ -16,6 +16,7 @@ Access failures render `+error.svelte`, not a bare 404: no signature slot for th
 ### Layout
 
 - Uses `DashboardPage` shell padding like other authenticated routes.
+- Shared `PageBackHeader`: Back link above the page title when the tab has browser history (`history.length > 1`, e.g. navigated from `/loans` or `/loans/[id]`). Hidden on a fresh landing (bookmark or direct URL). Back uses `history.back()`. Title uses `text-lg` on phone, `text-xl` on desktop. Role badge sits inline with the title.
 - Phone (`<lg`): contract preview stacks above signature and consent. Contract body uses page scroll (no inner `max-height` on the preview). Submit stays in the consent card (scrolls with content; no fixed bottom bar). Tab dock clearance comes from `pb-mobile-tab` on the app shell.
 - Desktop (`xl+`): two-column layout (contract left, signature + consent sticky right). Contract preview expands naturally (no inner scroll region). Signature hint text wraps; **Clear Signature** sits below the hint. Consent checkbox label uses `text-sm` (same as body copy). Full-width submit in the consent card.
 

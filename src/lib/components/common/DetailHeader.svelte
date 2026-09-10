@@ -6,9 +6,10 @@
 	import { formatText } from '$lib/format';
 	import { createIsMobileShell } from '$lib/composables/use-media-query.svelte';
 	import RegisterMobileHeroActions from '$lib/components/layout/RegisterMobileHeroActions.svelte';
+	import PageBackHeader from '$lib/components/common/PageBackHeader.svelte';
 	import { createLoanActionItems } from '$lib/components/common/action-buttons';
 	import ActionMenuList from '$lib/components/common/ActionMenuList.svelte';
-	import { ArrowLeft, ChevronLeft, AlertCircle, CheckCircle, MoreHorizontal } from 'lucide-svelte';
+	import { ArrowLeft, AlertCircle, CheckCircle, MoreHorizontal } from 'lucide-svelte';
 
 	interface Props {
 		title: string;
@@ -36,6 +37,7 @@
 		showPriceToggle?: boolean;
 		onAddPayment?: () => void;
 		onAddReceivedPayment?: () => void;
+		signContractHref?: string;
 	}
 
 	let {
@@ -63,7 +65,8 @@
 		onContractDetails,
 		showPriceToggle = true,
 		onAddPayment,
-		onAddReceivedPayment
+		onAddReceivedPayment,
+		signContractHref
 	}: Props = $props();
 
 	let showDeleteConfirm = $state(false);
@@ -148,21 +151,16 @@
 	<RegisterMobileHeroActions snippet={heroActions} active={isMobileShell.matches} />
 {/if}
 
-<div class="space-y-1 lg:hidden">
-	<div class="flex items-center gap-1">
-		<button
-			type="button"
-			class="touch-target native-press inline-flex shrink-0 items-center justify-center rounded-xl"
-			onclick={onBack}
-			aria-label={backLabel}
-		>
-			<ChevronLeft class="h-6 w-6" strokeWidth={1.75} />
-		</button>
-		<h1 class="min-w-0 flex-1 truncate text-xl font-semibold tracking-tight">{formatText(title)}</h1>
-	</div>
-	{#if description}
-		<p class="text-sm text-muted-foreground">{formatText(description)}</p>
-	{/if}
+<div class="lg:hidden">
+	<PageBackHeader {title} {description} {backLabel} {onBack}>
+		{#if signContractHref}
+			{#snippet actions()}
+				<Button href={signContractHref} size="sm" class="w-full">
+					Sign contract
+				</Button>
+			{/snippet}
+		{/if}
+	</PageBackHeader>
 </div>
 
 <div class="hidden flex-col gap-4 lg:flex">
@@ -184,9 +182,14 @@
 			{/if}
 		</div>
 
-		{#if actionItems.length > 0 && !isMobileShell.matches}
+		{#if (actionItems.length > 0 && !isMobileShell.matches) || signContractHref}
 			<div class="flex w-full items-center justify-end gap-1.5 lg:w-auto">
-				{@render heroActions()}
+				{#if signContractHref}
+					<Button href={signContractHref} variant="outline" size="sm">Sign contract</Button>
+				{/if}
+				{#if actionItems.length > 0 && !isMobileShell.matches}
+					{@render heroActions()}
+				{/if}
 			</div>
 		{/if}
 	</div>

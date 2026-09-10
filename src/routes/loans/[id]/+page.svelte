@@ -8,6 +8,7 @@
 
 	const loan = $derived(data.entity as LoanWithInvestors);
 	const access = $derived(data.access);
+	const canSignContract = $derived(data.canSignContract ?? false);
 	const paymentMethods = $derived(data.paymentMethods ?? []);
 	const title = $derived(loan?.loanName ?? 'Loan');
 
@@ -40,5 +41,13 @@
 <svelte:head><title>{title}</title></svelte:head>
 
 <DashboardPage>
-	<LoanDetailClient {loan} {investors} {borrowers} {loadingFormData} {access} {paymentMethods} />
+	<LoanDetailClient
+		{loan}
+		{investors}
+		{borrowers}
+		{loadingFormData}
+		{access}
+		{canSignContract}
+		{paymentMethods}
+	/>
 </DashboardPage>

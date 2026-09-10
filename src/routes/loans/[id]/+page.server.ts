@@ -5,6 +5,7 @@ import { loans } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { getLoanAccessContext } from "$lib/server/access-control";
 import { listPaymentMethodsForBorrowerLoanView } from "$lib/server/payment-methods";
+import { resolveCanSignContract } from "$lib/server/loan-signing-server";
 import { requireUserSession } from "$lib/server/request-auth";
 
 async function fetchOne(id: number, userId: string) {
@@ -42,5 +43,11 @@ export const load: PageServerLoad = async (event) => {
     throw error(403, "Read only");
   }
 
-  return result;
+  const canSignContract = await resolveCanSignContract({
+    loanId: id,
+    userId: session.user.id,
+    sessionEmail: session.user.email,
+  });
+
+  return { ...result, canSignContract };
 };

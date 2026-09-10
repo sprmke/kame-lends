@@ -11,7 +11,6 @@
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
 	import EditFormSheet from '$lib/components/common/EditFormSheet.svelte';
 	import LoanCreateModal from '$lib/components/loans/LoanCreateModal.svelte';
-	import { Button } from '$lib/components/ui/button';
 	import { createIsMobileOverlay } from '$lib/composables/use-media-query.svelte';
 	import { createDuplicateDataFromLoan } from '$lib/loan-duplicate';
 	import { encodeJsonForUrl } from '$lib/base64-url';
@@ -26,10 +25,11 @@
 		borrowers: Borrower[];
 		loadingFormData: boolean;
 		access: LoanAccessContext;
+		canSignContract?: boolean;
 		paymentMethods?: PaymentMethod[];
 	}
 
-	let { loan, investors, borrowers, loadingFormData, access, paymentMethods = [] }: Props =
+	let { loan, investors, borrowers, loadingFormData, access, canSignContract = false, paymentMethods = [] }: Props =
 		$props();
 
 	let isEditing = $state(
@@ -157,13 +157,8 @@
 			onAddReceivedPayment={
 				access.canAdminEdit ? () => (quickPaymentKind = 'received') : undefined
 			}
+			signContractHref={canSignContract ? `/loans/${loan.id}/sign` : undefined}
 		/>
-
-		{#if access.signingPartyRoles.length > 0 && !access.canAdminEdit}
-			<div class="flex justify-end">
-				<Button href={`/loans/${loan.id}/sign`} variant="outline" size="sm">Sign contract</Button>
-			</div>
-		{/if}
 
 		<LoanDetailContent
 			{loan}

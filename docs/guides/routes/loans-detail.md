@@ -5,11 +5,11 @@
 
 ## Behavior
 
-Full loan detail for any party with membership (owner, investor, borrower, witness). On phone the back chevron and title live in `DetailHeader` content below the brand bar. DetailHeader actions render in MobileTopBar as frosted icon wells.
+Full loan detail for any party with membership (owner, investor, borrower, witness). On phone the back chevron and title live in `DetailHeader` content below the brand bar. DetailHeader actions render in MobileTopBar as frosted icon wells. Phone headers use `PageBackHeader`: chevron + Back label above a smaller title (`text-lg`), subtitle, and optional full-width Sign CTA.
 
 - Owner: edit, delete, **Contract Details** (⋯ menu → `max-w-5xl` modal: signing status + copy links, full contract setup tabs from edit form, **Save contract** + **Download contract**), payment tools.
 - Investor / borrower / witness: read-only. Signing still allowed for their slot. Borrower sees owner **payment methods** (bank, account number, QR) when configured.
-- Sign CTA when the viewer has an open signature slot (non-owner parties only; owners use Contract Details).
+- Sign CTA when the viewer has a pending signature slot (non-owner parties only; owners use Contract Details in the ⋯ menu). Shown below the subtitle as a full-width button on phone; on desktop it aligns with header actions. Hidden after the party has signed or when viewing as the loan owner.
 - After create, `?signing=1` opens the Contract Details modal automatically.
 - Create/edit loan form: **Contract Preview** collapsible uses tabs (Parties & signatures, Contract terms, Contract preview). The live document preview is only on the preview tab.
 - **Desktop (`lg+`):** floating sidebar; list View / row click opens this content in `LoanDetailModal` with a `text-base font-medium` title and the same control chrome as the last Next.js app. Visual snapshots live in `e2e/visual-parity.spec.ts`.

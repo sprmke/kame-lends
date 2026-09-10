@@ -169,3 +169,14 @@ export async function resolveAuthenticatedSigningPayload(input: {
   const payload = await buildSigningPagePayload(fullInvitation as never);
   return { payload, invitation, access };
 }
+
+/** True when a non-owner party has an unsigned, non-expired signing invitation. */
+export async function resolveCanSignContract(input: {
+  loanId: number;
+  userId: string;
+  sessionEmail: string | null | undefined;
+}): Promise<boolean> {
+  const result = await resolveAuthenticatedSigningPayload(input);
+  if ("error" in result) return false;
+  return !result.payload.signedAt && !result.payload.expired;
+}
