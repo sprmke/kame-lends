@@ -2,6 +2,11 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { formatText } from '$lib/format';
+	import {
+		formatPaymentAccountNumberDisplay,
+		paymentProviderLabel,
+		paymentQrAltText
+	} from '$lib/payment-providers';
 	import { toast } from '$lib/toast';
 	import type { PaymentMethod } from '$lib/types';
 	import { Check, Copy } from 'lucide-svelte';
@@ -40,7 +45,9 @@
 						<div class="space-y-1">
 							<p class="text-caption">Bank</p>
 							<div class="flex items-center gap-1">
-								<p class="min-w-0 flex-1 text-sm font-medium">{formatText(method.bankName)}</p>
+								<p class="min-w-0 flex-1 text-sm font-medium">
+									{formatText(paymentProviderLabel(method.bankName))}
+								</p>
 								<Button
 									type="button"
 									variant="ghost"
@@ -60,8 +67,10 @@
 						<div class="space-y-1">
 							<p class="text-caption">Account number</p>
 							<div class="flex items-center gap-1">
-								<p class="min-w-0 flex-1 text-sm font-medium break-all">
-									{formatText(method.accountNumber)}
+								<p class="min-w-0 flex-1 text-sm font-medium break-all tabular-nums">
+									{formatText(
+										formatPaymentAccountNumberDisplay(method.bankName, method.accountNumber)
+									)}
 								</p>
 								<Button
 									type="button"
@@ -89,7 +98,7 @@
 							>
 								<img
 									src={method.qrCodeUrl}
-									alt="Payment QR code"
+									alt={paymentQrAltText(method.bankName)}
 									class="mx-auto h-auto w-full object-contain"
 								/>
 							</div>

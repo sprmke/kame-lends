@@ -1,3 +1,8 @@
+import {
+  normalizePaymentProvider,
+  validatePaymentAccountNumber,
+  validatePaymentProvider,
+} from "$lib/payment-providers";
 import { normalizeValidIdUrl } from "$lib/valid-id-document";
 
 /** Shared payment-method limits (safe for client + server). */
@@ -28,15 +33,22 @@ export function parsePaymentMethodInput(body: PaymentMethodInput):
   const accountNumber =
     typeof body.accountNumber === "string" ? body.accountNumber.trim() : "";
 
-  if (!bankName) return { error: "Bank name is required" };
-  if (bankName.length > 120) return { error: "Bank name is too long" };
+  const providerError = validatePaymentProvider(bankName);
+  if (providerError) return { error: providerError };
+
+  const provider = normalizePaymentProvider(bankName);
   if (!accountNumber) return { error: "Account number is required" };
-  if (accountNumber.length > 64) return { error: "Account number is too long" };
+
+  const accountNumberError = validatePaymentAccountNumber(
+    provider,
+    accountNumber,
+  );
+  if (accountNumberError) return { error: accountNumberError };
 
   const qrCodeUrl = normalizeValidIdUrl(body.qrCodeUrl);
   if (body.qrCodeUrl != null && String(body.qrCodeUrl).trim() && !qrCodeUrl) {
     return { error: "QR code must be a JPEG, PNG, or WebP image" };
   }
 
-  return { bankName, accountNumber, qrCodeUrl };
+  return { bankName: provider, accountNumber, qrCodeUrl };
 }

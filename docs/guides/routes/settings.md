@@ -5,15 +5,15 @@
 
 ## Behavior
 
-Account summary card (title **Account**, name / email / role in a compact grid). Page title is Settings. On phone the title lives in `PageHeader` below the brand bar; the subtitle hides under `lg`. Light/Dark theme is in the desktop sidebar and phone More sheet only (not on this page).
+Account summary card (title **Account**, name / email / **Roles** in a compact grid). **Roles** lists every assignment from workspace ownership plus loans and transactions (Admin, Investor, Borrower, Witness), not the single `users.role` column. Page title is Settings. On phone the title lives in `PageHeader` below the brand bar; the subtitle hides under `lg`. Settings is in the phone More sheet (not on the floating dock). Light/Dark theme is in the desktop sidebar and phone More sheet only (not on this page). The More sheet height follows its content.
 
 All signed-in users get:
 
-- **Payment methods** — bank name, account number, optional QR image (up to 10). Each user manages their own rows. Borrowers on a loan see the **loan owner's** methods on loan detail only.
+- **Payment methods** — grouped bank/e-wallet select (same PH provider list as Kame Homes: GCash, Maya, MariBank, BDO, etc.), account number with provider-specific validation, optional QR image (up to 10). Defaults to GCash on add. Hover (or tap on phone) a QR preview to Replace or Remove. Each user manages their own rows. Borrowers on a loan see the **loan owner's** methods on loan detail only.
 
 Party users (linked investor, borrower, or witness contact rows) also get:
 
-- **Identity documents** — valid ID and e-signature. Saves sync across all CRM rows linked to the signed-in user. Used for contract signing and admin contact records.
+- **Identity documents** — valid ID and e-signature. Upload a file or draw in the box (Clear, then Save). Hover (or tap on phone) a preview to Replace or Remove. Saves sync across all CRM rows linked to the signed-in user. Used for contract signing and admin contact records.
 
 Admin workspace owners also get:
 
@@ -25,6 +25,7 @@ Admin workspace owners also get:
 
 - Requires session.
 - Loads `isAdminWorkspace` via `getNavCapabilities`.
+- Loads `accountRoles` from workspace ownership plus loan allocations, investor transactions, borrower loans, and witness signing invitations (`loadPartyActivityRoles`). Falls back to `users.role` only when none of those apply.
 - Loads the signed-in user’s payment methods. If `payment_methods` is missing on the connected database, Settings still renders with an empty list.
 - When the user has linked party CRM rows: loads valid ID and e-signature via `loadPartyUserIdentityDocuments`.
 
@@ -40,8 +41,10 @@ Any signed-in user can open Settings and manage their own payment methods. Party
 
 ## Implementation map
 
-| Piece              | Path                                                               |
-| ------------------ | ------------------------------------------------------------------ |
-| Page               | `src/routes/settings/+page.svelte`                                 |
-| Payment methods UI | `src/lib/components/settings/PaymentMethodsManager.svelte`         |
-| Identity documents | `src/lib/components/settings/PartyIdentityDocumentsManager.svelte` |
+| Piece                | Path                                                               |
+| -------------------- | ------------------------------------------------------------------ |
+| Page                 | `src/routes/settings/+page.svelte`                                 |
+| Account roles        | `src/lib/account-roles.ts`, `src/lib/server/account-roles.ts`      |
+| Payment methods UI   | `src/lib/components/settings/PaymentMethodsManager.svelte`         |
+| Identity documents   | `src/lib/components/settings/PartyIdentityDocumentsManager.svelte` |
+| Image upload preview | `src/lib/components/common/ImageUploadPreview.svelte`              |

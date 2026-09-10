@@ -24,12 +24,15 @@ describe("payment-methods parsing", () => {
     expect(parsePaymentMethodId("abc")).toBeNull();
   });
 
-  it("requires bank name and account number", () => {
+  it("requires a supported provider and account number", () => {
     expect(parsePaymentMethodInput({})).toEqual({
-      error: "Bank name is required",
+      error: "Select a bank or e-wallet",
     });
     expect(parsePaymentMethodInput({ bankName: "  " })).toEqual({
-      error: "Bank name is required",
+      error: "Select a bank or e-wallet",
+    });
+    expect(parsePaymentMethodInput({ bankName: "Custom Bank" })).toEqual({
+      error: "Select a supported bank or e-wallet",
     });
     expect(parsePaymentMethodInput({ bankName: "BDO" })).toEqual({
       error: "Account number is required",
@@ -49,26 +52,26 @@ describe("payment-methods parsing", () => {
     });
   });
 
-  it("rejects oversized fields", () => {
+  it("rejects invalid account numbers for the provider", () => {
     expect(
       parsePaymentMethodInput({
-        bankName: "x".repeat(121),
-        accountNumber: "1",
+        bankName: "GCash",
+        accountNumber: "123",
       }),
-    ).toEqual({ error: "Bank name is too long" });
+    ).toEqual({ error: "Account number must be 10–11 digits" });
     expect(
       parsePaymentMethodInput({
         bankName: "BDO",
-        accountNumber: "9".repeat(65),
+        accountNumber: "123",
       }),
-    ).toEqual({ error: "Account number is too long" });
+    ).toEqual({ error: "Account number must be 8–24 characters" });
   });
 
   it("rejects invalid QR payloads", () => {
     expect(
       parsePaymentMethodInput({
         bankName: "BDO",
-        accountNumber: "1",
+        accountNumber: "1234567890",
         qrCodeUrl: "https://example.com/qr.png",
       }),
     ).toEqual({ error: "QR code must be a JPEG, PNG, or WebP image" });
