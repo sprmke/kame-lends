@@ -182,10 +182,10 @@ Pass into Nav from `+layout.server.ts`:
 
 ```ts
 navCapabilities: {
-	isAdminWorkspace: boolean; // owns any contacts/loans OR role === 'admin'
-	hasInvestments: boolean;
-	hasBorrowed: boolean;
-	hasWitnessed: boolean;
+  isAdminWorkspace: boolean; // owns any contacts/loans OR role === 'admin'
+  hasInvestments: boolean;
+  hasBorrowed: boolean;
+  hasWitnessed: boolean;
 }
 ```
 

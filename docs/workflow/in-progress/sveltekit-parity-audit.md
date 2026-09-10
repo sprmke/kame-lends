@@ -4,15 +4,15 @@ Branch: `feat/sveltekit-migration`. Compared against last Next.js tree in git (`
 
 **Status key:** ✅ parity · ⚠️ partial · ❌ missing/broken
 
-Last updated: 2026-09-09
+Last updated: 2026-09-10
 
 ---
 
 ## Summary
 
-Most list surfaces, modals, PDF export, investor detail tabs, loan form depth, and **debt create** are ported. Remaining gaps: **modal interaction QA**, `/sign/[token]` fixture, route guides sync.
+Desktop visual chrome is restored to the last Next.js tree: floating sidebar, 1rem radius, elevated cards, `h-11` / `rounded-2xl` inputs, selects, and buttons, FormHeader actions on the right plus bottom Cancel/Create on loan forms, Create Loan modal at `max-w-4xl` without an extra close X, and page subtitles. Remaining gaps: `/sign/[token]` fixture.
 
-**Verification:** `bun run check` — 0 errors (2026-09-09, session 9) · `bun run build` — pass · Playwright **13/13** with `DATABASE_URL` + `E2E_AUTH_SECRET`
+**Verification:** Playwright `visual-parity` (screenshots + layout asserts at 1440×900), `authenticated`, and `modals` suites.
 
 | Route                                 | Code parity | Runtime verified       |
 | ------------------------------------- | ----------- | ---------------------- |

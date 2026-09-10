@@ -182,10 +182,10 @@ Pass into Nav from `+layout.server.ts`:
 
 ```ts
 navCapabilities: {
-	isAdminWorkspace: boolean; // owns any contacts/loans OR role === 'admin'
-	hasInvestments: boolean;
-	hasBorrowed: boolean;
-	hasWitnessed: boolean;
+  isAdminWorkspace: boolean; // owns any contacts/loans OR role === 'admin'
+  hasInvestments: boolean;
+  hasBorrowed: boolean;
+  hasWitnessed: boolean;
 }
 ```
 
@@ -397,7 +397,6 @@ Page loads: `/investors/[id]`, `/borrowers/[id]` stay owner-scoped for CRM. Part
 3. Nav shows Investments / Borrowed / Witnessed according to memberships.
 4. Signing requires Google login; correct signature field is selected from loan party role; no token URL or expiry in the happy path.
 5. In-app calendar shows that loan’s events for all four memberships; admin Google sync create/update/delete verified on a test calendar.
-
 
 ## Verification status
 

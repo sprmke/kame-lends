@@ -2,11 +2,11 @@
 
 **Status:** In progress (production hardening)  
 **Repo:** kame-lends (SvelteKit at `src/`)  
-**Updated:** 2026-09-09
+**Updated:** 2026-09-10
 
 ## Goal
 
-Make the phone experience feel like a native app: persistent bottom navigation, thumb-first actions, bottom sheets instead of centered desktop dialogs, safe-area-aware chrome, and consistent list/detail patterns. Desktop (`lg+`) keeps the sidebar + centered dialogs.
+Make the phone experience feel like a native app: orange brand hero, floating glass tab dock, thumb-first actions, bottom sheets instead of centered desktop dialogs, safe-area-aware chrome, and consistent list/detail patterns. Desktop (`lg+`) keeps the sidebar + centered dialogs. Visual language stays Kame Lends (warm cream, orange) — not a copy of Kame Homes teal.
 
 ## Locked decisions
 
@@ -38,7 +38,7 @@ Make the phone experience feel like a native app: persistent bottom navigation, 
 - `DEFAULT_NAV_CAPABILITIES` is deny-by-default (`isAdminWorkspace: false`).
 - List quick-view uses `isMobileShellViewport()` (`max-width: 1023px`).
 - View mode and calendar day default use the same `lg` shell breakpoint.
-- Page chrome: hide list `PageHeader` titles and detail Back under `lg`.
+- Page chrome: `MobileTopBar` is brand lockup (logo + app name) + actions. List/detail/form titles render in content (`PageHeader` / `DetailHeader` / `FormHeader`). Detail back is in content under `lg`.
 
 ## Acceptance
 
@@ -51,8 +51,10 @@ Make the phone experience feel like a native app: persistent bottom navigation, 
 - [x] Overlay presentation lock + FormHeader embedded variant
 - [x] Unified `lg` breakpoint for shell, sheets, view mode, calendar, touch
 - [x] De-duplicated mobile titles / back chrome
-- [x] Entity titles in MobileTopBar via `mobilePageTitle` store
+- [x] Entity titles in content (`PageHeader` / `DetailHeader` / `FormHeader`); MobileTopBar is brand lockup
+- [x] PageHeader/DetailHeader hero actions in MobileTopBar (frosted icon wells); view toggle stays in list toolbar
 - [x] Payment / date-list / signing consent overlays on ResponsiveModal
 - [x] Transaction / borrower / investor form sticky actions aligned
+- [x] Brand hero + floating glass dock + native type/surface scale (2026-09-10)
 - [ ] Full route-guide set (partial: dashboard + loans notes)
 - [ ] Device QA matrix signed off

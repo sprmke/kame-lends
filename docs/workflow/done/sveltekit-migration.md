@@ -2,7 +2,7 @@
 
 Branch: **`feat/sveltekit-migration`**. **Cutover done:** SvelteKit app promoted to repo root (legacy Next.js archived locally as `_legacy-next-*`, gitignored).
 
-**Post-cutover:** Run manual QA on dev Neon branch (`docs/workflow/qa/sveltekit-manual-qa.md`). Production deploy requires **`lendwave`** unlock.
+**Post-cutover:** Run manual QA on dev Neon branch (`docs/workflow/qa/sveltekit-manual-qa.md`). Production deploy requires **`lendwave`** unlock. The Next.js `app/`, `components/`, `lib/`, `hooks/`, and `stores/` trees were removed from git; schema lives at `src/lib/server/db/schema.ts`.
 
 ---
 
@@ -117,15 +117,15 @@ Branch: **`feat/sveltekit-migration`**. **Cutover done:** SvelteKit app promoted
 ## Phase 10 — Cutover / promotion
 
 - [ ] Merge branch up to date with `main`
-- [ ] Promote `new-app/*` to repo root
-- [ ] Delete legacy Next.js tree and unused deps
+- [x] Promote `new-app/*` to repo root
+- [x] Delete legacy Next.js tree and unused deps
 - [ ] Update Vercel build config + `vercel.json` cron
 - [ ] Explicit prod deploy (requires **`lendwave`**)
 - [ ] Post-cutover monitoring; keep Next.js deployment rollback-ready
 
 ## Phase 11 — Cleanup & documentation
 
-- [ ] Remove dead code and unused dependencies
+- [x] Remove dead code and unused dependencies
 - [ ] Document `SHOW_TRANSACTIONS_UI` decision
 - [ ] Finalize `docs/PROJECT.md`, `docs/guides/routes/*`, `CLAUDE.md`, rules
 - [ ] Move this file to `docs/workflow/done/`
