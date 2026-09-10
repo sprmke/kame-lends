@@ -32,14 +32,13 @@ export function buildTotalLotMetric(
   const empty = totalLot === 0 && totalLotWithDepacto === 0;
 
   return {
-    label: 'Total Lot',
+    label: "Total Lot",
     empty,
-    value:
-      empty
-        ? '0 sqm'
-        : totalLotWithDepacto > totalLot
-          ? `${totalLot.toLocaleString()} + ${(totalLotWithDepacto - totalLot).toLocaleString()}`
-          : `${totalLot.toLocaleString()} sqm`,
+    value: empty
+      ? "0 sqm"
+      : totalLotWithDepacto > totalLot
+        ? `${totalLot.toLocaleString()} + ${(totalLotWithDepacto - totalLot).toLocaleString()}`
+        : `${totalLot.toLocaleString()} sqm`,
     subValue:
       totalLotWithDepacto > totalLot
         ? `= ${totalLotWithDepacto.toLocaleString()} sqm`

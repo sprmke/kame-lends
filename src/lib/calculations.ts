@@ -2,9 +2,11 @@
  * Business logic calculations for loans and investments
  */
 
+import { computeTotalLot } from "./lot-utils";
 import type {
   LoanWithInvestors,
   InvestorWithLoans,
+  BorrowerWithLoans,
   LoanInvestor,
   Investor,
   Loan,
@@ -15,6 +17,11 @@ function safeParseFloat(value: string | number | null | undefined): number {
   if (typeof value === "number") return Number.isNaN(value) ? 0 : value;
   const n = parseFloat(value);
   return Number.isNaN(n) ? 0 : n;
+}
+
+/** Principal is still outstanding. Completed loans can be lent again. */
+export function isOpenLoan(loan: { status: string }): boolean {
+  return loan.status !== "Completed";
 }
 
 /**
@@ -566,8 +573,11 @@ export function calculateInvestorStats(investor: InvestorWithLoans): {
   overdueLoans: number;
   totalGain: number;
 } {
-  const totalCapital = calculateTotalPrincipal(investor.loanInvestors);
-  const totalInterest = calculateTotalInterest(investor.loanInvestors);
+  const openLoanInvestors = investor.loanInvestors.filter((li) =>
+    isOpenLoan(li.loan),
+  );
+  const totalCapital = calculateTotalPrincipal(openLoanInvestors);
+  const totalInterest = calculateTotalInterest(openLoanInvestors);
 
   const activeLoans = investor.loanInvestors.filter(
     (li) =>
@@ -606,5 +616,59 @@ export function calculateInvestorStats(investor: InvestorWithLoans): {
     completedLoans,
     overdueLoans,
     totalGain,
+  };
+}
+
+/**
+ * Aggregate loan stats for a borrower profile.
+ */
+export function calculateBorrowerStats(borrower: BorrowerWithLoans): {
+  totalLoans: number;
+  openLoans: number;
+  activeLoans: number;
+  overdueLoans: number;
+  completedLoans: number;
+  activePrincipal: number;
+  activeInterest: number;
+  activeTotal: number;
+  overdueAmount: number;
+  totalLot: number;
+  totalLotWithDepacto: number;
+} {
+  const loans = borrower.loans ?? [];
+  const openLoansList = loans.filter((loan) => isOpenLoan(loan));
+  const overdueLoansList = loans.filter((loan) => loan.status === "Overdue");
+
+  let activePrincipal = 0;
+  let activeInterest = 0;
+  let overdueAmount = 0;
+
+  for (const loan of openLoansList) {
+    const investors = loan.loanInvestors ?? [];
+    activePrincipal += calculateTotalPrincipal(investors);
+    activeInterest += calculateTotalInterest(investors);
+  }
+
+  for (const loan of overdueLoansList) {
+    overdueAmount += calculateOverdueAmount(loan.loanInvestors ?? []);
+  }
+
+  const { totalLot, totalLotWithDepacto } = computeTotalLot(loans);
+
+  return {
+    totalLoans: loans.length,
+    openLoans: openLoansList.length,
+    activeLoans: loans.filter(
+      (loan) =>
+        loan.status === "Fully Funded" || loan.status === "Partially Funded",
+    ).length,
+    overdueLoans: overdueLoansList.length,
+    completedLoans: loans.filter((loan) => loan.status === "Completed").length,
+    activePrincipal,
+    activeInterest,
+    activeTotal: activePrincipal + activeInterest,
+    overdueAmount,
+    totalLot,
+    totalLotWithDepacto,
   };
 }

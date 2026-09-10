@@ -290,7 +290,7 @@ export function getLenderSignatureDetails(
   const multipleLenders = data.lenders.length > 1;
 
   return data.lenders.map((lender, index) => ({
-    role: multipleLenders ? `Lender ${index + 1}` : 'Lender',
+    role: multipleLenders ? `Lender ${index + 1}` : "Lender",
     printedName: lender.name,
     address: lender.address,
     contact: lender.contactNumber,
@@ -368,22 +368,22 @@ export function shouldShowPartySignatureImage(
   customization: ContractCustomization | undefined,
   party: SignaturePartyDetails,
 ): boolean {
-  if (party.role === 'Borrower') {
+  if (party.role === "Borrower") {
     return isBorrowerSignatureIncluded(customization);
   }
 
   if (
-    (party.role === 'Lender' || party.role.startsWith('Lender ')) &&
+    (party.role === "Lender" || party.role.startsWith("Lender ")) &&
     party.email
   ) {
     return isLenderSignatureIncluded(customization, party.email);
   }
 
-  if (party.role === 'Witness 1') {
+  if (party.role === "Witness 1") {
     return customization?.witness1SignatureIncluded !== false;
   }
 
-  if (party.role === 'Witness 2') {
+  if (party.role === "Witness 2") {
     return customization?.witness2SignatureIncluded !== false;
   }
 
@@ -427,10 +427,10 @@ export function getWitnessAttestationText(
 
 export function shouldShowValidId(party: SignaturePartyDetails): boolean {
   return (
-    party.role === 'Borrower' ||
-    party.role === 'Lender' ||
-    party.role.startsWith('Lender ') ||
-    party.role === 'Witness 1' ||
-    party.role === 'Witness 2'
+    party.role === "Borrower" ||
+    party.role === "Lender" ||
+    party.role.startsWith("Lender ") ||
+    party.role === "Witness 1" ||
+    party.role === "Witness 2"
   );
 }

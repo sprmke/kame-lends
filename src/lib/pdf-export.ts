@@ -9,7 +9,7 @@ import {
   HIDDEN_DATE_DISPLAY,
   HIDDEN_COUNT_DISPLAY,
   HIDDEN_PERCENTAGE_DISPLAY,
-} from './price-visibility';
+} from "./price-visibility";
 
 /**
  * A configurable section/field for PDF export.
@@ -26,13 +26,15 @@ export interface PDFSection<T = unknown> {
 /**
  * Formats a date as MM/DD/YYYY for PDF output
  */
-export function formatDateForPDF(date: Date | string | null | undefined): string {
+export function formatDateForPDF(
+  date: Date | string | null | undefined,
+): string {
   if (isSensitiveDataHidden()) return HIDDEN_DATE_DISPLAY;
-  if (!date) return '—';
+  if (!date) return "—";
   const d = new Date(date);
-  if (isNaN(d.getTime())) return '—';
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  if (isNaN(d.getTime())) return "—";
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   const year = d.getFullYear();
   return `${month}/${day}/${year}`;
 }
@@ -41,14 +43,14 @@ export function formatTextForPDF(
   value: string | number | null | undefined,
 ): string {
   if (isSensitiveDataHidden()) return HIDDEN_TEXT_DISPLAY;
-  if (value === null || value === undefined) return '—';
+  if (value === null || value === undefined) return "—";
   return String(value);
 }
 
 export function formatRateForPDF(value: number | string): string {
   if (isSensitiveDataHidden()) return HIDDEN_PERCENTAGE_DISPLAY;
-  const n = typeof value === 'number' ? value : parseFloat(String(value));
-  if (Number.isNaN(n)) return '—';
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  if (Number.isNaN(n)) return "—";
   return `${n.toFixed(2)}%`;
 }
 
@@ -60,12 +62,14 @@ export function formatCountForPDF(value: number | string): string {
 /**
  * Formats a number as Philippine Peso currency for PDF output
  */
-export function formatCurrencyForPDF(amount: string | number | null | undefined): string {
+export function formatCurrencyForPDF(
+  amount: string | number | null | undefined,
+): string {
   if (isSensitiveDataHidden()) return HIDDEN_CURRENCY_DISPLAY;
-  if (amount === null || amount === undefined) return 'P0.00';
-  const numValue = typeof amount === 'string' ? parseFloat(amount) : amount;
-  if (isNaN(numValue)) return 'P0.00';
-  const formatted = numValue.toLocaleString('en-PH', {
+  if (amount === null || amount === undefined) return "P0.00";
+  const numValue = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (isNaN(numValue)) return "P0.00";
+  const formatted = numValue.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -77,10 +81,10 @@ export function formatCurrencyForPDF(amount: string | number | null | undefined)
  */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
-  link.style.display = 'none';
+  link.style.display = "none";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -92,27 +96,27 @@ export function downloadBlob(blob: Blob, filename: string): void {
  */
 export const PDF_COLORS = {
   // Status colors
-  fullyFunded: '#10b981',
-  partiallyFunded: '#f59e0b',
-  completed: '#0ea5e9',
-  overdue: '#ef4444',
+  fullyFunded: "#10b981",
+  partiallyFunded: "#f59e0b",
+  completed: "#0ea5e9",
+  overdue: "#ef4444",
   // Type colors
-  lotTitle: '#f97316',
-  orcr: '#6366f1',
-  agent: '#d946ef',
+  lotTitle: "#f97316",
+  orcr: "#6366f1",
+  agent: "#d946ef",
   // Period status
-  pending: '#f59e0b',
-  incomplete: '#f97316',
+  pending: "#f59e0b",
+  incomplete: "#f97316",
   // Text
-  primary: '#0f172a',
-  secondary: '#475569',
-  muted: '#94a3b8',
+  primary: "#0f172a",
+  secondary: "#475569",
+  muted: "#94a3b8",
   // Surfaces
-  white: '#ffffff',
-  background: '#f8fafc',
-  border: '#e2e8f0',
-  sectionBg: '#f1f5f9',
+  white: "#ffffff",
+  background: "#f8fafc",
+  border: "#e2e8f0",
+  sectionBg: "#f1f5f9",
   // Accents
-  accentBlue: '#3b82f6',
-  accentBlueBg: '#eff6ff',
+  accentBlue: "#3b82f6",
+  accentBlueBg: "#eff6ff",
 } as const;

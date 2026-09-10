@@ -17,23 +17,25 @@ export const loanStatusConfig: Record<
   "Fully Funded": {
     variant: "default",
     className:
-      "bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200",
+      "bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 dark:text-emerald-300 dark:border-emerald-800",
     dotColor: "bg-emerald-500",
   },
   "Partially Funded": {
     variant: "secondary",
     className:
-      "bg-amber-100 hover:bg-amber-200 text-amber-700 border-amber-200",
+      "bg-amber-100 hover:bg-amber-200 text-amber-700 border-amber-200 dark:bg-amber-950 dark:hover:bg-amber-900 dark:text-amber-300 dark:border-amber-800",
     dotColor: "bg-amber-500",
   },
   Completed: {
     variant: "default",
-    className: "bg-sky-100 hover:bg-sky-200 text-sky-700 border-sky-200",
+    className:
+      "bg-sky-100 hover:bg-sky-200 text-sky-700 border-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900 dark:text-sky-300 dark:border-sky-800",
     dotColor: "bg-sky-500",
   },
   Overdue: {
     variant: "destructive",
-    className: "bg-rose-100 hover:bg-rose-200 text-rose-700 border-rose-200",
+    className:
+      "bg-rose-100 hover:bg-rose-200 text-rose-700 border-rose-200 dark:bg-rose-950 dark:hover:bg-rose-900 dark:text-rose-300 dark:border-rose-800",
     dotColor: "bg-rose-500",
   },
 };
@@ -86,11 +88,12 @@ export const transactionDirectionConfig: Record<
   In: {
     variant: "success",
     className:
-      "bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200",
+      "bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 dark:text-emerald-300 dark:border-emerald-800",
   },
   Out: {
     variant: "destructive",
-    className: "bg-rose-100 hover:bg-rose-200 text-rose-700 border-rose-200",
+    className:
+      "bg-rose-100 hover:bg-rose-200 text-rose-700 border-rose-200 dark:bg-rose-950 dark:hover:bg-rose-900 dark:text-rose-300 dark:border-rose-800",
   },
 };
 
@@ -105,7 +108,7 @@ export const interestPeriodStatusConfig: Record<
   Pending: {
     variant: "secondary",
     className:
-      "bg-amber-100 hover:bg-amber-200 text-amber-700 border-amber-200",
+      "bg-amber-100 hover:bg-amber-200 text-amber-700 border-amber-200 dark:bg-amber-950 dark:hover:bg-amber-900 dark:text-amber-300 dark:border-amber-800",
     dotColor: "bg-amber-500",
   },
   Incomplete: {
@@ -117,12 +120,13 @@ export const interestPeriodStatusConfig: Record<
   Completed: {
     variant: "default",
     className:
-      "bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200",
+      "bg-emerald-100 hover:bg-emerald-200 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 dark:text-emerald-300 dark:border-emerald-800",
     dotColor: "bg-emerald-500",
   },
   Overdue: {
     variant: "destructive",
-    className: "bg-rose-100 hover:bg-rose-200 text-rose-700 border-rose-200",
+    className:
+      "bg-rose-100 hover:bg-rose-200 text-rose-700 border-rose-200 dark:bg-rose-950 dark:hover:bg-rose-900 dark:text-rose-300 dark:border-rose-800",
     dotColor: "bg-rose-500",
   },
 };

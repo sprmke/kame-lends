@@ -10,7 +10,7 @@ import {
   HIDDEN_DATE_DISPLAY,
   HIDDEN_COUNT_DISPLAY,
   HIDDEN_PERCENTAGE_DISPLAY,
-} from './price-visibility';
+} from "./price-visibility";
 
 export interface CSVColumn<T> {
   header: string;
@@ -23,12 +23,12 @@ export interface CSVColumn<T> {
  */
 export function convertToCSV<T>(data: T[], columns: CSVColumn<T>[]): string {
   if (data.length === 0) {
-    return '';
+    return "";
   }
 
   // Create header row
   const headers = columns.map((col) => col.header);
-  const headerRow = headers.map(escapeCSVValue).join(',');
+  const headerRow = headers.map(escapeCSVValue).join(",");
 
   // Create data rows
   const dataRows = data.map((row) => {
@@ -37,7 +37,7 @@ export function convertToCSV<T>(data: T[], columns: CSVColumn<T>[]): string {
         const value = col.accessor(row);
         return escapeCSVValue(value);
       })
-      .join(',');
+      .join(",");
   });
 
   // Create total row if there are summable columns
@@ -49,7 +49,7 @@ export function convertToCSV<T>(data: T[], columns: CSVColumn<T>[]): string {
       .map((col, index) => {
         // First column shows "TOTAL" label
         if (index === 0) {
-          return escapeCSVValue('TOTAL');
+          return escapeCSVValue("TOTAL");
         }
 
         // Sum up numeric values for summable columns
@@ -66,14 +66,14 @@ export function convertToCSV<T>(data: T[], columns: CSVColumn<T>[]): string {
         }
 
         // Empty cell for non-summable columns
-        return '';
+        return "";
       })
-      .join(',');
+      .join(",");
 
     rows.push(totalRow);
   }
 
-  return rows.join('\n');
+  return rows.join("\n");
 }
 
 /**
@@ -81,18 +81,18 @@ export function convertToCSV<T>(data: T[], columns: CSVColumn<T>[]): string {
  * Handles formatted currency strings like "P1,234.56"
  */
 function extractNumericValue(
-  value: string | number | null | undefined
+  value: string | number | null | undefined,
 ): number {
   if (value === null || value === undefined) {
     return 0;
   }
 
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     return value;
   }
 
   // Remove currency symbols, commas, and other non-numeric characters except decimal point and minus
-  const cleaned = String(value).replace(/[^0-9.-]/g, '');
+  const cleaned = String(value).replace(/[^0-9.-]/g, "");
   const parsed = parseFloat(cleaned);
 
   return isNaN(parsed) ? 0 : parsed;
@@ -103,16 +103,16 @@ function extractNumericValue(
  */
 function escapeCSVValue(value: string | number | null | undefined): string {
   if (value === null || value === undefined) {
-    return '';
+    return "";
   }
 
   const stringValue = String(value);
 
   // If value contains comma, quote, or newline, wrap in quotes and escape existing quotes
   if (
-    stringValue.includes(',') ||
+    stringValue.includes(",") ||
     stringValue.includes('"') ||
-    stringValue.includes('\n')
+    stringValue.includes("\n")
   ) {
     return `"${stringValue.replace(/"/g, '""')}"`;
   }
@@ -125,17 +125,17 @@ function escapeCSVValue(value: string | number | null | undefined): string {
  */
 export function downloadCSV(csvContent: string, filename: string): void {
   // Add BOM for proper UTF-8 encoding in Excel
-  const BOM = '\uFEFF';
+  const BOM = "\uFEFF";
   const blob = new Blob([BOM + csvContent], {
-    type: 'text/csv;charset=utf-8;',
+    type: "text/csv;charset=utf-8;",
   });
 
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
 
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  link.style.visibility = "hidden";
 
   document.body.appendChild(link);
   link.click();
@@ -152,8 +152,8 @@ export function formatDateForCSV(date: Date | string): string {
   if (isSensitiveDataHidden()) return HIDDEN_DATE_DISPLAY;
   const d = new Date(date);
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -161,14 +161,14 @@ export function formatTextForCSV(
   value: string | number | null | undefined,
 ): string {
   if (isSensitiveDataHidden()) return HIDDEN_TEXT_DISPLAY;
-  if (value === null || value === undefined) return '';
+  if (value === null || value === undefined) return "";
   return String(value);
 }
 
 export function formatRateForCSV(value: number | string): string {
   if (isSensitiveDataHidden()) return HIDDEN_PERCENTAGE_DISPLAY;
-  const n = typeof value === 'number' ? value : parseFloat(String(value));
-  if (Number.isNaN(n)) return '';
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  if (Number.isNaN(n)) return "";
   return n.toFixed(2);
 }
 
@@ -183,9 +183,9 @@ export function formatCountForCSV(value: number | string): string {
 export function formatCurrencyForCSV(amount: string | number): string {
   if (isSensitiveDataHidden()) return HIDDEN_CURRENCY_DISPLAY;
 
-  const numValue = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const numValue = typeof amount === "string" ? parseFloat(amount) : amount;
 
-  const formatted = numValue.toLocaleString('en-PH', {
+  const formatted = numValue.toLocaleString("en-PH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

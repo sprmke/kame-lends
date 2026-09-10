@@ -32,6 +32,14 @@ export const TRANSACTION_DIRECTION_FILTER_OPTIONS: MultiSelectOption[] = [
   { value: "Out", label: "Out" },
 ];
 
+/** Synthetic multi-select value for loans missing a borrower or linked witness. */
+export const UNASSIGNED_PARTICIPANT_FILTER_VALUE = "__unassigned__";
+
+export const UNASSIGNED_PARTICIPANT_FILTER_OPTION: MultiSelectOption = {
+  value: UNASSIGNED_PARTICIPANT_FILTER_VALUE,
+  label: "Unassigned",
+};
+
 export type LoanActivityFilter = "all" | "with_loans" | "without_loans";
 
 export const LOAN_ACTIVITY_FILTER_OPTIONS = [
