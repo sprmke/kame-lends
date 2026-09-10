@@ -10,11 +10,11 @@
 
 <div class="flex flex-col gap-2">
 	<div class="flex flex-col gap-2 sm:flex-row">
-		<Skeleton class="h-9 min-w-0 flex-1 rounded-md" />
-		<Skeleton class="hidden h-9 w-[180px] rounded-md xl:block" />
-		<Skeleton class="hidden h-9 w-[180px] rounded-md xl:block" />
+		<Skeleton class="h-11 min-w-0 flex-1 rounded-2xl" />
+		<Skeleton class="hidden h-11 w-[180px] rounded-2xl xl:block" />
+		<Skeleton class="hidden h-11 w-[180px] rounded-2xl xl:block" />
 		{#if showMoreFilters}
-			<Skeleton class="h-9 w-[130px] rounded-md" />
+			<Skeleton class="h-11 w-[130px] rounded-2xl" />
 		{/if}
 	</div>
 </div>
