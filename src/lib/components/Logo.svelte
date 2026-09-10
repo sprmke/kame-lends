@@ -1,7 +1,7 @@
 <script lang="ts">
+	import BrandIcon from '$lib/components/BrandIcon.svelte';
 	import { APP_NAME } from '$lib/brand';
 	import { cn } from '$lib/utils';
-	import { Landmark } from 'lucide-svelte';
 
 	type Size = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -33,47 +33,29 @@
 		xl: 'text-2xl'
 	};
 
-	const iconSizeClasses: Record<Size, string> = {
-		sm: 'h-4 w-4',
-		md: 'h-5 w-5',
-		lg: 'h-6 w-6',
-		xl: 'h-7 w-7'
-	};
-
-	const iconContainerClasses: Record<Size, string> = {
-		sm: 'h-8 w-8 rounded-xl',
-		md: 'h-9 w-9 rounded-xl',
-		lg: 'h-10 w-10 rounded-2xl',
-		xl: 'h-11 w-11 rounded-2xl'
+	const iconSizeMap: Record<Size, 'xs' | 'sm' | 'md' | 'lg' | 'xl'> = {
+		sm: 'xs',
+		md: compactIcon ? 'sm' : 'md',
+		lg: 'lg',
+		xl: 'xl'
 	};
 </script>
 
 <span
 	class={cn(
-		'inline-flex items-center gap-2.5 font-extrabold tracking-tight text-foreground',
+		'inline-flex items-center gap-2.5 font-semibold tracking-tight text-foreground',
 		sizeClasses[size],
-		animated && 'transition-all duration-300',
+		animated && 'transition-opacity duration-200 hover:opacity-90',
 		className
 	)}
 >
 	{#if showIcon}
-		<span
-			class={cn(
-				'inline-flex items-center justify-center bg-gradient-to-br from-primary to-chart-5',
-				compactIcon ? 'rounded-md shadow-none' : 'shadow-[var(--shadow-soft)]',
-				compactIcon
-					? size === 'sm'
-						? 'h-7 w-7'
-						: size === 'md'
-							? 'h-8 w-8'
-							: iconContainerClasses[size]
-					: iconContainerClasses[size]
-			)}
-		>
-			<Landmark class={cn('text-primary-foreground', iconSizeClasses[size])} />
-		</span>
+		<BrandIcon
+			size={iconSizeMap[size]}
+			class={cn(gradient && 'ring-1 ring-primary/15')}
+		/>
 	{/if}
-	<span>
+	<span class="leading-none">
 		{brandPrimary}{#if brandAccent}<span class="text-primary"> {brandAccent}</span>{/if}
 	</span>
 </span>
