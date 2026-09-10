@@ -1,18 +1,9 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import {
-		ArrowDownToLine,
-		ArrowUpFromLine,
-		Copy,
-		Eye,
-		FileText,
-		Maximize2,
-		MoreVertical,
-		Pencil,
-		Trash2
-	} from 'lucide-svelte';
+	import { Eye, Maximize2, MoreVertical } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
+	import ActionMenuList from './ActionMenuList.svelte';
 	import type { RowActionItem } from './action-buttons';
 
 	interface Props {
@@ -22,6 +13,13 @@
 		size?: 'sm' | 'md';
 		class?: string;
 		showView?: boolean;
+		/** Card footer primary action label (default View). */
+		quickViewLabel?: string;
+		/** Show icon on card footer primary action. */
+		showQuickViewIcon?: boolean;
+		/** Card footer more-menu label; null = icon only. */
+		moreLabel?: string | null;
+		cardPrimaryVariant?: 'ghost' | 'outline';
 	}
 
 	let {
@@ -30,20 +28,29 @@
 		actionItems = [],
 		size = 'sm',
 		class: className = '',
-		showView = true
+		showView = true,
+		quickViewLabel = 'View',
+		showQuickViewIcon = true,
+		moreLabel = 'More',
+		cardPrimaryVariant = 'ghost'
 	}: Props = $props();
 
 	const isCardSize = $derived(size === 'md');
+	const isInlineCardFooter = $derived(isCardSize && cardPrimaryVariant === 'outline');
 	const tableActionButtonClass =
 		'touch-target h-9 text-xs px-2.5 gap-1 [&_svg]:size-3.5 lg:h-7 lg:px-2 lg:[&_svg]:size-3';
 	const cardActionButtonClass =
 		'h-9 min-h-9 w-full flex-1 rounded-none px-4 text-xs font-medium gap-1.5 hover:bg-muted/60 shadow-none [&_svg]:size-3.5 only:rounded-b-3xl first:rounded-bl-3xl last:rounded-br-3xl';
+	const inlineCardPrimaryClass =
+		'min-h-11 flex-1 rounded-full border-border/60 text-xs font-medium shadow-none';
+	const inlineCardMoreClass =
+		'min-h-11 min-w-11 shrink-0 rounded-full border border-border/60 px-0 shadow-none';
 </script>
 
 <div
 	class={cn(
 		'flex items-stretch',
-		isCardSize ? 'w-full' : 'justify-end gap-1 md:gap-1.5',
+		isInlineCardFooter ? 'w-full gap-2 p-3' : isCardSize ? 'w-full' : 'justify-end gap-1 md:gap-1.5',
 		className
 	)}
 	onclick={(event) => event.stopPropagation()}
@@ -52,16 +59,20 @@
 >
 	{#if onQuickView}
 		<Button
-			variant="ghost"
+			variant={isCardSize ? cardPrimaryVariant : 'ghost'}
 			size="sm"
 			class={cn(
-				isCardSize ? cardActionButtonClass : tableActionButtonClass,
-				isCardSize && 'flex-1'
+				isInlineCardFooter
+					? inlineCardPrimaryClass
+					: isCardSize
+						? cardActionButtonClass
+						: tableActionButtonClass,
+				isCardSize && !isInlineCardFooter && 'flex-1'
 			)}
 			onclick={onQuickView}
 		>
-			{#if isCardSize}<Maximize2 />{/if}
-			<span>View</span>
+			{#if isCardSize && showQuickViewIcon}<Maximize2 />{/if}
+			<span>{quickViewLabel}</span>
 		</Button>
 	{/if}
 
@@ -87,41 +98,26 @@
 				{#snippet child({ props })}
 					<Button
 						{...props}
-						variant="ghost"
+						variant={isInlineCardFooter ? 'outline' : 'ghost'}
 						size="sm"
 						title="More actions"
+						aria-label="More actions"
 						class={cn(
-							isCardSize ? cardActionButtonClass : tableActionButtonClass,
-							isCardSize && 'flex-1'
+							isInlineCardFooter
+								? inlineCardMoreClass
+								: isCardSize
+									? cardActionButtonClass
+									: tableActionButtonClass,
+							isCardSize && !isInlineCardFooter && 'flex-1'
 						)}
 					>
 						<MoreVertical />
-						{#if isCardSize}<span>More</span>{/if}
+						{#if isCardSize && moreLabel !== null}<span>{moreLabel}</span>{/if}
 					</Button>
 				{/snippet}
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content align="end">
-				{#each actionItems as item, index (item.label + index)}
-					{#if item.separatorBefore}
-						<DropdownMenu.Separator />
-					{/if}
-					<DropdownMenu.Item
-						class={item.destructive ? 'text-destructive focus:text-destructive' : ''}
-						disabled={item.disabled}
-						onclick={item.onClick}
-					>
-						{#if item.label === 'Fund Transfer'}<ArrowUpFromLine class="h-4 w-4" />
-						{:else if item.label === 'Add Received Payment'}<ArrowDownToLine class="h-4 w-4" />
-						{:else if item.label === 'Edit'}<Pencil class="h-4 w-4" />
-						{:else if item.label === 'Duplicate'}<Copy class="h-4 w-4" />
-						{:else if item.label.startsWith('Download') || item.label.startsWith('Generating')}<FileText
-								class="h-4 w-4"
-							/>
-						{:else if item.label === 'Delete'}<Trash2 class="h-4 w-4" />
-						{/if}
-						{item.label}
-					</DropdownMenu.Item>
-				{/each}
+				<ActionMenuList items={actionItems} />
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>
 	{/if}

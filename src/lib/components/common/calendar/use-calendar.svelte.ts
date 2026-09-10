@@ -164,14 +164,19 @@ export function createCalendarState(getEvents: () => CalendarEvent[]) {
     currentDate = new Date();
   }
 
-  function getViewTitle() {
+  function getViewTitle(compact?: boolean) {
     if (viewMode === "day") {
-      return currentDate.toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
+      return currentDate.toLocaleDateString(
+        "en-US",
+        compact
+          ? { weekday: "short", month: "short", day: "numeric" }
+          : {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            },
+      );
     }
 
     if (viewMode === "week") {

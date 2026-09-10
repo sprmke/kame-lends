@@ -3,12 +3,21 @@
 	import ListPageFiltersSkeleton from './page-skeletons/ListPageFiltersSkeleton.svelte';
 	import ListPageHeaderSkeleton from './page-skeletons/ListPageHeaderSkeleton.svelte';
 	import {
+		DEBTS_TABLE_COLUMNS,
 		INVESTORS_TABLE_COLUMNS,
+		BORROWERS_TABLE_COLUMNS,
+		WITNESSES_TABLE_COLUMNS,
 		LOANS_TABLE_COLUMNS,
 		TRANSACTIONS_TABLE_COLUMNS
 	} from './page-skeletons/table-columns';
 
-	export type ListPageSkeletonVariant = 'loans' | 'investors' | 'debts' | 'transactions';
+	export type ListPageSkeletonVariant =
+		| 'loans'
+		| 'investors'
+		| 'borrowers'
+		| 'witnesses'
+		| 'debts'
+		| 'transactions';
 
 	interface Props {
 		variant?: ListPageSkeletonVariant;
@@ -32,11 +41,25 @@
 					columns: INVESTORS_TABLE_COLUMNS,
 					tallRows: false
 				};
+			case 'borrowers':
+				return {
+					actionCount: 2,
+					showMoreFilters: false,
+					columns: BORROWERS_TABLE_COLUMNS,
+					tallRows: false
+				};
+			case 'witnesses':
+				return {
+					actionCount: 2,
+					showMoreFilters: false,
+					columns: WITNESSES_TABLE_COLUMNS,
+					tallRows: false
+				};
 			case 'debts':
 				return {
 					actionCount: 2,
 					showMoreFilters: true,
-					columns: TRANSACTIONS_TABLE_COLUMNS,
+					columns: DEBTS_TABLE_COLUMNS,
 					tallRows: false
 				};
 			case 'transactions':

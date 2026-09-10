@@ -30,7 +30,7 @@
 		{@render children()}
 
 		{#if hasActiveFilters}
-			<Button variant="outline" size="sm" onclick={onClearFilters} class="h-9 whitespace-nowrap">
+			<Button variant="outline" size="sm" onclick={onClearFilters} class="whitespace-nowrap">
 				<X class="mr-2 h-4 w-4" />
 				Clear All
 			</Button>

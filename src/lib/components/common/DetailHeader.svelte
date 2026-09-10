@@ -4,41 +4,11 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import PriceVisibilityToggle from './PriceVisibilityToggle.svelte';
 	import { formatText } from '$lib/format';
-	import { mobilePageTitle } from '$lib/stores/mobile-page-title.svelte';
-	import {
-		ArrowLeft,
-		ArrowDownToLine,
-		ArrowUpFromLine,
-		Edit,
-		Trash2,
-		AlertCircle,
-		CheckCircle,
-		Wallet,
-		ExternalLink,
-		Copy,
-		MoreVertical,
-		FileText
-	} from 'lucide-svelte';
-
-	type ActionIcon =
-		| 'fund'
-		| 'received'
-		| 'pay'
-		| 'edit'
-		| 'duplicate'
-		| 'contract'
-		| 'complete'
-		| 'view'
-		| 'delete';
-
-	interface ActionItem {
-		label: string;
-		onclick: () => void;
-		icon: ActionIcon;
-		destructive?: boolean;
-		disabled?: boolean;
-		separatorBefore?: boolean;
-	}
+	import { createIsMobileShell } from '$lib/composables/use-media-query.svelte';
+	import RegisterMobileHeroActions from '$lib/components/layout/RegisterMobileHeroActions.svelte';
+	import { createLoanActionItems } from '$lib/components/common/action-buttons';
+	import ActionMenuList from '$lib/components/common/ActionMenuList.svelte';
+	import { ArrowLeft, ChevronLeft, AlertCircle, CheckCircle, MoreHorizontal } from 'lucide-svelte';
 
 	interface Props {
 		title: string;
@@ -62,9 +32,7 @@
 		showViewLoan?: boolean;
 		onDuplicate?: () => void;
 		showDuplicate?: boolean;
-		onDownloadContract?: () => void;
-		showDownloadContract?: boolean;
-		isDownloadingContract?: boolean;
+		onContractDetails?: () => void;
 		showPriceToggle?: boolean;
 		onAddPayment?: () => void;
 		onAddReceivedPayment?: () => void;
@@ -92,9 +60,7 @@
 		showViewLoan = false,
 		onDuplicate,
 		showDuplicate = false,
-		onDownloadContract,
-		showDownloadContract = false,
-		isDownloadingContract = false,
+		onContractDetails,
 		showPriceToggle = true,
 		onAddPayment,
 		onAddReceivedPayment
@@ -105,10 +71,9 @@
 	let isDeleting = $state(false);
 	let isCompleting = $state(false);
 
-	$effect(() => {
-		mobilePageTitle.set(formatText(title));
-		return () => mobilePageTitle.clear();
-	});
+	const isMobileShell = createIsMobileShell(false);
+
+	$effect(() => isMobileShell.init());
 
 	async function handleDelete() {
 		isDeleting = true;
@@ -135,100 +100,78 @@
 		}
 	}
 
-	const actionItems = $derived.by((): ActionItem[] => {
-		const items: ActionItem[] = [];
-
-		if (onAddPayment) {
-			items.push({
-				label: 'Fund Transfer',
-				onclick: onAddPayment,
-				icon: 'fund'
-			});
-		}
-		if (onAddReceivedPayment) {
-			items.push({
-				label: 'Add Received Payment',
-				onclick: onAddReceivedPayment,
-				icon: 'received'
-			});
-		}
-		if (showPayBalance && onPayBalance) {
-			items.push({
-				label: 'Pay',
-				onclick: onPayBalance,
-				icon: 'pay'
-			});
-		}
-		if (onEdit && canEdit) {
-			items.push({
-				label: 'Edit',
-				onclick: onEdit,
-				icon: 'edit',
-				separatorBefore: Boolean(
-					onAddPayment || onAddReceivedPayment || (showPayBalance && onPayBalance)
-				)
-			});
-		}
-		if (showDuplicate && onDuplicate) {
-			items.push({
-				label: 'Duplicate',
-				onclick: onDuplicate,
-				icon: 'duplicate',
-				separatorBefore: !(onEdit && canEdit) && Boolean(onAddPayment || onAddReceivedPayment)
-			});
-		}
-		if (showDownloadContract && onDownloadContract) {
-			items.push({
-				label: isDownloadingContract ? 'Generating Contract...' : 'Download Contract',
-				onclick: () => {
-					if (!isDownloadingContract) onDownloadContract();
-				},
-				icon: 'contract',
-				disabled: isDownloadingContract
-			});
-		}
-		if (showComplete && onComplete) {
-			items.push({
-				label: 'Complete',
-				onclick: () => (showCompleteConfirm = true),
-				icon: 'complete'
-			});
-		}
-		if (showViewLoan && onViewLoan) {
-			items.push({
-				label: 'View Loan',
-				onclick: onViewLoan,
-				icon: 'view'
-			});
-		}
-		if (canDelete) {
-			items.push({
-				label: 'Delete',
-				onclick: () => (showDeleteConfirm = true),
-				icon: 'delete',
-				destructive: true,
-				separatorBefore: true
-			});
-		}
-
-		return items;
-	});
+	const actionItems = $derived(
+		createLoanActionItems({
+			canEdit,
+			onEdit,
+			showDuplicate,
+			onDuplicate,
+			onAddPayment,
+			onAddReceivedPayment,
+			showPayBalance,
+			onPayBalance,
+			onContractDetails,
+			showComplete,
+			onComplete: onComplete ? () => (showCompleteConfirm = true) : undefined,
+			showViewLoan,
+			onViewLoan,
+			canDelete,
+			onDelete: canDelete ? () => (showDeleteConfirm = true) : undefined
+		})
+	);
 </script>
 
-<div class="flex flex-col gap-3">
-	<Button
-		variant="ghost"
-		size="sm"
-		onclick={onBack}
-		class="touch-target -ml-2 hidden w-fit lg:inline-flex"
-	>
+{#snippet heroActions()}
+	<DropdownMenu.Root>
+		<DropdownMenu.Trigger>
+			{#snippet child({ props })}
+				<Button
+					{...props}
+					variant="outline"
+					size="sm"
+					class="touch-target h-10 shrink-0 px-2 md:h-8 md:px-3"
+					title="Actions"
+					aria-label="Actions"
+				>
+					<MoreHorizontal class="h-4 w-4" />
+				</Button>
+			{/snippet}
+		</DropdownMenu.Trigger>
+		<DropdownMenu.Content align="end">
+			<ActionMenuList items={actionItems} />
+		</DropdownMenu.Content>
+	</DropdownMenu.Root>
+{/snippet}
+
+{#if actionItems.length > 0}
+	<RegisterMobileHeroActions snippet={heroActions} active={isMobileShell.matches} />
+{/if}
+
+<div class="space-y-1 lg:hidden">
+	<div class="flex items-center gap-1">
+		<button
+			type="button"
+			class="touch-target native-press inline-flex shrink-0 items-center justify-center rounded-xl"
+			onclick={onBack}
+			aria-label={backLabel}
+		>
+			<ChevronLeft class="h-6 w-6" strokeWidth={1.75} />
+		</button>
+		<h1 class="min-w-0 flex-1 truncate text-xl font-semibold tracking-tight">{formatText(title)}</h1>
+	</div>
+	{#if description}
+		<p class="text-sm text-muted-foreground">{formatText(description)}</p>
+	{/if}
+</div>
+
+<div class="hidden flex-col gap-4 lg:flex">
+	<Button variant="ghost" size="sm" onclick={onBack} class="touch-target -ml-2 w-fit">
 		<ArrowLeft class="mr-2 h-4 w-4" />
 		{backLabel}
 	</Button>
 
-	<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-		<!-- Title lives in MobileTopBar under lg. -->
-		<div class="hidden min-w-0 space-y-1 lg:block">
+	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+		<div class="min-w-0 space-y-1">
 			<div class="flex flex-wrap items-center gap-2.5">
 				<h1 class="text-xl font-semibold tracking-tight">{formatText(title)}</h1>
 				{#if showPriceToggle}
@@ -240,63 +183,11 @@
 			{/if}
 		</div>
 
-		<div class="flex w-full items-center justify-end gap-1.5 lg:w-auto">
-			{#if showPriceToggle}
-				<div class="lg:hidden">
-					<PriceVisibilityToggle />
-				</div>
-			{/if}
-			{#if actionItems.length > 0}
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger>
-					{#snippet child({ props })}
-						<Button
-							{...props}
-							variant="outline"
-							size="sm"
-							class="touch-target h-10 shrink-0 px-2 md:h-8 md:px-3"
-							title="Actions"
-						>
-							<MoreVertical class="h-4 w-4" />
-						</Button>
-					{/snippet}
-				</DropdownMenu.Trigger>
-				<DropdownMenu.Content align="end" class="w-52">
-					{#each actionItems as item, index (item.label)}
-						{#if item.separatorBefore && index > 0}
-							<DropdownMenu.Separator />
-						{/if}
-						<DropdownMenu.Item
-							onclick={item.onclick}
-							disabled={item.disabled}
-							class={item.destructive ? 'text-destructive focus:text-destructive' : undefined}
-						>
-							{#if item.icon === 'fund'}
-								<ArrowUpFromLine class="mr-2 h-4 w-4" />
-							{:else if item.icon === 'received'}
-								<ArrowDownToLine class="mr-2 h-4 w-4" />
-							{:else if item.icon === 'pay'}
-								<Wallet class="mr-2 h-4 w-4" />
-							{:else if item.icon === 'edit'}
-								<Edit class="mr-2 h-4 w-4" />
-							{:else if item.icon === 'duplicate'}
-								<Copy class="mr-2 h-4 w-4" />
-							{:else if item.icon === 'contract'}
-								<FileText class="mr-2 h-4 w-4" />
-							{:else if item.icon === 'complete'}
-								<CheckCircle class="mr-2 h-4 w-4" />
-							{:else if item.icon === 'view'}
-								<ExternalLink class="mr-2 h-4 w-4" />
-							{:else if item.icon === 'delete'}
-								<Trash2 class="mr-2 h-4 w-4" />
-							{/if}
-							{item.label}
-						</DropdownMenu.Item>
-					{/each}
-				</DropdownMenu.Content>
-			</DropdownMenu.Root>
-			{/if}
-		</div>
+		{#if actionItems.length > 0 && !isMobileShell.matches}
+			<div class="flex w-full items-center justify-end gap-1.5 lg:w-auto">
+				{@render heroActions()}
+			</div>
+		{/if}
 	</div>
 </div>
 
@@ -332,7 +223,7 @@
 	<Dialog.Content>
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
-				<CheckCircle class="h-5 w-5 text-emerald-600" />
+				<CheckCircle class="h-5 w-5 text-chart-2" />
 				{formatText(completeTitle)}
 			</Dialog.Title>
 			<Dialog.Description>{formatText(completeDescription)}</Dialog.Description>
@@ -348,7 +239,7 @@
 			<Button
 				onclick={handleComplete}
 				disabled={isCompleting}
-				class="bg-green-600 hover:bg-green-700"
+				class="bg-chart-2 text-white hover:bg-chart-2/90"
 			>
 				{isCompleting ? 'Completing...' : 'Yes, Complete'}
 			</Button>

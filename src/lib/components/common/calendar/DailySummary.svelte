@@ -67,24 +67,30 @@
 </script>
 
 {#if showSummary}
-	<div class="mb-2 rounded border border-border bg-muted/30 {classes.container}">
+	<div class="mb-2 min-w-0 rounded border border-border bg-muted/30 {classes.container}">
 		{#if totalOut > 0}
-			<div class="flex items-center justify-between">
-				<span class="font-semibold text-rose-600 dark:text-rose-400">
+			<div class="flex min-w-0 items-center justify-between gap-1">
+				<span class="shrink-0 font-semibold text-rose-600 dark:text-rose-400">
 					{size === 'lg' ? 'Total Out:' : 'Out:'}
 				</span>
-				<span class="font-bold text-rose-700 dark:text-rose-400 {size === 'lg' ? 'text-lg' : ''}">
+				<span
+					class="truncate font-bold text-rose-600 tabular-nums dark:text-rose-400 {size === 'lg'
+						? 'text-lg'
+						: ''}"
+				>
 					-{formatCurrency(totalOut)}
 				</span>
 			</div>
 		{/if}
 		{#if totalIn > 0}
-			<div class="flex items-center justify-between">
-				<span class="font-semibold text-emerald-600 dark:text-emerald-400">
+			<div class="flex min-w-0 items-center justify-between gap-1">
+				<span class="shrink-0 font-semibold text-emerald-600 dark:text-emerald-400">
 					{size === 'lg' ? 'Total In:' : 'In:'}
 				</span>
 				<span
-					class="font-bold text-emerald-700 dark:text-emerald-400 {size === 'lg' ? 'text-lg' : ''}"
+					class="truncate font-bold text-emerald-600 tabular-nums dark:text-emerald-400 {size === 'lg'
+						? 'text-lg'
+						: ''}"
 				>
 					+{formatCurrency(totalIn)}
 				</span>
@@ -92,15 +98,15 @@
 		{/if}
 		{#if totalOut > 0 && totalIn > 0}
 			<div
-				class="flex items-center justify-between border-t border-border {size === 'lg'
+				class="flex min-w-0 items-center justify-between gap-1 border-t border-border {size === 'lg'
 					? 'pt-2'
 					: 'pt-0.5'}"
 			>
-				<span class="font-semibold text-foreground">Net:</span>
+				<span class="shrink-0 font-semibold text-foreground">Net:</span>
 				<span
-					class="font-bold {totalIn - totalOut >= 0
-						? 'text-emerald-700 dark:text-emerald-400'
-						: 'text-rose-700 dark:text-rose-400'} {size === 'lg' ? 'text-lg' : ''}"
+					class="truncate font-bold tabular-nums {totalIn - totalOut >= 0
+						? 'text-emerald-600 dark:text-emerald-400'
+						: 'text-rose-600 dark:text-rose-400'} {size === 'lg' ? 'text-lg' : ''}"
 				>
 					{formatCurrency(totalIn - totalOut)}
 				</span>

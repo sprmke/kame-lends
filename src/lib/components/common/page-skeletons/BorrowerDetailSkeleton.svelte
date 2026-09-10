@@ -1,6 +1,8 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { getSummaryMetricGridCols, ODD_LAST_TWO_COL_GRID_UNTIL_MD } from '$lib/summary-grid';
+	import { cn } from '$lib/utils';
 	import DetailHeaderSkeleton from './DetailHeaderSkeleton.svelte';
 </script>
 
@@ -17,6 +19,24 @@
 			{/each}
 		</Card.Content>
 	</Card.Root>
+
+	<div
+		class={cn(
+			'grid min-w-0 gap-2.5 md:gap-5',
+			getSummaryMetricGridCols(6),
+			ODD_LAST_TWO_COL_GRID_UNTIL_MD
+		)}
+	>
+		{#each Array.from({ length: 6 }) as _, index (index)}
+			<div
+				class="surface-card flex min-h-28 min-w-0 flex-col justify-between rounded-xl border border-border/60 p-3 md:min-h-[7.5rem] md:p-5"
+			>
+				<Skeleton class="h-3 w-24" />
+				<Skeleton class="h-6 w-32" />
+				<Skeleton class="h-4 w-20" />
+			</div>
+		{/each}
+	</div>
 
 	<div class="space-y-3">
 		<Skeleton class="h-6 w-28" />

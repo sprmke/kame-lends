@@ -6,6 +6,7 @@
 
 	interface Props {
 		title: string;
+		compactTitle?: string;
 		viewMode: ViewMode;
 		onViewModeChange: (mode: ViewMode) => void;
 		onToday: () => void;
@@ -17,6 +18,7 @@
 
 	let {
 		title,
+		compactTitle,
 		viewMode,
 		onViewModeChange,
 		onToday,
@@ -28,78 +30,92 @@
 </script>
 
 <Card.Root>
-	<Card.Content class="p-3">
-		<div class="flex flex-col gap-3">
-			<div class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-				<h2 class="text-base font-semibold tracking-tight">{title}</h2>
-				<div
-					class="flex flex-col-reverse items-start gap-2 sm:items-end xl:flex-row xl:items-center"
-				>
-					{#if showLegend && legendGroups && legendGroups.length > 0}
-						<div
-							class="flex flex-wrap items-center rounded-md border border-border/60 px-2 py-1 text-xs"
-						>
-							{#each legendGroups as group, groupIndex (group.title)}
-								<div class="flex items-center">
-									{#if groupIndex > 0}
-										<div class="mx-2 inline-block h-4 w-px bg-gray-300 md:mx-4 md:h-6"></div>
-									{/if}
-									<div class="inline-flex items-center gap-1 md:gap-2">
-										<span class="hidden font-semibold text-gray-600 sm:inline">{group.title}:</span>
-										{#each group.items as item (item.label)}
-											<div class="flex items-center gap-1 md:gap-1.5">
-												<div
-													class="flex h-2 w-2 items-center justify-center rounded-full md:h-3 md:w-3 {item.color}"
-												></div>
-												<span class="text-[10px] font-medium md:text-xs">{item.label}</span>
-											</div>
-										{/each}
-									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
-					<div class="flex flex-col items-center justify-center gap-2 sm:flex-row sm:justify-end">
-						<div class="flex items-center rounded-md border p-0.5">
+	<Card.Content class="space-y-2.5 p-3">
+		<div class="flex items-center gap-2">
+			<h2 class="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight lg:text-base">
+				<span class="lg:hidden">{compactTitle ?? title}</span>
+				<span class="hidden lg:inline">{title}</span>
+			</h2>
+			<div class="flex shrink-0 items-center gap-1.5">
+				<div class="hidden lg:block">
+					<div class="pill-segment">
 						<Button
 							variant={viewMode === 'day' ? 'secondary' : 'ghost'}
-							size="sm"
+							size="xs"
 							onclick={() => onViewModeChange('day')}
-							class="touch-target h-9 px-3 text-xs lg:h-7 lg:px-2"
+							class="h-7 px-2.5 shadow-none"
+							aria-pressed={viewMode === 'day'}
 						>
 							Day
 						</Button>
 						<Button
 							variant={viewMode === 'week' ? 'secondary' : 'ghost'}
-							size="sm"
+							size="xs"
 							onclick={() => onViewModeChange('week')}
-							class="touch-target hidden h-9 px-3 text-xs lg:inline-flex lg:h-7 lg:px-2"
+							class="h-7 px-2.5 shadow-none"
+							aria-pressed={viewMode === 'week'}
 						>
 							Week
 						</Button>
 						<Button
 							variant={viewMode === 'month' ? 'secondary' : 'ghost'}
-							size="sm"
+							size="xs"
 							onclick={() => onViewModeChange('month')}
-							class="touch-target hidden h-9 px-3 text-xs lg:inline-flex lg:h-7 lg:px-2"
+							class="h-7 px-2.5 shadow-none"
+							aria-pressed={viewMode === 'month'}
 						>
 							Month
 						</Button>
 					</div>
-					<div class="flex items-center gap-2">
-						<Button variant="outline" size="sm" class="touch-target lg:h-8" onclick={onToday}
-							>Today</Button
-						>
-						<Button variant="outline" size="sm" class="touch-target lg:h-8" onclick={onPrevious}>
-							<ChevronLeft class="h-4 w-4" />
-						</Button>
-						<Button variant="outline" size="sm" class="touch-target lg:h-8" onclick={onNext}>
-							<ChevronRight class="h-4 w-4" />
-						</Button>
-					</div>
-					</div>
+				</div>
+				<div class="pill-segment gap-0.5 p-0.5">
+					<Button
+						variant="ghost"
+						size="xs"
+						onclick={onToday}
+						class="touch-hit h-7 px-2.5 shadow-none"
+					>
+						Today
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						aria-label="Previous"
+						onclick={onPrevious}
+						class="touch-hit shadow-none"
+					>
+						<ChevronLeft />
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						aria-label="Next"
+						onclick={onNext}
+						class="touch-hit shadow-none"
+					>
+						<ChevronRight />
+					</Button>
 				</div>
 			</div>
 		</div>
+
+		{#if showLegend && legendGroups && legendGroups.length > 0}
+			<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-medium lg:text-xs">
+				{#each legendGroups as group, groupIndex (group.title)}
+					<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+						{#if groupIndex > 0}
+							<span class="hidden h-3 w-px bg-border lg:inline-block"></span>
+						{/if}
+						<span class="hidden text-muted-foreground lg:inline">{group.title}</span>
+						{#each group.items as item (item.label)}
+							<div class="flex items-center gap-1">
+								<div class="size-2 shrink-0 rounded-full {item.color}"></div>
+								<span>{item.label}</span>
+							</div>
+						{/each}
+					</div>
+				{/each}
+			</div>
+		{/if}
 	</Card.Content>
 </Card.Root>

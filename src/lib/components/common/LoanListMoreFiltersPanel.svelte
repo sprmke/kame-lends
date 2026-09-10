@@ -1,10 +1,13 @@
 <script lang="ts">
-	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
+	import MultiSelectFilter, {
+		type MultiSelectOption
+	} from '$lib/components/common/MultiSelectFilter.svelte';
 	import RangeFilter from '$lib/components/common/RangeFilter.svelte';
 	import {
 		LOAN_STATUS_FILTER_OPTIONS,
 		LOAN_TYPE_FILTER_OPTIONS
 	} from '$lib/list-filters';
+	import { UserCheck, UserRound, Users } from 'lucide-svelte';
 
 	interface Props {
 		statusFilter: string[];
@@ -27,6 +30,15 @@
 		maxTotalAmount: string;
 		onMinTotalAmountChange: (value: string) => void;
 		onMaxTotalAmountChange: (value: string) => void;
+		investorFilterOptions?: MultiSelectOption[];
+		selectedInvestors?: string[];
+		onInvestorsChange?: (value: string[]) => void;
+		borrowerFilterOptions?: MultiSelectOption[];
+		selectedBorrowers?: string[];
+		onBorrowersChange?: (value: string[]) => void;
+		witnessFilterOptions?: MultiSelectOption[];
+		selectedWitnesses?: string[];
+		onWitnessesChange?: (value: string[]) => void;
 	}
 
 	let {
@@ -49,7 +61,16 @@
 		minTotalAmount,
 		maxTotalAmount,
 		onMinTotalAmountChange,
-		onMaxTotalAmountChange
+		onMaxTotalAmountChange,
+		investorFilterOptions = [],
+		selectedInvestors = [],
+		onInvestorsChange = () => {},
+		borrowerFilterOptions = [],
+		selectedBorrowers = [],
+		onBorrowersChange = () => {},
+		witnessFilterOptions = [],
+		selectedWitnesses = [],
+		onWitnessesChange = () => {}
 	}: Props = $props();
 </script>
 
@@ -115,4 +136,62 @@
 		minPlaceholder="Min (₱)"
 		maxPlaceholder="Max (₱)"
 	/>
+</div>
+
+<div class="grid grid-cols-1 gap-3 border-t border-border/50 pt-3 sm:grid-cols-2 xl:grid-cols-3">
+	{#if investorFilterOptions.length > 0}
+		<div class="space-y-2">
+			<p class="flex items-center gap-1 text-xs font-semibold">
+				<Users class="h-3.5 w-3.5" />
+				Investors
+				{#if selectedInvestors.length > 0}({selectedInvestors.length}){/if}
+			</p>
+			<MultiSelectFilter
+				options={investorFilterOptions}
+				selected={selectedInvestors}
+				onChange={onInvestorsChange}
+				placeholder="All Investors"
+				allLabel="All Investors"
+				searchPlaceholder="Search investors..."
+				searchable={true}
+				triggerClassName="w-full"
+			/>
+		</div>
+	{/if}
+
+	<div class="space-y-2">
+		<p class="flex items-center gap-1 text-xs font-semibold">
+			<UserCheck class="h-3.5 w-3.5" />
+			Borrowers
+			{#if selectedBorrowers.length > 0}({selectedBorrowers.length}){/if}
+		</p>
+		<MultiSelectFilter
+			options={borrowerFilterOptions}
+			selected={selectedBorrowers}
+			onChange={onBorrowersChange}
+			placeholder="All Borrowers"
+			allLabel="All Borrowers"
+			searchPlaceholder="Search borrowers..."
+			searchable={true}
+			triggerClassName="w-full"
+		/>
+	</div>
+
+	<div class="space-y-2">
+		<p class="flex items-center gap-1 text-xs font-semibold">
+			<UserRound class="h-3.5 w-3.5" />
+			Witnesses
+			{#if selectedWitnesses.length > 0}({selectedWitnesses.length}){/if}
+		</p>
+		<MultiSelectFilter
+			options={witnessFilterOptions}
+			selected={selectedWitnesses}
+			onChange={onWitnessesChange}
+			placeholder="All Witnesses"
+			allLabel="All Witnesses"
+			searchPlaceholder="Search witnesses..."
+			searchable={true}
+			triggerClassName="w-full"
+		/>
+	</div>
 </div>

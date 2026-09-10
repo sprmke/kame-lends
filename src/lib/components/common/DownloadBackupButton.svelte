@@ -70,7 +70,7 @@
 	{#if isDownloading}
 		<Loader2 class="h-4 w-4 animate-spin" />
 	{:else if justDownloaded}
-		<CheckCircle2 class="h-4 w-4 text-green-500" />
+		<CheckCircle2 class="h-4 w-4 text-chart-2" />
 	{:else}
 		<Download class="h-4 w-4" />
 	{/if}

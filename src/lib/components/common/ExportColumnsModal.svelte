@@ -105,7 +105,7 @@
 		</div>
 
 		<ScrollArea.Root class="h-[280px] pr-4">
-			<div class="space-y-1">
+			<div class="space-y-1 pb-1">
 				{#each sections as section, index (section.key)}
 					<button
 						type="button"

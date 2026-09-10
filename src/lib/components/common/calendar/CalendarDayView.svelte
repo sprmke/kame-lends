@@ -21,11 +21,11 @@
 
 <div class="p-2 md:p-3">
 	{#each cells as cell, index (index)}
-		<div class="space-y-3 {isToday(cell.date) ? 'rounded-lg bg-primary/10 p-4' : ''}">
+		<div class="space-y-3 {isToday(cell.date) ? 'rounded-lg bg-primary/5 p-3' : ''}">
 			{#if isToday(cell.date)}
 				<div class="mb-3 flex items-center gap-2">
 					<span
-						class="inline-flex items-center rounded bg-primary px-3 py-1 text-[10px] font-bold text-primary-foreground uppercase"
+						class="inline-flex items-center rounded bg-primary/15 px-3 py-1 text-[10px] font-semibold text-primary/80 uppercase"
 					>
 						Today
 					</span>

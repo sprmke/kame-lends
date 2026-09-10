@@ -13,8 +13,10 @@
 		srOnlyHeader?: boolean;
 		showCloseButton?: boolean;
 		contentClass?: string;
+		bodyClass?: string;
 		sheetSide?: 'bottom' | 'right';
 		children: Snippet;
+		header?: Snippet;
 		footer?: Snippet;
 	}
 
@@ -26,8 +28,10 @@
 		srOnlyHeader = false,
 		showCloseButton = true,
 		contentClass = '',
+		bodyClass = '',
 		sheetSide = 'bottom',
 		children,
+		header,
 		footer
 	}: Props = $props();
 
@@ -63,40 +67,76 @@
 		<Sheet.Content
 			side={sheetSide}
 			{showCloseButton}
-			class={cn('gap-0 overflow-hidden p-0', contentClass)}
+			class={cn(
+				'responsive-modal-shell flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0',
+				contentClass
+			)}
 		>
-			{#if title || description}
+			{#if header}
+				<div class="min-w-0 shrink-0 border-b border-border/60 px-5 pt-6 pr-12 pb-4">
+					{@render header()}
+				</div>
+			{:else if title || description}
 				<Sheet.Header
-					class={cn(srOnlyHeader && 'sr-only', 'shrink-0 border-b border-border/60 pr-12')}
+					class={cn(srOnlyHeader && 'sr-only', 'shrink-0 border-b border-border/60 px-5 pb-4 pt-6 pr-12')}
 				>
 					{#if title}<Sheet.Title>{title}</Sheet.Title>{/if}
 					{#if description}<Sheet.Description>{description}</Sheet.Description>{/if}
 				</Sheet.Header>
 			{/if}
-			<div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+			<div class={cn('min-h-0 flex-1 overflow-y-auto px-5 py-4', bodyClass)}>
 				{@render children()}
 			</div>
 			{#if footer}
-				<Sheet.Footer class="shrink-0">
+				<div
+					data-slot="responsive-modal-footer"
+					class="sheet-modal-footer mt-auto flex shrink-0 flex-col-reverse gap-3 border-t border-border/60 bg-background px-5 pt-4 pb-safe"
+				>
 					{@render footer()}
-				</Sheet.Footer>
+				</div>
 			{/if}
 		</Sheet.Content>
 	</Sheet.Root>
 {:else}
 	<Dialog.Root {open} {onOpenChange}>
-		<Dialog.Content {showCloseButton} class={cn('max-h-[90vh] overflow-y-auto', contentClass)}>
-			{#if title || description}
-				<Dialog.Header class={cn(srOnlyHeader && 'sr-only')}>
+		<Dialog.Content
+			{showCloseButton}
+			class={cn(
+				'responsive-modal-shell flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0',
+				contentClass
+			)}
+		>
+			{#if header}
+				<div
+					class={cn(
+						'min-w-0 shrink-0 border-b border-border/60 px-5 pt-6 pb-4 md:px-6',
+						showCloseButton && 'pr-12'
+					)}
+				>
+					{@render header()}
+				</div>
+			{:else if title || description}
+				<Dialog.Header
+					class={cn(
+						srOnlyHeader && 'sr-only',
+						'shrink-0 border-b border-border/60 px-5 pb-4 pt-6 md:px-6',
+						showCloseButton && 'pr-12'
+					)}
+				>
 					{#if title}<Dialog.Title>{title}</Dialog.Title>{/if}
 					{#if description}<Dialog.Description>{description}</Dialog.Description>{/if}
 				</Dialog.Header>
 			{/if}
-			{@render children()}
+			<div class={cn('min-h-0 flex-1 overflow-y-auto px-5 py-4 md:px-6 md:py-5', bodyClass)}>
+				{@render children()}
+			</div>
 			{#if footer}
-				<Dialog.Footer>
+				<div
+					data-slot="responsive-modal-footer"
+					class="flex shrink-0 flex-col-reverse gap-2 rounded-b-2xl border-t border-border/60 bg-muted/30 px-5 py-4 md:px-6 sm:flex-row sm:justify-end"
+				>
 					{@render footer()}
-				</Dialog.Footer>
+				</div>
 			{/if}
 		</Dialog.Content>
 	</Dialog.Root>

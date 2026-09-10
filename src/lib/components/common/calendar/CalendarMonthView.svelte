@@ -32,42 +32,43 @@
 	}
 </script>
 
-<div class="overflow-x-auto">
-	<div class="min-w-[1200px]">
-		<div class="grid grid-cols-7 border-b">
-			{#each dayNames as day (day)}
-				<div class="border-r p-2 text-center text-sm font-semibold last:border-r-0">
-					<span class="hidden sm:inline">{day}</span>
-					<span class="inline sm:hidden">{day.slice(0, 3)}</span>
-				</div>
-			{/each}
-		</div>
+<div class="w-full min-w-0">
+	<div class="grid grid-cols-7 border-b">
+		{#each dayNames as day (day)}
+			<div
+				class="min-w-0 border-r p-1 text-center text-[11px] font-semibold last:border-r-0 lg:p-2 lg:text-sm"
+			>
+				<span class="hidden xl:inline">{day}</span>
+				<span class="inline xl:hidden">{day.slice(0, 3)}</span>
+			</div>
+		{/each}
+	</div>
 
-		<div class="grid grid-cols-7">
-			{#each cells as cell, index (index)}
-				<div
-					class="relative min-h-[120px] border-r border-b p-1.5 last:border-r-0 md:min-h-[140px] md:p-2 {!cell.isCurrentMonth
-						? 'bg-muted/30'
-						: ''} {isToday(cell.date) ? 'bg-primary/10' : ''}"
-				>
+	<div class="grid grid-cols-7">
+		{#each cells as cell, index (index)}
+			<div
+				class="relative min-h-[5.5rem] min-w-0 border-r border-b p-1 last:border-r-0 sm:min-h-[6.5rem] sm:p-1.5 lg:min-h-[7.5rem] lg:p-2 xl:min-h-[8.75rem] {!cell.isCurrentMonth
+					? 'bg-muted/30'
+					: ''} {isToday(cell.date) ? 'bg-primary/5' : ''}"
+			>
 					<div class="mb-1 flex items-center justify-between md:mb-2">
 						<div
 							class="text-xs font-medium md:text-sm {!cell.isCurrentMonth
 								? 'text-muted-foreground'
-								: ''} {isToday(cell.date) ? 'font-bold text-primary' : ''}"
+								: ''} {isToday(cell.date) ? 'font-semibold text-primary/80' : ''}"
 						>
 							{cell.date.getDate()}
 						</div>
 						{#if isToday(cell.date)}
 							<span
-								class="rounded bg-primary px-1.5 py-0.5 text-[8px] font-bold text-primary-foreground uppercase md:text-[9px]"
+								class="hidden rounded bg-primary/15 px-1.5 py-0.5 text-[8px] font-semibold text-primary/80 uppercase sm:inline md:text-[9px]"
 							>
 								Today
 							</span>
 						{/if}
 					</div>
 
-					<div class="space-y-1.5">
+					<div class="min-w-0 space-y-1.5">
 						<DailySummary
 							events={cell.events}
 							formatCurrency={config.formatCurrency}
@@ -93,8 +94,7 @@
 						{/if}
 					</div>
 				</div>
-			{/each}
-		</div>
+		{/each}
 	</div>
 </div>
 

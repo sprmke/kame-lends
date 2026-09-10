@@ -22,7 +22,7 @@
 	<button
 		type="button"
 		onclick={onToggle}
-		class="flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+		class="flex cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
 	>
 		<Icon class="h-4 w-4" />
 		{trigger.label}

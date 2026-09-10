@@ -39,7 +39,7 @@
 			placeholder={minPlaceholder}
 			value={minValue}
 			oninput={(e) => onMinChange(e.currentTarget.value)}
-			class="h-9 text-sm"
+			class="text-sm"
 		/>
 		<span class="text-muted-foreground">-</span>
 		<Input
@@ -47,7 +47,7 @@
 			placeholder={maxPlaceholder}
 			value={maxValue}
 			oninput={(e) => onMaxChange(e.currentTarget.value)}
-			class="h-9 text-sm"
+			class="text-sm"
 		/>
 	</div>
 </div>

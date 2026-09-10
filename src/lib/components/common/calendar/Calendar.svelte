@@ -18,9 +18,10 @@
 	const calendar = createCalendarState(() => events);
 </script>
 
-<div class="space-y-4">
+<div class="min-w-0 space-y-3">
 	<CalendarHeader
 		title={calendar.getViewTitle()}
+		compactTitle={calendar.getViewTitle(true)}
 		viewMode={calendar.viewMode}
 		onViewModeChange={calendar.setViewMode}
 		onToday={calendar.goToToday}
@@ -30,14 +31,8 @@
 		legendGroups={config.legendGroups}
 	/>
 
-	{#if calendar.viewMode === 'week' || calendar.viewMode === 'month'}
-		<div class="hidden rounded-lg bg-muted/30 py-1 text-center text-xs text-muted-foreground lg:block">
-			← Swipe to scroll horizontally →
-		</div>
-	{/if}
-
-	<Card.Root>
-		<Card.Content class="p-0">
+	<Card.Root class="min-w-0">
+		<Card.Content class="min-w-0 overflow-hidden p-0">
 			{#if calendar.viewMode === 'day'}
 				<CalendarDayView cells={calendar.calendarData} {config} />
 			{:else if calendar.viewMode === 'week'}

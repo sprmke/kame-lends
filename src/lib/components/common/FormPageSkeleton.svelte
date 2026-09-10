@@ -15,7 +15,7 @@
 				{#each Array.from({ length: 6 }) as _, i (i)}
 					<div class="space-y-1.5">
 						<Skeleton class="h-3 w-24" />
-						<Skeleton class="h-9 w-full rounded-md" />
+						<Skeleton class="h-11 w-full rounded-2xl" />
 					</div>
 				{/each}
 			</div>

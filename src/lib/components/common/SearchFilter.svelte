@@ -19,13 +19,13 @@
 		{placeholder}
 		{value}
 		oninput={(e) => onChange(e.currentTarget.value)}
-		class="h-11 rounded-xl border-border/50 bg-muted/40 pr-11 pl-10 shadow-none focus-visible:bg-background"
+		class="h-11 pr-11 pl-10 text-[16px]"
 	/>
 	{#if value}
 		<button
 			type="button"
 			onclick={() => onChange('')}
-			class="touch-target absolute top-1/2 right-1 flex -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+			class="touch-target absolute top-1/2 right-1 flex -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
 			aria-label="Clear search"
 		>
 			<X class="h-4 w-4" />

@@ -15,7 +15,7 @@
 	let {
 		items,
 		itemsPerPage: initialItemsPerPage = 10,
-		itemsPerPageOptions = [10, 15, 20, 50],
+		itemsPerPageOptions = [9, 12, 15, 20, 50],
 		children,
 		itemName = 'items',
 		class: className = '',
@@ -57,7 +57,7 @@
 		{@render children(paginatedItems)}
 
 		{#if items.length > Math.min(...itemsPerPageOptions)}
-			<div class="mt-6">
+			<div class="mt-3 lg:mt-6">
 				<Pagination
 					{currentPage}
 					{totalPages}

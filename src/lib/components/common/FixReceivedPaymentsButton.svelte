@@ -66,7 +66,7 @@
 	{#if isRunning}
 		<Loader2 class="h-4 w-4 animate-spin" />
 	{:else if justDone}
-		<CheckCircle2 class="h-4 w-4 text-green-500" />
+		<CheckCircle2 class="h-4 w-4 text-chart-2" />
 	{:else}
 		<Wrench class="h-4 w-4" />
 	{/if}

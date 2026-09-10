@@ -89,7 +89,14 @@
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger>
 			{#snippet child({ props })}
-				<Button {...props} {variant} {size} class={className} disabled={isGenerating}>
+				<Button
+					{...props}
+					{variant}
+					{size}
+					class={className}
+					disabled={isGenerating}
+					aria-label="Export PDF"
+				>
 					{#if isGenerating}
 						<Loader2 class="h-4 w-4 animate-spin md:mr-2" />
 					{:else}
@@ -128,6 +135,7 @@
 		class={className}
 		onclick={() => handleExportClick('all')}
 		disabled={isGenerating}
+		aria-label="Export PDF"
 	>
 		{#if isGenerating}
 			<Loader2 class="h-4 w-4 animate-spin xl:mr-2" />
