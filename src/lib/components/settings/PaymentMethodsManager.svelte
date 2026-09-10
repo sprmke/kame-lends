@@ -13,9 +13,18 @@
 
 	interface Props {
 		initialMethods?: PaymentMethod[];
+		/** When set, admin manages payment methods for a linked party user. */
+		managedUserId?: string | null;
+		disabled?: boolean;
 	}
 
-	let { initialMethods = [] }: Props = $props();
+	let { initialMethods = [], managedUserId = null, disabled = false }: Props = $props();
+
+	const apiBase = $derived(
+		managedUserId
+			? `/api/party-users/${managedUserId}/payment-methods`
+			: '/api/payment-methods'
+	);
 
 	let methods = $state<PaymentMethod[]>([...initialMethods]);
 	let isFormOpen = $state(false);
@@ -81,7 +90,7 @@
 		isSubmitting = true;
 		try {
 			const isEdit = editingId != null;
-			const url = isEdit ? `/api/payment-methods/${editingId}` : '/api/payment-methods';
+			const url = isEdit ? `${apiBase}/${editingId}` : apiBase;
 			const response = await fetch(url, {
 				method: isEdit ? 'PUT' : 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -117,7 +126,7 @@
 		if (!deleteTarget) return;
 		isDeleting = true;
 		try {
-			const response = await fetch(`/api/payment-methods/${deleteTarget.id}`, {
+			const response = await fetch(`${apiBase}/${deleteTarget.id}`, {
 				method: 'DELETE'
 			});
 			if (!response.ok) {
@@ -138,15 +147,14 @@
 </script>
 
 <Card.Root>
-	<Card.Header class="flex flex-row items-center justify-between gap-2 space-y-0">
+	<Card.Header class="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
 		<Card.Title>Payment methods</Card.Title>
 		{#if !isFormOpen}
 			<Button
 				type="button"
 				variant="outline"
 				size="sm"
-				class="h-9"
-				disabled={methods.length >= MAX_PAYMENT_METHODS_PER_USER}
+				disabled={disabled || methods.length >= MAX_PAYMENT_METHODS_PER_USER}
 				onclick={openCreate}
 			>
 				<Plus class="mr-1 h-3.5 w-3.5" />
@@ -154,7 +162,7 @@
 			</Button>
 		{/if}
 	</Card.Header>
-	<Card.Content class="space-y-3 p-3 pt-0">
+	<Card.Content class="space-y-3">
 		{#if isFormOpen}
 			<form class="space-y-3 rounded-md border border-border p-3" onsubmit={handleSubmit}>
 				<div class="space-y-1.5">
@@ -192,14 +200,13 @@
 					idPrefix="pm-qr"
 				/>
 				<div class="flex flex-wrap gap-1.5">
-					<Button type="submit" size="sm" class="h-9" disabled={isSubmitting}>
+					<Button type="submit" size="sm" disabled={isSubmitting}>
 						{isSubmitting ? 'Saving...' : editingId != null ? 'Save' : 'Add'}
 					</Button>
 					<Button
 						type="button"
 						variant="ghost"
 						size="sm"
-						class="h-9"
 						disabled={isSubmitting}
 						onclick={resetForm}
 					>
@@ -209,7 +216,9 @@
 			</form>
 		{/if}
 
-		{#if visibleMethods.length === 0 && !isFormOpen}
+		{#if disabled && managedUserId == null}
+			<p class="text-muted-foreground text-sm">Add an email to manage payment methods.</p>
+		{:else if visibleMethods.length === 0 && !isFormOpen}
 			<p class="text-muted-foreground text-sm">No payment methods</p>
 		{:else if visibleMethods.length > 0}
 			<ul class="space-y-2">
@@ -231,9 +240,8 @@
 								type="button"
 								variant="ghost"
 								size="icon"
-								class="h-9 w-9"
 								aria-label="Edit payment method"
-								disabled={isFormOpen}
+								disabled={disabled || isFormOpen}
 								onclick={() => openEdit(method)}
 							>
 								<Pencil class="h-3.5 w-3.5" />
@@ -242,8 +250,8 @@
 								type="button"
 								variant="ghost"
 								size="icon"
-								class="h-9 w-9"
 								aria-label="Delete payment method"
+								disabled={disabled}
 								onclick={() => (deleteTarget = method)}
 							>
 								<Trash2 class="h-3.5 w-3.5" />

@@ -137,6 +137,8 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
 
     const invGet = await request.get(`/api/loans/${loan.id}`);
     expect(invGet.ok(), await invGet.text()).toBeTruthy();
+    const invSigning = await request.get(`/api/loans/${loan.id}/signing`);
+    expect(invSigning.ok(), await invSigning.text()).toBeTruthy();
     const invPut = await request.put(`/api/loans/${loan.id}`, {
       data: {
         loanData: {
@@ -158,6 +160,36 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
       },
     });
     expect(invPut.status(), await invPut.text()).toBe(403);
+
+    const invPay = await request.post(`/api/loans/${loan.id}/payments`, {
+      data: {
+        investorId: investor.id,
+        amount: 100,
+        interestType: "rate",
+        interestValue: 10,
+        sentDate: dueDate,
+      },
+    });
+    expect(invPay.status(), await invPay.text()).toBe(403);
+
+    const invCreate = await request.post("/api/loans", {
+      data: {
+        loanData: {
+          loanName: "party-should-not-create",
+          type: "Lot Title",
+          status: "Fully Funded",
+          dueDate,
+        },
+        investorData: [],
+      },
+    });
+    expect(invCreate.status(), await invCreate.text()).toBe(403);
+
+    const borrowedEmpty = await gotoApp(page, "/borrowed");
+    expect(borrowedEmpty?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: /borrowed/i })).toBeVisible({
+      timeout: 20_000,
+    });
 
     const invPage = await gotoApp(page, "/investments");
     expect(invPage?.status()).toBe(200);
