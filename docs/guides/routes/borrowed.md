@@ -5,9 +5,9 @@
 
 ## Behavior
 
-Lists loans where the signed-in user is the borrower (`borrowers.borrower_user_id` → `loans.borrower_id`).
+Lists loans where the signed-in user is the borrower (`borrowers.borrower_user_id` → `loans.borrower_id`). Phone chrome matches the shared native shell. `PageHeader` title sits in content below the brand bar. PageHeader actions render in MobileTopBar as frosted icon wells. View toggle stays in the list toolbar on phone. Calendar defaults to day view under `lg`. Phone calendar chrome is a compact day toolbar (title + Today/prev/next; no Day-only toggle). Week/month stay `lg+`. List pagination on phone is range + page-size, then prev / page of total / next (numbered pills `lg+`). Search, status/type filters, More Filters (amount ranges plus investor, borrower, and witness multi-selects), and table/list chrome match `/loans`.
 
-Read-only list and loan detail. Sign CTA when a borrower signature slot is open: `/loans/[id]/sign`.
+Read-only list and loan detail. On desktop, table rows and calendar event cards open `LoanDetailModal`; on phone, navigation goes to `/loans/[id]`. Row/card ⋯ menu matches `/loans` (including **Contract Details** → `LoanContractDetailsModal`). Sign CTA when a borrower signature slot is open: `/loans/[id]/sign`.
 
 Loan detail shows the loan owner’s **payment methods** (bank name, account number, QR) when the owner has configured them in Settings. Owners, investors, and witnesses do not see this section.
 
@@ -19,4 +19,4 @@ Loan modal refresh uses `GET /api/loans/[id]`, which includes `paymentMethods` o
 
 ## Permissions
 
-Requires session. No create/edit/delete/payment actions.
+Requires session. Always in the sidebar. Empty list if the user has no borrower linkage. No create/edit/delete/payment actions.

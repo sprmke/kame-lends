@@ -6,7 +6,7 @@
 ## Behavior
 
 - Shows contact info and witnessed loans (party role, signed date, type/status/due + Open).
-- Edit via header or `?edit=1`. On phone that opens `EditFormSheet` over the detail. Desktop stays inline `WitnessForm`.
+- Edit via header or `?edit=1` (workspace admin only). Uses shared `PartyUserEditForm` (same as borrowers/investors). On phone that opens `EditFormSheet` over the detail.
 - Delete requires zero signing invitations.
 - Desktop list quick-view uses the same content inside `WitnessDetailModal`, including in-modal edit.
 
@@ -14,7 +14,7 @@ Witnessed loans come from `loan_signing_invitations` where `witness_id` matches.
 
 ## Permissions
 
-Owner-scoped (`witnesses.user_id` = session user). Non-owners get 404.
+Owner or linked witness (`witness_user_id`). Workspace owner can edit. Linked party is read-only. Others get 404.
 
 ## Load
 

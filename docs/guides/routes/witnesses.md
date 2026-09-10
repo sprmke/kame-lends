@@ -5,7 +5,7 @@
 
 ## Behavior
 
-- Admin workspace only (`isAdminWorkspace` in nav). Lists witness contacts owned by the signed-in user.
+- Lists witness contacts the user owns or is linked to (`witness_user_id`). `PageHeader` subtitle: "Contract witnesses for your loans" (visible at all breakpoints).
 - Search by name, email, or contact number. Inline filters: loan activity (All / With loans / No loans) and signing status (All / Signed / Pending). Table or card view. Card view footer: **Open** plus a **⋯** menu (Edit, Delete; same as table row actions). Toolbar uses shared `ListPageToolbar` (search full width on phone; filters and view toggle on the row below; view toggle hidden when the list is empty).
 - Empty card view: shared `ListEmptyState` (message only, or **Clear filters** when filters hide all rows). **Add Witness** stays in the page header.
 - **Phone (`<lg`):** row/card opens `/witnesses/[id]`. Add Witness and row edit open a bottom sheet (`WitnessCreateModal` / `WitnessDetailModal` in edit mode), not `/witnesses/new`. Detail-page edit also uses a sheet (`EditFormSheet`).
@@ -14,10 +14,10 @@
 
 ## Permissions
 
-| Role                                | Access                                        |
-| ----------------------------------- | --------------------------------------------- |
-| Admin workspace owner               | Full list/create/edit/delete                  |
-| Investor / borrower / witness party | Nav item hidden; API scoped to owner `userId` |
+| Role                                | Access                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| Admin workspace owner               | Full list/create/edit/delete                                                         |
+| Investor / borrower / witness party | Nav hidden. `/witnesses` redirects to `/dashboard`. Use Witnessed for loan activity. |
 
 ## Load
 

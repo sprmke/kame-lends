@@ -1,20 +1,34 @@
 # Loans list (`/loans`)
 
 **Status:** Documented (mobile shell notes)  
-**Updated:** 2026-09-09
+**Updated:** 2026-09-11
 
 ## Behavior
 
-- Lists loans with search, filters, cards/table/calendar view modes.
-- **Phone (`<lg`):** card/row open navigates to `/loans/[id]` via `isMobileShellViewport()`. New loan goes to `/loans/new` on phone (modal on desktop). Create / quick-pay / export / detail quick-view use bottom sheets via `ResponsiveModal` (presentation locked while open; sheet under `lg`). Modal create forms use `FormHeader variant="embedded"`. List page titles come from `MobileTopBar` (PageHeader title hidden under `lg`). Calendar defaults to day view under `lg`.
-- **Desktop (`lg+`):** row quick-view may open `LoanDetailModal`; sidebar nav remains.
-- Primary destinations live in the bottom tab bar; Settings is under More.
+- Lists loans with search, filters, cards/table/calendar view modes. Card view footer: **Open** plus a **⋯** menu (same row actions as the table). Canonical loan ⋯ menu (`createLoanActionItems`): Edit, Duplicate | Fund Transfer, Add Received Payment, **Contract Details** | Delete. **Contract Details** opens `LoanContractDetailsModal` (signing status, copy links, contract setup tabs, save + download; owners only for edit).
+- **Date range filter** (`from` / `to` URL params, `YYYY-MM-DD`, or `?range=all` for all-time): filters loans by **due date** (inclusive). Presets: week, month, year, all-time, custom. **Default:** current calendar month — `+page.server.ts` redirects to `?from=` / `?to=` when missing; list + summary cards filter immediately from URL or picker state. All-time clears `from` / `to` and shows every loan; summary cards use full history. Prev/next navigates the active preset (not all-time or custom). Clear resets to the current month. Legacy `?dueDate=` (exact day from calendar links) still works alongside the range.
+- **Summary cards** (below header when the list has data): Principal and Interest Estimate (open loans only), Interest Earned (completed loans only), and Completed (`completed / total` loan count) for the selected date range only (ignores search/status/type filters). **Principal** is peak concurrent deployed capital: the most paid principal out at once during the range. Each loan uses earliest paid `sentDate` as start; open loans end at `dueDate`, completed loans end at `updatedAt`. Sequential non-overlapping loans count once (reused capital). Overlapping periods add together. Unpaid disbursements are excluded.
+- **Phone (`<lg`):** card/row open navigates to `/loans/[id]` via `isMobileShellViewport()`. New loan and row edit open a bottom sheet (`LoanCreateModal` / `LoanDetailModal` in edit mode), not `/loans/new`. Create / quick-pay / export / detail quick-view use `ResponsiveModal` (presentation locked while open; sheet under `lg`). Sheet form title stays in the header; Cancel / submit sit in the scrolling form (`FormActions`, primary on top). `PageHeader` title sits in content below the brand bar. PageHeader actions (export, new loan) render in MobileTopBar as frosted icon wells. Search + filters share one row (`.mobile-list-toolbar`). View toggle stays in the toolbar on phone. Calendar view defaults to day view under `lg`. Phone calendar chrome is a compact day toolbar (title + Today/prev/next; no Day-only toggle). Week/month stay `lg+`. List pagination (`Pagination` / `CardPagination`) is a compact footer: range + page-size on one row, prev / current of total / next on the next. Page number pills stay `lg+`.
+- **Desktop (`xl+`):** status and type filters show inline in `ListPageToolbar`; **More Filters** opens a panel for principal, rate, interest, and total amount ranges, plus searchable multi-selects for investors, borrowers, and witnesses. The witnesses filter is always visible; options come from saved witnesses and from witnesses assigned on loaded loans. Borrowers and witnesses include an **Unassigned** option for loans missing a linked borrower or witness contact. Active advanced filters show a dot on the More Filters button.
+- **Below `xl`:** status/type move into the More Filters panel; the toolbar keeps search, view toggle, and the More Filters control.
+- **Desktop (`lg+`):** floating sidebar; row click and calendar event cards open `LoanDetailModal` (same `handleQuickView` path as the table). Search, filters, and the loans table sit on white card surfaces (`bg-card` / `.surface-card`) matching dashboard cards. Week/month calendar grids are fluid (seven equal columns, no horizontal scroll); event cards and daily totals truncate on narrow desktop widths beside the sidebar. Calendar and row-action dropdowns use the shared menu primitive (`min-w` 15rem, `min-h-11` items, labels do not wrap). `ResponsiveModal` (`responsive-modal-shell`) keeps a fixed header and footer; only the body scrolls. Quick-view: title left (`text-base font-medium`), `DetailModalHeader` actions top-right. Create / edit loan: `FormHeader` (`variant="embedded"`) in the fixed header with Cancel / submit wired via `form` attribute; form fields scroll below. Shell padding is `0` (header uses `px-5 md:px-6` / `pt-6 pb-4`, body uses `px-5 py-4 md:px-6 md:py-5`). Create Loan modal is `max-w-4xl` with no extra close X; Cancel / submit live only in the fixed header (no duplicate footer actions in the scroll body). Nested form card titles use the default `text-base font-medium`. Inputs and selects are `h-11` / `rounded-2xl` with `bg-card`. Subtitle is `Manage all your loans`. Visual layout is asserted by `e2e/visual-parity.spec.ts`.
+- **Admin:** sees workspace-owned loans. New Loan and row edit/delete only when `isAdminWorkspace`.
+- **Party users:** same page, usually empty. No create/edit/delete.
 
 ## Implementation
 
-| Concern        | Path                                                      |
-| -------------- | --------------------------------------------------------- |
-| Page           | `src/routes/loans/+page.svelte`                           |
-| Table          | `src/lib/components/loans/LoansTable.svelte`              |
-| Create overlay | `src/lib/components/loans/LoanCreateModal.svelte`         |
-| Shell          | `src/lib/components/Nav.svelte`, `src/lib/nav/app-nav.ts` |
+| Concern             | Path                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| Date range          | `src/lib/components/common/DateRangeFilter.svelte`                                                     |
+| Summary cards       | `src/lib/components/loans/LoanListSummaryCards.svelte`                                                 |
+| Date filter         | `src/lib/loan-list-summary.ts`, `src/lib/date/navigation.ts`, `src/lib/loan-list-date-range-server.ts` |
+| List toolbar        | `src/lib/components/common/ListPageToolbar.svelte`                                                     |
+| More filters        | `src/lib/components/common/LoanListMoreFiltersPanel.svelte`                                            |
+| Amount filters      | `src/lib/loan-list-page-filters.ts`                                                                    |
+| Participant filters | `src/lib/composables/use-loan-list-participant-filters.svelte.ts`                                      |
+| Filter options      | `src/lib/list-filters.ts`                                                                              |
+| Page                | `src/routes/loans/+page.svelte`                                                                        |
+| Table               | `src/lib/components/loans/LoansTable.svelte`                                                           |
+| Card                | `src/lib/components/loans/LoanCard.svelte`                                                             |
+| Create overlay      | `src/lib/components/loans/LoanCreateModal.svelte`                                                      |
+| Shell               | `src/lib/components/Nav.svelte`, `src/lib/nav/app-nav.ts`                                              |
