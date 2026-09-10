@@ -5,13 +5,21 @@
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+e2e/.auth/
 
-# next.js
+# next.js leftovers (build artifacts from pre-cutover checkouts)
 /.next/
 /out/
+next-env.d.ts
+_legacy-next-*/
 
 # production
 /build
@@ -19,6 +27,9 @@
 # misc
 .DS_Store
 *.pem
+.fallow/
+.tmp-mobile-review/
+.impeccable/
 
 # debug
 npm-debug.log*
@@ -30,17 +41,17 @@ yarn-error.log*
 .env.development
 .env.production
 .env
+.env*.bak*
 
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
-# drizzle
+# drizzle kit output
 drizzle/
 
 # sveltekit
 .svelte-kit
-
+.neon

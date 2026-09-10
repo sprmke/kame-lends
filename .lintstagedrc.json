@@ -1,4 +1,4 @@
 {
-	"*.{js,ts,svelte,css,md,json,mdc}": ["prettier --write"],
-	"src/**/*.{js,ts,svelte}": ["eslint --fix --max-warnings 150"]
+  "*.{js,ts,svelte,css,md,json,mdc}": ["prettier --write"],
+  "src/**/*.{js,ts,svelte}": ["eslint --fix --max-warnings 150"]
 }

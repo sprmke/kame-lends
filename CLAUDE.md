@@ -49,13 +49,11 @@ Before claiming any material task done:
 
 1. Follow **`documentation-maintenance`** skill.
 2. Route/page changes → **`route-guides`** skill.
-3. Update migration checkboxes in **`docs/workflow/in-progress/sveltekit-migration.md`**.
 
-| Change                 | Update                                             |
-| ---------------------- | -------------------------------------------------- |
-| Architecture, API, env | `docs/PROJECT.md`                                  |
-| Page UX in `new-app/`  | `docs/guides/routes/*.md`                          |
-| Migration progress     | `docs/workflow/in-progress/sveltekit-migration.md` |
+| Change                 | Update                    |
+| ---------------------- | ------------------------- |
+| Architecture, API, env | `docs/PROJECT.md`         |
+| Page UX in `src/`      | `docs/guides/routes/*.md` |
 
 ## AI session hygiene
 

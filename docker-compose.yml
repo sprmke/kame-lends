@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:17-alpine
     ports:
-      - '5433:5432'
+      - "5433:5432"
     environment:
       POSTGRES_USER: kame_lends
       POSTGRES_PASSWORD: kame_lends
@@ -10,7 +10,7 @@ services:
     volumes:
       - kame_lends_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U kame_lends -d kame_lends']
+      test: ["CMD-SHELL", "pg_isready -U kame_lends -d kame_lends"]
       interval: 5s
       timeout: 5s
       retries: 5
