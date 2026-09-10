@@ -18,12 +18,12 @@ bun run backup:neon:branches
 
 Or in [Neon Console](https://console.neon.tech): create branches from production:
 
-| Branch                           | Purpose                                      |
-| -------------------------------- | -------------------------------------------- |
-| `pre-sveltekit-migration-backup` | Point-in-time restore                        |
-| `dev-sveltekit-migration`        | SvelteKit QA (`new-app/.env` `DATABASE_URL`) |
+| Branch                           | Purpose                                    |
+| -------------------------------- | ------------------------------------------ |
+| `pre-sveltekit-migration-backup` | Point-in-time restore                      |
+| `dev-sveltekit-migration`        | SvelteKit QA (`.env.local` `DATABASE_URL`) |
 
-**Do not** point `new-app` at the production connection string during development.
+**Do not** point `.env.local` at the production connection string during development.
 
 ## 3. Vercel settings snapshot
 

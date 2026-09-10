@@ -5,10 +5,10 @@ Captured at migration start on branch `feat/sveltekit-migration`.
 ## Project
 
 - **App:** PawnTracker / kame-lends
-- **Framework (current):** Next.js 15 App Router
-- **Production URL:** `https://pawn-tracker.vercel.app` (from `env.example` `NEXT_PUBLIC_APP_URL`)
+- **Framework (at snapshot):** Next.js 15 App Router (since replaced by SvelteKit at repo root)
+- **Production URL:** `https://pawn-tracker.vercel.app` (public URL now `PUBLIC_APP_URL` in `.env.example`)
 
-## Build (current Next.js)
+## Build (Next.js at snapshot)
 
 | Setting | Value                          |
 | ------- | ------------------------------ |

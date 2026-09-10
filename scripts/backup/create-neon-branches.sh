@@ -18,7 +18,7 @@ if ! command -v neonctl >/dev/null 2>&1; then
   else
     warn "neonctl not found. Create branches manually in Neon Console:"
     warn "  1. Branch from prod: $BACKUP_BRANCH (restore point)"
-    warn "  2. Branch from prod: $DEV_BRANCH (QA for SvelteKit; use its DATABASE_URL in new-app/.env)"
+    warn "  2. Branch from prod: $DEV_BRANCH (QA for SvelteKit; use its DATABASE_URL in .env.local)"
     exit 0
   fi
 else
@@ -31,4 +31,4 @@ $NEON branches create --name "$BACKUP_BRANCH" || warn "Branch may already exist:
 info "Creating QA dev branch: $DEV_BRANCH"
 $NEON branches create --name "$DEV_BRANCH" || warn "Branch may already exist: $DEV_BRANCH"
 
-ok "Done. Copy the connection string for '$DEV_BRANCH' into new-app/.env (never prod during migration)."
+ok "Done. Copy the connection string for '$DEV_BRANCH' into .env.local (never prod during migration)."
