@@ -27,13 +27,13 @@
 
 {#snippet listContent()}
 	{#if displayLoans.length === 0}
-		<p class="py-4 text-center text-sm text-muted-foreground">No overdue loans</p>
+		<p class="py-2 text-center text-sm text-muted-foreground">No overdue loans</p>
 	{:else}
-		<div class="max-h-64 space-y-2 overflow-y-auto pr-1">
-			{#each displayLoans.slice(0, 5) as loan (loan.id)}
+		<div class="dashboard-activity-list">
+			{#each displayLoans as loan (loan.id)}
 				<a href="/loans/{loan.id}" class="dashboard-activity-item">
 					<div class="flex items-start justify-between gap-2">
-						<p class="truncate text-sm font-semibold">{formatText(loan.loanName)}</p>
+						<p class="truncate text-sm font-medium">{formatText(loan.loanName)}</p>
 						<Badge
 							variant={getLoanTypeBadge(loan.type).variant}
 							class={cn('shrink-0 text-[10px]', getLoanTypeBadge(loan.type).className)}
@@ -43,7 +43,7 @@
 					</div>
 					<div class="flex items-center justify-between text-xs text-muted-foreground">
 						<span>Due {formatDateShort(loan.dueDate)}</span>
-						<span class="font-semibold text-destructive">
+						<span class="font-medium text-destructive tabular-nums">
 							{formatCurrency(calculateOverdueAmount(loan.loanInvestors))}
 						</span>
 					</div>
@@ -59,7 +59,6 @@
 	icon={TriangleAlert}
 	accentClassName="bg-destructive/12"
 	iconClassName="text-destructive"
-	stripeClassName="bg-destructive"
 	onViewAllClick={() => (window.location.href = '/loans?view=table&status=Overdue')}
 >
 	{@render listContent()}

@@ -27,7 +27,7 @@
 </script>
 
 <div
-	class={cn('grid gap-2.5 md:grid-cols-2 2xl:grid-cols-4', !hasAnyActivity && 'hidden 2xl:grid')}
+	class={cn('grid gap-2.5 md:grid-cols-2 md:gap-5 2xl:grid-cols-4', !hasAnyActivity && 'hidden 2xl:grid')}
 >
 	<ActivityCardSlot visibleBelowLarge={hasUpcomingPayouts}>
 		<MaturingLoansCard loans={upcomingPaymentsDue} />

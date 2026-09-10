@@ -1,11 +1,14 @@
 <script lang="ts">
-	import { LineChart, Tooltip } from 'layerchart';
-	import { curveMonotoneX } from 'd3-shape';
+	import type { ApexOptions } from 'apexcharts';
+	import type ApexCharts from 'apexcharts';
 	import { Button } from '$lib/components/ui/button';
 	import ChartShell from './ChartShell.svelte';
-	import { CHART_HEIGHT, CHART_PALETTE, CHART_TOOLTIP_ROOT, chartEnterMotion } from './chart-theme';
+	import ApexChart from './ApexChart.svelte';
+	import { CHART_HEIGHT, chartPalette, tooltipCard } from './chart-theme';
 	import { formatChartAxis, formatCurrency } from '$lib/format';
+	import { cn } from '$lib/utils';
 	import { TrendingUp } from 'lucide-svelte';
+	import { mode } from 'mode-watcher';
 	import type { CashflowDataPoint } from '$lib/server/dashboard-data';
 
 	type TimePeriod = 'day' | 'week' | 'month';
@@ -27,12 +30,18 @@
 	}: Props = $props();
 
 	let period = $state<TimePeriod>('week');
+	let chart = $state<ApexCharts | null>(null);
+	let hidden = $state(new Set<string>());
 
-	const series = [
-		{ key: 'inflow', label: 'Inflow', color: CHART_PALETTE.teal },
-		{ key: 'outflow', label: 'Outflow', color: CHART_PALETTE.coral },
-		{ key: 'net', label: 'Net', color: CHART_PALETTE.primary }
-	];
+	const seriesMeta = $derived.by(() => {
+		void mode.current;
+		const palette = chartPalette();
+		return [
+			{ key: 'inflow' as const, label: 'Inflow', color: palette.teal, dash: 0 },
+			{ key: 'outflow' as const, label: 'Outflow', color: palette.coral, dash: 0 },
+			{ key: 'net' as const, label: 'Net', color: palette.primary, dash: 6 }
+		];
+	});
 
 	const data = $derived(
 		period === 'day' ? dailyData : period === 'week' ? weeklyData : monthlyData
@@ -48,17 +57,108 @@
 		month: 'Month'
 	};
 
-	const enterMotion = chartEnterMotion();
+	const series = $derived(
+		seriesMeta.map((item) => ({
+			name: item.label,
+			type: item.key === 'net' ? 'line' : 'area',
+			data: data.map((row) => row[item.key])
+		}))
+	);
+
+	const options = $derived<ApexOptions>({
+		colors: seriesMeta.map((item) => item.color),
+		stroke: {
+			curve: 'smooth',
+			width: [2.5, 2.5, 3],
+			dashArray: seriesMeta.map((item) => item.dash)
+		},
+		fill: {
+			type: ['gradient', 'gradient', 'solid'],
+			gradient: {
+				shadeIntensity: 0.15,
+				opacityFrom: 0.28,
+				opacityTo: 0.02,
+				stops: [0, 90, 100]
+			}
+		},
+		markers: {
+			size: 0,
+			strokeWidth: 2,
+			strokeColors: 'var(--card)',
+			hover: { size: 5 }
+		},
+		grid: {
+			borderColor: 'var(--border)',
+			strokeDashArray: 4,
+			xaxis: { lines: { show: false } },
+			yaxis: { lines: { show: true } },
+			padding: { top: 12, right: 8, left: 4, bottom: 0 }
+		},
+		xaxis: {
+			categories: data.map((row) => row.label),
+			tickAmount: Math.min(6, Math.max(2, data.length - 1)),
+			labels: {
+				style: { colors: 'var(--muted-foreground)', fontSize: '11px' },
+				hideOverlappingLabels: true
+			}
+		},
+		yaxis: {
+			labels: {
+				formatter: (value) => formatChartAxis(value),
+				style: { colors: 'var(--muted-foreground)', fontSize: '11px' }
+			}
+		},
+		tooltip: {
+			shared: true,
+			intersect: false,
+			custom({ dataPointIndex }) {
+				const row = data[dataPointIndex];
+				if (!row) return '';
+				return tooltipCard(
+					row.label,
+					seriesMeta.map((item) => ({
+						label: item.label,
+						value: formatCurrency(row[item.key]),
+						color: item.color
+					}))
+				);
+			}
+		}
+	});
+
+	function toggleSeries(name: string) {
+		if (!chart) return;
+		if (hidden.has(name)) {
+			void chart.showSeries(name);
+			hidden.delete(name);
+		} else {
+			void chart.hideSeries(name);
+			hidden.add(name);
+		}
+		hidden = new Set(hidden);
+	}
 </script>
 
 {#snippet headerActions()}
 	<div class="flex flex-wrap items-center justify-end gap-3">
-		<div class="hidden items-center gap-3 sm:flex">
-			{#each series as s (s.key)}
-				<div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-					<span class="size-2 rounded-full" style="background: {s.color}"></span>
-					{s.label}
-				</div>
+		<div class="hidden items-center gap-1 sm:flex">
+			{#each seriesMeta as item (item.key)}
+				<button
+					type="button"
+					class={cn(
+						'flex min-h-11 items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-opacity duration-200',
+						hidden.has(item.label) && 'opacity-40'
+					)}
+					onclick={() => toggleSeries(item.label)}
+				>
+					<span
+						class="size-2 rounded-full"
+						style="background: {item.color}; {item.dash
+							? 'box-shadow: inset 0 0 0 1px color-mix(in oklab, white 35%, transparent)'
+							: ''}"
+					></span>
+					{item.label}
+				</button>
 			{/each}
 		</div>
 		<div class="pill-segment self-start">
@@ -66,7 +166,10 @@
 				<Button
 					variant={period === p ? 'secondary' : 'ghost'}
 					size="sm"
-					class="h-8 rounded-xl px-3.5 text-xs font-semibold"
+					class={cn(
+						'h-8 rounded-xl px-3.5 text-xs font-medium',
+						period === p && 'bg-muted text-foreground shadow-none'
+					)}
 					onclick={() => (period = p as TimePeriod)}
 				>
 					{periodLabels[p as TimePeriod]}
@@ -83,61 +186,14 @@
 			<p class="text-sm">{emptyMessage}</p>
 		</div>
 	{:else}
-		<div class="chart-canvas" style="height: {CHART_HEIGHT}px">
-			<LineChart
-				{data}
-				x="label"
-				{series}
-				legend={false}
-				axis
-				grid
-				rule={false}
-				highlight={{ lines: true, points: true }}
-				props={{
-					spline: {
-						curve: curveMonotoneX,
-						strokeWidth: 2.5,
-						motion: enterMotion
-					},
-					grid: {
-						stroke: 'var(--border)',
-						opacity: 0.7
-					},
-					yAxis: {
-						format: formatChartAxis,
-						tickMarks: false
-					},
-					xAxis: {
-						tickMarks: false,
-						tickOcclusion: { padding: 12, priority: 'start-end' },
-						tickLabelProps: {
-							class: 'text-[11px] fill-muted-foreground'
-						}
-					},
-					highlight: {
-						motion: { type: 'tween', duration: 150 }
-					},
-					tooltip: { root: CHART_TOOLTIP_ROOT }
-				}}
-			>
-				{#snippet tooltip()}
-					<Tooltip.Root {...CHART_TOOLTIP_ROOT}>
-						{#snippet children({ data: row }: { data: CashflowDataPoint })}
-							<p class="chart-tooltip-title">{row.label}</p>
-							<Tooltip.List>
-								{#each series as s (s.key)}
-									<Tooltip.Item
-										label={s.label}
-										value={formatCurrency(row[s.key as keyof CashflowDataPoint] as number)}
-										color={s.color}
-										valueAlign="right"
-									/>
-								{/each}
-							</Tooltip.List>
-						{/snippet}
-					</Tooltip.Root>
-				{/snippet}
-			</LineChart>
-		</div>
+		<ApexChart type="line" height={CHART_HEIGHT} {series} {options} bind:chart />
+		<ul class="sr-only">
+			{#each data as row (row.label)}
+				<li>
+					{row.label}: inflow {formatCurrency(row.inflow)}, outflow {formatCurrency(row.outflow)},
+					net {formatCurrency(row.net)}
+				</li>
+			{/each}
+		</ul>
 	{/if}
 </ChartShell>

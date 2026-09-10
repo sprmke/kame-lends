@@ -1,51 +1,43 @@
 /**
- * Dashboard-only visual system. Applied via `dashboard-shell` on <html> when authenticated.
- * Public landing, sign-in, and contract signing pages are unaffected.
+ * Dashboard visual system. Applied via `dashboard-shell` on <html> when authenticated.
+ * Desktop (lg+) matches the legacy Next.js PawnTracker chrome: 1rem radius, elevated
+ * rounded cards, generous page padding. Phone (<lg) only tightens padding for the
+ * native tab/top bars. Public routes never get `dashboard-shell`.
  */
-html.dashboard-shell {
-  --radius: 0.5rem;
-  --shadow-elevated: 0 1px 2px oklch(0.18 0.02 55 / 0.05);
-  --shadow-elevated-lg:
-    0 1px 3px oklch(0.18 0.02 55 / 0.08),
-    0 4px 16px -4px oklch(0.18 0.02 55 / 0.1);
-  --shadow-soft: 0 2px 8px -2px oklch(0.67 0.17 52 / 0.12);
-
-  --background: oklch(0.985 0.003 75);
-  --border: oklch(0.9 0.006 70);
-}
-
-html.dashboard-shell.dark {
-  --background: oklch(0.15 0.014 55);
-  --border: oklch(0.3 0.018 55);
-}
 
 @layer utilities {
   html.dashboard-shell .dashboard-page {
-    @apply container mx-auto space-y-4 p-3;
+    @apply mx-auto max-w-[1680px] space-y-6 p-4;
   }
 
-  @media (width >= theme(--breakpoint-md)) {
+  @media (width >= theme(--breakpoint-sm)) {
     html.dashboard-shell .dashboard-page {
-      @apply space-y-5 p-4;
+      @apply p-6;
     }
   }
 
   @media (width >= theme(--breakpoint-lg)) {
     html.dashboard-shell .dashboard-page {
-      @apply p-5;
+      @apply space-y-8 p-8;
+    }
+  }
+
+  @media (width >= theme(--breakpoint-xl)) {
+    html.dashboard-shell .dashboard-page {
+      @apply p-10;
     }
   }
 
   html.dashboard-shell .dashboard-stack {
-    @apply space-y-4;
+    @apply space-y-6;
   }
 
   html.dashboard-shell .dashboard-form {
-    @apply mx-auto space-y-4;
+    @apply mx-auto w-full space-y-6;
   }
 
   html.dashboard-shell .dashboard-section {
-    @apply space-y-3;
+    @apply space-y-5;
   }
 
   html.dashboard-shell .dashboard-section-header {
@@ -53,137 +45,165 @@ html.dashboard-shell.dark {
   }
 
   html.dashboard-shell .dashboard-section-title {
-    @apply text-base font-semibold tracking-tight;
-  }
-
-  html.dashboard-shell .section-eyebrow {
-    @apply text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase;
-  }
-
-  html.dashboard-shell .surface-card {
-    @apply rounded-lg border border-border bg-card text-card-foreground shadow-none;
-  }
-
-  html.dashboard-shell .surface-card-interactive {
-    @apply rounded-lg border border-border bg-card text-card-foreground shadow-none transition-colors duration-150;
-  }
-
-  html.dashboard-shell .surface-card-interactive:hover {
-    @apply border-border bg-card;
-    box-shadow: var(--shadow-elevated);
-    transform: none;
-  }
-
-  html.dashboard-shell .surface-muted {
-    @apply rounded-md border border-border/60 bg-muted/50;
-  }
-
-  html.dashboard-shell .icon-well,
-  html.dashboard-shell .icon-well-sm,
-  html.dashboard-shell .icon-well-md,
-  html.dashboard-shell .icon-well-lg {
-    @apply rounded-md;
-  }
-
-  html.dashboard-shell .icon-well-sm {
-    @apply h-8 w-8;
-  }
-
-  html.dashboard-shell .icon-well-md {
-    @apply h-9 w-9;
-  }
-
-  html.dashboard-shell .pill-segment {
-    @apply rounded-md border border-border/60 bg-muted/60 p-0.5;
-  }
-
-  html.dashboard-shell .empty-state-well {
-    @apply rounded-md border border-dashed border-border/60 bg-muted/30 px-4 py-8 text-center;
-  }
-
-  html.dashboard-shell .dashboard-empty {
-    @apply flex flex-col items-center justify-center py-8;
+    @apply text-base font-medium tracking-tight;
   }
 
   html.dashboard-shell .dashboard-metric-cell {
-    @apply min-w-0 rounded-md bg-muted/70 p-2.5;
+    @apply min-w-0 rounded-2xl bg-muted/70 p-3.5;
   }
 
   html.dashboard-shell .dashboard-filter-panel {
-    @apply space-y-2.5 rounded-md border border-border/60 bg-muted/30 p-3;
+    @apply space-y-3 rounded-3xl border border-border/50 bg-card p-4;
+    box-shadow: var(--shadow-elevated);
   }
 
-  html.dashboard-shell .nav-item-active {
-    background: oklch(0.67 0.17 52);
-    color: oklch(0.99 0 0);
-    box-shadow: none;
+  html.dashboard-shell .dashboard-empty {
+    @apply flex flex-col items-center justify-center py-10;
   }
 
-  html.dashboard-shell .nav-item-active-icon {
-    background: oklch(1 0 0 / 0.18);
+  html.dashboard-shell .dashboard-activity-list {
+    @apply max-h-72 space-y-2.5 overflow-y-auto pr-1;
   }
 
   html.dashboard-shell .dashboard-activity-item {
-    @apply flex flex-col gap-1.5 rounded-md border border-border/60 bg-muted/30 p-2.5 transition-colors hover:border-primary/25 hover:bg-background;
-  }
-
-  html.dashboard-shell .dashboard-panel-stripe {
-    @apply absolute inset-x-0 top-0 h-0.5 rounded-t-lg;
-  }
-
-  /* shadcn card density */
-  html.dashboard-shell [data-slot="card"] {
-    --card-spacing: 0.75rem;
-  }
-
-  html.dashboard-shell [data-slot="card-header"] {
-    @apply gap-0.5;
-  }
-
-  html.dashboard-shell [data-slot="card-title"] {
-    @apply text-sm font-medium;
-  }
-
-  /* tables */
-  html.dashboard-shell [data-slot="table-head"] {
-    @apply h-8 px-2 text-xs font-medium text-muted-foreground;
-  }
-
-  html.dashboard-shell [data-slot="table-cell"] {
-    @apply px-2 py-1.5 text-sm;
-  }
-
-  html.dashboard-shell [data-slot="table-container"] {
-    @apply rounded-md border border-border/60;
-  }
-
-  /* dialogs & sheets */
-  html.dashboard-shell [data-slot="dialog-content"] {
-    @apply gap-3 rounded-lg p-3 sm:max-w-lg;
-  }
-
-  html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-wide {
-    @apply sm:max-w-4xl;
+    @apply flex flex-col gap-1.5 rounded-2xl border border-border/40 bg-muted/30 px-3.5 py-3.5 transition-colors hover:border-primary/25 hover:bg-background;
   }
 
   html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-calendar {
     @apply gap-0 p-0 sm:max-w-2xl;
   }
 
-  html.dashboard-shell [data-slot="alert-dialog-content"] {
-    @apply gap-3 rounded-lg p-3;
+  /* ResponsiveModal owns header/body/footer padding — no outer shell padding */
+  html.dashboard-shell [data-slot="dialog-content"].responsive-modal-shell,
+  html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-wide {
+    gap: 0;
+    padding: 0;
+  }
+}
+
+html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-wide {
+  max-width: min(56rem, calc(100% - 2rem)) !important;
+}
+
+@media (width >= 1024px) {
+  html.dashboard-shell [data-slot="card"] {
+    --card-spacing: 1.5rem;
+    border-radius: var(--radius-3xl);
+    border-width: 1px;
+    border-color: color-mix(in oklch, var(--border) 50%, transparent);
+    box-shadow: var(--shadow-elevated);
+    --tw-ring-shadow: 0 0 #0000;
   }
 
-  /* tabs */
+  html.dashboard-shell [data-slot="card-title"] {
+    letter-spacing: -0.02em;
+  }
+
+  html.dashboard-shell [data-slot="dialog-content"] {
+    gap: 1rem;
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-elevated-lg);
+  }
+
+  html.dashboard-shell [data-slot="dialog-content"].responsive-modal-shell,
+  html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-wide,
+  html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-calendar {
+    gap: 0;
+    padding: 0;
+  }
+
+  html.dashboard-shell [data-slot="alert-dialog-content"] {
+    gap: 1rem;
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  html.dashboard-shell [data-slot="table-head"] {
+    height: 2.5rem;
+    padding-inline: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  html.dashboard-shell [data-slot="table-cell"] {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  html.dashboard-shell [data-slot="tabs-list"]:not([data-variant="line"]) {
+    box-shadow: var(--shadow-elevated);
+  }
+
   html.dashboard-shell [data-slot="tabs-list"] {
-    @apply h-8 rounded-md p-0.5;
+    height: 2.5rem;
+    border-radius: 1rem;
+    padding: 0.25rem;
   }
 
   html.dashboard-shell [data-slot="tabs-trigger"] {
-    @apply h-7 rounded-sm px-2.5 text-xs;
+    height: 2rem;
+    border-radius: 0.75rem;
+    padding-inline: 0.75rem;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  html.dashboard-shell .dashboard-page {
+    @apply space-y-3 overflow-x-clip p-3;
   }
 
-  html.dashboard-shell [data-slot="tabs-content"] {
-    @apply mt-3 space-y-4;
+  html.dashboard-shell .dashboard-stack,
+  html.dashboard-shell .dashboard-form {
+    @apply space-y-3;
+  }
+
+  html.dashboard-shell .dashboard-section {
+    @apply space-y-3;
+  }
+
+  html.dashboard-shell .dashboard-filter-panel {
+    @apply space-y-3 rounded-[1.35rem] p-3;
+  }
+
+  html.dashboard-shell .page-header-actions {
+    @apply ml-auto w-auto justify-end gap-1.5;
+  }
+
+  html.dashboard-shell [data-slot="dialog-content"],
+  html.dashboard-shell [data-slot="alert-dialog-content"] {
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  html.dashboard-shell [data-slot="dialog-content"].responsive-modal-shell,
+  html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-wide,
+  html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-calendar {
+    gap: 0;
+    padding: 0;
+  }
+
+  /* Pagination footer: compact page-size control (Select trigger is !w-full by default) */
+  html.dashboard-shell [data-slot="pagination"] .pagination-page-size-trigger {
+    height: 2.25rem;
+    min-height: 2.25rem;
+    width: 3.5rem;
+    min-width: 3.5rem;
+    max-width: 3.5rem;
+  }
+}
+
+/* Odd-last KPI: full width only while the grid is still 2 columns */
+@media (max-width: 767px) {
+  html.dashboard-shell .summary-2col-odd-last > :nth-child(odd):last-child,
+  html.dashboard-shell .summary-2col-odd-last-md > :nth-child(odd):last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  html.dashboard-shell .summary-2col-odd-last > :nth-child(odd):last-child {
+    grid-column: 1 / -1;
   }
 }

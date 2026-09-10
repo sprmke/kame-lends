@@ -27,17 +27,16 @@
 	icon={Send}
 	accentClassName="bg-primary/12"
 	iconClassName="text-primary"
-	stripeClassName="bg-primary"
 	onViewAllClick={() => (window.location.href = '/loans?view=table')}
 >
 	{#if displayItems.length === 0}
-		<p class="py-4 text-center text-sm text-muted-foreground">No pending disbursements</p>
+		<p class="py-2 text-center text-sm text-muted-foreground">No pending disbursements</p>
 	{:else}
-		<div class="max-h-64 space-y-2 overflow-y-auto pr-1">
-			{#each displayItems.slice(0, 5) as item (item.id)}
+		<div class="dashboard-activity-list">
+			{#each displayItems as item (item.id)}
 				<a href="/loans/{item.loanId}" class="dashboard-activity-item">
 					<div class="flex items-start justify-between gap-2">
-						<p class="truncate text-sm font-semibold">{formatText(item.loanName)}</p>
+						<p class="truncate text-sm font-medium">{formatText(item.loanName)}</p>
 						<Badge
 							variant={getLoanTypeBadge(item.loanType as LoanType).variant}
 							class={cn(
@@ -50,7 +49,7 @@
 					</div>
 					<div class="flex items-center justify-between text-xs text-muted-foreground">
 						<span>{formatText(item.investorName)}</span>
-						<span class="font-semibold">{formatCurrency(item.amount)}</span>
+						<span class="font-medium tabular-nums">{formatCurrency(item.amount)}</span>
 					</div>
 					<p class="text-[10px] text-muted-foreground">Sent {formatDateShort(item.sentDate)}</p>
 				</a>

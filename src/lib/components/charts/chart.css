@@ -1,42 +1,134 @@
 .chart-canvas {
-	--color-surface-100: var(--card);
-	--color-surface-200: var(--muted);
-	--color-surface-300: var(--muted);
-	--color-surface-content: var(--card-foreground);
+  min-width: 0;
+  width: 100%;
 }
 
-.chart-canvas svg text {
-	font-size: 11px;
+.chart-canvas .apexcharts-canvas,
+.chart-canvas .apexcharts-svg {
+  overflow: visible;
 }
 
-.chart-canvas svg .fill-foreground {
-	fill: var(--foreground);
+.chart-canvas .apexcharts-tooltip {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
-.chart-canvas svg .fill-muted-foreground {
-	fill: var(--muted-foreground);
+.chart-canvas .apexcharts-tooltip-title,
+.chart-canvas .apexcharts-xaxistooltip,
+.chart-canvas .apexcharts-yaxistooltip {
+  display: none !important;
+}
+
+.chart-canvas .apexcharts-gridline {
+  stroke-dasharray: 4;
+}
+
+.chart-canvas .apexcharts-yaxis-label,
+.chart-canvas .apexcharts-xaxis-label,
+.chart-canvas .apexcharts-legend-text,
+.chart-canvas .apexcharts-datalabel,
+.chart-canvas .apexcharts-pie-label,
+.chart-canvas .apexcharts-datalabels-group text {
+  font-family: Figtree, ui-sans-serif, system-ui, sans-serif !important;
 }
 
 .chart-tooltip {
-	border-radius: 0.75rem;
-	border: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
-	background: var(--popover);
-	color: var(--popover-foreground);
-	padding: 0.5rem 0.75rem;
-	box-shadow: var(--shadow-elevated);
-	font-size: 0.75rem;
-	line-height: 1.25rem;
+  min-width: 10.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  padding: 0.5rem 0.75rem;
+  box-shadow: var(--shadow-elevated);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
 }
 
 .chart-tooltip-title {
-	margin-bottom: 0.375rem;
-	font-weight: 600;
-	color: var(--popover-foreground);
+  margin-bottom: 0.375rem;
+  font-weight: 600;
+  color: var(--popover-foreground);
 }
 
-.lc-tooltip-root {
-	--color-surface-100: var(--card);
-	--color-surface-200: var(--muted);
-	--color-surface-300: var(--muted);
-	--color-surface-content: var(--card-foreground);
+.chart-tooltip-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-tooltip-swatch {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+}
+
+.chart-tooltip-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.chart-donut-svg {
+  transform: rotate(-90deg);
+  transform-origin: center;
+  overflow: visible;
+  animation: chart-donut-in 480ms ease-out both;
+}
+
+.chart-donut-arc {
+  pointer-events: stroke;
+  cursor: pointer;
+  transition: opacity 180ms ease;
+}
+
+.chart-donut-arc.is-dim {
+  opacity: 0.34;
+}
+
+@keyframes chart-donut-in {
+  from {
+    opacity: 0;
+    transform: rotate(-104deg) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-90deg) scale(1);
+  }
+}
+
+.chart-track-fill {
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--track) 68%, var(--card)) 0%,
+    var(--track) 100%
+  );
+  animation: chart-track-in 520ms ease-out both;
+}
+
+@keyframes chart-track-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-track-fill,
+  .chart-donut-svg {
+    animation: none;
+  }
+
+  .chart-donut-svg {
+    opacity: 1;
+    transform: rotate(-90deg);
+  }
+
+  .chart-donut-arc {
+    transition: none;
+  }
 }

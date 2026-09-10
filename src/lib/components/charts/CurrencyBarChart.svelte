@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { BarChart, Tooltip } from 'layerchart';
 	import ChartShell from './ChartShell.svelte';
-	import { CHART_HEIGHT, CHART_PALETTE, CHART_TOOLTIP_ROOT, chartEnterMotion } from './chart-theme';
+	import { barChartHeight, chartPalette } from './chart-theme';
 	import { formatChartAxis, formatCurrency } from '$lib/format';
+	import { cn } from '$lib/utils';
 	import { TrendingUp } from 'lucide-svelte';
+	import { mode } from 'mode-watcher';
 	import type { InvestorCapitalRow } from '$lib/server/dashboard-data';
 
 	interface DataKey {
-		key: string;
+		key: 'capital' | 'interest';
 		label: string;
 		color: string;
 	}
@@ -22,92 +23,110 @@
 	let {
 		data,
 		title = 'Top Investors by Capital',
-		dataKeys = [
-			{ key: 'capital', label: 'Capital', color: CHART_PALETTE.primary },
-			{ key: 'interest', label: 'Interest', color: CHART_PALETTE.teal }
-		],
+		dataKeys,
 		emptyMessage = 'No investors found'
 	}: Props = $props();
 
+	let hidden = $state(new Set<string>());
+	let hovered = $state<string | null>(null);
+
+	const palette = $derived.by(() => {
+		void mode.current;
+		return chartPalette();
+	});
+	const keys = $derived(
+		dataKeys ?? [
+			{ key: 'capital' as const, label: 'Capital', color: palette.primary },
+			{ key: 'interest' as const, label: 'Interest', color: palette.teal }
+		]
+	);
 	const isEmpty = $derived(!data || data.length === 0);
-	const enterMotion = chartEnterMotion();
+	const ranked = $derived(data ?? []);
+	const visibleKeys = $derived(keys.filter((item) => !hidden.has(item.label)));
+	const maxValue = $derived(
+		Math.max(
+			1,
+			...ranked.flatMap((row) => visibleKeys.map((item) => Number(row[item.key]) || 0))
+		)
+	);
+	const height = $derived(barChartHeight(ranked.length));
+
+	function toggleSeries(name: string) {
+		if (hidden.has(name)) hidden.delete(name);
+		else hidden.add(name);
+		hidden = new Set(hidden);
+	}
+
+	function widthPercent(value: number): number {
+		if (value <= 0) return 0;
+		return Math.max(1.25, Math.min(100, (value / maxValue) * 100));
+	}
 </script>
 
 {#snippet seriesLegend()}
-	<div class="flex flex-wrap items-center gap-3">
-		{#each dataKeys as dk (dk.key)}
-			<div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-				<span class="size-2 rounded-full" style="background: {dk.color}"></span>
-				{dk.label}
-			</div>
+	<div class="flex flex-wrap items-center gap-1">
+		{#each keys as item (item.key)}
+			<button
+				type="button"
+				class={cn(
+					'flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs text-muted-foreground transition-opacity duration-200',
+					hidden.has(item.label) && 'opacity-40'
+				)}
+				onclick={() => toggleSeries(item.label)}
+			>
+				<span class="size-2.5 rounded-full" style="background: {item.color}"></span>
+				{item.label}
+			</button>
 		{/each}
 	</div>
 {/snippet}
 
 <ChartShell {title} action={seriesLegend}>
 	{#if isEmpty}
-		<div class="empty-state-well h-[{CHART_HEIGHT}px] gap-2 text-muted-foreground">
+		<div class="empty-state-well gap-2 text-muted-foreground" style="height: {height}px">
 			<TrendingUp class="h-8 w-8 opacity-40" />
 			<p class="text-sm">{emptyMessage}</p>
 		</div>
 	{:else}
-		<div class="chart-canvas" style="height: {CHART_HEIGHT}px">
-			<BarChart
-				{data}
-				y="name"
-				orientation="horizontal"
-				series={dataKeys.map((dk) => ({ key: dk.key, label: dk.label, color: dk.color }))}
-				seriesLayout="group"
-				bandPadding={0.28}
-				groupPadding={0.2}
-				axis
-				grid
-				rule={false}
-				legend={false}
-				padding={{ left: 120, right: 16, top: 8, bottom: 28 }}
-				props={{
-					bars: {
-						strokeWidth: 0,
-						radius: 6,
-						rounded: 'edge',
-						motion: enterMotion
-					},
-					grid: {
-						stroke: 'var(--border)',
-						opacity: 0.7
-					},
-					xAxis: {
-						format: formatChartAxis,
-						tickMarks: false,
-						tickOcclusion: { padding: 10, priority: 'start-end' }
-					},
-					yAxis: {
-						tickMarks: false,
-						tickLabelProps: {
-							class: 'text-[11px] fill-muted-foreground'
-						}
-					},
-					tooltip: { root: CHART_TOOLTIP_ROOT }
-				}}
-			>
-				{#snippet tooltip()}
-					<Tooltip.Root {...CHART_TOOLTIP_ROOT}>
-						{#snippet children({ data: row }: { data: InvestorCapitalRow })}
-							<p class="chart-tooltip-title">{row.name}</p>
-							<Tooltip.List>
-								{#each dataKeys as dk (dk.key)}
-									<Tooltip.Item
-										label={dk.label}
-										value={formatCurrency(row[dk.key as keyof InvestorCapitalRow] as number)}
-										color={dk.color}
-										valueAlign="right"
-									/>
-								{/each}
-							</Tooltip.List>
-						{/snippet}
-					</Tooltip.Root>
-				{/snippet}
-			</BarChart>
-		</div>
+		<ul class="space-y-4">
+			{#each ranked as row, rowIndex (row.name)}
+				<li
+					class={cn(
+						'rounded-2xl transition-opacity duration-200',
+						hovered && hovered !== row.name && 'opacity-40'
+					)}
+					onpointerenter={() => (hovered = row.name)}
+					onpointerleave={() => (hovered = null)}
+				>
+					<p class="truncate text-sm font-medium" title={row.name}>{row.name}</p>
+					<div class="mt-2 space-y-1.5">
+						{#each visibleKeys as item, seriesIndex (item.key)}
+							{@const value = Number(row[item.key]) || 0}
+							<div class="flex items-center gap-2.5">
+								<div
+									class="h-3 min-w-0 flex-1 rounded-full bg-muted/45"
+									title="{item.label} {formatCurrency(value)}"
+								>
+									<div
+										class="chart-track-fill h-full rounded-full"
+										style="--track: {item.color}; width: {widthPercent(value)}%; animation-delay: {rowIndex *
+											70 +
+											seriesIndex * 40}ms"
+									></div>
+								</div>
+								<span class="w-19 shrink-0 text-right text-xs tabular-nums text-muted-foreground"
+									>{formatChartAxis(value)}</span
+								>
+							</div>
+						{/each}
+					</div>
+					<span class="sr-only">
+						{row.name}: capital {formatCurrency(row.capital)}, interest {formatCurrency(
+							row.interest
+						)}
+					</span>
+				</li>
+			{/each}
+		</ul>
 	{/if}
 </ChartShell>

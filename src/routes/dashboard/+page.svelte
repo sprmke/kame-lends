@@ -1,5 +1,6 @@
 <script lang="ts">
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
+	import DashboardQuickActionsMenu from '$lib/components/dashboard/DashboardQuickActionsMenu.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import SummaryCard from '$lib/components/common/SummaryCard.svelte';
 	import DashboardActivityCards from '$lib/components/common/DashboardActivityCards.svelte';
@@ -23,8 +24,6 @@
 	{#await data.summary}
 		<DashboardSummarySkeleton />
 	{:then summary}
-		{@const totalEarnings = summary.completedPrincipal + summary.completedInterestEarned}
-		{@const activePrincipal = summary.totalPrincipal - summary.completedPrincipal}
 		{@const hasAnyActivity =
 			summary.upcomingPaymentsDue.length > 0 ||
 			summary.overdueLoansData.length > 0 ||
@@ -36,39 +35,28 @@
 			description="Overview of your lending performance and upcoming activity."
 			eyebrow="Welcome back"
 			showPriceToggle={true}
-		/>
+		>
+			<DashboardQuickActionsMenu navCapabilities={data.navCapabilities} />
+		</PageHeader>
 
 		<SummaryCard
 			metrics={[
 				{
 					label: 'Total Principal',
-					amount: summary.totalPrincipal,
-					subCount: summary.totalLoans,
-					subCountSuffix: ' loans'
+					amount: summary.totalPrincipal
 				},
 				{
 					label: 'Active',
-					amount: activePrincipal,
-					subCount: summary.activeLoansCount,
-					subCountSuffix: ' loans'
+					amount: summary.activePrincipal
 				},
 				{
-					label: 'Completed',
-					amount: summary.completedPrincipal,
-					subCount: summary.completedLoansCount,
-					subCountSuffix: ' loans'
+					label: 'Interest Estimate',
+					amount: summary.interestEstimate
 				},
 				{
 					label: 'Interest Earned',
-					amount: summary.completedInterestEarned,
-					subValueTemplate: 'of {amount}',
-					subAmount: summary.totalInterestExpected,
-					valueClassName: 'text-emerald-600 dark:text-emerald-500'
-				},
-				{
-					label: 'Total Earnings',
-					amount: totalEarnings,
-					subValue: 'Completed + Interest Earned'
+					amount: summary.interestEarned,
+					valueClassName: 'text-chart-2'
 				}
 			]}
 		/>
@@ -96,7 +84,7 @@
 					<p class="section-eyebrow">Analytics</p>
 					<h2 class="dashboard-section-title">Trends & insights</h2>
 				</div>
-				<div class={cn('grid gap-3', SHOW_TRANSACTIONS_UI ? 'lg:grid-cols-2' : 'lg:grid-cols-1')}>
+				<div class={cn('grid gap-5', SHOW_TRANSACTIONS_UI ? 'lg:grid-cols-2' : 'lg:grid-cols-1')}>
 					{#if SHOW_TRANSACTIONS_UI}
 						<CashflowTrendChart
 							dailyData={charts.dailyData}
@@ -119,7 +107,7 @@
 					<p class="section-eyebrow">Portfolio</p>
 					<h2 class="dashboard-section-title">Distribution</h2>
 				</div>
-				<div class="grid gap-3 lg:grid-cols-2">
+				<div class="grid gap-5 lg:grid-cols-2">
 					<LoanTypePieChart
 						data={charts.loanTypeData}
 						title="Loan Type Distribution"

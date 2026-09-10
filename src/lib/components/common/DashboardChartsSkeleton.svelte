@@ -8,7 +8,7 @@
 
 {#snippet chartCard(showToggle: boolean)}
 	<Card.Root class="surface-card border-border/60">
-		<Card.Header class="flex flex-row items-center justify-between gap-3 space-y-0 px-3 pt-3 pb-0">
+		<Card.Header class="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
 			<Skeleton class="h-4 w-44" />
 			{#if showToggle}
 				<div class="pill-segment self-start">
@@ -18,7 +18,7 @@
 				</div>
 			{/if}
 		</Card.Header>
-		<Card.Content class="px-3 pt-1 pb-3">
+		<Card.Content>
 			<Skeleton class="w-full rounded-md" style="height: {CHART_HEIGHT}px" />
 		</Card.Content>
 	</Card.Root>
@@ -39,7 +39,7 @@
 >
 	<section class="dashboard-section">
 		{@render sectionHeading()}
-		<div class={cn('grid gap-3', SHOW_TRANSACTIONS_UI ? 'lg:grid-cols-2' : 'lg:grid-cols-1')}>
+		<div class={cn('grid gap-5', SHOW_TRANSACTIONS_UI ? 'lg:grid-cols-2' : 'lg:grid-cols-1')}>
 			{#if SHOW_TRANSACTIONS_UI}
 				{@render chartCard(true)}
 			{/if}
@@ -49,7 +49,7 @@
 
 	<section class="dashboard-section">
 		{@render sectionHeading()}
-		<div class="grid gap-3 lg:grid-cols-2">
+		<div class="grid gap-5 lg:grid-cols-2">
 			{@render chartCard(false)}
 			{@render chartCard(false)}
 		</div>

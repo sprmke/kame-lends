@@ -25,17 +25,16 @@
 	icon={CheckCircle2}
 	accentClassName="bg-chart-4/12"
 	iconClassName="text-chart-4"
-	stripeClassName="bg-chart-4"
 	onViewAllClick={() => (window.location.href = '/loans?view=table&status=Completed')}
 >
 	{#if displayLoans.length === 0}
-		<p class="py-4 text-center text-sm text-muted-foreground">No completed loans</p>
+		<p class="py-2 text-center text-sm text-muted-foreground">No completed loans</p>
 	{:else}
-		<div class="max-h-64 space-y-2 overflow-y-auto pr-1">
-			{#each displayLoans.slice(0, 5) as loan (loan.id)}
+		<div class="dashboard-activity-list">
+			{#each displayLoans as loan (loan.id)}
 				<a href="/loans/{loan.id}" class="dashboard-activity-item">
 					<div class="flex items-start justify-between gap-2">
-						<p class="truncate text-sm font-semibold">{formatText(loan.loanName)}</p>
+						<p class="truncate text-sm font-medium">{formatText(loan.loanName)}</p>
 						<Badge
 							variant={getLoanTypeBadge(loan.type).variant}
 							class={cn('shrink-0 text-[10px]', getLoanTypeBadge(loan.type).className)}
@@ -45,7 +44,7 @@
 					</div>
 					<div class="flex items-center justify-between text-xs text-muted-foreground">
 						<span>Completed {formatDateShort(loan.dueDate)}</span>
-						<span class="font-semibold"
+						<span class="font-medium tabular-nums"
 							>{formatCurrency(calculateTotalPrincipal(loan.loanInvestors))}</span
 						>
 					</div>

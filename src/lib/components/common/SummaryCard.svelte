@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Snippet, Component } from 'svelte';
+	import type { Component } from 'svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { cn } from '$lib/utils';
-	import { getSummaryMetricGridCols } from '$lib/summary-grid';
+	import { getOddLastVisibleMobileSpan, getSummaryMetricGridCols } from '$lib/summary-grid';
 	import { formatCurrency, formatCount } from '$lib/format';
 	import { Wallet, Activity, CheckCircle2, TrendingUp, CircleDollarSign } from 'lucide-svelte';
 
@@ -56,38 +56,62 @@
 		}
 		return metric.subValue;
 	}
+
+	const gridCols = $derived(className ?? getSummaryMetricGridCols(metrics.length));
+	const visibleCount = $derived(metrics.filter((m) => !isMetricEmpty(m)).length);
+	const lastVisibleIndex = $derived(metrics.findLastIndex((m) => !isMetricEmpty(m)));
 </script>
 
-<div class={cn('grid gap-2.5 sm:gap-3', className ?? getSummaryMetricGridCols(metrics.length))}>
+<div class={cn('grid min-w-0 items-stretch gap-2.5 md:gap-5', gridCols)}>
 	{#each metrics as metric, index}
 		{@const defaults = defaultStyles[index % defaultStyles.length]}
 		{@const Icon = metric.icon ?? defaults.icon}
 		{@const empty = isMetricEmpty(metric)}
+		{@const subValue = resolveSubValue(metric)}
 		<Card.Root
-			class={cn('group surface-card-interactive border-border/40', empty && 'hidden lg:block')}
+			class={cn(
+				'group flex h-full min-w-0 surface-card-interactive border-border/40',
+				empty && 'hidden lg:block',
+				getOddLastVisibleMobileSpan({
+					empty,
+					isLastVisible: index === lastVisibleIndex,
+					visibleCount,
+					gridClass: gridCols
+				})
+			)}
 		>
-			<Card.Content class="p-3">
+			<Card.Content
+				class={cn(
+					'flex h-full w-full min-w-0 flex-col gap-1 p-3 md:p-5',
+					subValue && 'min-h-28 md:min-h-[7.5rem]'
+				)}
+			>
 				<div class="flex items-center justify-between gap-2">
-					<p class="text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+					<p class="text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
 						{metric.label}
 					</p>
 					<div
-						class={cn('icon-well-sm shrink-0', metric.accentClassName ?? defaults.accentClassName)}
+						class={cn(
+							'icon-well-sm shrink-0 transition-transform duration-300 group-hover:scale-105',
+							metric.accentClassName ?? defaults.accentClassName
+						)}
 					>
-						<Icon class="h-3.5 w-3.5" />
+						<Icon class="h-3 w-3" />
 					</div>
 				</div>
 				<p
 					class={cn(
-						'mt-1.5 text-base leading-snug font-semibold break-words tabular-nums',
+						'text-[15px] leading-snug font-semibold break-words tabular-nums lg:text-lg',
 						metric.valueClassName
 					)}
 				>
 					{resolveValue(metric)}
 				</p>
-				{#if resolveSubValue(metric)}
-					<p class="mt-0.5 text-xs leading-snug break-words text-muted-foreground">
-						{resolveSubValue(metric)}
+				{#if subValue}
+					<p
+						class="mt-auto text-xs leading-relaxed break-words text-muted-foreground lg:text-sm"
+					>
+						{subValue}
 					</p>
 				{/if}
 			</Card.Content>
