@@ -4,24 +4,22 @@
 	import BorrowerForm from '$lib/components/borrowers/BorrowerForm.svelte';
 	import type { Borrower } from '$lib/types';
 
-	/** @deprecated Prefer `BorrowerCreateModal` for list create. Kept for LoanForm nested create. */
 	interface Props {
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
-		onSuccess: (borrower: Borrower) => void | Promise<void>;
+		onSuccess?: (borrower: Borrower) => void | Promise<void>;
 	}
 
 	let { open, onOpenChange, onSuccess }: Props = $props();
 
 	let isSubmitting = $state(false);
 
-	const formId = 'borrower-create-form-nested';
-
+	const formId = 'borrower-create-form';
 	const submitLabel = $derived(isSubmitting ? 'Creating...' : 'Create');
 
 	async function handleSuccess(borrower: Borrower) {
 		onOpenChange(false);
-		await onSuccess(borrower);
+		await onSuccess?.(borrower);
 	}
 </script>
 

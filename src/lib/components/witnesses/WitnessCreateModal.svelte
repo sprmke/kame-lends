@@ -1,27 +1,25 @@
 <script lang="ts">
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
-	import BorrowerForm from '$lib/components/borrowers/BorrowerForm.svelte';
-	import type { Borrower } from '$lib/types';
+	import WitnessForm from '$lib/components/witnesses/WitnessForm.svelte';
+	import type { Witness } from '$lib/types';
 
-	/** @deprecated Prefer `BorrowerCreateModal` for list create. Kept for LoanForm nested create. */
 	interface Props {
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
-		onSuccess: (borrower: Borrower) => void | Promise<void>;
+		onSuccess?: (witness: Witness) => void | Promise<void>;
 	}
 
 	let { open, onOpenChange, onSuccess }: Props = $props();
 
 	let isSubmitting = $state(false);
 
-	const formId = 'borrower-create-form-nested';
-
+	const formId = 'witness-create-form';
 	const submitLabel = $derived(isSubmitting ? 'Creating...' : 'Create');
 
-	async function handleSuccess(borrower: Borrower) {
+	async function handleSuccess(witness: Witness) {
 		onOpenChange(false);
-		await onSuccess(borrower);
+		await onSuccess?.(witness);
 	}
 </script>
 
@@ -33,7 +31,7 @@
 >
 	{#snippet header()}
 		<FormHeader
-			title="Add Borrower"
+			title="Add Witness"
 			{formId}
 			onCancel={() => onOpenChange(false)}
 			{isSubmitting}
@@ -45,7 +43,7 @@
 
 	{#if open}
 		{#key open}
-			<BorrowerForm
+			<WitnessForm
 				embedded
 				showFormHeader={false}
 				{formId}
