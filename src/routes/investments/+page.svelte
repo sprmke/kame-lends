@@ -2,18 +2,19 @@
 	import { onMount } from 'svelte';
 	import { invalidate } from '$app/navigation';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import SearchFilter from '$lib/components/common/SearchFilter.svelte';
+	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
+	import LoanListMoreFiltersPanel from '$lib/components/common/LoanListMoreFiltersPanel.svelte';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
 	import SyncCalendarButton from '$lib/components/common/SyncCalendarButton.svelte';
-	import ViewModeToggle from '$lib/components/common/ViewModeToggle.svelte';
 	import ExportButton from '$lib/components/common/ExportButton.svelte';
-	import RangeFilter from '$lib/components/common/RangeFilter.svelte';
 	import CardPagination from '$lib/components/common/CardPagination.svelte';
 	import ListPageSkeleton from '$lib/components/common/ListPageSkeleton.svelte';
+	import ListEmptyState from '$lib/components/common/ListEmptyState.svelte';
 	import ConfirmDeleteDialog from '$lib/components/common/ConfirmDeleteDialog.svelte';
+	import LoanCard from '$lib/components/loans/LoanCard.svelte';
 	import LoansTable from '$lib/components/loans/LoansTable.svelte';
 	import LoanCalendarView from '$lib/components/loans/LoanCalendarView.svelte';
 	import LoanDetailModal from '$lib/components/loans/LoanDetailModal.svelte';
@@ -22,25 +23,43 @@
 		type LoanQuickPaymentKind
 	} from '$lib/components/loans/LoanQuickPaymentDialog.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
-	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
-	import { formatCurrency, formatDateVeryShort, formatText, formatPercentage } from '$lib/format';
-	import { calculateTransactionStats, calculateLoanStats } from '$lib/calculations';
+	import {
+		createIsMobileShell,
+		isMobileShellViewport
+	} from '$lib/composables/use-media-query.svelte';
 	import { downloadLoansPdf } from '$lib/pdf-download';
 	import { loanPDFSections } from '$lib/pdf-sections';
-	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
 	import { createDuplicateDataFromLoan } from '$lib/loan-duplicate';
-	import { downloadLoanContract } from '$lib/download-loan-contract';
+	import LoanContractDetailsModal from '$lib/components/loans/LoanContractDetailsModal.svelte';
 	import { toast } from '$lib/toast';
-	import { cn } from '$lib/utils';
-	import { PlusCircle, X, Filter } from 'lucide-svelte';
+	import {
+		hasActiveLoanAmountFilters,
+		matchesLoanAmountFilters
+	} from '$lib/loan-list-page-filters';
+	import {
+		computeLoanListSummaryStats,
+		passesLoanDueDateRangeFilter
+	} from '$lib/loan-list-summary';
+	import {
+		LIST_FILTER_DESKTOP_TRIGGER_CLASS,
+		LOAN_STATUS_FILTER_OPTIONS,
+		LOAN_TYPE_FILTER_OPTIONS
+	} from '$lib/list-filters';
+	import DateRangeFilter from '$lib/components/common/DateRangeFilter.svelte';
+	import LoanListSummaryCards from '$lib/components/loans/LoanListSummaryCards.svelte';
+	import { createLoanListDateRange } from '$lib/composables/use-loan-list-date-range.svelte';
+	import { createLoanListParticipantFilters } from '$lib/composables/use-loan-list-participant-filters.svelte';
+	import { loanListRowActionHandlers } from '$lib/components/common/action-buttons';
+	import { PiggyBank, PlusCircle, X } from 'lucide-svelte';
 	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 
 	let { data } = $props();
 	const pageTitle = $derived((data as { pageTitle?: string }).pageTitle ?? 'Investments');
+	const emptyMessage = $derived(
+		(data as { emptyMessage?: string }).emptyMessage ?? 'No investments yet'
+	);
 	const canCreate = $derived((data as { canCreate?: boolean }).canCreate !== false);
 	const canManage = $derived((data as { canManage?: boolean }).canManage !== false);
 
@@ -57,6 +76,8 @@
 	});
 
 	const viewModeState = createResponsiveViewMode();
+	const isMobileShell = createIsMobileShell(false);
+	const participantFilters = createLoanListParticipantFilters(() => loans);
 	let searchQuery = $state('');
 	let statusFilter = $state<string[]>([]);
 	let typeFilter = $state<string[]>([]);
@@ -75,14 +96,20 @@
 	let quickPaymentLoan = $state<LoanWithInvestors | null>(null);
 	let quickPaymentKind = $state<LoanQuickPaymentKind | null>(null);
 	let loanPendingDeletion = $state<LoanWithInvestors | null>(null);
-	let downloadingContractLoanId = $state<number | null>(null);
+	let contractDetailsLoan = $state<LoanWithInvestors | null>(null);
+	let showContractDetailsModal = $state(false);
 	let showCreateModal = $state(false);
 	let createModalInvestors = $state<Investor[]>([]);
 	let createModalBorrowers = $state<Borrower[]>([]);
 	let createModalDuplicateData = $state<DuplicateLoanData | null>(null);
 	let loadingCreateFormData = $state(false);
+	let detailStartInEdit = $state(false);
 
-	onMount(() => viewModeState.init());
+	onMount(() => {
+		viewModeState.init();
+		isMobileShell.init();
+		void participantFilters.loadFilterOptions();
+	});
 
 	async function loadCreateFormData() {
 		if (createModalInvestors.length > 0 && createModalBorrowers.length > 0) return;
@@ -105,10 +132,6 @@
 	}
 
 	async function openCreateModal(duplicateData: DuplicateLoanData | null = null) {
-		if (isMobileShellViewport() && !duplicateData) {
-			await goto('/loans/new');
-			return;
-		}
 		createModalDuplicateData = duplicateData;
 		showCreateModal = true;
 		await loadCreateFormData();
@@ -144,6 +167,12 @@
 	}
 
 	function handleRowEdit(loan: LoanWithInvestors) {
+		if (isMobileShellViewport()) {
+			selectedLoan = loan;
+			detailStartInEdit = true;
+			isModalOpen = true;
+			return;
+		}
 		goto(`/loans/${loan.id}`);
 	}
 
@@ -158,13 +187,15 @@
 		quickPaymentKind = kind;
 	}
 
-	async function handleRowDownloadContract(loan: LoanWithInvestors) {
-		downloadingContractLoanId = loan.id;
-		try {
-			const sourceLoan = await fetchFullLoan(loan);
-			await downloadLoanContract(sourceLoan);
-		} finally {
-			downloadingContractLoanId = null;
+	async function handleRowContractDetails(loan: LoanWithInvestors) {
+		contractDetailsLoan = await fetchFullLoan(loan);
+		showContractDetailsModal = true;
+	}
+
+	async function handleContractDetailsSaved() {
+		await refreshLoans();
+		if (contractDetailsLoan) {
+			contractDetailsLoan = await fetchFullLoan(contractDetailsLoan);
 		}
 	}
 
@@ -179,21 +210,48 @@
 		await refreshLoans();
 	}
 
-	const dueDateFilter = $derived($page.url.searchParams.get('dueDate'));
-	const viewParam = $derived($page.url.searchParams.get('view'));
+	const rowActions = $derived(
+		loanListRowActionHandlers({
+			scope: 'investments',
+			canManage,
+			onEdit: handleRowEdit,
+			onDuplicate: handleRowDuplicate,
+			onAddPayment: (loan) => handleQuickPayment(loan, 'payment'),
+			onAddReceivedPayment: (loan) => handleQuickPayment(loan, 'received'),
+			onContractDetails: handleRowContractDetails,
+			onDelete: (loan) => {
+				loanPendingDeletion = loan;
+			}
+		})
+	);
+
+	const dueDateFilter = $derived(page.url.searchParams.get('dueDate'));
+	const viewParam = $derived(page.url.searchParams.get('view'));
+	const dateRangeState = createLoanListDateRange(() => page);
+	const filterFrom = $derived(dateRangeState.filterFrom);
+	const filterTo = $derived(dateRangeState.filterTo);
 
 	$effect(() => {
 		if (viewParam === 'table' || viewParam === 'cards' || viewParam === 'calendar') {
 			viewModeState.setViewMode(viewParam);
 		}
-		const statusParams = $page.url.searchParams.getAll('status');
+		const statusParams = page.url.searchParams.getAll('status');
 		if (statusParams.length) statusFilter = statusParams;
-		const typeParams = $page.url.searchParams.getAll('type');
+		const typeParams = page.url.searchParams.getAll('type');
 		if (typeParams.length) typeFilter = typeParams;
 	});
 
+	const dateFilteredLoans = $derived(
+		(loans ?? []).filter((loan) => passesLoanDueDateRangeFilter(loan, filterFrom, filterTo))
+	);
+
+	const summaryStats = $derived(
+		computeLoanListSummaryStats(dateFilteredLoans, filterFrom, filterTo)
+	);
+
 	const filteredLoans = $derived(
 		(loans ?? []).filter((loan) => {
+			if (!passesLoanDueDateRangeFilter(loan, filterFrom, filterTo)) return false;
 			if (searchQuery) {
 				const q = searchQuery.toLowerCase();
 				if (
@@ -210,18 +268,18 @@
 				if (loanDue !== dueDateFilter) return false;
 			}
 
-			const stats = calculateLoanStats(loan);
+			if (!participantFilters.matchesParticipantFilters(loan)) return false;
 
-			if (minPrincipal !== '' && stats.totalPrincipal < parseFloat(minPrincipal)) return false;
-			if (maxPrincipal !== '' && stats.totalPrincipal > parseFloat(maxPrincipal)) return false;
-			if (minAvgRate !== '' && stats.avgRate < parseFloat(minAvgRate)) return false;
-			if (maxAvgRate !== '' && stats.avgRate > parseFloat(maxAvgRate)) return false;
-			if (minInterest !== '' && stats.totalInterest < parseFloat(minInterest)) return false;
-			if (maxInterest !== '' && stats.totalInterest > parseFloat(maxInterest)) return false;
-			if (minTotalAmount !== '' && stats.totalAmount < parseFloat(minTotalAmount)) return false;
-			if (maxTotalAmount !== '' && stats.totalAmount > parseFloat(maxTotalAmount)) return false;
-
-			return true;
+			return matchesLoanAmountFilters(loan, {
+				minPrincipal,
+				maxPrincipal,
+				minAvgRate,
+				maxAvgRate,
+				minInterest,
+				maxInterest,
+				minTotalAmount,
+				maxTotalAmount
+			});
 		})
 	);
 
@@ -232,14 +290,20 @@
 	const selectedLoans = $derived(sortedLoans.filter((loan) => selectedRowIds.has(loan.id)));
 
 	const hasActiveAmountFilters = $derived(
-		minPrincipal !== '' ||
-			maxPrincipal !== '' ||
-			minAvgRate !== '' ||
-			maxAvgRate !== '' ||
-			minInterest !== '' ||
-			maxInterest !== '' ||
-			minTotalAmount !== '' ||
-			maxTotalAmount !== ''
+		hasActiveLoanAmountFilters({
+			minPrincipal,
+			maxPrincipal,
+			minAvgRate,
+			maxAvgRate,
+			minInterest,
+			maxInterest,
+			minTotalAmount,
+			maxTotalAmount
+		})
+	);
+
+	const hasActiveAdvancedFilters = $derived(
+		hasActiveAmountFilters || participantFilters.hasActiveParticipantFilters
 	);
 
 	const hasActiveFilters = $derived(
@@ -247,13 +311,14 @@
 			statusFilter.length > 0 ||
 			typeFilter.length > 0 ||
 			!!dueDateFilter ||
-			hasActiveAmountFilters
+			hasActiveAdvancedFilters
 	);
 
 	function clearFilters() {
 		searchQuery = '';
 		statusFilter = [];
 		typeFilter = [];
+		participantFilters.clearParticipantFilters();
 		minPrincipal = '';
 		maxPrincipal = '';
 		minAvgRate = '';
@@ -262,22 +327,36 @@
 		maxInterest = '';
 		minTotalAmount = '';
 		maxTotalAmount = '';
+		dateRangeState.clearDateFilter();
+		const url = new URL(page.url);
+		url.searchParams.delete('dueDate');
+		goto(`${url.pathname}${url.search}`, { replaceState: true, keepFocus: true, noScroll: true });
 	}
 </script>
 
-<svelte:head><title>Loans</title></svelte:head>
+<svelte:head><title>Investments</title></svelte:head>
 
 {#if loans === null}
 	<ListPageSkeleton variant="loans" />
 {:else}
 	<DashboardPage>
-		<PageHeader title={pageTitle} description="" showPriceToggle={true}>
-			<ViewModeToggle
-				viewMode={viewModeState.viewMode}
-				onViewModeChange={viewModeState.setViewMode}
-				showCalendar={true}
-				hasData={loans.length > 0}
-			/>
+		<PageHeader
+			title={pageTitle}
+			description="Loans where you are an investor"
+			showPriceToggle={true}
+		>
+			{#if !isMobileShell.matches}
+				<DateRangeFilter
+					dateRange={dateRangeState.dateRange}
+					datePreset={dateRangeState.datePreset}
+					isActive={dateRangeState.isDateFilterActive}
+					setDatePreset={dateRangeState.setDatePreset}
+					setDateRange={dateRangeState.setDateRange}
+					navigatePeriod={dateRangeState.navigatePeriod}
+					goToToday={dateRangeState.goToToday}
+					onClear={dateRangeState.clearDateFilter}
+				/>
+			{/if}
 			<ExportButton
 				data={loans}
 				filteredData={sortedLoans}
@@ -287,145 +366,98 @@
 			/>
 			{#if canCreate}
 				<SyncCalendarButton variant="outline" size="default" />
-				<Button class="h-9 px-3" onclick={() => openCreateModal()}>
+				<Button class="px-3" onclick={() => openCreateModal()} aria-label="New Loan">
 					<PlusCircle class="h-4 w-4 xl:mr-2" />
 					<span class="hidden xl:inline">New Loan</span>
 				</Button>
 			{/if}
 		</PageHeader>
 
-		<div class="flex flex-col gap-2 sm:flex-row">
-			<SearchFilter
-				value={searchQuery}
-				onChange={(v) => (searchQuery = v)}
-				placeholder="Search loans by name or notes..."
+		{#if isMobileShell.matches}
+			<DateRangeFilter
+				dateRange={dateRangeState.dateRange}
+				datePreset={dateRangeState.datePreset}
+				isActive={dateRangeState.isDateFilterActive}
+				fullWidth={true}
+				setDatePreset={dateRangeState.setDatePreset}
+				setDateRange={dateRangeState.setDateRange}
+				navigatePeriod={dateRangeState.navigatePeriod}
+				goToToday={dateRangeState.goToToday}
+				onClear={dateRangeState.clearDateFilter}
 			/>
-			<MultiSelectFilter
-				options={[
-					{ value: 'Fully Funded', label: 'Fully Funded' },
-					{ value: 'Partially Funded', label: 'Partially Funded' },
-					{ value: 'Completed', label: 'Completed' },
-					{ value: 'Overdue', label: 'Overdue' }
-				]}
-				selected={statusFilter}
-				onChange={(v) => (statusFilter = v)}
-				placeholder="Select Status"
-				allLabel="All Status"
-				triggerClassName="hidden h-9 w-full xl:flex xl:w-[180px]"
-			/>
-			<MultiSelectFilter
-				options={[
-					{ value: 'Lot Title', label: 'Lot Title' },
-					{ value: 'OR/CR', label: 'OR/CR' },
-					{ value: 'Agent', label: 'Agent' }
-				]}
-				selected={typeFilter}
-				onChange={(v) => (typeFilter = v)}
-				placeholder="Select Type"
-				allLabel="All Types"
-				triggerClassName="hidden h-9 w-full xl:flex xl:w-[180px]"
-			/>
-			<Button
-				variant={showMoreFilters ? 'secondary' : 'outline'}
-				size="sm"
-				class="relative h-9 px-3 whitespace-nowrap"
-				onclick={() => (showMoreFilters = !showMoreFilters)}
-			>
-				<Filter class="h-4 w-4 xl:mr-2" />
-				<span class="hidden xl:inline">{showMoreFilters ? 'Less' : 'More'} Filters</span>
-				{#if hasActiveAmountFilters}
-					<span class="relative ml-1 flex h-2 w-2 xl:ml-2">
-						<span
-							class="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-primary opacity-75"
-						></span>
-						<span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
-					</span>
-				{/if}
-			</Button>
-			{#if hasActiveFilters}
-				<Button variant="outline" size="sm" class="h-9" onclick={clearFilters}>
-					<X class="h-4 w-4 xl:mr-2" />
-					<span class="hidden xl:inline">Clear All</span>
-				</Button>
-			{/if}
-		</div>
-
-		{#if showMoreFilters}
-			<div class="dashboard-filter-panel animate-in duration-200 slide-in-from-top-2">
-				<div class="grid grid-cols-2 gap-3 border-b pb-3 xl:hidden">
-					<div>
-						<p class="mb-2 block text-xs font-semibold">Status</p>
-						<MultiSelectFilter
-							options={[
-								{ value: 'Fully Funded', label: 'Fully Funded' },
-								{ value: 'Partially Funded', label: 'Partially Funded' },
-								{ value: 'Completed', label: 'Completed' },
-								{ value: 'Overdue', label: 'Overdue' }
-							]}
-							selected={statusFilter}
-							onChange={(v) => (statusFilter = v)}
-							placeholder="Select Status"
-							allLabel="All Status"
-							triggerClassName="h-9 w-full"
-						/>
-					</div>
-					<div>
-						<p class="mb-2 block text-xs font-semibold">Type</p>
-						<MultiSelectFilter
-							options={[
-								{ value: 'Lot Title', label: 'Lot Title' },
-								{ value: 'OR/CR', label: 'OR/CR' },
-								{ value: 'Agent', label: 'Agent' }
-							]}
-							selected={typeFilter}
-							onChange={(v) => (typeFilter = v)}
-							placeholder="Select Type"
-							allLabel="All Types"
-							triggerClassName="h-9 w-full"
-						/>
-					</div>
-				</div>
-
-				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-					<RangeFilter
-						label="Total Principal"
-						minValue={minPrincipal}
-						maxValue={maxPrincipal}
-						onMinChange={(v) => (minPrincipal = v)}
-						onMaxChange={(v) => (maxPrincipal = v)}
-						minPlaceholder="Min (₱)"
-						maxPlaceholder="Max (₱)"
-					/>
-					<RangeFilter
-						label="Avg. Rate"
-						minValue={minAvgRate}
-						maxValue={maxAvgRate}
-						onMinChange={(v) => (minAvgRate = v)}
-						onMaxChange={(v) => (maxAvgRate = v)}
-						minPlaceholder="Min (%)"
-						maxPlaceholder="Max (%)"
-					/>
-					<RangeFilter
-						label="Total Interest"
-						minValue={minInterest}
-						maxValue={maxInterest}
-						onMinChange={(v) => (minInterest = v)}
-						onMaxChange={(v) => (maxInterest = v)}
-						minPlaceholder="Min (₱)"
-						maxPlaceholder="Max (₱)"
-					/>
-					<RangeFilter
-						label="Total Amount"
-						minValue={minTotalAmount}
-						maxValue={maxTotalAmount}
-						onMinChange={(v) => (minTotalAmount = v)}
-						onMaxChange={(v) => (maxTotalAmount = v)}
-						minPlaceholder="Min (₱)"
-						maxPlaceholder="Max (₱)"
-					/>
-				</div>
-			</div>
 		{/if}
+
+		{#if loans.length > 0}
+			<LoanListSummaryCards stats={summaryStats} />
+		{/if}
+
+		<ListPageToolbar
+			searchValue={searchQuery}
+			searchPlaceholder="Search loans by name or notes..."
+			onSearchChange={(value) => (searchQuery = value)}
+			viewMode={viewModeState.viewMode}
+			onViewModeChange={viewModeState.setViewMode}
+			showCalendar={true}
+			hasData={loans.length > 0}
+			showViewToggle={true}
+			{hasActiveFilters}
+			onClearFilters={clearFilters}
+			{showMoreFilters}
+			onToggleMoreFilters={() => (showMoreFilters = !showMoreFilters)}
+			{hasActiveAdvancedFilters}
+		>
+			{#snippet filters()}
+				<MultiSelectFilter
+					options={LOAN_STATUS_FILTER_OPTIONS}
+					selected={statusFilter}
+					onChange={(value) => (statusFilter = value)}
+					placeholder="Select Status"
+					allLabel="All Status"
+					triggerClassName={LIST_FILTER_DESKTOP_TRIGGER_CLASS}
+				/>
+				<MultiSelectFilter
+					options={LOAN_TYPE_FILTER_OPTIONS}
+					selected={typeFilter}
+					onChange={(value) => (typeFilter = value)}
+					placeholder="Select Type"
+					allLabel="All Types"
+					triggerClassName={LIST_FILTER_DESKTOP_TRIGGER_CLASS}
+				/>
+			{/snippet}
+			{#snippet moreFilters()}
+				<LoanListMoreFiltersPanel
+					{statusFilter}
+					{typeFilter}
+					onStatusChange={(value) => (statusFilter = value)}
+					onTypeChange={(value) => (typeFilter = value)}
+					{minPrincipal}
+					{maxPrincipal}
+					onMinPrincipalChange={(value) => (minPrincipal = value)}
+					onMaxPrincipalChange={(value) => (maxPrincipal = value)}
+					{minAvgRate}
+					{maxAvgRate}
+					onMinAvgRateChange={(value) => (minAvgRate = value)}
+					onMaxAvgRateChange={(value) => (maxAvgRate = value)}
+					{minInterest}
+					{maxInterest}
+					onMinInterestChange={(value) => (minInterest = value)}
+					onMaxInterestChange={(value) => (maxInterest = value)}
+					{minTotalAmount}
+					{maxTotalAmount}
+					onMinTotalAmountChange={(value) => (minTotalAmount = value)}
+					onMaxTotalAmountChange={(value) => (maxTotalAmount = value)}
+					investorFilterOptions={participantFilters.investorFilterOptions}
+					selectedInvestors={participantFilters.selectedInvestors}
+					onInvestorsChange={(value) => (participantFilters.selectedInvestors = value)}
+					borrowerFilterOptions={participantFilters.borrowerFilterOptions}
+					selectedBorrowers={participantFilters.selectedBorrowers}
+					onBorrowersChange={(value) => (participantFilters.selectedBorrowers = value)}
+					witnessFilterOptions={participantFilters.witnessFilterOptions}
+					selectedWitnesses={participantFilters.selectedWitnesses}
+					onWitnessesChange={(value) => (participantFilters.selectedWitnesses = value)}
+				/>
+			{/snippet}
+		</ListPageToolbar>
 
 		{#if hasActiveFilters}
 			<p class="text-sm text-muted-foreground">
@@ -433,108 +465,61 @@
 			</p>
 		{/if}
 
-		{#if loans.length === 0}
-			<Card.Root>
-				<Card.Content class="dashboard-empty">
-					<p class="mb-4 text-muted-foreground">No loans found</p>
-					<Button href="/loans/new">
-						<PlusCircle class="mr-2 h-4 w-4" />
-						Create your first loan
-					</Button>
-				</Card.Content>
-			</Card.Root>
-		{:else if filteredLoans.length === 0}
-			<Card.Root>
-				<Card.Content class="dashboard-empty">
-					<p class="mb-4 text-muted-foreground">No loans match your filters</p>
-					<Button variant="outline" onclick={clearFilters}>
-						<X class="mr-2 h-4 w-4" />
-						Clear filters
-					</Button>
-				</Card.Content>
-			</Card.Root>
-		{:else if viewModeState.viewMode === 'table'}
+		{#if viewModeState.viewMode === 'table'}
 			<LoansTable
 				loans={sortedLoans}
+				emptyMessage={loans.length === 0 ? emptyMessage : 'No loans match your filters'}
 				enableRowSelection={true}
 				{selectedRowIds}
 				onSelectedRowIdsChange={(ids) => (selectedRowIds = ids)}
 				onQuickView={handleQuickView}
-				onEdit={handleRowEdit}
-				onAddPayment={(loan) => handleQuickPayment(loan, 'payment')}
-				onAddReceivedPayment={(loan) => handleQuickPayment(loan, 'received')}
-				onDuplicate={handleRowDuplicate}
-				onDownloadContract={handleRowDownloadContract}
-				{downloadingContractLoanId}
-				onDelete={(loan) => (loanPendingDeletion = loan)}
+				onEdit={rowActions.onEdit}
+				onAddPayment={rowActions.onAddPayment}
+				onAddReceivedPayment={rowActions.onAddReceivedPayment}
+				onDuplicate={rowActions.onDuplicate}
+				onContractDetails={rowActions.onContractDetails}
+				onDelete={rowActions.onDelete}
 			/>
+			{#if filteredLoans.length === 0 && hasActiveFilters && loans.length > 0}
+				<div class="mt-4 flex justify-center">
+					<Button variant="outline" onclick={clearFilters}>
+						<X class="mr-2 h-4 w-4" />
+						Clear filters
+					</Button>
+				</div>
+			{/if}
+		{:else if loans.length === 0}
+			<ListEmptyState message={emptyMessage} icon={PiggyBank} />
+		{:else if filteredLoans.length === 0}
+			<ListEmptyState message="No loans match your filters">
+				{#snippet actions()}
+					<Button variant="outline" onclick={clearFilters}>
+						<X class="mr-2 h-4 w-4" />
+						Clear filters
+					</Button>
+				{/snippet}
+			</ListEmptyState>
 		{:else if viewModeState.viewMode === 'cards'}
 			<CardPagination items={sortedLoans} itemsPerPage={9} itemName="loans">
 				{#snippet children(cardLoans)}
 					<div class="grid gap-2.5 sm:grid-cols-2 2xl:grid-cols-3">
 						{#each cardLoans as loan (loan.id)}
-							{@const stats = calculateTransactionStats(loan.loanInvestors)}
-							<Card.Root
-								class="flex h-full flex-col overflow-hidden transition-colors hover:border-primary/20"
-							>
-								<Card.Header class="px-4 pt-4 pb-1">
-									<div class="flex items-start justify-between gap-2">
-										<Card.Title class="truncate text-sm sm:text-base"
-											>{formatText(loan.loanName)}</Card.Title
-										>
-										<div class="flex shrink-0 gap-1">
-											<Badge
-												variant={getLoanTypeBadge(loan.type).variant}
-												class={cn('text-[10px]', getLoanTypeBadge(loan.type).className)}
-											>
-												{formatText(loan.type)}
-											</Badge>
-											<Badge
-												variant={getLoanStatusBadge(loan.status).variant}
-												class={cn('text-[10px]', getLoanStatusBadge(loan.status).className)}
-											>
-												{formatText(loan.status)}
-											</Badge>
-										</div>
-									</div>
-								</Card.Header>
-								<Card.Content class="flex-1 space-y-3 px-4 pt-0 pb-3">
-									<div class="grid grid-cols-2 gap-2">
-										<div class="dashboard-metric-cell p-2">
-											<p class="text-caption mb-1">Principal</p>
-											<p class="text-sm font-medium">{formatCurrency(stats.totalPrincipal)}</p>
-										</div>
-										<div class="dashboard-metric-cell p-2">
-											<p class="text-caption mb-1">Rate</p>
-											<p class="text-sm font-medium">{formatPercentage(stats.averageRate)}</p>
-										</div>
-										<div class="dashboard-metric-cell p-2">
-											<p class="text-caption mb-1">Due</p>
-											<p class="text-sm font-medium">{formatDateVeryShort(loan.dueDate)}</p>
-										</div>
-										<div class="dashboard-metric-cell p-2">
-											<p class="text-caption mb-1">Interest</p>
-											<p class="text-sm font-medium">{formatCurrency(stats.totalInterest)}</p>
-										</div>
-									</div>
-								</Card.Content>
-								<Card.Footer class="px-4 pb-4">
-									<Button
-										variant="outline"
-										size="sm"
-										class="w-full"
-										onclick={() => handleQuickView(loan)}
-									>
-										Open
-									</Button>
-								</Card.Footer>
-							</Card.Root>
+							<LoanCard
+								{loan}
+								onQuickView={handleQuickView}
+								onEdit={rowActions.onEdit}
+								onAddPayment={rowActions.onAddPayment}
+								onAddReceivedPayment={rowActions.onAddReceivedPayment}
+								onDuplicate={rowActions.onDuplicate}
+								onContractDetails={rowActions.onContractDetails}
+								onDelete={rowActions.onDelete}
+							/>
 						{/each}
 					</div>
 				{/snippet}
 			</CardPagination>
 		{:else}
-			<LoanCalendarView loans={sortedLoans} />
+			<LoanCalendarView loans={sortedLoans} onLoanClick={handleQuickView} />
 		{/if}
 
 		<LoanCreateModal
@@ -553,20 +538,25 @@
 		<LoanDetailModal
 			loan={selectedLoan}
 			open={isModalOpen}
+			startInEditMode={detailStartInEdit}
 			onOpenChange={(open) => {
 				isModalOpen = open;
-				if (!open) selectedLoan = null;
+				if (!open) {
+					selectedLoan = null;
+					detailStartInEdit = false;
+				}
 			}}
 			onUpdate={refreshLoans}
 			onDuplicate={async (duplicateData) => {
 				await openCreateModal(duplicateData);
 			}}
+			readOnly={!canManage}
 		/>
 
 		<LoanQuickPaymentDialog
 			loan={quickPaymentLoan}
 			kind={quickPaymentKind}
-			open={quickPaymentKind !== null}
+			open={canManage && quickPaymentKind !== null}
 			onOpenChange={(open) => {
 				if (!open) {
 					quickPaymentKind = null;
@@ -575,6 +565,19 @@
 			}}
 			onSuccess={refreshLoans}
 		/>
+
+		{#if contractDetailsLoan}
+			<LoanContractDetailsModal
+				loan={contractDetailsLoan}
+				open={showContractDetailsModal}
+				onOpenChange={(open) => {
+					showContractDetailsModal = open;
+					if (!open) contractDetailsLoan = null;
+				}}
+				canEdit={canManage}
+				onSaved={handleContractDetailsSaved}
+			/>
+		{/if}
 
 		<ConfirmDeleteDialog
 			open={loanPendingDeletion !== null}

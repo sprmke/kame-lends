@@ -1,9 +1,12 @@
 <script lang="ts">
+	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import ContractSigningClient from '$lib/components/signing/ContractSigningClient.svelte';
 
 	let { data } = $props();
 </script>
 
-<div class="mx-auto max-w-5xl px-4 py-6">
+<svelte:head><title>Sign Loan Agreement</title></svelte:head>
+
+<DashboardPage>
 	<ContractSigningClient loanId={data.loanId} initialData={data.signing} />
-</div>
+</DashboardPage>
