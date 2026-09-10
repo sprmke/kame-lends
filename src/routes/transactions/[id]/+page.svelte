@@ -28,7 +28,7 @@
 <svelte:head><title>{title}</title></svelte:head>
 
 <DashboardPage>
-	<PageHeader {title}>
+	<PageHeader {title} description="Transaction details">
 		<Button
 			href="/transactions"
 			variant="outline"

@@ -3,33 +3,40 @@
 	import { goto, invalidate } from '$app/navigation';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import SearchFilter from '$lib/components/common/SearchFilter.svelte';
+	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
+	import DebtsMoreFiltersPanel from '$lib/components/common/DebtsMoreFiltersPanel.svelte';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
-	import RangeFilter from '$lib/components/common/RangeFilter.svelte';
+	import SingleSelectFilter from '$lib/components/common/SingleSelectFilter.svelte';
 	import CardPagination from '$lib/components/common/CardPagination.svelte';
-	import ViewModeToggle from '$lib/components/common/ViewModeToggle.svelte';
 	import ListPageSkeleton from '$lib/components/common/ListPageSkeleton.svelte';
+	import ListEmptyState from '$lib/components/common/ListEmptyState.svelte';
 	import ConfirmDeleteDialog from '$lib/components/common/ConfirmDeleteDialog.svelte';
 	import DebtsTable from '$lib/components/debts/DebtsTable.svelte';
 	import DebtCard from '$lib/components/debts/DebtCard.svelte';
 	import DebtDetailModal from '$lib/components/debts/DebtDetailModal.svelte';
+	import DebtCreateModal from '$lib/components/debts/DebtCreateModal.svelte';
+	import DebtForm from '$lib/components/debts/DebtForm.svelte';
+	import EditFormSheet from '$lib/components/common/EditFormSheet.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import * as Select from '$lib/components/ui/select';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
 	import { isCompletedDebt } from '$lib/debt-calculations';
 	import { toast } from '$lib/toast';
-	import { PlusCircle, X, Filter, Users } from 'lucide-svelte';
+	import {
+		DEBT_INTERVAL_FILTER_OPTIONS,
+		LIST_FILTER_DESKTOP_TRIGGER_CLASS
+	} from '$lib/list-filters';
+	import { HandCoins, PlusCircle, X } from 'lucide-svelte';
 	import type { DebtWithInvestor, Investor } from '$lib/types';
 
-	const INTERVAL_OPTIONS = [
-		{ value: 'Daily', label: 'Daily' },
-		{ value: 'Weekly', label: 'Weekly' },
-		{ value: 'Monthly', label: 'Monthly' },
-		{ value: 'Annually', label: 'Annually' }
-	];
+	const REPAYMENT_FILTER_OPTIONS = [
+		{ value: 'hide', label: 'Hide Repaid' },
+		{ value: 'show', label: 'Show Repaid' }
+	] as const;
 
 	let { data } = $props();
+	const canCreate = $derived((data as { canCreate?: boolean }).canCreate !== false);
+	const canManage = $derived((data as { canManage?: boolean }).canManage !== false);
 
 	let items = $state<DebtWithInvestor[] | null>(null);
 	let investors = $state<Pick<Investor, 'id' | 'name'>[]>([]);
@@ -55,6 +62,9 @@
 	let selectedDebt = $state<DebtWithInvestor | null>(null);
 	let showDebtModal = $state(false);
 	let debtPendingDeletion = $state<DebtWithInvestor | null>(null);
+	let showCreateModal = $state(false);
+	let editingDebt = $state<DebtWithInvestor | null>(null);
+	let editSubmitting = $state(false);
 
 	onMount(async () => {
 		viewModeState.init();
@@ -86,7 +96,19 @@
 	}
 
 	function handleRowEdit(debt: DebtWithInvestor) {
+		if (isMobileShellViewport()) {
+			editingDebt = debt;
+			return;
+		}
 		goto(`/debts/${debt.id}?edit=1`);
+	}
+
+	function openCreateModal() {
+		if (isMobileShellViewport()) {
+			showCreateModal = true;
+			return;
+		}
+		goto('/debts/new');
 	}
 
 	async function handleRowDelete(debt: DebtWithInvestor) {
@@ -162,162 +184,106 @@
 	<ListPageSkeleton variant="debts" />
 {:else}
 	<DashboardPage>
-		<PageHeader title="Borrowings" showPriceToggle={true}>
-			<ViewModeToggle
-				viewMode={viewModeState.viewMode}
-				onViewModeChange={(mode) => viewModeState.setViewMode(mode)}
-				hasData={items.length > 0}
-			/>
-			<Button href="/debts/new" size="sm">
-				<PlusCircle class="mr-2 h-4 w-4" />
-				Add Borrowing
-			</Button>
+		<PageHeader
+			title="Borrowings"
+			description="Track borrowings and projected interest costs"
+			showPriceToggle={true}
+		>
+			{#if canCreate}
+				<Button size="sm" aria-label="Add Borrowing" onclick={openCreateModal}>
+					<PlusCircle class="h-4 w-4 lg:mr-2" />
+					<span class="hidden lg:inline">Add Borrowing</span>
+				</Button>
+			{/if}
 		</PageHeader>
 
-		<div class="flex flex-col gap-3">
-			<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-				<SearchFilter
-					value={searchQuery}
-					onChange={(value) => {
-						searchQuery = value;
-					}}
-					placeholder="Search borrowings..."
-				/>
-
-				<Select.Root
-					type="single"
-					value={showPastDebts ? 'show' : 'hide'}
-					onValueChange={(value) => {
-						showPastDebts = value === 'show';
-					}}
-				>
-					<Select.Trigger class="hidden h-9 w-full xl:flex xl:w-[200px]">
-						{showPastDebts ? 'Show Repaid' : 'Hide Repaid'}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Item value="hide">Hide Repaid</Select.Item>
-						<Select.Item value="show">Show Repaid</Select.Item>
-					</Select.Content>
-				</Select.Root>
-
-				<MultiSelectFilter
-					options={INTERVAL_OPTIONS}
-					selected={intervalFilter}
-					onChange={(value) => {
-						intervalFilter = value;
-					}}
-					placeholder="Accrual Period"
-					allLabel="All Periods"
-					triggerClassName="hidden h-9 w-full xl:flex xl:w-[180px]"
-				/>
-
-				<Button
-					variant={showMoreFilters ? 'secondary' : 'outline'}
-					size="sm"
-					class="relative h-9 px-3"
-					onclick={() => (showMoreFilters = !showMoreFilters)}
-				>
-					<Filter class="h-4 w-4 xl:mr-2" />
-					<span class="hidden xl:inline">{showMoreFilters ? 'Less' : 'More'} Filters</span>
-					{#if hasActiveAmountFilters}
-						<span class="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary"></span>
-					{/if}
-				</Button>
-
-				{#if hasActiveFilters}
-					<Button variant="outline" size="sm" class="h-9 px-3" onclick={clearFilters}>
-						<X class="h-4 w-4 xl:mr-2" />
-						<span class="hidden xl:inline">Clear All</span>
-					</Button>
-				{/if}
-			</div>
-
-			{#if showMoreFilters}
-				<div class="space-y-3 rounded-lg border bg-muted/30 p-4">
-					<div class="grid grid-cols-2 gap-3 border-b pb-3 xl:hidden">
-						<div class="space-y-2">
-							<p class="text-xs font-semibold">Repaid Borrowings</p>
-							<Select.Root
-								type="single"
-								value={showPastDebts ? 'show' : 'hide'}
-								onValueChange={(value) => {
-									showPastDebts = value === 'show';
-								}}
-							>
-								<Select.Trigger class="w-full">
-									{showPastDebts ? 'Show Repaid' : 'Hide Repaid'}
-								</Select.Trigger>
-								<Select.Content>
-									<Select.Item value="hide">Hide Repaid</Select.Item>
-									<Select.Item value="show">Show Repaid</Select.Item>
-								</Select.Content>
-							</Select.Root>
-						</div>
-						<div class="space-y-2">
-							<p class="text-xs font-semibold">Accrual Period</p>
-							<MultiSelectFilter
-								options={INTERVAL_OPTIONS}
-								selected={intervalFilter}
-								onChange={(value) => {
-									intervalFilter = value;
-								}}
-								placeholder="Accrual Period"
-								allLabel="All Periods"
-								triggerClassName="w-full"
-							/>
-						</div>
-					</div>
-
-					<RangeFilter
-						label="Principal Amount"
-						minValue={minAmount}
-						maxValue={maxAmount}
-						onMinChange={(value) => {
-							minAmount = value;
-						}}
-						onMaxChange={(value) => {
-							maxAmount = value;
-						}}
-						minPlaceholder="Min (₱)"
-						maxPlaceholder="Max (₱)"
+		<ListPageToolbar
+			searchValue={searchQuery}
+			searchPlaceholder="Search borrowings..."
+			onSearchChange={(value) => (searchQuery = value)}
+			viewMode={viewModeState.viewMode}
+			onViewModeChange={(mode) => viewModeState.setViewMode(mode)}
+			hasData={items.length > 0}
+			showViewToggle={true}
+			{hasActiveFilters}
+			onClearFilters={clearFilters}
+			{showMoreFilters}
+			onToggleMoreFilters={() => (showMoreFilters = !showMoreFilters)}
+			hasActiveAdvancedFilters={hasActiveAmountFilters}
+		>
+			{#snippet filters()}
+				<div class={LIST_FILTER_DESKTOP_TRIGGER_CLASS}>
+					<SingleSelectFilter
+						options={REPAYMENT_FILTER_OPTIONS}
+						value={showPastDebts ? 'show' : 'hide'}
+						onChange={(value) => (showPastDebts = value === 'show')}
 					/>
-
-					<div class="space-y-2 border-t pt-3">
-						<p class="flex items-center gap-1 text-xs font-semibold">
-							<Users class="h-3.5 w-3.5" />
-							Investors
-							{#if selectedInvestors.length > 0}({selectedInvestors.length}){/if}
-						</p>
-						<MultiSelectFilter
-							options={investorFilterOptions}
-							selected={selectedInvestors}
-							onChange={(value) => {
-								selectedInvestors = value;
-							}}
-							placeholder="All Investors"
-							allLabel="All Investors"
-							triggerClassName="w-full"
-						/>
-					</div>
 				</div>
-			{/if}
-		</div>
+				<div class="hidden shrink-0 xl:block">
+					<MultiSelectFilter
+						options={DEBT_INTERVAL_FILTER_OPTIONS}
+						selected={intervalFilter}
+						onChange={(value) => (intervalFilter = value)}
+						placeholder="Accrual Period"
+						allLabel="All Periods"
+						triggerClassName={LIST_FILTER_DESKTOP_TRIGGER_CLASS}
+					/>
+				</div>
+			{/snippet}
+			{#snippet moreFilters()}
+				<DebtsMoreFiltersPanel
+					{showPastDebts}
+					onShowPastDebtsChange={(value) => (showPastDebts = value)}
+					{intervalFilter}
+					onIntervalChange={(value) => (intervalFilter = value)}
+					{minAmount}
+					{maxAmount}
+					onMinAmountChange={(value) => (minAmount = value)}
+					onMaxAmountChange={(value) => (maxAmount = value)}
+					{investorFilterOptions}
+					{selectedInvestors}
+					onInvestorsChange={(value) => (selectedInvestors = value)}
+				/>
+			{/snippet}
+		</ListPageToolbar>
 
-		{#if sortedDebts.length === 0}
-			<p class="text-muted-foreground">No borrowings match your filters.</p>
-		{:else if viewModeState.viewMode === 'table'}
+		{#if viewModeState.viewMode === 'table'}
 			<DebtsTable
 				debts={sortedDebts}
+				emptyMessage={(items?.length ?? 0) === 0
+					? 'No borrowings yet.'
+					: 'No borrowings match your filters.'}
 				onQuickView={handleQuickView}
-				onEdit={handleRowEdit}
-				onDelete={(debt) => (debtPendingDeletion = debt)}
+				onEdit={canManage ? handleRowEdit : undefined}
+				onDelete={canManage ? (debt) => (debtPendingDeletion = debt) : undefined}
 			/>
+		{:else if sortedDebts.length === 0}
+			<ListEmptyState
+				message={(items?.length ?? 0) === 0
+					? 'No borrowings yet'
+					: 'No borrowings match your filters.'}
+				icon={HandCoins}
+			>
+				{#if hasActiveFilters}
+					{#snippet actions()}
+						<Button variant="outline" onclick={clearFilters}>
+							<X class="mr-2 h-4 w-4" />
+							Clear filters
+						</Button>
+					{/snippet}
+				{/if}
+			</ListEmptyState>
 		{:else}
 			<CardPagination items={sortedDebts} itemsPerPage={9} itemName="borrowings">
 				{#snippet children(cardDebts)}
 					<div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
 						{#each cardDebts as debt (debt.id)}
-							<DebtCard {debt} onQuickView={() => handleQuickView(debt)} />
+							<DebtCard
+								{debt}
+								onQuickView={() => handleQuickView(debt)}
+								onEdit={canManage ? handleRowEdit : undefined}
+								onDelete={canManage ? (item) => (debtPendingDeletion = item) : undefined}
+							/>
 						{/each}
 					</div>
 				{/snippet}
@@ -333,7 +299,41 @@
 			if (!open) selectedDebt = null;
 		}}
 		onUpdate={refreshDebts}
+		readOnly={!canManage}
 	/>
+
+	<DebtCreateModal
+		open={showCreateModal}
+		onOpenChange={(open) => (showCreateModal = open)}
+		onSuccess={refreshDebts}
+	/>
+
+	<EditFormSheet
+		open={editingDebt !== null}
+		onOpenChange={(open) => {
+			if (!open) editingDebt = null;
+		}}
+		title={editingDebt?.name ?? 'Borrowing'}
+		formId="debt-list-edit-form"
+		isSubmitting={editSubmitting}
+		isEditMode={true}
+		submitLabel={editSubmitting ? 'Saving...' : 'Save Changes'}
+	>
+		{#if editingDebt}
+			<DebtForm
+				investors={investors as Investor[]}
+				existingDebt={editingDebt}
+				formId="debt-list-edit-form"
+				showFormHeader={false}
+				bind:isSubmitting={editSubmitting}
+				onSuccess={async () => {
+					editingDebt = null;
+					await refreshDebts();
+				}}
+				onCancel={() => (editingDebt = null)}
+			/>
+		{/if}
+	</EditFormSheet>
 
 	<ConfirmDeleteDialog
 		open={debtPendingDeletion !== null}

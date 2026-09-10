@@ -1,9 +1,14 @@
-import type { PageServerLoad } from './$types';
-import { getCachedInvestors } from '$lib/server/cached-data';
-import { requireUserSession } from '$lib/server/request-auth';
+import type { PageServerLoad } from "./$types";
+import { getCachedInvestors } from "$lib/server/cached-data";
+import { requireWorkspaceAdminPage } from "$lib/server/workspace-admin";
 
 export const load: PageServerLoad = async (event) => {
-	const session = requireUserSession(event);
-	event.depends('app:investors');
-	return { items: getCachedInvestors(session.user.id, 'list') };
+  const session = await requireWorkspaceAdminPage(event, "/dashboard");
+  event.depends("app:investors");
+  const { navCapabilities } = await event.parent();
+  return {
+    items: getCachedInvestors(session.user.id, "list"),
+    canCreate: navCapabilities.isAdminWorkspace,
+    canManage: navCapabilities.isAdminWorkspace,
+  };
 };

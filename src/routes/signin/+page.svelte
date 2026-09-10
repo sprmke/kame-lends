@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Logo from '$lib/components/Logo.svelte';
+	import ThemeToggle from '$lib/components/theme/ThemeToggle.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 
@@ -8,7 +9,10 @@
 
 <svelte:head><title>Sign In</title></svelte:head>
 
-<div class="relative flex min-h-screen items-center justify-center p-4 pt-safe pb-safe">
+<div class="relative flex min-h-screen items-center justify-center px-4 pt-safe-offset-md pb-safe-offset-md">
+	<div class="absolute top-4 right-4 z-10 pt-safe-offset-sm">
+		<ThemeToggle />
+	</div>
 	<div class="absolute inset-0 -z-10 overflow-hidden">
 		<div
 			class="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-primary/6 blur-3xl"
@@ -24,14 +28,14 @@
 				<Logo size="xl" showIcon={true} gradient={true} />
 			</div>
 			<div class="space-y-2">
-				<h1 class="text-2xl font-bold tracking-tight">Welcome back</h1>
+				<h1 class="text-2xl font-semibold tracking-tight">Welcome back</h1>
 				<Card.Description class="text-base">
 					Sign in to manage your loans and investors
 				</Card.Description>
 			</div>
 		</Card.Header>
 		<Card.Content class="mt-5 space-y-5 px-8 pb-8">
-			<form method="POST" class="space-y-5">
+			<form method="POST" action="?/signIn" class="space-y-5">
 				<input type="hidden" name="providerId" value="google" />
 				<input type="hidden" name="callbackUrl" value={data.callbackUrl} />
 				<Button
