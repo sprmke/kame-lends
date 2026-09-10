@@ -1,56 +1,40 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { cn } from '$lib/utils';
-	import Logo from '$lib/components/Logo.svelte';
-	import { ChevronLeft } from 'lucide-svelte';
+	import BrandIcon from '$lib/components/BrandIcon.svelte';
+	import { APP_NAME } from '$lib/brand';
 
 	interface Props {
-		title: string;
-		showBack?: boolean;
-		backHref?: string;
-		showLogo?: boolean;
 		actions?: Snippet;
 		class?: string;
 	}
 
-	let {
-		title,
-		showBack = false,
-		backHref = '..',
-		showLogo = false,
-		actions,
-		class: className = ''
-	}: Props = $props();
+	let { actions, class: className = '' }: Props = $props();
+
+	const [brandPrimary, brandAccent] = APP_NAME.split(' ');
 </script>
 
 <header
-	class={cn(
-		'fixed inset-x-0 top-0 z-40 border-b border-border/80 bg-card/95 pt-safe backdrop-blur-md lg:hidden',
-		className
-	)}
+	class={cn('mobile-brand-hero fixed inset-x-0 top-0 z-40 pt-safe lg:hidden', className)}
 	style="padding-left: var(--safe-area-left); padding-right: var(--safe-area-right);"
 >
-	<div class="flex h-[var(--mobile-top-bar-height)] items-center gap-2 px-2">
-		{#if showBack}
-			<a
-				href={backHref}
-				class="touch-target inline-flex items-center justify-center rounded-md text-foreground hover:bg-accent"
-				aria-label="Back"
+	<div class="flex h-[var(--mobile-top-bar-height)] items-center gap-2 px-3">
+		<a
+			href="/dashboard"
+			class="native-press flex min-w-0 flex-1 items-center gap-2"
+			aria-label={APP_NAME}
+		>
+			<BrandIcon size="sm" variant="glass" />
+			<span
+				class="min-w-0 truncate text-[15px] font-semibold tracking-tight text-primary-foreground"
 			>
-				<ChevronLeft class="h-6 w-6" />
-			</a>
-		{:else if showLogo}
-			<a href="/dashboard" class="flex shrink-0 items-center px-1">
-				<Logo size="md" showIcon={true} compactIcon={true} />
-			</a>
-		{/if}
-
-		<p class="min-w-0 flex-1 truncate text-base font-semibold tracking-tight">{title}</p>
-
+				{brandPrimary}{#if brandAccent}<span class="font-semibold text-primary-foreground/80"
+					>{' '}{brandAccent}</span
+				>{/if}
+			</span>
+		</a>
 		{#if actions}
-			<div class="flex shrink-0 items-center gap-1">
-				{@render actions()}
-			</div>
+			{@render actions()}
 		{/if}
 	</div>
 </header>

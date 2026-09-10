@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import PriceVisibilityToggle from '$lib/components/common/PriceVisibilityToggle.svelte';
+	import RegisterMobileHeroActions from '$lib/components/layout/RegisterMobileHeroActions.svelte';
+	import { createIsMobileShell } from '$lib/composables/use-media-query.svelte';
 
 	interface Props {
 		title: string;
@@ -11,36 +13,37 @@
 	}
 
 	let { title, description, eyebrow, showPriceToggle = false, children }: Props = $props();
+
+	const isMobileShell = createIsMobileShell(false);
+
+	$effect(() => isMobileShell.init());
 </script>
 
-<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-	<!-- Title lives in MobileTopBar under lg; keep actions only on phone. -->
-	<div class="hidden min-w-0 space-y-0.5 lg:block">
+<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between lg:gap-4">
+	<div class="min-w-0 max-w-2xl space-y-2">
 		{#if eyebrow}
 			<p class="section-eyebrow">{eyebrow}</p>
 		{/if}
-		<div class="flex flex-wrap items-center gap-2">
-			<h1 class="text-xl font-semibold tracking-tight md:text-2xl">{title}</h1>
+		<div class="flex flex-wrap items-center gap-2.5">
+			<h1 class="text-xl font-semibold tracking-tight">{title}</h1>
 			{#if showPriceToggle}
-				<PriceVisibilityToggle />
-			{/if}
-		</div>
-		{#if description}
-			<p class="text-sm text-muted-foreground">{description}</p>
-		{/if}
-	</div>
-	{#if children}
-		<div class="flex w-full shrink-0 flex-wrap items-center gap-1.5 lg:w-auto lg:justify-end">
-			{#if showPriceToggle}
-				<div class="lg:hidden">
+				<div class="hidden lg:block">
 					<PriceVisibilityToggle />
 				</div>
 			{/if}
-			{@render children()}
 		</div>
-	{:else if showPriceToggle}
-		<div class="lg:hidden">
-			<PriceVisibilityToggle />
-		</div>
+		{#if description}
+			<p class="text-sm leading-relaxed text-muted-foreground">{description}</p>
+		{/if}
+	</div>
+	{#if children}
+		<RegisterMobileHeroActions snippet={children} active={isMobileShell.matches} />
+		{#if !isMobileShell.matches}
+			<div
+				class="page-header-actions hidden w-full shrink-0 flex-wrap items-center gap-2 lg:flex lg:w-auto lg:justify-end"
+			>
+				{@render children()}
+			</div>
+		{/if}
 	{/if}
 </div>

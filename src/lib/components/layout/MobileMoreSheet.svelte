@@ -2,6 +2,7 @@
 	import * as Sheet from '$lib/components/ui/sheet';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import PriceVisibilityToggle from '$lib/components/common/PriceVisibilityToggle.svelte';
+	import ThemeToggle from '$lib/components/theme/ThemeToggle.svelte';
 	import { isNavActive, type AppNavItem } from '$lib/nav/app-nav';
 	import { cn } from '$lib/utils';
 	import { LogOut } from 'lucide-svelte';
@@ -34,53 +35,81 @@
 </script>
 
 <Sheet.Root {open} {onOpenChange}>
-	<Sheet.Content side="bottom" class="gap-0 p-0" showCloseButton={true}>
-		<Sheet.Header class="border-b border-border/60">
+	<Sheet.Content
+		side="bottom"
+		showCloseButton={true}
+		class="h-[92dvh]! max-h-[92dvh]! gap-0 overflow-hidden p-0 pb-0!"
+	>
+		<Sheet.Header class="sr-only">
 			<Sheet.Title>More</Sheet.Title>
 		</Sheet.Header>
 
-		<div class="flex items-center gap-3 px-4 py-3">
-			<Avatar.Root class="h-11 w-11 ring-1 ring-border">
-				<Avatar.Image src={user.image ?? undefined} alt={user.name ?? 'User'} />
-				<Avatar.Fallback class="bg-primary text-sm font-semibold text-primary-foreground">
-					{userInitials}
-				</Avatar.Fallback>
-			</Avatar.Root>
-			<div class="min-w-0 flex-1">
-				<p class="truncate text-sm font-medium">{user.name ?? 'User'}</p>
-				<p class="truncate text-xs text-muted-foreground">{user.email}</p>
+		<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+			<nav
+				class="min-h-0 flex-[1_1_0] space-y-0.5 overflow-y-auto overscroll-contain px-3 py-1 [-webkit-overflow-scrolling:touch]"
+				aria-label="More"
+			>
+				{#each moreNavItems as item (item.id)}
+					{@const active = isNavActive(pathname, item.href)}
+					<a
+						href={item.href}
+						data-sveltekit-preload-data="hover"
+						aria-current={active ? 'page' : undefined}
+						class={cn(
+							'native-press flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium leading-snug transition-colors',
+							active
+								? 'bg-primary/10 text-primary'
+								: 'text-foreground hover:bg-muted/60 active:bg-muted'
+						)}
+						onclick={() => onOpenChange(false)}
+					>
+						<item.icon class="size-4 shrink-0 opacity-90" strokeWidth={1.75} />
+						<span class="min-w-0 truncate">{item.title}</span>
+					</a>
+				{/each}
+			</nav>
+
+			<div class="shrink-0 bg-popover px-3 pb-[max(0.75rem,var(--safe-area-bottom))]">
+				<div class="space-y-1.5 border-t border-border/60 pt-2.5">
+					<div class="flex min-h-11 items-center gap-1">
+						<div class="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 px-2 py-1.5">
+							<Avatar.Root class="size-8 shrink-0 ring-2 ring-background">
+								<Avatar.Image src={user.image ?? undefined} alt={user.name ?? 'User'} />
+								<Avatar.Fallback
+									class="bg-primary text-[11px] font-semibold text-primary-foreground"
+								>
+									{userInitials}
+								</Avatar.Fallback>
+							</Avatar.Root>
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-[13px] font-semibold leading-tight">
+									{user.name ?? 'User'}
+								</p>
+								{#if user.email}
+									<p class="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">
+										{user.email}
+									</p>
+								{/if}
+							</div>
+						</div>
+						<PriceVisibilityToggle
+							class="size-10 shrink-0 rounded-lg border-border/60 bg-muted shadow-none [&_svg]:size-4"
+						/>
+					</div>
+
+					<ThemeToggle variant="segmented" class="w-full shadow-none" />
+
+					<form method="POST" action="/auth/signout?/signOut">
+						<button
+							type="submit"
+							class="native-press mt-0.5 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+						>
+							<LogOut class="size-3.5 shrink-0" strokeWidth={1.75} />
+							Sign out
+						</button>
+					</form>
+				</div>
 			</div>
-			<PriceVisibilityToggle />
-		</div>
-
-		<nav class="flex flex-col gap-0.5 px-2 pb-2" aria-label="More">
-			{#each moreNavItems as item (item.id)}
-				{@const active = isNavActive(pathname, item.href)}
-				<a
-					href={item.href}
-					data-sveltekit-preload-data="hover"
-					class={cn(
-						'touch-target flex items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors',
-						active ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-accent'
-					)}
-					onclick={() => onOpenChange(false)}
-				>
-					<item.icon class="h-5 w-5 shrink-0" />
-					<span>{item.title}</span>
-				</a>
-			{/each}
-		</nav>
-
-		<div class="border-t border-border/60 p-2">
-			<form method="POST" action="/auth/signout">
-				<button
-					type="submit"
-					class="touch-target flex w-full items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-destructive hover:bg-destructive/5"
-				>
-					<LogOut class="h-4 w-4" />
-					Sign out
-				</button>
-			</form>
 		</div>
 	</Sheet.Content>
 </Sheet.Root>

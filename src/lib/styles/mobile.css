@@ -1,17 +1,58 @@
 /** Shared mobile shell / safe-area utilities for native-feel phone UI. */
 
 :root {
-  --mobile-tab-height: 3.5rem;
-  --mobile-top-bar-height: 3rem;
+  --mobile-tab-height: 3.25rem;
+  --mobile-top-bar-height: 3.25rem;
+  --mobile-dock-clearance: 5.75rem;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
+  --shadow-native:
+    0 2px 8px 0 oklch(0.18 0.02 55 / 0.04),
+    0 12px 32px -8px oklch(0.18 0.02 55 / 0.1);
+  --shadow-native-float:
+    0 1px 2px 0 oklch(0.18 0.02 55 / 0.04),
+    0 8px 24px -6px oklch(0.18 0.02 55 / 0.1),
+    0 20px 48px -12px oklch(0.18 0.02 55 / 0.08);
+  --shadow-native-primary:
+    0 4px 14px 0 color-mix(in oklch, var(--primary) 28%, transparent),
+    0 10px 28px -8px color-mix(in oklch, var(--primary) 22%, transparent);
+  --sheet-enter-duration: 300ms;
+  --sheet-exit-duration: 220ms;
+  --sheet-enter-easing: cubic-bezier(0.32, 0.72, 0, 1);
+  --sheet-exit-easing: cubic-bezier(0.32, 0, 0.67, 0);
+  --sheet-overlay-enter-duration: 250ms;
+  --sheet-overlay-exit-duration: 180ms;
+}
+
+.dark {
+  --shadow-native:
+    0 2px 8px 0 oklch(0 0 0 / 0.2), 0 12px 32px -8px oklch(0 0 0 / 0.35);
+  --shadow-native-float:
+    0 1px 2px 0 oklch(0 0 0 / 0.2), 0 8px 24px -6px oklch(0 0 0 / 0.32),
+    0 20px 48px -12px oklch(0 0 0 / 0.28);
+  --shadow-native-primary:
+    0 4px 14px 0 color-mix(in oklch, var(--primary) 32%, transparent),
+    0 10px 28px -8px color-mix(in oklch, var(--primary) 24%, transparent);
 }
 
 @layer utilities {
   .pt-safe {
     padding-top: var(--safe-area-top);
+  }
+
+  /** Safe area + fixed offset for public/marketing chrome (landing nav, sign-in). */
+  .pt-safe-offset-sm {
+    padding-top: calc(var(--safe-area-top) + 0.75rem);
+  }
+
+  .pt-safe-offset-md {
+    padding-top: calc(var(--safe-area-top) + 1.25rem);
+  }
+
+  .pb-safe-offset-md {
+    padding-bottom: calc(var(--safe-area-bottom) + 1.25rem);
   }
 
   .pb-safe {
@@ -26,24 +67,124 @@
     padding-right: var(--safe-area-right);
   }
 
-  .pb-mobile-tab {
-    padding-bottom: calc(
-      var(--mobile-tab-height) + var(--safe-area-bottom) + 0.5rem
-    );
-  }
+  @media (max-width: 1023px) {
+    .pb-mobile-tab {
+      padding-bottom: calc(
+        var(--mobile-dock-clearance) + var(--safe-area-bottom)
+      );
+    }
 
-  .pt-mobile-top {
-    padding-top: calc(var(--mobile-top-bar-height) + var(--safe-area-top));
+    .pt-mobile-top {
+      padding-top: calc(var(--mobile-top-bar-height) + var(--safe-area-top));
+    }
   }
 
   .touch-target {
     min-height: 44px;
     min-width: 44px;
   }
+
+  /* Expand hit area without growing visible chrome (dense filters / segments). */
+  .touch-hit {
+    position: relative;
+  }
+
+  .touch-hit::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+  }
+}
+
+.native-press {
+  touch-action: manipulation;
+  transition: transform 150ms ease-out;
+}
+
+/* bits-ui PresenceManager: one-frame data-starting-style, then data-ending-style on close. */
+[data-slot="sheet-overlay"] {
+  opacity: 1;
+  transition: opacity var(--sheet-overlay-enter-duration)
+    var(--sheet-enter-easing);
+}
+
+[data-slot="sheet-overlay"][data-starting-style],
+[data-slot="sheet-overlay"][data-ending-style] {
+  opacity: 0;
+}
+
+[data-slot="sheet-overlay"][data-ending-style] {
+  transition-duration: var(--sheet-overlay-exit-duration);
+  transition-timing-function: var(--sheet-exit-easing);
+}
+
+[data-slot="sheet-content"] {
+  transform: translate3d(0, 0, 0);
+  transition: transform var(--sheet-enter-duration) var(--sheet-enter-easing);
+}
+
+[data-slot="sheet-content"][data-ending-style] {
+  transition-duration: var(--sheet-exit-duration);
+  transition-timing-function: var(--sheet-exit-easing);
+}
+
+[data-slot="sheet-content"][data-side="bottom"][data-starting-style],
+[data-slot="sheet-content"][data-side="bottom"][data-ending-style] {
+  transform: translateY(100%);
+}
+
+[data-slot="sheet-content"][data-side="top"][data-starting-style],
+[data-slot="sheet-content"][data-side="top"][data-ending-style] {
+  transform: translateY(-100%);
+}
+
+[data-slot="sheet-content"][data-side="left"][data-starting-style],
+[data-slot="sheet-content"][data-side="left"][data-ending-style] {
+  transform: translateX(-100%);
+}
+
+[data-slot="sheet-content"][data-side="right"][data-starting-style],
+[data-slot="sheet-content"][data-side="right"][data-ending-style] {
+  transform: translateX(100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .native-press:active {
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .native-press,
+  .native-press:active {
+    transition: none;
+    transform: none;
+  }
+
+  [data-slot="sheet-content"],
+  [data-slot="sheet-overlay"] {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media (max-width: 1023px) {
-  html.dashboard-shell [data-slot="button"]:not([data-size="icon-xs"]) {
+  html.dashboard-shell {
+    touch-action: manipulation;
+  }
+
+  html.dashboard-shell .app-shell {
+    overscroll-behavior: contain;
+  }
+
+  /* Primary / large buttons keep 44px. Dense sm / icon-sm chrome does not. */
+  html.dashboard-shell
+    [data-slot="button"]:is(
+      [data-size="default"],
+      [data-size="lg"],
+      [data-size="icon"],
+      [data-size="icon-lg"]
+    ) {
     min-height: 44px;
   }
 
@@ -53,7 +194,192 @@
 
   html.dashboard-shell .mobile-sticky-actions-with-tabs {
     padding-bottom: calc(
-      var(--mobile-tab-height) + var(--safe-area-bottom) + 0.75rem
+      var(--mobile-dock-clearance) + var(--safe-area-bottom)
     );
+  }
+
+  /* Brand hero: straight bottom edge, orange (not Homes teal). */
+  html.dashboard-shell .mobile-brand-hero {
+    background: linear-gradient(
+      180deg,
+      var(--primary) 0%,
+      color-mix(in oklch, var(--primary) 88%, black) 100%
+    );
+    color: var(--primary-foreground);
+    border-bottom: 0;
+    box-shadow: none;
+  }
+
+  html.dashboard-shell .mobile-brand-hero::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 1px;
+    background: oklch(1 0 0 / 0.14);
+    pointer-events: none;
+  }
+
+  html.dashboard-shell .mobile-floating-dock {
+    box-shadow:
+      0 1px 0 0 oklch(1 0 0 / 0.65) inset,
+      0 1px 2px 0 oklch(0.18 0.02 55 / 0.05),
+      0 10px 28px -8px oklch(0.18 0.02 55 / 0.14),
+      0 24px 56px -16px oklch(0.18 0.02 55 / 0.12);
+  }
+
+  html.dashboard-shell.dark .mobile-floating-dock,
+  .dark html.dashboard-shell .mobile-floating-dock {
+    box-shadow:
+      0 1px 0 0 oklch(1 0 0 / 0.06) inset,
+      0 1px 2px 0 oklch(0 0 0 / 0.2),
+      0 10px 28px -8px oklch(0 0 0 / 0.35),
+      0 24px 56px -16px oklch(0 0 0 / 0.28);
+  }
+
+  html.dashboard-shell .section-eyebrow {
+    display: none;
+  }
+
+  html.dashboard-shell .dashboard-section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  html.dashboard-shell [data-slot="card"] {
+    --card-spacing: 1rem;
+    min-width: 0;
+    border-width: 0;
+    border-radius: 1.35rem;
+    box-shadow: var(--shadow-native-float);
+  }
+
+  html.dashboard-shell .dashboard-metric-cell p:last-child {
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+  }
+
+  html.dashboard-shell .surface-card,
+  html.dashboard-shell .surface-card-interactive,
+  html.dashboard-shell .dashboard-filter-panel {
+    border-width: 0;
+    border-radius: 1.35rem;
+    box-shadow: var(--shadow-native-float);
+  }
+
+  html.dashboard-shell [data-slot="card-title"] {
+    font-size: 0.875rem;
+  }
+
+  html.dashboard-shell [data-slot="card-description"] {
+    display: none;
+  }
+
+  html.dashboard-shell .icon-well-sm {
+    height: 2rem;
+    width: 2rem;
+    border-radius: 0.75rem;
+  }
+
+  html.dashboard-shell .dashboard-activity-item {
+    min-width: 0;
+  }
+
+  html.dashboard-shell .dashboard-activity-item p,
+  html.dashboard-shell .dashboard-activity-item span {
+    overflow-wrap: anywhere;
+  }
+
+  html.dashboard-shell .mobile-list-toolbar-controls {
+    width: 100%;
+  }
+
+  html.dashboard-shell .sheet-modal-footer [data-slot="button"],
+  html.dashboard-shell
+    .responsive-modal-shell
+    .form-actions
+    [data-slot="button"] {
+    width: 100%;
+    min-height: 3rem;
+    height: 3rem;
+    font-size: 1rem;
+  }
+
+  html.dashboard-shell .settings-action {
+    height: 2rem;
+    min-height: 0;
+    padding-inline: 0.75rem;
+    font-size: 0.75rem;
+    position: relative;
+  }
+
+  html.dashboard-shell .settings-action::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+  }
+
+  html.dashboard-shell [data-slot="input"] {
+    font-size: 16px;
+  }
+
+  html.dashboard-shell [data-slot="input"]::placeholder {
+    font-size: 13px;
+  }
+
+  html.dashboard-shell [data-slot="tabs-trigger"] {
+    font-size: 13px;
+  }
+
+  html.dashboard-shell .mobile-hero-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  html.dashboard-shell .mobile-hero-actions .pill-segment {
+    display: none;
+  }
+
+  html.dashboard-shell .mobile-hero-actions [data-slot="button"] {
+    position: relative;
+    display: inline-flex;
+    height: 2.25rem;
+    width: 2.25rem;
+    min-height: 0;
+    min-width: 0;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    justify-content: center;
+    border-width: 0;
+    border-radius: 9999px;
+    background: oklch(1 0 0 / 0.15);
+    color: var(--primary-foreground);
+    box-shadow: 0 0 0 1px oklch(1 0 0 / 0.25);
+  }
+
+  html.dashboard-shell .mobile-hero-actions [data-slot="button"]:hover {
+    background: oklch(1 0 0 / 0.22);
+  }
+
+  html.dashboard-shell .mobile-hero-actions [data-slot="button"] svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  html.dashboard-shell .mobile-hero-actions [data-slot="button"]::before {
+    content: "";
+    position: absolute;
+    inset: -0.25rem;
+  }
+}
+
+@media (max-width: 1023px) and (hover: none) {
+  html.dashboard-shell .surface-card-interactive:hover {
+    transform: none;
+    box-shadow: var(--shadow-native-float);
   }
 }

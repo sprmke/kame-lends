@@ -24,54 +24,60 @@
 </script>
 
 <nav
-	class="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-card/95 pb-safe backdrop-blur-md lg:hidden"
+	class="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(0.75rem,var(--safe-area-bottom))] lg:hidden"
 	aria-label="Primary"
-	style="padding-left: var(--safe-area-left); padding-right: var(--safe-area-right);"
+	style="padding-left: max(0.75rem, var(--safe-area-left)); padding-right: max(0.75rem, var(--safe-area-right));"
 >
-	<div class="mx-auto flex h-[var(--mobile-tab-height)] max-w-lg items-stretch justify-around px-1">
-		{#each primaryTabs as item (item.id)}
-			{@const active = isNavActive(pathname, item.href)}
-			<a
-				href={item.href}
-				data-sveltekit-preload-data="hover"
-				data-sveltekit-preload-code="hover"
-				aria-current={active ? 'page' : undefined}
-				class={cn(
-					'flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors',
-					active ? 'text-primary' : 'text-muted-foreground'
-				)}
-			>
-				<div
+	<div
+		class="mobile-floating-dock pointer-events-auto mx-auto flex max-w-md items-stretch rounded-[1.75rem] border border-border/40 bg-background/88 py-1 ring-1 ring-black/[0.04] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/72 dark:ring-white/[0.08]"
+	>
+		<div class="relative flex w-full items-stretch justify-around gap-0.5 px-1.5">
+			{#each primaryTabs as item (item.id)}
+				{@const active = isNavActive(pathname, item.href)}
+				<a
+					href={item.href}
+					data-sveltekit-preload-data="hover"
+					data-sveltekit-preload-code="hover"
+					aria-current={active ? 'page' : undefined}
 					class={cn(
-						'flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
-						active ? 'bg-primary/15 text-primary' : 'text-muted-foreground'
+						'native-press relative z-[1] flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[1rem] px-1 py-1 transition-colors duration-150',
+						active ? 'bg-primary text-primary-foreground shadow-[var(--shadow-native-primary)]' : 'text-muted-foreground'
 					)}
 				>
-					<item.icon class="h-5 w-5" />
-				</div>
-				<span class="truncate">{item.title}</span>
-			</a>
-		{/each}
-		<button
-			type="button"
-			class={cn(
-				'flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors',
-				moreActive ? 'text-primary' : 'text-muted-foreground'
-			)}
-			aria-label="More"
-			aria-haspopup="dialog"
-			aria-expanded={moreOpen}
-			onclick={onMoreClick}
-		>
-			<div
+					<item.icon class="size-[18px] shrink-0" strokeWidth={1.75} />
+					<span
+						class={cn(
+							'w-full truncate text-center text-[10px] leading-none tracking-tight',
+							active ? 'font-semibold' : 'font-medium'
+						)}
+					>
+						{item.title}
+					</span>
+				</a>
+			{/each}
+			<button
+				type="button"
 				class={cn(
-					'flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
-					moreActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground'
+					'native-press relative z-[1] flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[1rem] px-1 py-1 transition-colors duration-150',
+					moreActive
+						? 'bg-primary text-primary-foreground shadow-[var(--shadow-native-primary)]'
+						: 'text-muted-foreground'
 				)}
+				aria-label="More"
+				aria-haspopup="dialog"
+				aria-expanded={moreOpen}
+				onclick={onMoreClick}
 			>
-				<Ellipsis class="h-5 w-5" />
-			</div>
-			<span>More</span>
-		</button>
+				<Ellipsis class="size-[18px] shrink-0" strokeWidth={1.75} />
+				<span
+					class={cn(
+						'w-full truncate text-center text-[10px] leading-none tracking-tight',
+						moreActive ? 'font-semibold' : 'font-medium'
+					)}
+				>
+					More
+				</span>
+			</button>
+		</div>
 	</div>
 </nav>

@@ -2,11 +2,13 @@ import {
   Home,
   FileText,
   Users,
+  ContactRound,
   ArrowLeftRight,
   Settings,
   HandCoins,
   PiggyBank,
   Eye,
+  UserCheck,
 } from "lucide-svelte";
 import { SHOW_TRANSACTIONS_UI } from "$lib/feature-flags";
 
@@ -47,51 +49,64 @@ export function buildDestinationItems(
   if (caps.isAdminWorkspace) {
     items.push({ id: "loans", title: "Loans", href: "/loans", icon: FileText });
   }
-  if (caps.hasInvestments) {
-    items.push({
+
+  items.push(
+    {
       id: "investments",
       title: "Investments",
       href: "/investments",
       icon: PiggyBank,
-    });
-  }
-  if (caps.hasBorrowed) {
-    items.push({
+    },
+    {
       id: "borrowed",
       title: "Borrowed",
       href: "/borrowed",
       icon: HandCoins,
-    });
-  }
-  if (caps.hasWitnessed) {
-    items.push({
+    },
+    {
       id: "witnessed",
       title: "Witnessed",
       href: "/witnessed",
       icon: Eye,
-    });
-  }
-  if (caps.isAdminWorkspace && SHOW_TRANSACTIONS_UI) {
-    items.push({
-      id: "transactions",
-      title: "Transactions",
-      href: "/transactions",
-      icon: ArrowLeftRight,
-    });
-  }
+    },
+  );
+
   if (caps.isAdminWorkspace) {
-    items.push({
-      id: "debts",
-      title: "Borrowings",
-      href: "/debts",
-      icon: HandCoins,
-    });
-    items.push({
-      id: "investors",
-      title: "Investors",
-      href: "/investors",
-      icon: Users,
-    });
+    if (SHOW_TRANSACTIONS_UI) {
+      items.push({
+        id: "transactions",
+        title: "Transactions",
+        href: "/transactions",
+        icon: ArrowLeftRight,
+      });
+    }
+
+    items.push(
+      {
+        id: "debts",
+        title: "Borrowings",
+        href: "/debts",
+        icon: HandCoins,
+      },
+      {
+        id: "investors",
+        title: "Investors",
+        href: "/investors",
+        icon: Users,
+      },
+      {
+        id: "borrowers",
+        title: "Borrowers",
+        href: "/borrowers",
+        icon: ContactRound,
+      },
+      {
+        id: "witnesses",
+        title: "Witnesses",
+        href: "/witnesses",
+        icon: UserCheck,
+      },
+    );
   }
 
   return items;
@@ -132,7 +147,12 @@ export function resolveMobilePageTitle(pathname: string): string {
   if (pathname.startsWith("/investors/new")) return "New investor";
   if (pathname.startsWith("/investors/")) return "Investor";
   if (pathname.startsWith("/investors")) return "Investors";
+  if (pathname.startsWith("/borrowers/new")) return "New borrower";
   if (pathname.startsWith("/borrowers/")) return "Borrower";
+  if (pathname.startsWith("/borrowers")) return "Borrowers";
+  if (pathname.startsWith("/witnesses/new")) return "New witness";
+  if (pathname.startsWith("/witnesses/")) return "Witness";
+  if (pathname.startsWith("/witnesses")) return "Witnesses";
   if (pathname.startsWith("/transactions/new")) return "New transaction";
   if (pathname.startsWith("/transactions/")) return "Transaction";
   if (pathname.startsWith("/transactions")) return "Transactions";
@@ -150,6 +170,7 @@ export function isDetailRoute(pathname: string): boolean {
     /^\/debts\/[^/]+/.test(pathname) ||
     /^\/investors\/[^/]+/.test(pathname) ||
     /^\/borrowers\/[^/]+/.test(pathname) ||
+    /^\/witnesses\/[^/]+/.test(pathname) ||
     /^\/transactions\/[^/]+/.test(pathname) ||
     pathname.endsWith("/new")
   );

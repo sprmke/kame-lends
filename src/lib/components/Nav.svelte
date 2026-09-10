@@ -2,23 +2,24 @@
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { cn } from '$lib/utils';
+	import BrandIcon from '$lib/components/BrandIcon.svelte';
 	import Logo from '$lib/components/Logo.svelte';
+	import ThemeToggle from '$lib/components/theme/ThemeToggle.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import MobileTabBar from '$lib/components/layout/MobileTabBar.svelte';
 	import MobileTopBar from '$lib/components/layout/MobileTopBar.svelte';
+	import MobileHeroActions from '$lib/components/layout/MobileHeroActions.svelte';
 	import MobileMoreSheet from '$lib/components/layout/MobileMoreSheet.svelte';
 	import {
 		buildAppNav,
 		DEFAULT_NAV_CAPABILITIES,
-		isDetailRoute,
 		isNavActive,
-		resolveMobilePageTitle,
 		type NavCapabilities
 	} from '$lib/nav/app-nav';
-	import { mobilePageTitle } from '$lib/stores/mobile-page-title.svelte';
-	import { ChevronLeft, ChevronRight, Landmark, LogOut } from 'lucide-svelte';
+	import { THEME_COLOR_DASHBOARD } from '$lib/theme/preferences';
+	import { ChevronLeft, ChevronRight, LogOut } from 'lucide-svelte';
 
 	interface UserInfo {
 		name?: string | null;
@@ -46,10 +47,6 @@
 	const isSignPage = $derived(pathname.startsWith('/sign/'));
 	const isPublicChromeless = $derived(isLandingPage || isSignInPage || isSignPage);
 
-	const mobileTitle = $derived(mobilePageTitle.override ?? resolveMobilePageTitle(pathname));
-	const showMobileBack = $derived(isDetailRoute(pathname));
-	const showMobileLogo = $derived(pathname === '/dashboard' || pathname === '/');
-
 	const moreActive = $derived(
 		moreOpen || nav.moreNavItems.some((item) => isNavActive(pathname, item.href))
 	);
@@ -70,13 +67,19 @@
 	);
 </script>
 
+<svelte:head>
+	{#if user && !isPublicChromeless}
+		<meta name="theme-color" content={THEME_COLOR_DASHBOARD} />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+	{/if}
+</svelte:head>
+
 {#if user && !isPublicChromeless}
-	<MobileTopBar
-		title={mobileTitle}
-		showBack={showMobileBack}
-		showLogo={showMobileLogo && !showMobileBack}
-		backHref=".."
-	/>
+	<MobileTopBar>
+		{#snippet actions()}
+			<MobileHeroActions />
+		{/snippet}
+	</MobileTopBar>
 
 	<MobileTabBar
 		{pathname}
@@ -96,32 +99,31 @@
 
 	<aside
 		class={cn(
-			'fixed top-0 left-0 z-40 hidden h-screen flex-col border-r border-border/80 bg-card transition-all duration-200 lg:flex',
-			isCollapsed ? 'w-[4.25rem]' : 'w-56'
+			'fixed top-4 left-4 z-40 hidden h-[calc(100vh-2rem)] flex-col rounded-[1.75rem] border border-border/50 bg-card/95 shadow-[var(--shadow-elevated-lg)] backdrop-blur-xl transition-all duration-300 lg:flex',
+			isCollapsed ? 'w-[5.5rem]' : 'w-[17rem]'
 		)}
 	>
 		<div
 			class={cn(
-				'flex h-12 shrink-0 items-center border-b border-border/80',
-				isCollapsed ? 'justify-center px-2' : 'justify-between px-3'
+				'flex h-16 shrink-0 items-center border-b border-border/50',
+				isCollapsed ? 'justify-center px-2' : 'justify-between px-4'
 			)}
 		>
 			{#if !isCollapsed}
-				<a href="/dashboard"><Logo size="md" showIcon={true} compactIcon={true} /></a>
+				<a href="/dashboard"
+					><Logo size="md" showIcon={true} gradient={true} animated={true} /></a
+				>
 			{:else}
-				<a href="/dashboard" class="flex justify-center" title="Dashboard">
-					<span
-						class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground"
-					>
-						<Landmark class="h-3.5 w-3.5" />
-					</span>
+				<a href="/dashboard" class="flex w-full justify-center" title="Dashboard">
+					<BrandIcon size="lg" />
 				</a>
 			{/if}
 			<button
 				type="button"
 				class={cn(
-					'flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
-					isCollapsed && 'absolute top-3 -right-3 border border-border/80 bg-card shadow-sm'
+					'flex h-8 w-8 items-center justify-center rounded-xl bg-muted/80 text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground',
+					isCollapsed &&
+						'absolute top-5 -right-3.5 border border-border/50 bg-card shadow-[var(--shadow-elevated)]'
 				)}
 				aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 				onclick={() => (isCollapsed = !isCollapsed)}
@@ -131,7 +133,7 @@
 					/>{/if}
 			</button>
 		</div>
-		<nav class={cn('flex-1 space-y-0.5 overflow-y-auto py-2', isCollapsed ? 'px-1.5' : 'px-2')}>
+		<nav class={cn('flex-1 space-y-1.5 overflow-y-auto', isCollapsed ? 'p-2.5' : 'p-4')}>
 			{#each nav.sidebarItems as item (item.id)}
 				<a
 					href={item.href}
@@ -139,38 +141,41 @@
 					data-sveltekit-preload-code="hover"
 					title={isCollapsed ? item.title : undefined}
 					class={cn(
-						'group relative flex items-center rounded-md py-2 text-sm font-medium transition-colors',
+						'group relative mb-0.5 flex items-center rounded-2xl py-2.5 text-sm font-medium transition-all duration-200',
 						isNavActive(pathname, item.href)
 							? 'nav-item-active'
-							: 'text-muted-foreground hover:bg-muted/80 hover:text-foreground',
-						isCollapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5'
+							: 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+						isCollapsed ? 'justify-center px-2' : 'gap-3 px-3.5'
 					)}
 				>
 					<div
 						class={cn(
-							'flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors',
+							'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
 							isNavActive(pathname, item.href)
 								? 'nav-item-active-icon'
 								: 'bg-muted/80 group-hover:bg-primary/10'
 						)}
 					>
-						<item.icon class="h-3.5 w-3.5" />
+						<item.icon class="h-4 w-4" />
 					</div>
-					{#if !isCollapsed}<span class="truncate">{item.title}</span>{/if}
+					{#if !isCollapsed}<span class="truncate font-medium">{item.title}</span>{/if}
 				</a>
 			{/each}
 		</nav>
-		<div class="border-t border-border/80 p-2">
+		<div class="border-t border-border/50 p-4">
+			<div class={cn('mb-3', isCollapsed && 'flex justify-center')}>
+				<ThemeToggle variant={isCollapsed ? 'icon' : 'segmented'} class={isCollapsed ? undefined : 'w-full'} />
+			</div>
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger
 					class={cn(
-						'flex w-full items-center rounded-md py-1.5 text-sm font-medium transition-colors hover:bg-accent',
-						isCollapsed ? 'justify-center px-1' : 'gap-2.5 px-2'
+						'flex w-full items-center rounded-xl py-2 text-sm font-medium transition-all duration-200 hover:bg-accent',
+						isCollapsed ? 'justify-center px-2' : 'gap-3 px-3'
 					)}
 				>
-					<Avatar.Root class="h-8 w-8 ring-1 ring-border">
+					<Avatar.Root class="h-9 w-9 ring-2 ring-primary/20">
 						<Avatar.Image src={user.image ?? undefined} alt={user.name ?? 'User'} />
-						<Avatar.Fallback class="bg-primary text-xs font-semibold text-primary-foreground">
+						<Avatar.Fallback class="bg-primary text-sm font-semibold text-primary-foreground">
 							{userInitials}
 						</Avatar.Fallback>
 					</Avatar.Root>
@@ -181,13 +186,13 @@
 						</div>
 					{/if}
 				</DropdownMenu.Trigger>
-				<DropdownMenu.Content align="end" class="w-56">
-					<DropdownMenu.Label>My Account</DropdownMenu.Label>
+				<DropdownMenu.Content align="end">
+					<DropdownMenu.Label class="font-semibold">My Account</DropdownMenu.Label>
 					<DropdownMenu.Separator />
 					<DropdownMenu.Item>
-						<form method="POST" action="/auth/signout" class="w-full">
-							<button type="submit" class="flex w-full items-center text-destructive">
-								<LogOut class="mr-2 h-4 w-4" />
+						<form method="POST" action="/auth/signout?/signOut" class="w-full">
+							<button type="submit" class="flex w-full items-center gap-2.5 text-destructive">
+								<LogOut class="h-4 w-4" />
 								Sign out
 							</button>
 						</form>
@@ -204,20 +209,25 @@
 			class="flex h-12 items-center justify-between px-3 lg:mx-auto lg:h-14 lg:max-w-7xl lg:px-6"
 		>
 			<a href="/"><Logo size="md" showIcon={true} compactIcon={true} /></a>
-			<Button href="/signin" size="sm" class="touch-target lg:h-8">Login</Button>
+			<div class="flex items-center gap-2">
+				<ThemeToggle />
+				<Button href="/signin" size="sm" class="touch-target lg:h-8">Login</Button>
+			</div>
 		</div>
 	</header>
 {/if}
 
 <div
 	class={cn(
-		'min-h-screen transition-[margin,padding] duration-200',
+		'min-h-screen min-w-0 transition-[margin,padding] duration-300',
+		user && !isPublicChromeless && 'app-shell',
 		isPublicChromeless
 			? 'pt-0'
 			: user
-				? 'pt-mobile-top pb-mobile-tab lg:pt-0 lg:pb-0'
+				? 'pt-mobile-top pb-mobile-tab lg:pt-4 lg:pb-0'
 				: 'pt-12 lg:pt-14',
-		user && !isCollapsed ? 'lg:ml-56' : user && isCollapsed ? 'lg:ml-[4.25rem]' : 'lg:ml-0'
+		user && !isCollapsed ? 'lg:ml-[19rem]' : user && isCollapsed ? 'lg:ml-[7.5rem]' : 'lg:ml-0',
+		user && !isPublicChromeless && 'lg:pr-4'
 	)}
 >
 	{@render children()}
