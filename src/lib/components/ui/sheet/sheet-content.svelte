@@ -46,12 +46,16 @@
 		{...restProps}
 	>
 		{#if side === 'bottom'}
-			<div class="flex shrink-0 justify-center pt-3 pb-2.5" aria-hidden="true">
-				<div class="h-1 w-10 rounded-full bg-muted-foreground/35"></div>
-			</div>
+			<SheetPrimitive.Close
+				data-slot="sheet-handle"
+				class="relative flex w-full shrink-0 cursor-pointer touch-target items-center justify-center px-3 pt-3 pb-2.5 active:opacity-70"
+			>
+				<div class="h-1 w-10 rounded-full bg-muted-foreground/35" aria-hidden="true"></div>
+				<span class="sr-only">Close</span>
+			</SheetPrimitive.Close>
 		{/if}
 		{@render children?.()}
-		{#if showCloseButton}
+		{#if showCloseButton && side !== 'bottom'}
 			<SheetPrimitive.Close data-slot="sheet-close">
 				{#snippet child({ props })}
 					<Button

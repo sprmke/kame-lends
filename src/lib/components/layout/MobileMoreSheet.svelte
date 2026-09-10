@@ -39,7 +39,7 @@
 <Sheet.Root {open} {onOpenChange}>
 	<Sheet.Content
 		side="bottom"
-		showCloseButton={true}
+		showCloseButton={false}
 		class="gap-0 overflow-hidden p-0 pb-0!"
 	>
 		<Sheet.Header class="sr-only">
@@ -49,7 +49,7 @@
 		<div class="flex min-h-0 flex-col">
 			{#if moreNavItems.length > 0}
 				<nav
-					class="min-h-0 overflow-y-auto overscroll-contain px-3 pt-2 pb-2 pr-12 [-webkit-overflow-scrolling:touch]"
+					class="min-h-0 overflow-y-auto overscroll-contain pb-2 [-webkit-overflow-scrolling:touch]"
 					aria-label="More"
 				>
 					{#each moreNavGroups as group, groupIndex (group.id)}
@@ -58,7 +58,7 @@
 						{/if}
 						{#if group.label}
 							<p
-								class="mb-1 px-2.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
+								class="mb-1 px-4 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
 							>
 								{group.label}
 							</p>
@@ -71,7 +71,7 @@
 									data-sveltekit-preload-data="hover"
 									aria-current={active ? 'page' : undefined}
 									class={cn(
-										'native-press flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium leading-snug transition-colors',
+										'native-press flex min-h-11 w-full items-center gap-2.5 px-4 py-2 text-[13px] font-medium leading-snug transition-colors',
 										active
 											? 'bg-primary/10 text-primary'
 											: 'text-foreground hover:bg-muted/60 active:bg-muted'
@@ -90,7 +90,7 @@
 			<div
 				class={cn(
 					'shrink-0 bg-popover px-3 pb-[max(1rem,var(--safe-area-bottom))]',
-					moreNavItems.length === 0 && 'pt-2 pr-12'
+					moreNavItems.length === 0 && 'pt-2'
 				)}
 			>
 				<div
