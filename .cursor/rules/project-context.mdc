@@ -1,0 +1,54 @@
+---
+description: Kame Lends — stack, doc index, where to edit. SvelteKit at repo root.
+alwaysApply: true
+---
+
+# Kame Lends (PawnTracker) — agent context
+
+## Read first (task-scoped)
+
+1. `docs/README.md` → **`docs/PROJECT.md`** (architecture / API / env / routes)
+2. **`docs/workflow/done/sveltekit-migration.md`** — migration tracker on `feat/sveltekit-migration`
+3. **`docs/guides/routes/README.md`** — per-page behavior (when guides exist)
+4. Loan math / domain → **`loan-domain`** skill
+
+## Stack (authoritative)
+
+| Layer | Technology |
+| ----- | ---------- |
+| **UI** | SvelteKit 2 + Svelte 5 + Vite (repo root `src/`) |
+| **DB** | Neon Postgres + Drizzle ORM (`src/lib/server/db/schema.ts`, `db/migrations/`) |
+| **Auth** | Auth.js (`@auth/sveltekit`) |
+| **Hosting** | Vercel + `@sveltejs/adapter-vercel` |
+| **PDF** | Server-only `@react-pdf/renderer` (see `pdf-export` skill) |
+
+Stale if a skill mentions Supabase, tRPC, Next.js App Router, or React Router for current work.
+
+## Layout
+
+- Branch: **`feat/sveltekit-migration`**
+- App routes: **`src/routes/`** · shared logic: **`src/lib/`** · server-only: **`src/lib/server/`**
+- Database: use **`dev-sveltekit-migration`** Neon branch for QA (not prod)
+
+## Tooling index
+
+- Rules/skills: **`.cursor/rules/README.md`**
+- Claude Code: **`.claude/README.md`** + **`CLAUDE.md`**
+- OpenCode: **`opencode.json`**
+- Once after clone: **`bun run setup:ai-tooling`**
+- Prod safety: unlock **`lendwave`** (`.cursor/rules/no-prod-deploy.mdc`)
+
+## Where to edit
+
+| Concern | Path |
+| ---- | ---- |
+| Routes | `src/routes/` |
+| Components | `src/lib/components/` |
+| Shared logic | `src/lib/` |
+| Server-only | `src/lib/server/`, `+server.ts` |
+| Schema | `src/lib/server/db/schema.ts` |
+| Auth | `src/lib/server/auth.ts`, `src/hooks.server.ts` |
+
+## Docs sync
+
+Behavior changes → update docs in the same change (`documentation-maintenance.mdc` · `documentation-maintenance` skill). Per-route → `docs/guides/routes/`.

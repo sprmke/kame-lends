@@ -1,0 +1,29 @@
+---
+description: Keep docs/guides route guides in sync when pages or features change
+alwaysApply: true
+---
+
+# Route guides maintenance
+
+Whenever you **implement or materially change** a page, section, or feature in **`src/`**, update the matching guide under **`docs/guides/routes/`** in the **same change**.
+
+## Which file to update
+
+Mirror the SvelteKit URL (omit dynamic param values). Index: **`docs/guides/routes/README.md`**.
+
+| Route | Guide |
+| ----- | ----- |
+| `/dashboard` | `docs/guides/routes/dashboard.md` |
+| `/loans`, `/loans/[id]` | `docs/guides/routes/loans.md`, `loans-detail.md` |
+| `/investors` | `docs/guides/routes/investors.md` |
+| `/sign/[token]` | `docs/guides/routes/sign.md` |
+
+Workflow: **`.agent/skills/route-guides/SKILL.md`**.
+
+## What to document
+
+Behavior, load/actions, validation, permissions (admin vs investor), edge cases, implementation map (Svelte + server paths).
+
+## When guides need no change
+
+Typos, internal renames with no UX/API/validation change.

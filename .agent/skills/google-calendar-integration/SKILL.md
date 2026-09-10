@@ -12,26 +12,25 @@ Service account (not user OAuth):
 
 ## Implementation
 
-- `lib/google-calendar.ts` (~1k lines, `googleapis` client) — framework-agnostic, port to `new-app/src/lib/server/`.
+- `src/lib/server/google-calendar.ts` (`googleapis` client)
 - Events: disbursements, due dates, interest due, daily summaries with links back to filtered loans.
 
 ## Sync model
 
 - **Manual sync** from settings / loans (admin workspace owner only).
-- Not triggered on every loan save (matches legacy behavior).
+- Not triggered on every loan save.
 - Shared service-account calendar (`GOOGLE_CALENDAR_ID`); no per-user Google OAuth attendees.
 - Loan parties see events in the **in-app** loan calendar on `/loans`, `/investments`, `/borrowed`, `/witnessed`.
 
 ## SvelteKit wiring
 
 - Settings page actions call server functions.
-- API routes: port `app/api/loans/sync-calendar`, `cleanup-calendar`, etc. to `+server.ts`.
+- API routes: `src/routes/api/loans/sync-calendar/+server.ts`, `cleanup-calendar`, etc.
 
 ## Testing
 
-Use a **test calendar** on dev Neon QA — never prod calendar during migration.
+Use a **test calendar** on the QA Neon branch — never the prod calendar.
 
 ## App URL in events
 
-- Legacy: `NEXT_PUBLIC_APP_URL`
-- SvelteKit cutover: `PUBLIC_APP_URL` (document in env migration)
+`PUBLIC_APP_URL` (see `.env.example`).

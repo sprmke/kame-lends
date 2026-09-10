@@ -1,16 +1,16 @@
 # SvelteKit conventions — Kame Lends
 
-Use for routes, loaders, forms, and server code in `new-app/`.
+Use for routes, loaders, forms, and server code in `src/`.
 
 ## Stack
 
 - **SvelteKit 2** + **Svelte 5** (runes: `$state`, `$derived`, `$effect`, `.svelte.ts` modules).
-- **Vite** dev server (`bun run dev` in `new-app/`).
+- **Vite** dev server (`bun run dev` at repo root).
 - **adapter-vercel** for production.
 
 ## File-based routes
 
-Routes live under `new-app/src/routes/`:
+Routes live under `src/routes/`:
 
 | File                                   | Role                                      |
 | -------------------------------------- | ----------------------------------------- |
@@ -20,7 +20,7 @@ Routes live under `new-app/src/routes/`:
 | `+server.ts`                           | API endpoints (downloads, cron, webhooks) |
 | `+error.svelte`                        | Error boundary                            |
 
-Mirror legacy `app/` URLs when porting (e.g. `/loans/[id]` → `routes/loans/[id]/`).
+Keep existing URL paths (e.g. `/loans/[id]` → `src/routes/loans/[id]/`).
 
 ## Server vs client
 
@@ -30,7 +30,6 @@ Mirror legacy `app/` URLs when porting (e.g. `/loans/[id]` → `routes/loans/[id
 ## Auth
 
 - `@auth/sveltekit` in `hooks.server.ts` — see `auth-js-sveltekit` skill.
-- Port `middleware.ts` route matrix into `hooks.server.ts` `sequence` handler.
 
 ## Data loading
 
@@ -44,10 +43,10 @@ Mirror legacy `app/` URLs when porting (e.g. `/loans/[id]` → `routes/loans/[id
 
 ## Env vars
 
-- SvelteKit public prefix: `PUBLIC_*` (replaces `NEXT_PUBLIC_*` at cutover).
+- Public prefix: `PUBLIC_*`.
 - Private: `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_*`, etc. — only in server modules.
 
 ## Do not
 
 - Add Next.js App Router patterns (`app/`, `use client`, `next/navigation`).
-- Use React components in `new-app/` except server-only PDF (`pdf-export` skill).
+- Use React components in `src/` except server-only PDF (`pdf-export` skill).

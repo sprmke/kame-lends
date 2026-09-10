@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/session-docs-sync-reminder.sh",
+        "timeout": 5
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/guard-shell.sh",
+        "timeout": 5
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": ".cursor/hooks/guard-shipped-migrations.sh",
+        "matcher": "StrReplace",
+        "timeout": 5
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/format-edited-file.sh",
+        "timeout": 15
+      },
+      {
+        "command": "bash .cursor/hooks/check-stack-terminology.sh",
+        "timeout": 5
+      }
+    ]
+  }
+}

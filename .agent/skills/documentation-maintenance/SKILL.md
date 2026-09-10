@@ -4,13 +4,12 @@ Invoke before claiming any material change done. Mirrors `.cursor/rules/document
 
 ## Same-change updates
 
-| Change                                     | Update                                                        |
-| ------------------------------------------ | ------------------------------------------------------------- |
-| Architecture, routes, env, API, data model | `docs/PROJECT.md`                                             |
-| Page/section UX in `new-app/`              | `docs/guides/routes/*.md` (+ `route-guides` skill)            |
-| Migration progress                         | `docs/workflow/in-progress/sveltekit-migration.md` checkboxes |
-| Ops runbooks                               | `docs/archive/operations/`                                    |
-| Stack conventions                          | `.cursor/rules/project-context.mdc` if paths mislead agents   |
+| Change                                     | Update                                                      |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| Architecture, routes, env, API, data model | `docs/PROJECT.md`                                           |
+| Page/section UX in `src/`                  | `docs/guides/routes/*.md` (+ `route-guides` skill)          |
+| Ops runbooks                               | `docs/archive/operations/`                                  |
+| Stack conventions                          | `.cursor/rules/project-context.mdc` if paths mislead agents |
 
 ## Rules of thumb
 

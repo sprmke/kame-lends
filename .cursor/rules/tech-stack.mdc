@@ -1,0 +1,33 @@
+---
+description: SvelteKit stack guardrails — ban Next.js patterns in src/
+globs:
+  - 'src/**'
+---
+
+# Tech stack — SvelteKit app
+
+**`src/`** is SvelteKit 2 + Svelte 5. Do not reintroduce Next.js or client React.
+
+## Use
+
+- SvelteKit file routes (`+page.svelte`, `+page.server.ts`, `+server.ts`)
+- Svelte 5 runes (`$state`, `$derived`, `.svelte.ts` stores)
+- shadcn-svelte + Bits UI
+- sveltekit-superforms + Zod
+- Charts: SVG donuts; CSS ranking tracks for investor capital; ApexCharts only for cashflow. Not Recharts.
+- lucide-svelte for icons
+- Drizzle + Neon (server-only)
+- `@auth/sveltekit`
+
+## Ban in src/
+
+| Banned | Why |
+| ------ | --- |
+| `next/*`, `next-auth` | Legacy stack |
+| Client React, Radix React, Recharts | Use Svelte equivalents |
+| `react-hook-form`, `zustand` | Use superforms + runes |
+| tRPC, Supabase client patterns | Wrong stack |
+
+## Allowed exception
+
+Server-only `@react-pdf/renderer` for PDF exports (`pdf-export` skill). React must not ship to the browser bundle.

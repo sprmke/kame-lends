@@ -1,0 +1,33 @@
+---
+description: sveltekit-superforms + Zod
+globs:
+  - 'src/**/*Form*'
+  - 'src/**/schemas/**'
+  - 'src/**/+page.server.ts'
+---
+
+# Forms — superforms + Zod
+
+## Stack
+
+- **sveltekit-superforms** + **Formsnap** + **Zod**
+- Zod schemas port from legacy with minimal changes (`src/lib/*` validation)
+
+## Pattern
+
+1. Define schema in `src/lib/schemas/` or colocated `*Schema.ts`
+2. In `+page.server.ts`: `superValidate` on load and in `actions`
+3. In `+page.svelte`: `superForm` with `formsnap` field components
+
+## Server actions
+
+- Mutations go through form `actions` in `+page.server.ts`, not client-side fetch to custom APIs (unless download/stream).
+
+## Errors
+
+- Field errors from Zod; toast for action-level failures (`svelte-sonner`).
+- Keep copy short (`human-copy.mdc`, `ui-minimal-copy.mdc`).
+
+## Money fields
+
+Use same parsing/validation as legacy forms; cross-check with `loan-domain` skill and calculation modules.

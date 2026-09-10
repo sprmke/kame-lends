@@ -1,0 +1,29 @@
+---
+description: Keep project docs in sync when code, APIs, or product behavior changes
+alwaysApply: true
+---
+
+# Documentation maintenance
+
+Whenever you **implement or materially change** behavior (features, routes, validation, DB schema/migrations, env vars, integrations, or user-visible flows), **update documentation in the same change**.
+
+**Claude Code:** invoke **`documentation-maintenance`** skill before claiming done.
+
+## What to update
+
+| Change type | Update |
+| ----------- | ------ |
+| Architecture, routes, env, API, data model | **`docs/PROJECT.md`** |
+| Page/section UX in `src/` | **`docs/guides/routes/*.md`** (`route-guides` skill) |
+| Ops / backup / cutover | **`docs/archive/operations/`** |
+| Agent path pointers | **`.cursor/rules/project-context.mdc`** |
+
+## Rules of thumb
+
+- Small accurate edits over full rewrites.
+- New env var or HTTP route → document in `docs/PROJECT.md`.
+- Fix contradictions; do not leave docs stale.
+
+## Exempt
+
+Typos, internal renames with no behavior/API/UX impact.

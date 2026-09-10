@@ -1,57 +1,57 @@
 {
-	"$schema": "https://opencode.ai/config.json",
-	"instructions": [
-		".cursor/rules/project-context.mdc",
-		".cursor/rules/ai-usage.mdc",
-		".cursor/rules/documentation-maintenance.mdc",
-		".cursor/rules/ui-minimal-copy.mdc",
-		".cursor/rules/human-copy.mdc",
-		".cursor/rules/git-commits.mdc",
-		".cursor/rules/no-prod-deploy.mdc",
-		".cursor/rules/route-guides.mdc",
-		".cursor/rules/tech-stack.mdc",
-		"CLAUDE.md"
-	],
-	"skills": {
-		"paths": [".agent/skills"]
-	},
-	"mcp": {
-		"neon": {
-			"type": "remote",
-			"url": "https://mcp.neon.tech/mcp",
-			"enabled": true
-		},
-		"playwright": {
-			"type": "local",
-			"command": ["npx", "-y", "@playwright/mcp@latest"],
-			"enabled": true
-		},
-		"context7": {
-			"type": "local",
-			"command": ["npx", "-y", "@upstash/context7-mcp"],
-			"enabled": true
-		},
-		"markitdown": {
-			"type": "local",
-			"command": ["markitdown-mcp"],
-			"enabled": true
-		}
-	},
-	"permission": {
-		"edit": {
-			"*": "allow",
-			"db/migrations/**": "deny",
-			"**/db/migrations/**": "deny"
-		},
-		"bash": {
-			"*": "allow",
-			"rm -rf /": "deny",
-			"rm -rf /*": "deny",
-			"rm -rf ~": "deny",
-			"rm -rf ~/*": "deny"
-		},
-		"skill": {
-			"*": "allow"
-		}
-	}
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    ".cursor/rules/project-context.mdc",
+    ".cursor/rules/ai-usage.mdc",
+    ".cursor/rules/documentation-maintenance.mdc",
+    ".cursor/rules/ui-minimal-copy.mdc",
+    ".cursor/rules/human-copy.mdc",
+    ".cursor/rules/git-commits.mdc",
+    ".cursor/rules/no-prod-deploy.mdc",
+    ".cursor/rules/route-guides.mdc",
+    ".cursor/rules/tech-stack.mdc",
+    "CLAUDE.md"
+  ],
+  "skills": {
+    "paths": [".agent/skills"]
+  },
+  "mcp": {
+    "neon": {
+      "type": "remote",
+      "url": "https://mcp.neon.tech/mcp",
+      "enabled": true
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@latest"],
+      "enabled": true
+    },
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp"],
+      "enabled": true
+    },
+    "markitdown": {
+      "type": "local",
+      "command": ["markitdown-mcp"],
+      "enabled": true
+    }
+  },
+  "permission": {
+    "edit": {
+      "*": "allow",
+      "db/migrations/**": "deny",
+      "**/db/migrations/**": "deny"
+    },
+    "bash": {
+      "*": "allow",
+      "rm -rf /": "deny",
+      "rm -rf /*": "deny",
+      "rm -rf ~": "deny",
+      "rm -rf ~/*": "deny"
+    },
+    "skill": {
+      "*": "allow"
+    }
+  }
 }

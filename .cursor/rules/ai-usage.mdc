@@ -1,0 +1,41 @@
+---
+description: Token hygiene — session length, model routing, MCP discipline
+alwaysApply: true
+---
+
+# AI usage — session hygiene
+
+## Sessions
+
+- **One task ≈ one chat.** New feature or doc pass → new session (`/clear`).
+- Do **not** continue multi-day threads. Long context (>150k) is expensive.
+- Prefer `/clear` when switching goals.
+
+## Models
+
+| Work | Prefer |
+| ---- | ------ |
+| Implementation, UI port, docs | **Composer** (Cursor) / Sonnet (Claude) |
+| Hard architecture, money-math bugs | Sonnet + thinking (sparingly) |
+| Opus / Max Mode | Rare — explicit hard judgment only |
+
+Do **not** use high-thinking for spacing, copy tweaks, or mechanical ports.
+
+## Subagents
+
+- Default: **no subagents.** One agent + targeted `rg`/`Read`.
+- Spawn explore/verify only when the user asks or scope truly requires it.
+
+## MCP
+
+- **neon** (OAuth), **context7**, **playwright**, **markitdown** — use when relevant.
+- Skip failed/unauth servers; do not retry auth loops.
+- Prefer `rg` / `Read` over Playwright for code questions.
+
+## Cross-session context
+
+- **`docs/PROJECT.md`**, **`docs/workflow/in-progress/sveltekit-migration.md`**, route guides — then `/clear` between tasks.
+
+## Dual repo sessions
+
+If **kame-homes** is also open, ignore its Supabase/Next.js-specific rules for kame-lends work.

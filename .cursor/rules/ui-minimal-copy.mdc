@@ -1,0 +1,28 @@
+---
+description: Keep UI copy minimal — no extra labels or helper text unless required
+globs:
+  - 'src/**/*.svelte'
+  - 'src/**/*.ts'
+alwaysApply: true
+---
+
+# UI minimal copy
+
+**Default:** do not add UI text unless the user asks or it is **really needed**.
+
+## Allowed
+
+- Form field labels (WCAG)
+- Primary actions (`Save`, `Cancel`)
+- Errors / validation
+- Destructive confirms (one short line)
+- `aria-label` on icon-only controls
+
+## Do not add unless asked
+
+- Page subtitles under a clear title
+- Helper paragraphs, tip callouts
+- Empty-state essays
+- Marketing microcopy on operational screens
+
+When text _is_ required, follow **`human-copy.mdc`**.

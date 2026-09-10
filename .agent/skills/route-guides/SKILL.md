@@ -1,12 +1,12 @@
 # Route guides — Kame Lends (SvelteKit)
 
-Invoke for every route/page/section change in `new-app/`. Mirrors `.cursor/rules/route-guides.mdc`.
+Invoke for every route/page/section change in `src/`. Mirrors `.cursor/rules/route-guides.mdc`.
 
 ## Location
 
-`docs/guides/routes/` — one guide per page/section, mirroring SvelteKit URLs under `new-app/src/routes/`.
+`docs/guides/routes/` — one guide per page/section, mirroring SvelteKit URLs under `src/routes/`.
 
-Index: `docs/guides/routes/README.md` (create when first guide lands).
+Index: `docs/guides/routes/README.md`.
 
 ## Naming
 
@@ -32,7 +32,7 @@ Use nested folders for deep trees if needed.
 
 ## Template
 
-Copy from `docs/guides/_template.md` when adding a route (create template with first guide batch).
+Copy from `docs/guides/_template.md` when adding a route.
 
 ## When to skip
 

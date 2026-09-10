@@ -1,0 +1,37 @@
+---
+description: shadcn-svelte components and Svelte 5 runes
+globs:
+  - 'src/**/*.svelte'
+  - 'src/lib/components/**'
+---
+
+# Components — shadcn-svelte + runes
+
+## UI kit
+
+- **shadcn-svelte** in `src/lib/components/ui/`
+- **Bits UI** primitives under the hood
+- `cn()` from `src/lib/utils.ts` (tailwind-merge + clsx)
+
+## Svelte 5 runes
+
+- Component state: `$state`, `$derived`, `$props()`
+- Shared client state: `.svelte.ts` modules (replaces Zustand)
+- Avoid legacy `export let` / `$:` where runes are clearer
+
+## Structure
+
+- Page-specific components near routes or under `src/lib/components/<feature>/`
+- Reuse `components/ui/*` primitives; do not fork button/card styles per page
+
+## Icons
+
+- `lucide-svelte` — same icon names as legacy `lucide-react`
+
+## Charts
+
+- **Charts:** `chart-theme.ts` palette. SVG donuts (`LoanTypePieChart.svelte`) and CSS ranking tracks (`CurrencyBarChart.svelte`). ApexCharts via `ApexChart.svelte` for cashflow only. Not Recharts.
+
+## Accessibility
+
+- shadcn-svelte provides labels and focus rings; verify icon-only buttons have `aria-label`.
