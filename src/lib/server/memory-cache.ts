@@ -8,74 +8,78 @@ const inflight = new Map<string, Promise<unknown>>();
 const versions = new Map<string, number>();
 
 function versionOf(key: string): number {
-	return versions.get(key) ?? 0;
+  return versions.get(key) ?? 0;
 }
 
 function bumpVersion(key: string): void {
-	versions.set(key, versionOf(key) + 1);
+  versions.set(key, versionOf(key) + 1);
 }
 
 export function memoryCacheGet<T>(key: string): T | undefined {
-	const entry = store.get(key);
-	if (!entry) return undefined;
-	if (entry.expires <= Date.now()) {
-		store.delete(key);
-		return undefined;
-	}
-	return entry.value as T;
+  const entry = store.get(key);
+  if (!entry) return undefined;
+  if (entry.expires <= Date.now()) {
+    store.delete(key);
+    return undefined;
+  }
+  return entry.value as T;
 }
 
-export function memoryCacheSet<T>(key: string, value: T, ttlMs = CACHE_TTL_MS): void {
-	store.set(key, { value, expires: Date.now() + ttlMs });
+export function memoryCacheSet<T>(
+  key: string,
+  value: T,
+  ttlMs = CACHE_TTL_MS,
+): void {
+  store.set(key, { value, expires: Date.now() + ttlMs });
 }
 
 export function memoryCacheInvalidatePrefix(prefix: string): void {
-	const keys = new Set<string>();
-	for (const key of store.keys()) {
-		if (key.startsWith(prefix)) keys.add(key);
-	}
-	for (const key of inflight.keys()) {
-		if (key.startsWith(prefix)) keys.add(key);
-	}
-	for (const key of versions.keys()) {
-		if (key.startsWith(prefix)) keys.add(key);
-	}
-	for (const key of keys) {
-		store.delete(key);
-		inflight.delete(key);
-		bumpVersion(key);
-	}
+  const keys = new Set<string>();
+  for (const key of store.keys()) {
+    if (key.startsWith(prefix)) keys.add(key);
+  }
+  for (const key of inflight.keys()) {
+    if (key.startsWith(prefix)) keys.add(key);
+  }
+  for (const key of versions.keys()) {
+    if (key.startsWith(prefix)) keys.add(key);
+  }
+  for (const key of keys) {
+    store.delete(key);
+    inflight.delete(key);
+    bumpVersion(key);
+  }
 }
 
 export function memoryCacheClear(): void {
-	store.clear();
-	inflight.clear();
-	versions.clear();
+  store.clear();
+  inflight.clear();
+  versions.clear();
 }
 
 export async function remember<T>(
-	key: string,
-	fn: () => Promise<T>,
-	ttlMs = CACHE_TTL_MS
+  key: string,
+  fn: () => Promise<T>,
+  ttlMs = CACHE_TTL_MS,
 ): Promise<T> {
-	const hit = memoryCacheGet<T>(key);
-	if (hit !== undefined) return hit;
+  const hit = memoryCacheGet<T>(key);
+  if (hit !== undefined) return hit;
 
-	const pending = inflight.get(key);
-	if (pending) return pending as Promise<T>;
+  const pending = inflight.get(key);
+  if (pending) return pending as Promise<T>;
 
-	const startedAt = versionOf(key);
-	const task = fn()
-		.then((value) => {
-			if (versionOf(key) === startedAt) {
-				memoryCacheSet(key, value, ttlMs);
-			}
-			return value;
-		})
-		.finally(() => {
-			inflight.delete(key);
-		});
+  const startedAt = versionOf(key);
+  const task = fn()
+    .then((value) => {
+      if (versionOf(key) === startedAt) {
+        memoryCacheSet(key, value, ttlMs);
+      }
+      return value;
+    })
+    .finally(() => {
+      inflight.delete(key);
+    });
 
-	inflight.set(key, task);
-	return task;
+  inflight.set(key, task);
+  return task;
 }

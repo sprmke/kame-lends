@@ -1,631 +1,694 @@
 import {
-	pgTable,
-	text,
-	serial,
-	integer,
-	decimal,
-	timestamp,
-	boolean,
-	jsonb,
-	pgEnum,
-	primaryKey,
-	index
-} from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
-import type { AdapterAccount } from '@auth/core/adapters';
+  pgTable,
+  text,
+  serial,
+  integer,
+  decimal,
+  timestamp,
+  boolean,
+  jsonb,
+  pgEnum,
+  primaryKey,
+  index,
+} from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import type { AdapterAccount } from "@auth/core/adapters";
 
 // Enums
-export const userRoleEnum = pgEnum('user_role', ['admin', 'investor', 'borrower', 'witness']);
-export const loanTypeEnum = pgEnum('loan_type', ['Lot Title', 'OR/CR', 'Agent']);
-export const loanStatusEnum = pgEnum('loan_status', [
-	'Partially Funded',
-	'Fully Funded',
-	'Overdue',
-	'Completed'
+export const userRoleEnum = pgEnum("user_role", [
+  "admin",
+  "investor",
+  "borrower",
+  "witness",
 ]);
-export const transactionTypeEnum = pgEnum('transaction_type', ['Investment']);
-export const transactionDirectionEnum = pgEnum('transaction_direction', ['In', 'Out']);
-export const interestTypeEnum = pgEnum('interest_type', ['rate', 'fixed']);
-export const interestPeriodStatusEnum = pgEnum('interest_period_status', [
-	'Pending',
-	'Incomplete',
-	'Completed',
-	'Overdue'
+export const loanTypeEnum = pgEnum("loan_type", [
+  "Lot Title",
+  "OR/CR",
+  "Agent",
 ]);
-export const debtInterestIntervalEnum = pgEnum('debt_interest_interval', [
-	'Daily',
-	'Weekly',
-	'Monthly',
-	'Annually'
+export const loanStatusEnum = pgEnum("loan_status", [
+  "Partially Funded",
+  "Fully Funded",
+  "Overdue",
+  "Completed",
 ]);
-export const signingPartyRoleEnum = pgEnum('signing_party_role', [
-	'borrower',
-	'lender',
-	'witness_1',
-	'witness_2'
+export const transactionTypeEnum = pgEnum("transaction_type", ["Investment"]);
+export const transactionDirectionEnum = pgEnum("transaction_direction", [
+  "In",
+  "Out",
+]);
+export const interestTypeEnum = pgEnum("interest_type", ["rate", "fixed"]);
+export const interestPeriodStatusEnum = pgEnum("interest_period_status", [
+  "Pending",
+  "Incomplete",
+  "Completed",
+  "Overdue",
+]);
+export const debtInterestIntervalEnum = pgEnum("debt_interest_interval", [
+  "Daily",
+  "Weekly",
+  "Monthly",
+  "Annually",
+]);
+export const signingPartyRoleEnum = pgEnum("signing_party_role", [
+  "borrower",
+  "lender",
+  "witness_1",
+  "witness_2",
 ]);
 
 // Investors Table
 export const investors = pgTable(
-	'investors',
-	{
-		id: serial('id').primaryKey(),
-		userId: text('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		investorUserId: text('investor_user_id').references(() => users.id, {
-			onDelete: 'set null'
-		}),
-		name: text('name').notNull(),
-		email: text('email').notNull(),
-		contactNumber: text('contact_number'),
-		address: text('address'),
-		validIdUrl: text('valid_id_url'),
-		eSignatureUrl: text('e_signature_url'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		userIdIdx: index('investors_user_id_idx').on(table.userId),
-		investorUserIdIdx: index('investors_investor_user_id_idx').on(table.investorUserId)
-	})
+  "investors",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    investorUserId: text("investor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    contactNumber: text("contact_number"),
+    address: text("address"),
+    validIdUrl: text("valid_id_url"),
+    eSignatureUrl: text("e_signature_url"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("investors_user_id_idx").on(table.userId),
+    investorUserIdIdx: index("investors_investor_user_id_idx").on(
+      table.investorUserId,
+    ),
+  }),
 );
 
 // Borrowers Table
 export const borrowers = pgTable(
-	'borrowers',
-	{
-		id: serial('id').primaryKey(),
-		userId: text('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		borrowerUserId: text('borrower_user_id').references(() => users.id, {
-			onDelete: 'set null'
-		}),
-		name: text('name').notNull(),
-		contactNumber: text('contact_number'),
-		email: text('email'),
-		address: text('address'),
-		notes: text('notes'),
-		validIdUrl: text('valid_id_url'),
-		eSignatureUrl: text('e_signature_url'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		userIdIdx: index('borrowers_user_id_idx').on(table.userId),
-		borrowerUserIdIdx: index('borrowers_borrower_user_id_idx').on(table.borrowerUserId)
-	})
+  "borrowers",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    borrowerUserId: text("borrower_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    contactNumber: text("contact_number"),
+    email: text("email"),
+    address: text("address"),
+    notes: text("notes"),
+    validIdUrl: text("valid_id_url"),
+    eSignatureUrl: text("e_signature_url"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("borrowers_user_id_idx").on(table.userId),
+    borrowerUserIdIdx: index("borrowers_borrower_user_id_idx").on(
+      table.borrowerUserId,
+    ),
+  }),
 );
 
 // Reusable contract witnesses
 export const witnesses = pgTable(
-	'witnesses',
-	{
-		id: serial('id').primaryKey(),
-		userId: text('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		witnessUserId: text('witness_user_id').references(() => users.id, {
-			onDelete: 'set null'
-		}),
-		name: text('name').notNull(),
-		email: text('email'),
-		contactNumber: text('contact_number'),
-		address: text('address'),
-		validIdUrl: text('valid_id_url'),
-		eSignatureUrl: text('e_signature_url'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		userIdIdx: index('witnesses_user_id_idx').on(table.userId),
-		witnessUserIdIdx: index('witnesses_witness_user_id_idx').on(table.witnessUserId),
-		userNameIdx: index('witnesses_user_name_idx').on(table.userId, table.name)
-	})
+  "witnesses",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    witnessUserId: text("witness_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    email: text("email"),
+    contactNumber: text("contact_number"),
+    address: text("address"),
+    validIdUrl: text("valid_id_url"),
+    eSignatureUrl: text("e_signature_url"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("witnesses_user_id_idx").on(table.userId),
+    witnessUserIdIdx: index("witnesses_witness_user_id_idx").on(
+      table.witnessUserId,
+    ),
+    userNameIdx: index("witnesses_user_name_idx").on(table.userId, table.name),
+  }),
 );
 
 // Loans Table
 export const loans = pgTable(
-	'loans',
-	{
-		id: serial('id').primaryKey(),
-		userId: text('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		borrowerId: integer('borrower_id').references(() => borrowers.id, {
-			onDelete: 'restrict'
-		}),
-		loanName: text('loan_name').notNull(),
-		type: loanTypeEnum('type').notNull(),
-		status: loanStatusEnum('status').notNull().default('Fully Funded'),
-		dueDate: timestamp('due_date').notNull(),
-		freeLotSqm: integer('free_lot_sqm'),
-		notes: text('notes'),
-		googleCalendarEventIds: jsonb('google_calendar_event_ids'), // Store array of event IDs for sent/due/interest events
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		userIdIdx: index('loans_user_id_idx').on(table.userId),
-		borrowerIdIdx: index('loans_borrower_id_idx').on(table.borrowerId),
-		dueDateIdx: index('loans_due_date_idx').on(table.dueDate)
-	})
+  "loans",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    borrowerId: integer("borrower_id").references(() => borrowers.id, {
+      onDelete: "restrict",
+    }),
+    loanName: text("loan_name").notNull(),
+    type: loanTypeEnum("type").notNull(),
+    status: loanStatusEnum("status").notNull().default("Fully Funded"),
+    dueDate: timestamp("due_date").notNull(),
+    freeLotSqm: integer("free_lot_sqm"),
+    notes: text("notes"),
+    googleCalendarEventIds: jsonb("google_calendar_event_ids"), // Store array of event IDs for sent/due/interest events
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("loans_user_id_idx").on(table.userId),
+    borrowerIdIdx: index("loans_borrower_id_idx").on(table.borrowerId),
+    dueDateIdx: index("loans_due_date_idx").on(table.dueDate),
+  }),
 );
 
 // Loan Contracts (persisted customization for signing)
-export const loanContracts = pgTable('loan_contracts', {
-	id: serial('id').primaryKey(),
-	loanId: integer('loan_id')
-		.references(() => loans.id, { onDelete: 'cascade' })
-		.notNull()
-		.unique(),
-	customization: jsonb('customization').notNull(),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
-	updatedAt: timestamp('updated_at').defaultNow().notNull()
+export const loanContracts = pgTable("loan_contracts", {
+  id: serial("id").primaryKey(),
+  loanId: integer("loan_id")
+    .references(() => loans.id, { onDelete: "cascade" })
+    .notNull()
+    .unique(),
+  customization: jsonb("customization").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Loan Signing Invitations (shareable e-signature links per party)
 export const loanSigningInvitations = pgTable(
-	'loan_signing_invitations',
-	{
-		id: serial('id').primaryKey(),
-		loanId: integer('loan_id')
-			.references(() => loans.id, { onDelete: 'cascade' })
-			.notNull(),
-		contractId: integer('contract_id')
-			.references(() => loanContracts.id, { onDelete: 'cascade' })
-			.notNull(),
-		token: text('token').unique(),
-		partyRole: signingPartyRoleEnum('party_role').notNull(),
-		investorId: integer('investor_id').references(() => investors.id, {
-			onDelete: 'set null'
-		}),
-		witnessId: integer('witness_id').references(() => witnesses.id, {
-			onDelete: 'set null'
-		}),
-		partyName: text('party_name').notNull(),
-		partyEmail: text('party_email'),
-		signatureDataUrl: text('signature_data_url'),
-		signedAt: timestamp('signed_at'),
-		consentedAt: timestamp('consented_at'),
-		expiresAt: timestamp('expires_at'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		witnessIdIdx: index('loan_signing_invitations_witness_id_idx').on(table.witnessId)
-	})
+  "loan_signing_invitations",
+  {
+    id: serial("id").primaryKey(),
+    loanId: integer("loan_id")
+      .references(() => loans.id, { onDelete: "cascade" })
+      .notNull(),
+    contractId: integer("contract_id")
+      .references(() => loanContracts.id, { onDelete: "cascade" })
+      .notNull(),
+    token: text("token").unique(),
+    partyRole: signingPartyRoleEnum("party_role").notNull(),
+    investorId: integer("investor_id").references(() => investors.id, {
+      onDelete: "set null",
+    }),
+    witnessId: integer("witness_id").references(() => witnesses.id, {
+      onDelete: "set null",
+    }),
+    partyName: text("party_name").notNull(),
+    partyEmail: text("party_email"),
+    signatureDataUrl: text("signature_data_url"),
+    signedAt: timestamp("signed_at"),
+    consentedAt: timestamp("consented_at"),
+    expiresAt: timestamp("expires_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    witnessIdIdx: index("loan_signing_invitations_witness_id_idx").on(
+      table.witnessId,
+    ),
+  }),
 );
 
 // Loan Investors (Junction Table)
 export const loanInvestors = pgTable(
-	'loan_investors',
-	{
-		id: serial('id').primaryKey(),
-		loanId: integer('loan_id')
-			.references(() => loans.id, { onDelete: 'cascade' })
-			.notNull(),
-		investorId: integer('investor_id')
-			.references(() => investors.id, { onDelete: 'cascade' })
-			.notNull(),
-		amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
-		interestRate: decimal('interest_rate', { precision: 15, scale: 2 }).notNull(),
-		interestType: interestTypeEnum('interest_type').notNull().default('rate'),
-		sentDate: timestamp('sent_date').notNull(),
-		isPaid: boolean('is_paid').notNull().default(true),
-		hasMultipleInterest: boolean('has_multiple_interest').notNull().default(false),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		loanIdIdx: index('loan_investors_loan_id_idx').on(table.loanId),
-		investorIdIdx: index('loan_investors_investor_id_idx').on(table.investorId)
-	})
+  "loan_investors",
+  {
+    id: serial("id").primaryKey(),
+    loanId: integer("loan_id")
+      .references(() => loans.id, { onDelete: "cascade" })
+      .notNull(),
+    investorId: integer("investor_id")
+      .references(() => investors.id, { onDelete: "cascade" })
+      .notNull(),
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    interestRate: decimal("interest_rate", {
+      precision: 15,
+      scale: 2,
+    }).notNull(),
+    interestType: interestTypeEnum("interest_type").notNull().default("rate"),
+    sentDate: timestamp("sent_date").notNull(),
+    isPaid: boolean("is_paid").notNull().default(true),
+    hasMultipleInterest: boolean("has_multiple_interest")
+      .notNull()
+      .default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    loanIdIdx: index("loan_investors_loan_id_idx").on(table.loanId),
+    investorIdIdx: index("loan_investors_investor_id_idx").on(table.investorId),
+  }),
 );
 
 // Interest Periods Table (for multiple interest due dates)
 export const interestPeriods = pgTable(
-	'interest_periods',
-	{
-		id: serial('id').primaryKey(),
-		loanInvestorId: integer('loan_investor_id')
-			.references(() => loanInvestors.id, { onDelete: 'cascade' })
-			.notNull(),
-		dueDate: timestamp('due_date').notNull(),
-		interestRate: decimal('interest_rate', { precision: 15, scale: 2 }).notNull(),
-		interestType: interestTypeEnum('interest_type').notNull().default('rate'),
-		status: interestPeriodStatusEnum('status').notNull().default('Pending'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		loanInvestorIdIdx: index('interest_periods_loan_investor_id_idx').on(table.loanInvestorId)
-	})
+  "interest_periods",
+  {
+    id: serial("id").primaryKey(),
+    loanInvestorId: integer("loan_investor_id")
+      .references(() => loanInvestors.id, { onDelete: "cascade" })
+      .notNull(),
+    dueDate: timestamp("due_date").notNull(),
+    interestRate: decimal("interest_rate", {
+      precision: 15,
+      scale: 2,
+    }).notNull(),
+    interestType: interestTypeEnum("interest_type").notNull().default("rate"),
+    status: interestPeriodStatusEnum("status").notNull().default("Pending"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    loanInvestorIdIdx: index("interest_periods_loan_investor_id_idx").on(
+      table.loanInvestorId,
+    ),
+  }),
 );
 
 // Received Payments (payments received back from borrower, per loan investor)
 export const receivedPayments = pgTable(
-	'received_payments',
-	{
-		id: serial('id').primaryKey(),
-		loanInvestorId: integer('loan_investor_id')
-			.references(() => loanInvestors.id, { onDelete: 'cascade' })
-			.notNull(),
-		/** When set, this receipt applies toward this interest period (partial or full). */
-		interestPeriodId: integer('interest_period_id').references(() => interestPeriods.id, {
-			onDelete: 'set null'
-		}),
-		amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
-		receivedDate: timestamp('received_date').notNull(),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		loanInvestorIdIdx: index('received_payments_loan_investor_id_idx').on(table.loanInvestorId)
-	})
+  "received_payments",
+  {
+    id: serial("id").primaryKey(),
+    loanInvestorId: integer("loan_investor_id")
+      .references(() => loanInvestors.id, { onDelete: "cascade" })
+      .notNull(),
+    /** When set, this receipt applies toward this interest period (partial or full). */
+    interestPeriodId: integer("interest_period_id").references(
+      () => interestPeriods.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    receivedDate: timestamp("received_date").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    loanInvestorIdIdx: index("received_payments_loan_investor_id_idx").on(
+      table.loanInvestorId,
+    ),
+  }),
 );
 
 // Debts Table
 export const debts = pgTable(
-	'debts',
-	{
-		id: serial('id').primaryKey(),
-		userId: text('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		investorId: integer('investor_id')
-			.references(() => investors.id, { onDelete: 'cascade' })
-			.notNull(),
-		name: text('name').notNull(),
-		amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
-		date: timestamp('date').notNull(),
-		interestRate: decimal('interest_rate', { precision: 15, scale: 6 }).notNull(),
-		interestInterval: debtInterestIntervalEnum('interest_interval').notNull().default('Monthly'),
-		durationMonths: integer('duration_months').notNull().default(12),
-		additionalFees: jsonb('additional_fees')
-			.$type<Array<{ label: string; amount: string }>>()
-			.default([]),
-		notes: text('notes'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		userIdIdx: index('debts_user_id_idx').on(table.userId),
-		investorIdIdx: index('debts_investor_id_idx').on(table.investorId)
-	})
+  "debts",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    investorId: integer("investor_id")
+      .references(() => investors.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    date: timestamp("date").notNull(),
+    interestRate: decimal("interest_rate", {
+      precision: 15,
+      scale: 6,
+    }).notNull(),
+    interestInterval: debtInterestIntervalEnum("interest_interval")
+      .notNull()
+      .default("Monthly"),
+    durationMonths: integer("duration_months").notNull().default(12),
+    additionalFees: jsonb("additional_fees")
+      .$type<Array<{ label: string; amount: string }>>()
+      .default([]),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("debts_user_id_idx").on(table.userId),
+    investorIdIdx: index("debts_investor_id_idx").on(table.investorId),
+  }),
 );
 
 // Debt interest periods (scheduled interest due per payment period)
 export const debtInterestPeriods = pgTable(
-	'debt_interest_periods',
-	{
-		id: serial('id').primaryKey(),
-		debtId: integer('debt_id')
-			.references(() => debts.id, { onDelete: 'cascade' })
-			.notNull(),
-		periodNumber: integer('period_number').notNull(),
-		dueDate: timestamp('due_date').notNull(),
-		expectedInterest: decimal('expected_interest', {
-			precision: 15,
-			scale: 2
-		}).notNull(),
-		status: interestPeriodStatusEnum('status').notNull().default('Pending'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		debtIdIdx: index('debt_interest_periods_debt_id_idx').on(table.debtId)
-	})
+  "debt_interest_periods",
+  {
+    id: serial("id").primaryKey(),
+    debtId: integer("debt_id")
+      .references(() => debts.id, { onDelete: "cascade" })
+      .notNull(),
+    periodNumber: integer("period_number").notNull(),
+    dueDate: timestamp("due_date").notNull(),
+    expectedInterest: decimal("expected_interest", {
+      precision: 15,
+      scale: 2,
+    }).notNull(),
+    status: interestPeriodStatusEnum("status").notNull().default("Pending"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    debtIdIdx: index("debt_interest_periods_debt_id_idx").on(table.debtId),
+  }),
 );
 
 // Debt received payments (interest payments per debt period)
 export const debtReceivedPayments = pgTable(
-	'debt_received_payments',
-	{
-		id: serial('id').primaryKey(),
-		debtInterestPeriodId: integer('debt_interest_period_id')
-			.references(() => debtInterestPeriods.id, { onDelete: 'cascade' })
-			.notNull(),
-		amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
-		receivedDate: timestamp('received_date').notNull(),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		periodIdIdx: index('debt_received_payments_period_id_idx').on(table.debtInterestPeriodId)
-	})
+  "debt_received_payments",
+  {
+    id: serial("id").primaryKey(),
+    debtInterestPeriodId: integer("debt_interest_period_id")
+      .references(() => debtInterestPeriods.id, { onDelete: "cascade" })
+      .notNull(),
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    receivedDate: timestamp("received_date").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    periodIdIdx: index("debt_received_payments_period_id_idx").on(
+      table.debtInterestPeriodId,
+    ),
+  }),
 );
 
 // Transactions Table
 export const transactions = pgTable(
-	'transactions',
-	{
-		id: serial('id').primaryKey(),
-		userId: text('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		investorId: integer('investor_id')
-			.references(() => investors.id, { onDelete: 'cascade' })
-			.notNull(),
-		loanId: integer('loan_id').references(() => loans.id, {
-			onDelete: 'cascade'
-		}),
-		date: timestamp('date').notNull(),
-		type: transactionTypeEnum('type').notNull(),
-		direction: transactionDirectionEnum('direction').notNull(),
-		name: text('name').notNull(),
-		amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
-		balance: decimal('balance', { precision: 15, scale: 2 }).notNull(),
-		notes: text('notes'),
-		transactionIndex: integer('transaction_index'),
-		transactionTotal: integer('transaction_total'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		userIdIdx: index('transactions_user_id_idx').on(table.userId),
-		investorIdIdx: index('transactions_investor_id_idx').on(table.investorId),
-		loanIdIdx: index('transactions_loan_id_idx').on(table.loanId),
-		dateIdx: index('transactions_date_idx').on(table.date)
-	})
+  "transactions",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    investorId: integer("investor_id")
+      .references(() => investors.id, { onDelete: "cascade" })
+      .notNull(),
+    loanId: integer("loan_id").references(() => loans.id, {
+      onDelete: "cascade",
+    }),
+    date: timestamp("date").notNull(),
+    type: transactionTypeEnum("type").notNull(),
+    direction: transactionDirectionEnum("direction").notNull(),
+    name: text("name").notNull(),
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    balance: decimal("balance", { precision: 15, scale: 2 }).notNull(),
+    notes: text("notes"),
+    transactionIndex: integer("transaction_index"),
+    transactionTotal: integer("transaction_total"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("transactions_user_id_idx").on(table.userId),
+    investorIdIdx: index("transactions_investor_id_idx").on(table.investorId),
+    loanIdIdx: index("transactions_loan_id_idx").on(table.loanId),
+    dateIdx: index("transactions_date_idx").on(table.date),
+  }),
 );
 
 // Auth.js Tables
-export const users = pgTable('user', {
-	id: text('id')
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
-	name: text('name'),
-	email: text('email').notNull().unique(),
-	emailVerified: timestamp('emailVerified', { mode: 'date' }),
-	image: text('image'),
-	role: userRoleEnum('role').notNull().default('admin')
+export const users = pgTable("user", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name"),
+  email: text("email").notNull().unique(),
+  emailVerified: timestamp("emailVerified", { mode: "date" }),
+  image: text("image"),
+  role: userRoleEnum("role").notNull().default("admin"),
 });
 
 /** Bank / QR details for receiving loan payments. Visible to borrowers on loan detail only. */
 export const paymentMethods = pgTable(
-	'payment_methods',
-	{
-		id: serial('id').primaryKey(),
-		userId: text('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		bankName: text('bank_name').notNull(),
-		accountNumber: text('account_number').notNull(),
-		qrCodeUrl: text('qr_code_url'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull()
-	},
-	(table) => ({
-		userIdIdx: index('payment_methods_user_id_idx').on(table.userId)
-	})
+  "payment_methods",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    bankName: text("bank_name").notNull(),
+    accountNumber: text("account_number").notNull(),
+    qrCodeUrl: text("qr_code_url"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("payment_methods_user_id_idx").on(table.userId),
+  }),
 );
 
 export const accounts = pgTable(
-	'account',
-	{
-		userId: text('userId')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		type: text('type').notNull(),
-		provider: text('provider').notNull(),
-		providerAccountId: text('providerAccountId').notNull(),
-		refresh_token: text('refresh_token'),
-		access_token: text('access_token'),
-		expires_at: integer('expires_at'),
-		token_type: text('token_type'),
-		scope: text('scope'),
-		id_token: text('id_token'),
-		session_state: text('session_state')
-	},
-	(account) => ({
-		compoundKey: primaryKey({
-			columns: [account.provider, account.providerAccountId]
-		})
-	})
+  "account",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("providerAccountId").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (account) => ({
+    compoundKey: primaryKey({
+      columns: [account.provider, account.providerAccountId],
+    }),
+  }),
 );
 
-export const sessions = pgTable('session', {
-	sessionToken: text('sessionToken').primaryKey(),
-	userId: text('userId')
-		.notNull()
-		.references(() => users.id, { onDelete: 'cascade' }),
-	expires: timestamp('expires', { mode: 'date' }).notNull()
+export const sessions = pgTable("session", {
+  sessionToken: text("sessionToken").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
 });
 
 export const verificationTokens = pgTable(
-	'verificationToken',
-	{
-		identifier: text('identifier').notNull(),
-		token: text('token').notNull(),
-		expires: timestamp('expires', { mode: 'date' }).notNull()
-	},
-	(vt) => ({
-		compoundKey: primaryKey({ columns: [vt.identifier, vt.token] })
-	})
+  "verificationToken",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+  },
+  (vt) => ({
+    compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
+  }),
 );
 
 // Relations
 export const borrowersRelations = relations(borrowers, ({ one, many }) => ({
-	user: one(users, {
-		fields: [borrowers.userId],
-		references: [users.id]
-	}),
-	borrowerUser: one(users, {
-		fields: [borrowers.borrowerUserId],
-		references: [users.id]
-	}),
-	loans: many(loans)
+  user: one(users, {
+    fields: [borrowers.userId],
+    references: [users.id],
+  }),
+  borrowerUser: one(users, {
+    fields: [borrowers.borrowerUserId],
+    references: [users.id],
+  }),
+  loans: many(loans),
 }));
 
 export const witnessesRelations = relations(witnesses, ({ one, many }) => ({
-	user: one(users, {
-		fields: [witnesses.userId],
-		references: [users.id]
-	}),
-	witnessUser: one(users, {
-		fields: [witnesses.witnessUserId],
-		references: [users.id]
-	}),
-	signingInvitations: many(loanSigningInvitations)
+  user: one(users, {
+    fields: [witnesses.userId],
+    references: [users.id],
+  }),
+  witnessUser: one(users, {
+    fields: [witnesses.witnessUserId],
+    references: [users.id],
+  }),
+  signingInvitations: many(loanSigningInvitations),
 }));
 
 export const investorsRelations = relations(investors, ({ one, many }) => ({
-	user: one(users, {
-		fields: [investors.userId],
-		references: [users.id]
-	}),
-	investorUser: one(users, {
-		fields: [investors.investorUserId],
-		references: [users.id]
-	}),
-	loanInvestors: many(loanInvestors),
-	transactions: many(transactions),
-	debts: many(debts)
+  user: one(users, {
+    fields: [investors.userId],
+    references: [users.id],
+  }),
+  investorUser: one(users, {
+    fields: [investors.investorUserId],
+    references: [users.id],
+  }),
+  loanInvestors: many(loanInvestors),
+  transactions: many(transactions),
+  debts: many(debts),
 }));
 
 export const loansRelations = relations(loans, ({ one, many }) => ({
-	user: one(users, {
-		fields: [loans.userId],
-		references: [users.id]
-	}),
-	borrower: one(borrowers, {
-		fields: [loans.borrowerId],
-		references: [borrowers.id]
-	}),
-	loanContract: one(loanContracts, {
-		fields: [loans.id],
-		references: [loanContracts.loanId]
-	}),
-	loanInvestors: many(loanInvestors),
-	signingInvitations: many(loanSigningInvitations),
-	transactions: many(transactions)
+  user: one(users, {
+    fields: [loans.userId],
+    references: [users.id],
+  }),
+  borrower: one(borrowers, {
+    fields: [loans.borrowerId],
+    references: [borrowers.id],
+  }),
+  loanContract: one(loanContracts, {
+    fields: [loans.id],
+    references: [loanContracts.loanId],
+  }),
+  loanInvestors: many(loanInvestors),
+  signingInvitations: many(loanSigningInvitations),
+  transactions: many(transactions),
 }));
 
-export const loanContractsRelations = relations(loanContracts, ({ one, many }) => ({
-	loan: one(loans, {
-		fields: [loanContracts.loanId],
-		references: [loans.id]
-	}),
-	signingInvitations: many(loanSigningInvitations)
-}));
+export const loanContractsRelations = relations(
+  loanContracts,
+  ({ one, many }) => ({
+    loan: one(loans, {
+      fields: [loanContracts.loanId],
+      references: [loans.id],
+    }),
+    signingInvitations: many(loanSigningInvitations),
+  }),
+);
 
-export const loanSigningInvitationsRelations = relations(loanSigningInvitations, ({ one }) => ({
-	loan: one(loans, {
-		fields: [loanSigningInvitations.loanId],
-		references: [loans.id]
-	}),
-	contract: one(loanContracts, {
-		fields: [loanSigningInvitations.contractId],
-		references: [loanContracts.id]
-	}),
-	investor: one(investors, {
-		fields: [loanSigningInvitations.investorId],
-		references: [investors.id]
-	}),
-	witness: one(witnesses, {
-		fields: [loanSigningInvitations.witnessId],
-		references: [witnesses.id]
-	})
-}));
+export const loanSigningInvitationsRelations = relations(
+  loanSigningInvitations,
+  ({ one }) => ({
+    loan: one(loans, {
+      fields: [loanSigningInvitations.loanId],
+      references: [loans.id],
+    }),
+    contract: one(loanContracts, {
+      fields: [loanSigningInvitations.contractId],
+      references: [loanContracts.id],
+    }),
+    investor: one(investors, {
+      fields: [loanSigningInvitations.investorId],
+      references: [investors.id],
+    }),
+    witness: one(witnesses, {
+      fields: [loanSigningInvitations.witnessId],
+      references: [witnesses.id],
+    }),
+  }),
+);
 
-export const loanInvestorsRelations = relations(loanInvestors, ({ one, many }) => ({
-	loan: one(loans, {
-		fields: [loanInvestors.loanId],
-		references: [loans.id]
-	}),
-	investor: one(investors, {
-		fields: [loanInvestors.investorId],
-		references: [investors.id]
-	}),
-	interestPeriods: many(interestPeriods),
-	receivedPayments: many(receivedPayments)
-}));
+export const loanInvestorsRelations = relations(
+  loanInvestors,
+  ({ one, many }) => ({
+    loan: one(loans, {
+      fields: [loanInvestors.loanId],
+      references: [loans.id],
+    }),
+    investor: one(investors, {
+      fields: [loanInvestors.investorId],
+      references: [investors.id],
+    }),
+    interestPeriods: many(interestPeriods),
+    receivedPayments: many(receivedPayments),
+  }),
+);
 
-export const receivedPaymentsRelations = relations(receivedPayments, ({ one }) => ({
-	loanInvestor: one(loanInvestors, {
-		fields: [receivedPayments.loanInvestorId],
-		references: [loanInvestors.id]
-	}),
-	interestPeriod: one(interestPeriods, {
-		fields: [receivedPayments.interestPeriodId],
-		references: [interestPeriods.id]
-	})
-}));
+export const receivedPaymentsRelations = relations(
+  receivedPayments,
+  ({ one }) => ({
+    loanInvestor: one(loanInvestors, {
+      fields: [receivedPayments.loanInvestorId],
+      references: [loanInvestors.id],
+    }),
+    interestPeriod: one(interestPeriods, {
+      fields: [receivedPayments.interestPeriodId],
+      references: [interestPeriods.id],
+    }),
+  }),
+);
 
-export const interestPeriodsRelations = relations(interestPeriods, ({ one, many }) => ({
-	loanInvestor: one(loanInvestors, {
-		fields: [interestPeriods.loanInvestorId],
-		references: [loanInvestors.id]
-	}),
-	linkedReceivedPayments: many(receivedPayments)
-}));
+export const interestPeriodsRelations = relations(
+  interestPeriods,
+  ({ one, many }) => ({
+    loanInvestor: one(loanInvestors, {
+      fields: [interestPeriods.loanInvestorId],
+      references: [loanInvestors.id],
+    }),
+    linkedReceivedPayments: many(receivedPayments),
+  }),
+);
 
 export const debtsRelations = relations(debts, ({ one, many }) => ({
-	user: one(users, {
-		fields: [debts.userId],
-		references: [users.id]
-	}),
-	investor: one(investors, {
-		fields: [debts.investorId],
-		references: [investors.id]
-	}),
-	interestPeriods: many(debtInterestPeriods)
+  user: one(users, {
+    fields: [debts.userId],
+    references: [users.id],
+  }),
+  investor: one(investors, {
+    fields: [debts.investorId],
+    references: [investors.id],
+  }),
+  interestPeriods: many(debtInterestPeriods),
 }));
 
-export const debtInterestPeriodsRelations = relations(debtInterestPeriods, ({ one, many }) => ({
-	debt: one(debts, {
-		fields: [debtInterestPeriods.debtId],
-		references: [debts.id]
-	}),
-	receivedPayments: many(debtReceivedPayments)
-}));
+export const debtInterestPeriodsRelations = relations(
+  debtInterestPeriods,
+  ({ one, many }) => ({
+    debt: one(debts, {
+      fields: [debtInterestPeriods.debtId],
+      references: [debts.id],
+    }),
+    receivedPayments: many(debtReceivedPayments),
+  }),
+);
 
-export const debtReceivedPaymentsRelations = relations(debtReceivedPayments, ({ one }) => ({
-	debtInterestPeriod: one(debtInterestPeriods, {
-		fields: [debtReceivedPayments.debtInterestPeriodId],
-		references: [debtInterestPeriods.id]
-	})
-}));
+export const debtReceivedPaymentsRelations = relations(
+  debtReceivedPayments,
+  ({ one }) => ({
+    debtInterestPeriod: one(debtInterestPeriods, {
+      fields: [debtReceivedPayments.debtInterestPeriodId],
+      references: [debtInterestPeriods.id],
+    }),
+  }),
+);
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
-	user: one(users, {
-		fields: [transactions.userId],
-		references: [users.id]
-	}),
-	investor: one(investors, {
-		fields: [transactions.investorId],
-		references: [investors.id]
-	}),
-	loan: one(loans, {
-		fields: [transactions.loanId],
-		references: [loans.id]
-	})
+  user: one(users, {
+    fields: [transactions.userId],
+    references: [users.id],
+  }),
+  investor: one(investors, {
+    fields: [transactions.investorId],
+    references: [investors.id],
+  }),
+  loan: one(loans, {
+    fields: [transactions.loanId],
+    references: [loans.id],
+  }),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
-	accounts: many(accounts),
-	sessions: many(sessions),
-	investors: many(investors),
-	borrowers: many(borrowers),
-	loans: many(loans),
-	transactions: many(transactions),
-	debts: many(debts),
-	paymentMethods: many(paymentMethods)
+  accounts: many(accounts),
+  sessions: many(sessions),
+  investors: many(investors),
+  borrowers: many(borrowers),
+  loans: many(loans),
+  transactions: many(transactions),
+  debts: many(debts),
+  paymentMethods: many(paymentMethods),
 }));
 
 export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({
-	user: one(users, {
-		fields: [paymentMethods.userId],
-		references: [users.id]
-	})
+  user: one(users, {
+    fields: [paymentMethods.userId],
+    references: [users.id],
+  }),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
-	user: one(users, { fields: [accounts.userId], references: [users.id] })
+  user: one(users, { fields: [accounts.userId], references: [users.id] }),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
-	user: one(users, { fields: [sessions.userId], references: [users.id] })
+  user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));

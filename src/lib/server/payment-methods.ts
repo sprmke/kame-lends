@@ -3,7 +3,6 @@ import { paymentMethods } from "$lib/server/db/schema";
 import { eq, asc, count } from "drizzle-orm";
 import type { LoanAccessContext } from "$lib/loan-access";
 import type { PaymentMethod } from "$lib/types";
-import { getNavCapabilities } from "$lib/server/access-control";
 import {
   MAX_PAYMENT_METHODS_PER_USER,
   parsePaymentMethodId,
@@ -34,11 +33,16 @@ export function toPublicPaymentMethod(row: PaymentMethodRow): PaymentMethod {
 export async function listPaymentMethodsForUser(
   userId: string,
 ): Promise<PaymentMethod[]> {
-  const rows = await db.query.paymentMethods.findMany({
-    where: eq(paymentMethods.userId, userId),
-    orderBy: [asc(paymentMethods.id)],
-  });
-  return rows.map(toPublicPaymentMethod);
+  try {
+    const rows = await db.query.paymentMethods.findMany({
+      where: eq(paymentMethods.userId, userId),
+      orderBy: [asc(paymentMethods.id)],
+    });
+    return rows.map(toPublicPaymentMethod);
+  } catch (error) {
+    console.error("Failed to list payment methods", error);
+    return [];
+  }
 }
 
 /**
@@ -53,12 +57,11 @@ export async function listPaymentMethodsForBorrowerLoanView(
   return listPaymentMethodsForUser(loanOwnerUserId);
 }
 
-/** Owners who run an admin workspace may manage payment methods. */
+/** Any signed-in user may manage their own payment methods in Settings. */
 export async function canManagePaymentMethods(
-  userId: string,
+  _userId: string,
 ): Promise<boolean> {
-  const caps = await getNavCapabilities(userId);
-  return caps.isAdminWorkspace;
+  return true;
 }
 
 export async function countPaymentMethodsForUser(
