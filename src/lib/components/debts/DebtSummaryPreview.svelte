@@ -15,6 +15,8 @@
 		DebtInterestPeriodWithPayments
 	} from '$lib/types';
 	import { Calendar, TrendingUp } from 'lucide-svelte';
+	import { ODD_LAST_TWO_COL_GRID_UNTIL_MD } from '$lib/summary-grid';
+	import { cn } from '$lib/utils';
 
 	interface Props {
 		principal: string;
@@ -68,13 +70,13 @@
 {#if summary}
 	<Card.Root class="border-primary/20 bg-primary/5">
 		<Card.Header class="pb-3">
-			<Card.Title class="flex items-center gap-2 text-lg sm:text-xl">
+			<Card.Title class="flex items-center gap-2">
 				<TrendingUp class="h-5 w-5 text-primary" />
 				Interest Overview
 			</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
-			<div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+			<div class={cn(ODD_LAST_TWO_COL_GRID_UNTIL_MD, 'grid grid-cols-2 gap-3 md:grid-cols-3')}>
 				<div class="rounded-lg border bg-background p-3">
 					<p class="mb-1 text-sm text-muted-foreground">Principal</p>
 					<p class="text-base font-semibold">{formatCurrency(summary.principal)}</p>
@@ -85,13 +87,13 @@
 				</div>
 				<div class="rounded-lg border bg-background p-3">
 					<p class="mb-1 text-sm text-muted-foreground">Interest per {intervalLabel}</p>
-					<p class="text-base font-semibold text-emerald-600">
+					<p class="text-base font-semibold text-chart-2">
 						{formatCurrency(summary.perPeriodInterest)}
 					</p>
 				</div>
 				<div class="rounded-lg border bg-background p-3">
 					<p class="mb-1 text-sm text-muted-foreground">Total interest</p>
-					<p class="text-base font-semibold text-emerald-600">
+					<p class="text-base font-semibold text-chart-2">
 						{formatCurrency(summary.scheduleInterestTotal)}
 					</p>
 				</div>
@@ -101,7 +103,7 @@
 				</div>
 				<div class="rounded-lg border bg-background p-3">
 					<p class="mb-1 text-sm text-muted-foreground">Interest and fees</p>
-					<p class="text-base font-semibold text-emerald-600">
+					<p class="text-base font-semibold text-chart-2">
 						{formatCurrency(summary.totalInterestIncludingFees)}
 					</p>
 				</div>
@@ -117,8 +119,8 @@
 					<p class="mb-1 text-sm text-muted-foreground">Amount outstanding</p>
 					<p
 						class="text-base font-semibold {amountOutstanding > 0
-							? 'text-amber-600 dark:text-amber-500'
-							: 'text-emerald-600'}"
+							? 'text-chart-5'
+							: 'text-chart-2'}"
 					>
 						{formatCurrency(amountOutstanding)}
 					</p>
@@ -170,7 +172,7 @@
 										·
 										{formatCurrency(entry.principalPortion)} principal ·
 									</span>
-									<span class="text-emerald-600">{formatCurrency(entry.interest)} interest</span>
+									<span class="text-chart-2">{formatCurrency(entry.interest)} interest</span>
 									{#if entry.feesPortion > 0}
 										<span class="text-muted-foreground">
 											·

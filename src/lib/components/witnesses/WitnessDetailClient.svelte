@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import DetailHeader from '$lib/components/common/DetailHeader.svelte';
-	import WitnessForm from '$lib/components/witnesses/WitnessForm.svelte';
+	import PartyUserEditForm from '$lib/components/party/PartyUserEditForm.svelte';
 	import WitnessDetailContent from '$lib/components/witnesses/WitnessDetailContent.svelte';
 	import EditFormSheet from '$lib/components/common/EditFormSheet.svelte';
 	import { createIsMobileOverlay } from '$lib/composables/use-media-query.svelte';
@@ -12,12 +12,13 @@
 
 	interface Props {
 		initialWitness: WitnessWithLoans;
+		canManage?: boolean;
 	}
 
-	let { initialWitness }: Props = $props();
+	let { initialWitness, canManage = true }: Props = $props();
 
 	let witness = $state<WitnessWithLoans>(initialWitness);
-	let isEditing = $state($page.url.searchParams.get('edit') === '1');
+	let isEditing = $state($page.url.searchParams.get('edit') === '1' && canManage);
 	let editSubmitting = $state(false);
 	const mobile = createIsMobileOverlay(
 		typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false
@@ -26,7 +27,7 @@
 
 	$effect(() => mobile.init());
 
-	const canDelete = $derived((witness.signingInvitations?.length ?? 0) === 0);
+	const canDelete = $derived(canManage && (witness.signingInvitations?.length ?? 0) === 0);
 
 	async function refreshWitness() {
 		try {
@@ -52,10 +53,11 @@
 {#if isEditing && !mobile.matches}
 	<div class="mx-auto max-w-2xl">
 		{#key witness.id}
-			<WitnessForm
-				existingWitness={witness}
+			<PartyUserEditForm
+				entityType="witness"
+				entityId={witness.id}
+				displayName={witness.name}
 				cancelHref="/witnesses/{witness.id}"
-				successHref="/witnesses/{witness.id}"
 				onSuccess={async () => {
 					isEditing = false;
 					await refreshWitness();
@@ -68,12 +70,14 @@
 	<div class="dashboard-form max-w-3xl">
 		<DetailHeader
 			title={witness.name}
+			description="Witness contact and signing history"
 			backLabel="Back to Witnesses"
 			onBack={() => goto('/witnesses')}
-			onEdit={() => (isEditing = true)}
+			onEdit={canManage ? () => (isEditing = true) : undefined}
 			onDelete={handleDelete}
 			deleteTitle="Delete witness?"
 			deleteDescription={`Delete ${witness.name}? This cannot be undone.`}
+			canEdit={canManage}
 			{canDelete}
 			deleteWarning={`Cannot delete this witness because they have ${countWitnessedLoans(witness)} witnessed loan(s).`}
 			showPriceToggle={false}
@@ -97,9 +101,12 @@
 		contentClass="sm:max-w-lg"
 	>
 		{#key witness.id}
-			<WitnessForm
-				existingWitness={witness}
+			<PartyUserEditForm
+				entityType="witness"
+				entityId={witness.id}
+				displayName={witness.name}
 				formId={editFormId}
+				embedded
 				showFormHeader={false}
 				bind:isSubmitting={editSubmitting}
 				onSuccess={async () => {

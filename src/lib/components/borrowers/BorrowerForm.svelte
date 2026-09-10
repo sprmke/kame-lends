@@ -130,6 +130,9 @@
 	{#if renderFormHeader}
 		<FormHeader
 			title={isEditMode ? (existingBorrower?.name ?? 'Borrower') : 'Create Borrower'}
+			description={isEditMode
+				? 'Update borrower contact details'
+				: 'Add a borrower for your loans'}
 			onCancel={handleCancel}
 			onSubmit={handleFormSubmit}
 			{isSubmitting}

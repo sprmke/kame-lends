@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { encodeJsonForUrl } from '$lib/base64-url';
-	import { isAfter, isBefore, isPast } from 'date-fns';
+	import {
+		isMaturingFundedLoan,
+		isOverdueLoanForDashboard
+	} from '$lib/loan-due-date';
 	import DetailHeader from '$lib/components/common/DetailHeader.svelte';
 	import SummaryCard from '$lib/components/common/SummaryCard.svelte';
 	import SearchFilter from '$lib/components/common/SearchFilter.svelte';
@@ -14,6 +16,7 @@
 	import PendingDisbursementsCard from '$lib/components/common/PendingDisbursementsCard.svelte';
 	import LoansTable from '$lib/components/loans/LoansTable.svelte';
 	import LoanDetailModal from '$lib/components/loans/LoanDetailModal.svelte';
+	import LoanCreateModal from '$lib/components/loans/LoanCreateModal.svelte';
 	import DebtsTable from '$lib/components/debts/DebtsTable.svelte';
 	import DebtCard from '$lib/components/debts/DebtCard.svelte';
 	import DebtCreateModal from '$lib/components/debts/DebtCreateModal.svelte';
@@ -23,21 +26,21 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
-	import {
-		calculateAverageRate,
-		calculateTotalInterest,
-		calculateTotalPrincipal
-	} from '$lib/calculations';
+	import { calculateAverageRate, calculateTotalInterest } from '$lib/calculations';
 	import { calculateInvestorDebtStats, isFullyPaidDebt } from '$lib/debt-calculations';
+	import { computeInvestorPortfolioCapitalStats } from '$lib/loan-list-summary';
 	import { computeTotalLot, buildTotalLotMetric } from '$lib/lot-utils';
 	import { INVESTOR_DETAIL_SUMMARY_GRID } from '$lib/summary-grid';
-	import { formatCurrency, formatText } from '$lib/format';
+	import { formatCurrency } from '$lib/format';
 	import { downloadLoansPdf } from '$lib/pdf-download';
 	import { loanPDFSections } from '$lib/pdf-sections';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
-	import { Plus, X, Filter, Mail, Phone, User } from 'lucide-svelte';
+	import { Plus, X, Filter } from 'lucide-svelte';
+	import { toast } from '$lib/toast';
+	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import type { PendingDisbursement } from '$lib/server/dashboard-data';
 	import type {
+		Borrower,
 		DebtWithInvestor,
 		Investor,
 		InvestorWithLoans,
@@ -47,10 +50,11 @@
 	interface Props {
 		investor: InvestorWithLoans;
 		loans: LoanWithInvestors[];
-		onEdit: () => void;
+		onEdit?: () => void;
+		canManage?: boolean;
 	}
 
-	let { investor, loans, onEdit }: Props = $props();
+	let { investor, loans, onEdit, canManage = true }: Props = $props();
 
 	const LOAN_TYPE_OPTIONS = [
 		{ value: 'Lot Title', label: 'Lot Title' },
@@ -90,10 +94,22 @@
 	let showDebtModal = $state(false);
 	let selectedLoan = $state<LoanWithInvestors | null>(null);
 	let showLoanDetailModal = $state(false);
+	let showLoanCreateModal = $state(false);
+	let createModalInvestors = $state<Investor[]>([]);
+	let createModalBorrowers = $state<Borrower[]>([]);
+	let createModalDuplicateData = $state<DuplicateLoanData | null>(null);
+	let loadingCreateFormData = $state(false);
 	const debtsViewMode = createResponsiveViewMode();
 
-	const investorLoanInvestors = $derived((investor.loanInvestors ?? []).filter((li) => li.loan));
-	const uniqueLoanCount = $derived(new Set(investorLoanInvestors.map((li) => li.loanId)).size);
+	/** Use `loans` graph (includes interestPeriods), not `investor.loanInvestors` from entity load. */
+	const investorLoanInvestors = $derived(
+		loans.flatMap((loan) =>
+			(loan.loanInvestors ?? [])
+				.filter((li) => li.investor?.id === investor.id)
+				.map((li) => ({ ...li, loan }))
+		)
+	);
+	const uniqueLoanCount = $derived(loans.length);
 	const investorDebts = $derived(investor.debts ?? []);
 	const investorTransactions = $derived(investor.transactions ?? []);
 	const debtStats = $derived(calculateInvestorDebtStats(investorDebts));
@@ -110,13 +126,7 @@
 		updatedAt: investor.updatedAt
 	});
 
-	const uniqueInvestorLoans = $derived.by(() => {
-		const byId = new Map<number, NonNullable<(typeof investorLoanInvestors)[0]['loan']>>();
-		for (const li of investorLoanInvestors) {
-			if (!byId.has(li.loan.id)) byId.set(li.loan.id, li.loan);
-		}
-		return Array.from(byId.values());
-	});
+	const uniqueInvestorLoans = $derived(loans);
 
 	const overviewStats = $derived.by(() => {
 		const filteredLoanInvestors = investorLoanInvestors.filter((li) => {
@@ -127,33 +137,17 @@
 			return true;
 		});
 
+		const capital = computeInvestorPortfolioCapitalStats(filteredLoanInvestors);
 		const filteredLoanIds = new Set(filteredLoanInvestors.map((li) => li.loan.id));
-		const totalCapital = calculateTotalPrincipal(filteredLoanInvestors);
-		const completedLoanInvestors = filteredLoanInvestors.filter(
-			(li) => li.loan.status === 'Completed'
-		);
-		const completedCapital = calculateTotalPrincipal(completedLoanInvestors);
-		const completedLoanInterest = calculateTotalInterest(completedLoanInvestors);
-		const loanEarnings = completedCapital + completedLoanInterest;
-		const activeCapital = totalCapital - completedCapital;
-		const activeLoanIds = new Set(
-			filteredLoanInvestors.filter((li) => li.loan.status !== 'Completed').map((li) => li.loan.id)
-		);
-		const completedLoanIds = new Set(completedLoanInvestors.map((li) => li.loan.id));
 		const filteredUniqueLoans = uniqueInvestorLoans.filter((loan) => filteredLoanIds.has(loan.id));
 		const { totalLot, totalLotWithDepacto } = computeTotalLot(filteredUniqueLoans);
+		const totalLoanInterest = capital.interestEstimate + capital.interestEarned;
+		const netEarnings = totalLoanInterest - debtStats.interestPaid;
 
 		return {
-			totalCapital,
-			activeCapital,
-			completedCapital,
-			loanCount: filteredLoanIds.size,
-			activeLoansCount: activeLoanIds.size,
-			completedLoansCount: completedLoanIds.size,
-			completedLoanInterest,
-			loanEarnings,
-			netInterestEarned: completedLoanInterest - debtStats.totalExpectedInterest,
-			netTotalEarnings: loanEarnings - debtStats.totalRepayment,
+			...capital,
+			totalLoanInterest,
+			netEarnings,
 			totalLot,
 			totalLotWithDepacto
 		};
@@ -225,16 +219,9 @@
 		})
 	);
 
-	const now = new Date();
-	const fourteenDaysFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-
 	const overdueLoans = $derived(
 		loans
-			.filter(
-				(loan) =>
-					loan.status === 'Overdue' ||
-					(loan.status !== 'Completed' && isPast(new Date(loan.dueDate)))
-			)
+			.filter((loan) => isOverdueLoanForDashboard(loan))
 			.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
 	);
 
@@ -246,14 +233,7 @@
 
 	const maturingLoans = $derived(
 		loans
-			.filter((loan) => {
-				const dueDate = new Date(loan.dueDate);
-				return (
-					(loan.status === 'Fully Funded' || loan.status === 'Partially Funded') &&
-					isAfter(dueDate, now) &&
-					isBefore(dueDate, fourteenDaysFromNow)
-				);
-			})
+			.filter((loan) => isMaturingFundedLoan(loan))
 			.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
 	);
 
@@ -278,7 +258,8 @@
 	});
 
 	const canDelete = $derived(
-		investorLoanInvestors.length === 0 &&
+		canManage &&
+			investorLoanInvestors.length === 0 &&
 			investorTransactions.length === 0 &&
 			investorDebts.length === 0
 	);
@@ -294,6 +275,32 @@
 
 	async function refresh() {
 		await invalidateAll();
+	}
+
+	async function loadCreateFormData() {
+		if (createModalInvestors.length > 0 && createModalBorrowers.length > 0) return;
+		loadingCreateFormData = true;
+		try {
+			const [investorRes, borrowerRes] = await Promise.all([
+				fetch('/api/investors?simple=true'),
+				fetch('/api/borrowers?simple=true')
+			]);
+			const investorData = await investorRes.json();
+			const borrowerData = await borrowerRes.json();
+			if (Array.isArray(investorData)) createModalInvestors = investorData;
+			if (Array.isArray(borrowerData)) createModalBorrowers = borrowerData;
+		} catch (error) {
+			console.error('Failed to load loan form data', error);
+			toast.error('Failed to load form data');
+		} finally {
+			loadingCreateFormData = false;
+		}
+	}
+
+	async function openLoanCreate(duplicateData: DuplicateLoanData | null = null) {
+		createModalDuplicateData = duplicateData;
+		showLoanCreateModal = true;
+		await loadCreateFormData();
 	}
 
 	function clearOverviewFilters() {
@@ -356,7 +363,8 @@
 		description="Investor portfolio and activity"
 		backLabel="Back to Investors"
 		onBack={() => goto('/investors')}
-		{onEdit}
+		onEdit={canManage ? onEdit : undefined}
+		canEdit={canManage}
 		onDelete={handleDelete}
 		deleteTitle="Delete Investor"
 		deleteDescription={`Are you sure you want to delete ${investor.name}? This action cannot be undone.`}
@@ -371,37 +379,7 @@
 			<Tabs.Trigger value="debts">Borrowings ({investorDebts.length})</Tabs.Trigger>
 		</Tabs.List>
 
-		<Tabs.Content value="overview">
-			<Card.Root>
-				<Card.Content class="space-y-3 p-3">
-					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						<div class="space-y-1">
-							<div class="flex items-center gap-2 text-sm text-muted-foreground">
-								<User class="h-3 w-3" />
-								<span class="text-xs">Full Name</span>
-							</div>
-							<p class="font-medium">{formatText(investor.name)}</p>
-						</div>
-						<div class="space-y-1">
-							<div class="flex items-center gap-2 text-sm text-muted-foreground">
-								<Mail class="h-3 w-3" />
-								<span class="text-xs">Email Address</span>
-							</div>
-							<p class="font-medium">{formatText(investor.email)}</p>
-						</div>
-						<div class="space-y-1">
-							<div class="flex items-center gap-2 text-sm text-muted-foreground">
-								<Phone class="h-3 w-3" />
-								<span class="text-xs">Contact Number</span>
-							</div>
-							<p class="font-medium">
-								{investor.contactNumber ? formatText(investor.contactNumber) : '-'}
-							</p>
-						</div>
-					</div>
-				</Card.Content>
-			</Card.Root>
-
+		<Tabs.Content value="overview" class="mt-6 space-y-6">
 			<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
 				<MultiSelectFilter
 					options={LOAN_TYPE_OPTIONS}
@@ -420,7 +398,7 @@
 					triggerClassName="w-full sm:w-[180px]"
 				/>
 				{#if hasActiveOverviewFilters}
-					<Button variant="outline" size="sm" class="h-9" onclick={clearOverviewFilters}>
+					<Button variant="outline" size="sm" onclick={clearOverviewFilters}>
 						<X class="h-4 w-4 sm:mr-2" />
 						<span class="hidden sm:inline">Clear Filters</span>
 					</Button>
@@ -433,7 +411,7 @@
 					{
 						label: 'Total Capital',
 						amount: overviewStats.totalCapital,
-						subCount: overviewStats.loanCount,
+						subCount: overviewStats.totalLoanCount,
 						subCountSuffix: ' loans'
 					},
 					{
@@ -443,50 +421,48 @@
 						subCountSuffix: ' loans'
 					},
 					{
-						label: 'Completed',
-						amount: overviewStats.completedCapital,
-						subCount: overviewStats.completedLoansCount,
-						subCountSuffix: ' loans'
-					},
-					{
-						label: 'Total Borrowings',
-						amount: debtStats.totalPrincipal,
-						subCount: debtStats.totalCount,
-						subCountSuffix: ' borrowings'
-					},
-					{
 						label: 'Active Borrowings',
 						amount: debtStats.activePrincipal,
 						subCount: debtStats.activeCount,
-						subCountSuffix: ' borrowings'
+						subCountSuffix: ' borrowings',
+						empty: debtStats.totalCount === 0
 					},
 					{
-						label: 'Repaid Borrowings',
-						amount: debtStats.completedPrincipal,
-						subCount: debtStats.completedCount,
-						subCountSuffix: ' borrowings'
+						label: 'Borrowing Cost Paid',
+						amount: debtStats.interestPaid,
+						subValue: 'Interest and fees paid',
+						empty: debtStats.totalCount === 0
+					},
+					{
+						label: 'Upcoming Earnings',
+						amount: overviewStats.interestEstimate,
+						subValue: 'Open loans'
 					},
 					{
 						label: 'Interest Earned',
-						amount: overviewStats.netInterestEarned,
-						subValue: `Loans +${formatCurrency(overviewStats.completedLoanInterest)} · Borrowings -${formatCurrency(debtStats.totalExpectedInterest)}`,
-						valueClassName:
-							overviewStats.netInterestEarned >= 0
-								? 'text-emerald-600 dark:text-emerald-500'
-								: 'text-red-600 dark:text-red-500'
+						amount: overviewStats.interestEarned,
+						subValue: 'Completed loans',
+						valueClassName: 'text-chart-2'
 					},
 					{
-						label: 'Total Earnings',
-						amount: overviewStats.netTotalEarnings,
-						subValue: `Loans +${formatCurrency(overviewStats.loanEarnings)} · Borrowings -${formatCurrency(debtStats.totalRepayment)}`,
-						valueClassName:
-							overviewStats.netTotalEarnings >= 0 ? undefined : 'text-red-600 dark:text-red-500'
+						label: 'Total Loan Interest',
+						amount: overviewStats.totalLoanInterest,
+						subValue: 'Upcoming - Earned'
+					},
+					{
+						label: 'Net Earnings',
+						amount: overviewStats.netEarnings,
+						subValue:
+							debtStats.totalCount > 0
+								? 'Loan interest - Borrowing cost'
+								: 'Loan interest scheduled',
+						valueClassName: overviewStats.netEarnings >= 0 ? undefined : 'text-chart-3'
 					},
 					buildTotalLotMetric(overviewStats.totalLot, overviewStats.totalLotWithDepacto)
 				]}
 			/>
 
-			<div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+			<div class="grid items-start gap-2.5 md:grid-cols-2 2xl:grid-cols-4">
 				<MaturingLoansCard loans={maturingLoans} />
 				<PastDueLoansCard loans={overdueLoans} />
 				<PendingDisbursementsCard disbursements={pendingDisbursements} />
@@ -494,7 +470,7 @@
 			</div>
 		</Tabs.Content>
 
-		<Tabs.Content value="loans" class="space-y-3">
+		<Tabs.Content value="loans" class="mt-6 space-y-4">
 			<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
 				<SearchFilter
 					value={loanSearchQuery}
@@ -520,14 +496,13 @@
 				<Button
 					variant={showMoreLoanFilters ? 'secondary' : 'outline'}
 					size="sm"
-					class="h-9"
 					onclick={() => (showMoreLoanFilters = !showMoreLoanFilters)}
 				>
 					<Filter class="h-4 w-4 xl:mr-2" />
 					<span class="hidden xl:inline">{showMoreLoanFilters ? 'Less' : 'More'} Filters</span>
 				</Button>
 				{#if hasActiveLoanFilters}
-					<Button variant="outline" size="sm" class="h-9" onclick={clearLoanFilters}>
+					<Button variant="outline" size="sm" onclick={clearLoanFilters}>
 						<X class="h-4 w-4 xl:mr-2" />
 						<span class="hidden xl:inline">Clear All</span>
 					</Button>
@@ -538,15 +513,17 @@
 					sections={loanPDFSections}
 					onGeneratePDF={(data, keys) => downloadLoansPdf(data, keys, investor.id)}
 				/>
-				<Button size="sm" class="h-9" onclick={() => goto(`/loans/new?investorId=${investor.id}`)}>
+				{#if canManage}
+				<Button size="sm" onclick={() => openLoanCreate()}>
 					<Plus class="h-3 w-3 xl:mr-1" />
 					<span class="hidden xl:inline">Add Loan</span>
 				</Button>
+				{/if}
 			</div>
 
 			{#if showMoreLoanFilters}
 				<div
-					class="grid grid-cols-1 gap-3 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2 lg:grid-cols-4"
+					class="dashboard-filter-panel grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
 				>
 					<RangeFilter
 						label="Total Principal"
@@ -587,20 +564,13 @@
 				</div>
 			{/if}
 
-			{#if filteredLoans.length === 0}
-				<Card.Root>
-					<Card.Content class="dashboard-empty gap-3">
-						<p class="text-muted-foreground">No loans match your filters</p>
-						<Button variant="outline" onclick={clearLoanFilters}>
-							<X class="mr-2 h-4 w-4" />
-							Clear filters
-						</Button>
-					</Card.Content>
-				</Card.Root>
-			{:else}
-				<LoansTable
-					loans={filteredLoans}
-					onQuickView={(loan) => {
+			<LoansTable
+				loans={filteredLoans}
+				investorId={investor.id}
+				emptyMessage={uniqueLoanCount === 0
+					? 'No loans yet.'
+					: 'No loans match your filters.'}
+				onQuickView={(loan) => {
 						if (isMobileShellViewport()) {
 							goto(`/loans/${loan.id}`);
 							return;
@@ -609,10 +579,17 @@
 						showLoanDetailModal = true;
 					}}
 				/>
+			{#if filteredLoans.length === 0 && uniqueLoanCount > 0}
+				<div class="mt-4 flex justify-center">
+					<Button variant="outline" onclick={clearLoanFilters}>
+						<X class="mr-2 h-4 w-4" />
+						Clear filters
+					</Button>
+				</div>
 			{/if}
 		</Tabs.Content>
 
-		<Tabs.Content value="debts" class="space-y-3">
+		<Tabs.Content value="debts" class="mt-6 space-y-4">
 			<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
 				<SearchFilter
 					value={debtSearchQuery}
@@ -622,14 +599,13 @@
 				<Button
 					variant={showMoreDebtFilters ? 'secondary' : 'outline'}
 					size="sm"
-					class="h-9"
 					onclick={() => (showMoreDebtFilters = !showMoreDebtFilters)}
 				>
 					<Filter class="h-4 w-4 xl:mr-2" />
 					<span class="hidden xl:inline">{showMoreDebtFilters ? 'Less' : 'More'} Filters</span>
 				</Button>
 				{#if hasActiveDebtFilters}
-					<Button variant="outline" size="sm" class="h-9" onclick={clearDebtFilters}>
+					<Button variant="outline" size="sm" onclick={clearDebtFilters}>
 						<X class="h-4 w-4 xl:mr-2" />
 						<span class="hidden xl:inline">Clear All</span>
 					</Button>
@@ -639,14 +615,16 @@
 					onViewModeChange={debtsViewMode.setViewMode}
 					hasData={filteredDebts.length > 0}
 				/>
-				<Button size="sm" class="h-9" onclick={() => (showDebtModal = true)}>
+				{#if canManage}
+				<Button size="sm" onclick={() => (showDebtModal = true)}>
 					<Plus class="h-3 w-3 xl:mr-1" />
 					<span class="hidden xl:inline">Add Borrowing</span>
 				</Button>
+				{/if}
 			</div>
 
 			{#if showMoreDebtFilters}
-				<div class="rounded-lg border bg-muted/30 p-4">
+				<div class="dashboard-filter-panel">
 					<RangeFilter
 						label="Principal Amount"
 						minValue={minDebtAmount}
@@ -659,14 +637,42 @@
 				</div>
 			{/if}
 
-			{#if investorDebts.length === 0}
-				<Card.Root>
-					<Card.Content class="dashboard-empty gap-3">
-						<p class="text-muted-foreground">No borrowings yet</p>
+			{#if debtsViewMode.viewMode === 'table'}
+				<DebtsTable
+					debts={filteredDebts}
+					itemsPerPage={10}
+					emptyMessage={investorDebts.length === 0
+						? 'No borrowings yet.'
+						: 'No borrowings match your filters.'}
+					onQuickView={(debt) => goto(`/debts/${debt.id}`)}
+				/>
+				{#if investorDebts.length === 0}
+					{#if canManage}
+					<div class="mt-4 flex justify-center">
 						<Button size="sm" onclick={() => (showDebtModal = true)}>
 							<Plus class="mr-2 h-4 w-4" />
 							Add Borrowing
 						</Button>
+					</div>
+					{/if}
+				{:else if filteredDebts.length === 0}
+					<div class="mt-4 flex justify-center">
+						<Button variant="outline" onclick={clearDebtFilters}>
+							<X class="mr-2 h-4 w-4" />
+							Clear filters
+						</Button>
+					</div>
+				{/if}
+			{:else if investorDebts.length === 0}
+				<Card.Root>
+					<Card.Content class="dashboard-empty gap-3">
+						<p class="text-muted-foreground">No borrowings yet</p>
+						{#if canManage}
+						<Button size="sm" onclick={() => (showDebtModal = true)}>
+							<Plus class="mr-2 h-4 w-4" />
+							Add Borrowing
+						</Button>
+						{/if}
 					</Card.Content>
 				</Card.Root>
 			{:else if filteredDebts.length === 0}
@@ -679,7 +685,7 @@
 						</Button>
 					</Card.Content>
 				</Card.Root>
-			{:else if debtsViewMode.viewMode === 'cards'}
+			{:else}
 				<CardPagination
 					items={filteredDebts}
 					itemsPerPage={10}
@@ -694,12 +700,6 @@
 						</div>
 					{/snippet}
 				</CardPagination>
-			{:else}
-				<DebtsTable
-					debts={filteredDebts}
-					itemsPerPage={10}
-					onQuickView={(debt) => goto(`/debts/${debt.id}`)}
-				/>
 			{/if}
 		</Tabs.Content>
 	</Tabs.Root>
@@ -708,6 +708,20 @@
 		open={showDebtModal}
 		onOpenChange={(open) => (showDebtModal = open)}
 		preselectedInvestorId={investor.id}
+		onSuccess={refresh}
+	/>
+
+	<LoanCreateModal
+		open={showLoanCreateModal}
+		onOpenChange={(open) => {
+			showLoanCreateModal = open;
+			if (!open) createModalDuplicateData = null;
+		}}
+		preselectedInvestorId={investor.id}
+		investors={createModalInvestors}
+		borrowers={createModalBorrowers}
+		duplicateData={createModalDuplicateData}
+		loadingFormData={loadingCreateFormData}
 		onSuccess={refresh}
 	/>
 
@@ -720,8 +734,7 @@
 		}}
 		onUpdate={refresh}
 		onDuplicate={(duplicateData) => {
-			const encodedData = encodeJsonForUrl(duplicateData);
-			goto(`/loans/new?duplicate=${encodeURIComponent(encodedData)}`);
+			void openLoanCreate(duplicateData);
 		}}
 	/>
 </div>

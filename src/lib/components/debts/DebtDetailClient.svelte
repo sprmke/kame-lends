@@ -3,6 +3,9 @@
 	import { page } from '$app/stores';
 	import DetailHeader from '$lib/components/common/DetailHeader.svelte';
 	import DebtForm from '$lib/components/debts/DebtForm.svelte';
+	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
+	import EditFormSheet from '$lib/components/common/EditFormSheet.svelte';
+	import { createIsMobileOverlay } from '$lib/composables/use-media-query.svelte';
 	import DebtSummaryPreview from '$lib/components/debts/DebtSummaryPreview.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
@@ -10,16 +13,26 @@
 	import { formatCurrency, formatDateShort, formatText } from '$lib/format';
 	import { normalizeDebtFees } from '$lib/debt-calculations';
 	import type { DebtWithInvestorAndPeriods, Investor } from '$lib/types';
+	import { ODD_LAST_TWO_COL_GRID } from '$lib/summary-grid';
+	import { cn } from '$lib/utils';
 
 	interface Props {
 		initialDebt: DebtWithInvestorAndPeriods;
 		investors: Investor[];
+		canManage?: boolean;
 	}
 
-	let { initialDebt, investors }: Props = $props();
+	let { initialDebt, investors, canManage = true }: Props = $props();
 
 	let debt = $state<DebtWithInvestorAndPeriods>(initialDebt);
-	let isEditing = $state($page.url.searchParams.get('edit') === '1');
+	let isEditing = $state($page.url.searchParams.get('edit') === '1' && canManage);
+	let editSubmitting = $state(false);
+	const mobile = createIsMobileOverlay(
+		typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false
+	);
+	const editFormId = $derived(`debt-detail-edit-${debt.id}`);
+
+	$effect(() => mobile.init());
 
 	const fees = $derived(debt.additionalFees ?? []);
 	const debtDate = $derived(
@@ -46,8 +59,11 @@
 	}
 </script>
 
-{#if isEditing}
+{#if isEditing && !mobile.matches}
 	<div class="mx-auto max-w-4xl">
+		{#if investors.length === 0}
+			<FormPageSkeleton />
+		{:else}
 		{#key debt.id}
 			<DebtForm
 				{investors}
@@ -61,6 +77,7 @@
 				onPaymentsChange={refreshDebt}
 			/>
 		{/key}
+		{/if}
 	</div>
 {:else}
 	<div class="dashboard-form max-w-4xl">
@@ -69,8 +86,10 @@
 			description={`Investor: ${formatText(debt.investor.name)}`}
 			backLabel="Back to Borrowings"
 			onBack={() => goto('/debts')}
-			onEdit={() => (isEditing = true)}
+			onEdit={canManage ? () => (isEditing = true) : undefined}
 			onDelete={handleDelete}
+			canEdit={canManage}
+			canDelete={canManage}
 			deleteTitle="Delete borrowing?"
 			deleteDescription={`This will permanently delete "${debt.name}".`}
 			showPriceToggle={false}
@@ -81,7 +100,9 @@
 				<Card.Title>Borrowing Summary</Card.Title>
 			</Card.Header>
 			<Card.Content>
-				<div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+				<div
+					class={cn(ODD_LAST_TWO_COL_GRID, 'grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5')}
+				>
 					<div class="rounded-lg bg-muted/50 p-3">
 						<p class="mb-1 text-xs text-muted-foreground">Principal</p>
 						<p class="text-sm font-semibold">{formatCurrency(debt.amount)}</p>
@@ -133,7 +154,42 @@
 			durationMonths={debt.durationMonths}
 			additionalFees={normalizeDebtFees(fees)}
 			interestPeriods={debt.interestPeriods}
-			onPaymentsChange={refreshDebt}
+			onPaymentsChange={canManage ? refreshDebt : undefined}
 		/>
 	</div>
+{/if}
+
+{#if isEditing && mobile.matches}
+	<EditFormSheet
+		open={true}
+		onOpenChange={(open) => {
+			if (!open) isEditing = false;
+		}}
+		title={formatText(debt.name)}
+		formId={editFormId}
+		isSubmitting={editSubmitting}
+		isEditMode={true}
+		submitLabel={editSubmitting ? 'Saving...' : 'Save Changes'}
+	>
+		{#if investors.length === 0}
+			<FormPageSkeleton />
+		{:else}
+			{#key debt.id}
+				<DebtForm
+					{investors}
+					existingDebt={debt}
+					initialInterestPeriods={debt.interestPeriods}
+					formId={editFormId}
+					showFormHeader={false}
+					bind:isSubmitting={editSubmitting}
+					onSuccess={async () => {
+						isEditing = false;
+						await refreshDebt();
+					}}
+					onCancel={() => (isEditing = false)}
+					onPaymentsChange={refreshDebt}
+				/>
+			{/key}
+		{/if}
+	</EditFormSheet>
 {/if}

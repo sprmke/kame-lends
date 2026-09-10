@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Select from '$lib/components/ui/select';
+	import SearchableSelect from '$lib/components/common/SearchableSelect.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
+	import FormActions from '$lib/components/common/FormActions.svelte';
+	import { cn } from '$lib/utils';
 	import { toast } from '$lib/toast';
 	import { toLocalDateString } from '$lib/date-utils';
 	import type { Investor } from '$lib/types';
@@ -15,9 +17,21 @@
 		investors?: Investor[];
 		preselectedInvestorId?: number;
 		cancelHref?: string;
+		onSuccess?: () => void | Promise<void>;
+		onCancel?: () => void;
+		formId?: string;
+		isSubmitting?: boolean;
 	}
 
-	let { investors = [], preselectedInvestorId, cancelHref = '/transactions' }: Props = $props();
+	let {
+		investors = [],
+		preselectedInvestorId,
+		cancelHref = '/transactions',
+		onSuccess,
+		onCancel,
+		formId,
+		isSubmitting = $bindable(false)
+	}: Props = $props();
 
 	let formRef = $state<HTMLFormElement | null>(null);
 	let name = $state('');
@@ -26,8 +40,11 @@
 	let transactionDate = $state(toLocalDateString(new Date()));
 	let investorId = $state(preselectedInvestorId ? String(preselectedInvestorId) : '');
 	let notes = $state('');
-	let isSubmitting = $state(false);
 	let errors = $state<Record<string, string>>({});
+
+	const investorOptions = $derived(
+		investors.map((investor) => ({ value: String(investor.id), label: investor.name }))
+	);
 
 	function validate() {
 		const next: Record<string, string> = {};
@@ -70,7 +87,11 @@
 			}
 
 			toast.success('Transaction created');
-			await goto('/transactions');
+			if (onSuccess) {
+				await onSuccess();
+			} else {
+				await goto('/transactions');
+			}
 		} catch (error) {
 			console.error(error);
 			toast.error(error instanceof Error ? error.message : 'Save failed');
@@ -80,16 +101,23 @@
 	}
 </script>
 
-<form bind:this={formRef} class="dashboard-form max-w-2xl" onsubmit={handleSubmit}>
-	<FormHeader
-		title="Create Transaction"
-		onCancel={() => goto(cancelHref)}
-		onSubmit={handleFormSubmit}
-		{isSubmitting}
-		isEditMode={false}
-		submitLabel={isSubmitting ? 'Creating...' : 'Create'}
-		variant="page"
-	/>
+<form
+	bind:this={formRef}
+	id={formId}
+	class={cn('dashboard-form w-full min-w-0', onCancel ? 'max-w-none' : 'max-w-2xl')}
+	onsubmit={handleSubmit}
+>
+	{#if !onCancel}
+		<FormHeader
+			title="Create Transaction"
+			onCancel={() => goto(cancelHref)}
+			onSubmit={handleFormSubmit}
+			{isSubmitting}
+			isEditMode={false}
+			submitLabel={isSubmitting ? 'Creating...' : 'Create'}
+			variant="page"
+		/>
+	{/if}
 
 	<Card.Root>
 		<Card.Header>
@@ -104,16 +132,17 @@
 
 			<div class="space-y-2">
 				<Label for="investorId">Investor</Label>
-				<Select.Root type="single" bind:value={investorId} disabled={isSubmitting}>
-					<Select.Trigger id="investorId" class="w-full">
-						{investors.find((i) => String(i.id) === investorId)?.name ?? 'Select investor'}
-					</Select.Trigger>
-					<Select.Content>
-						{#each investors as investor}
-							<Select.Item value={String(investor.id)}>{investor.name}</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
+				<SearchableSelect
+					id="investorId"
+					options={investorOptions}
+					value={investorId}
+					onValueChange={(value) => (investorId = value)}
+					placeholder="Select investor"
+					searchPlaceholder="Search investors..."
+					searchable={true}
+					disabled={isSubmitting}
+					triggerClassName="w-full"
+				/>
 				{#if errors.investorId}<p class="text-sm text-destructive">{errors.investorId}</p>{/if}
 			</div>
 
@@ -157,4 +186,13 @@
 			</div>
 		</Card.Content>
 	</Card.Root>
+
+	<FormActions
+		onCancel={() => (onCancel ? onCancel() : goto(cancelHref))}
+		{formId}
+		{isSubmitting}
+		layout={onCancel ? 'stacked' : 'responsive'}
+		submitLabel={isSubmitting ? 'Creating...' : 'Create'}
+		class={onCancel ? 'md:hidden' : 'lg:hidden'}
+	/>
 </form>

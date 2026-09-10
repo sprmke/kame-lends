@@ -14,11 +14,11 @@
 				<div class="landing-cta-orbs pointer-events-none absolute inset-0"></div>
 				<div class="relative mx-auto max-w-2xl text-center">
 					<h2
-						class="text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl lg:text-5xl"
+						class="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl"
 					>
 						Ready to take control of your lending operation?
 					</h2>
-					<p class="mx-auto mt-6 max-w-lg text-lg text-primary-foreground/85">
+					<p class="mx-auto mt-6 max-w-lg text-lg text-white/85">
 						Join operators who run smarter with loans, investors, and
 						{SHOW_TRANSACTIONS_UI ? 'transactions' : 'borrowings'} in one place.
 					</p>

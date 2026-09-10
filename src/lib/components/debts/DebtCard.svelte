@@ -2,6 +2,11 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
+	import {
+		createCardQuickViewHandler,
+		createRowActionItems,
+		GRID_CARD_ACTION_PROPS
+	} from '$lib/components/common/action-buttons';
 	import { formatCurrency, formatDateShort, formatText } from '$lib/format';
 	import { calculateDebtSummary, calculatePerPeriodInterest } from '$lib/debt-calculations';
 	import type { DebtWithInvestor } from '$lib/types';
@@ -10,9 +15,24 @@
 		debt: DebtWithInvestor;
 		viewHref?: string;
 		onQuickView?: (debt: DebtWithInvestor) => void;
+		onEdit?: (debt: DebtWithInvestor) => void;
+		onDelete?: (debt: DebtWithInvestor) => void;
 	}
 
-	let { debt, viewHref = `/debts/${debt.id}`, onQuickView }: Props = $props();
+	let {
+		debt,
+		viewHref = `/debts/${debt.id}`,
+		onQuickView,
+		onEdit,
+		onDelete
+	}: Props = $props();
+
+	const actionItems = $derived(
+		createRowActionItems({
+			onEdit: onEdit ? () => onEdit(debt) : undefined,
+			onDelete: onDelete ? () => onDelete(debt) : undefined
+		})
+	);
 
 	const perPeriodInterest = $derived(calculatePerPeriodInterest(debt.amount, debt.interestRate));
 	const debtDate = $derived(
@@ -51,11 +71,11 @@
 			</div>
 			<div class="dashboard-metric-cell p-2">
 				<p class="mb-1 text-[10px] text-muted-foreground">Interest / Period</p>
-				<p class="text-xs font-semibold text-emerald-600">{formatCurrency(perPeriodInterest)}</p>
+				<p class="text-xs font-semibold text-chart-2">{formatCurrency(perPeriodInterest)}</p>
 			</div>
 			<div class="dashboard-metric-cell p-2">
 				<p class="mb-1 text-[10px] text-muted-foreground">Total Interest</p>
-				<p class="text-xs font-semibold text-emerald-600">{formatCurrency(totalInterest)}</p>
+				<p class="text-xs font-semibold text-chart-2">{formatCurrency(totalInterest)}</p>
 			</div>
 		</div>
 		<p class="truncate text-xs text-muted-foreground">{formatText(debt.investor.name)}</p>
@@ -63,15 +83,11 @@
 	<Card.Footer class="border-t px-0 py-0">
 		<ActionButtons
 			{viewHref}
-			showView={false}
-			size="md"
-			onQuickView={onQuickView
-				? (event) => {
-						event.preventDefault();
-						event.stopPropagation();
-						onQuickView(debt);
-					}
-				: undefined}
+			{...GRID_CARD_ACTION_PROPS}
+			{actionItems}
+			onQuickView={createCardQuickViewHandler(
+				onQuickView ? () => onQuickView(debt) : undefined
+			)}
 		/>
 	</Card.Footer>
 </Card.Root>

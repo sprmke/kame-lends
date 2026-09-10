@@ -1,10 +1,14 @@
 <script lang="ts">
 	import ContactInfoCard from '$lib/components/common/ContactInfoCard.svelte';
+	import SummaryCard from '$lib/components/common/SummaryCard.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { formatDateVeryShort, formatText } from '$lib/format';
 	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
+	import { calculateBorrowerStats } from '$lib/calculations';
+	import { buildTotalLotMetric } from '$lib/lot-utils';
+	import { BORROWER_DETAIL_SUMMARY_GRID } from '$lib/summary-grid';
 	import { cn } from '$lib/utils';
 	import type { BorrowerWithLoans } from '$lib/types';
 
@@ -16,6 +20,7 @@
 	let { borrower, showHeader = true }: Props = $props();
 
 	const loans = $derived(borrower.loans ?? []);
+	const stats = $derived(calculateBorrowerStats(borrower));
 </script>
 
 <div class="dashboard-stack">
@@ -31,6 +36,45 @@
 		contactNumber={borrower.contactNumber}
 		address={borrower.address}
 	/>
+
+	{#if loans.length > 0}
+		<SummaryCard
+			class={BORROWER_DETAIL_SUMMARY_GRID}
+			metrics={[
+				{
+					label: 'Active Balance',
+					amount: stats.activePrincipal,
+					subCount: stats.openLoans,
+					subCountSuffix: ' open loans'
+				},
+				{
+					label: 'Interest',
+					amount: stats.activeInterest,
+					subValue: 'Open loans'
+				},
+				{
+					label: 'Total Due',
+					amount: stats.activeTotal,
+					subValue: 'Principal + interest'
+				},
+				{
+					label: 'Overdue',
+					amount: stats.overdueAmount,
+					subCount: stats.overdueLoans,
+					subCountSuffix: stats.overdueLoans === 1 ? ' loan' : ' loans',
+					empty: stats.overdueLoans === 0,
+					valueClassName: stats.overdueAmount > 0 ? 'text-chart-3' : undefined
+				},
+				{
+					label: 'Completed',
+					value: String(stats.completedLoans),
+					subValue: stats.completedLoans === 1 ? 'Loan closed' : 'Loans closed',
+					empty: stats.completedLoans === 0
+				},
+				buildTotalLotMetric(stats.totalLot, stats.totalLotWithDepacto)
+			]}
+		/>
+	{/if}
 
 	{#if borrower.notes}
 		<div class="space-y-1">

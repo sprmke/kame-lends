@@ -1,8 +1,9 @@
 <script lang="ts">
 	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
 	import Pagination from '$lib/components/common/Pagination.svelte';
+	import TableEmptyRow from '$lib/components/common/TableEmptyRow.svelte';
+	import { TABLE_ROW_CLICKABLE } from '$lib/table-styles';
 	import { cn } from '$lib/utils';
 	import { formatCurrencyCompact, formatDateVeryShort, formatText } from '$lib/format';
 	import { getTransactionDirectionBadge, getTransactionTypeBadge } from '$lib/badge-config';
@@ -16,9 +17,10 @@
 	interface Props {
 		transactions: TransactionWithInvestor[];
 		itemsPerPage?: number;
+		emptyMessage?: string;
 	}
 
-	let { transactions, itemsPerPage = 10 }: Props = $props();
+	let { transactions, itemsPerPage = 10, emptyMessage = 'No transactions found.' }: Props = $props();
 
 	let currentPage = $state(1);
 	const totalPages = $derived(Math.max(1, Math.ceil(transactions.length / itemsPerPage)));
@@ -42,13 +44,15 @@
 					<Table.Head class="hidden lg:table-cell">Type</Table.Head>
 					<Table.Head>Direction</Table.Head>
 					<Table.Head>Amount</Table.Head>
-					<Table.Head class="text-right">Actions</Table.Head>
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
+				{#if paginated.length === 0}
+					<TableEmptyRow colspan={6} message={emptyMessage} />
+				{:else}
 				{#each paginated as transaction (transaction.id)}
 					<Table.Row
-						class="cursor-pointer"
+						class={TABLE_ROW_CLICKABLE}
 						onclick={() => (window.location.href = `/transactions/${transaction.id}`)}
 					>
 						<Table.Cell>{formatDateVeryShort(transaction.date)}</Table.Cell>
@@ -88,12 +92,9 @@
 							{transaction.direction === 'In' ? '+' : '-'}
 							{formatCurrencyCompact(transaction.amount)}
 						</Table.Cell>
-						<Table.Cell class="text-right" onclick={(e) => e.stopPropagation()}>
-							<Button href="/transactions/{transaction.id}" variant="outline" size="sm">Open</Button
-							>
-						</Table.Cell>
 					</Table.Row>
 				{/each}
+				{/if}
 			</Table.Body>
 		</Table.Root>
 	</div>

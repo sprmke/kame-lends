@@ -1,13 +1,16 @@
 <script lang="ts">
 	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
 	import Pagination from '$lib/components/common/Pagination.svelte';
+	import DataTableCard from '$lib/components/common/DataTableCard.svelte';
+	import SortableTableHead from '$lib/components/common/SortableTableHead.svelte';
+	import TableActionsHead from '$lib/components/common/TableActionsHead.svelte';
 	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
 	import { createRowActionItems } from '$lib/components/common/action-buttons';
 	import { formatCurrencyCompact, formatDateVeryShort, formatText } from '$lib/format';
+	import TableEmptyRow from '$lib/components/common/TableEmptyRow.svelte';
+	import { TABLE_COL_ACTIONS, TABLE_COL_NAME, TABLE_COL_NUMERIC, TABLE_ROW_CLICKABLE } from '$lib/table-styles';
 	import { cn } from '$lib/utils';
-	import { ArrowUpDown } from 'lucide-svelte';
 	import type { DebtWithInvestor } from '$lib/types';
 
 	type SortDirection = 'asc' | 'desc';
@@ -19,11 +22,13 @@
 		onQuickView?: (debt: DebtWithInvestor) => void;
 		onEdit?: (debt: DebtWithInvestor) => void;
 		onDelete?: (debt: DebtWithInvestor) => void;
+		emptyMessage?: string;
 	}
 
 	let {
 		debts,
 		itemsPerPage: initialItemsPerPage = 10,
+		emptyMessage = 'No borrowings found.',
 		onQuickView,
 		onEdit,
 		onDelete
@@ -82,71 +87,69 @@
 		}
 	}
 
-	const columns: Array<{ field: SortField; label: string; className?: string }> = [
+	const columns: Array<{
+		field: SortField;
+		label: string;
+		className?: string;
+		align?: 'left' | 'right';
+	}> = [
 		{ field: 'date', label: 'Start Date' },
 		{ field: 'name', label: 'Name' },
 		{ field: 'investor', label: 'Investor', className: 'hidden md:table-cell' },
-		{ field: 'amount', label: 'Principal' },
-		{ field: 'interestRate', label: 'Rate', className: 'hidden lg:table-cell' },
+		{ field: 'amount', label: 'Principal', align: 'right' },
+		{ field: 'interestRate', label: 'Rate', className: 'hidden lg:table-cell', align: 'right' },
 		{ field: 'interestInterval', label: 'Period', className: 'hidden xl:table-cell' }
 	];
 </script>
 
-<div class="space-y-4">
-	<div class="overflow-hidden rounded-xl border border-border/50">
+<DataTableCard>
+	{#snippet children()}
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
-					{#each columns as column}
-						<Table.Head class={column.className}>
-							<button
-								type="button"
-								class="inline-flex items-center gap-1 font-medium hover:text-foreground"
-								onclick={() => handleSort(column.field)}
-							>
-								{column.label}
-								<ArrowUpDown
-									class={cn(
-										'h-3.5 w-3.5',
-										sortField === column.field ? 'text-foreground' : 'text-muted-foreground/50'
-									)}
-								/>
-							</button>
-						</Table.Head>
+					{#each columns as column (column.field)}
+						<SortableTableHead
+							label={column.label}
+							class={column.className}
+							align={column.align}
+							active={sortField === column.field}
+							onclick={() => handleSort(column.field)}
+						/>
 					{/each}
-					<Table.Head class="text-right">Actions</Table.Head>
+					<TableActionsHead />
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
+				{#if paginated.length === 0}
+					<TableEmptyRow colspan={columns.length + 1} message={emptyMessage} />
+				{:else}
 				{#each paginated as debt (debt.id)}
-					<Table.Row class="cursor-pointer" onclick={() => onQuickView?.(debt)}>
+					<Table.Row class={TABLE_ROW_CLICKABLE} onclick={() => onQuickView?.(debt)}>
 						<Table.Cell>{formatDateVeryShort(debt.date)}</Table.Cell>
 						<Table.Cell>
-							<p class="truncate font-medium" title={formatText(debt.name)}>
+							<p class={cn('truncate', TABLE_COL_NAME)} title={formatText(debt.name)}>
 								{formatText(debt.name)}
 							</p>
 						</Table.Cell>
 						<Table.Cell class="hidden truncate md:table-cell">
 							{formatText(debt.investor.name)}
 						</Table.Cell>
-						<Table.Cell class="font-medium tabular-nums">
+						<Table.Cell class={TABLE_COL_NUMERIC}>
 							{formatCurrencyCompact(debt.amount)}
 						</Table.Cell>
-						<Table.Cell class="hidden tabular-nums lg:table-cell">{debt.interestRate}%</Table.Cell>
+						<Table.Cell class={cn('hidden lg:table-cell', TABLE_COL_NUMERIC)}>
+							{debt.interestRate}%
+						</Table.Cell>
 						<Table.Cell class="hidden xl:table-cell">
 							<Badge variant="secondary" class="text-[10px]">{debt.interestInterval}</Badge>
 						</Table.Cell>
-						<Table.Cell class="text-right">
+						<Table.Cell
+							class={TABLE_COL_ACTIONS}
+							onclick={(event) => event.stopPropagation()}
+						>
 							<ActionButtons
 								viewHref="/debts/{debt.id}"
 								showView={false}
-								onQuickView={onQuickView
-									? (event) => {
-											event.preventDefault();
-											event.stopPropagation();
-											onQuickView(debt);
-										}
-									: undefined}
 								actionItems={createRowActionItems({
 									onEdit: onEdit ? () => onEdit(debt) : undefined,
 									onDelete: onDelete ? () => onDelete(debt) : undefined
@@ -155,14 +158,25 @@
 						</Table.Cell>
 					</Table.Row>
 				{/each}
+				{/if}
 			</Table.Body>
 		</Table.Root>
-	</div>
-
-	<Pagination
-		{currentPage}
-		{totalPages}
-		onPageChange={(page) => (currentPage = page)}
-		itemName="borrowings"
-	/>
-</div>
+	{/snippet}
+	{#snippet footer()}
+		<Pagination
+			embedded
+			{currentPage}
+			{totalPages}
+			onPageChange={(page) => (currentPage = page)}
+			startIndex={(currentPage - 1) * itemsPerPage}
+			endIndex={Math.min(currentPage * itemsPerPage, sortedDebts.length)}
+			totalItems={sortedDebts.length}
+			itemName="borrowings"
+			{itemsPerPage}
+			onItemsPerPageChange={(value) => {
+				itemsPerPage = value;
+				currentPage = 1;
+			}}
+		/>
+	{/snippet}
+</DataTableCard>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Logo from '$lib/components/Logo.svelte';
+	import ThemeToggle from '$lib/components/theme/ThemeToggle.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
 	import { Menu, X } from 'lucide-svelte';
@@ -33,10 +34,10 @@
 
 <header
 	class={cn(
-		'fixed inset-x-0 top-0 z-50 pt-safe transition-all duration-500',
+		'fixed inset-x-0 top-0 z-50 transition-all duration-500',
 		scrolled
-			? 'border-b border-border/50 bg-background/75 py-3 shadow-sm backdrop-blur-xl'
-			: 'bg-transparent py-5'
+			? 'border-b border-border/50 bg-background/75 pt-safe-offset-sm pb-3 shadow-sm backdrop-blur-xl'
+			: 'bg-transparent pt-safe-offset-md pb-5'
 	)}
 >
 	<div class="mx-auto flex max-w-7xl items-center justify-between px-5 sm:px-8">
@@ -56,24 +57,28 @@
 		</nav>
 
 		<div class="hidden items-center gap-3 md:flex">
+			<ThemeToggle />
 			<Button href="/signin" variant="ghost" size="sm" class="rounded-xl">Sign In</Button>
 			<Button href="/signin" size="sm" class="rounded-xl px-5 shadow-[var(--shadow-soft)]">
 				Get Started
 			</Button>
 		</div>
 
-		<button
-			type="button"
-			class="touch-target relative z-10 inline-flex items-center justify-center rounded-xl border border-border/60 bg-card/80 md:hidden"
-			onclick={() => (mobileOpen = !mobileOpen)}
-			aria-label="Toggle menu"
-		>
-			{#if mobileOpen}
-				<X class="h-5 w-5" />
-			{:else}
-				<Menu class="h-5 w-5" />
-			{/if}
-		</button>
+		<div class="relative z-10 flex items-center gap-2 md:hidden">
+			<ThemeToggle class="size-11" />
+			<button
+				type="button"
+				class="touch-target relative inline-flex items-center justify-center rounded-xl border border-border/60 bg-card/80"
+				onclick={() => (mobileOpen = !mobileOpen)}
+				aria-label="Toggle menu"
+			>
+				{#if mobileOpen}
+					<X class="h-5 w-5" />
+				{:else}
+					<Menu class="h-5 w-5" />
+				{/if}
+			</button>
+		</div>
 	</div>
 </header>
 

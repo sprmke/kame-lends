@@ -23,7 +23,7 @@
 			<div class="order-1 lg:order-2">
 				<ScrollReveal>
 					<p class="section-eyebrow">Why {APP_NAME}</p>
-					<h2 class="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+					<h2 class="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
 						Your trusted partner for lending operations
 					</h2>
 					<p class="mt-6 text-lg leading-relaxed text-muted-foreground">

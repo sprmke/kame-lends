@@ -52,7 +52,7 @@
 	<Card.Root>
 		<Card.Header>
 			<div class="flex items-center justify-between">
-				<Card.Title class="text-lg sm:text-xl">
+				<Card.Title>
 					Borrowing Details
 					{#if total > 1}
 						<span class="ml-2 text-sm font-normal text-muted-foreground">#{index + 1}</span>

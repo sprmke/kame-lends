@@ -136,7 +136,7 @@
 			onpointercancel={finishStroke}
 		></canvas>
 	</div>
-	<div class="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+	<div class="flex flex-col gap-2.5">
 		<p class="text-sm leading-relaxed text-muted-foreground">
 			Draw your signature inside the box above using your mouse or finger.
 		</p>
@@ -144,6 +144,7 @@
 			type="button"
 			variant="outline"
 			size="sm"
+			class="w-full sm:w-auto sm:self-start"
 			onclick={clear}
 			disabled={disabled || !hasInk}
 		>

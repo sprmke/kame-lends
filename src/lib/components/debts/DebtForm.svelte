@@ -3,6 +3,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
+	import FormActions from '$lib/components/common/FormActions.svelte';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
 	import DebtEntryCard from '$lib/components/debts/DebtEntryCard.svelte';
 	import InvestorFormModal from '$lib/components/investors/InvestorFormModal.svelte';
@@ -13,6 +14,7 @@
 		type DebtFeeEntry,
 		type DebtFormEntry
 	} from '$lib/components/debts/debt-form-types';
+	import { cn } from '$lib/utils';
 	import { toast } from '$lib/toast';
 	import { normalizeDebtFees, normalizeInterestRate } from '$lib/debt-calculations';
 	import type { DebtInterestPeriodWithPayments, DebtWithInvestor, Investor } from '$lib/types';
@@ -27,6 +29,9 @@
 		onSuccess?: () => void | Promise<void>;
 		onCancel?: () => void;
 		onPaymentsChange?: () => void | Promise<void>;
+		showFormHeader?: boolean;
+		formId?: string;
+		isSubmitting?: boolean;
 	}
 
 	let {
@@ -37,7 +42,10 @@
 		cancelHref = '/debts',
 		onSuccess,
 		onCancel,
-		onPaymentsChange
+		onPaymentsChange,
+		showFormHeader = true,
+		formId,
+		isSubmitting = $bindable(false)
 	}: Props = $props();
 
 	const isEditMode = $derived(!!existingDebt);
@@ -59,7 +67,6 @@
 	);
 	let entryErrors = $state<Record<string, Record<string, string>>>({});
 	let interestPeriods = $state<DebtInterestPeriodWithPayments[]>(initialInterestPeriods ?? []);
-	let isSubmitting = $state(false);
 	let showInvestorModal = $state(false);
 
 	$effect(() => {
@@ -316,29 +323,37 @@
 	}
 </script>
 
-<form bind:this={formRef} class="dashboard-form max-w-4xl" onsubmit={handleSubmit}>
-	<FormHeader
-		title={isEditMode ? 'Edit Borrowing' : 'Create Borrowing'}
-		description={isEditMode
-			? 'Update borrowing details and preview expected interest costs'
-			: 'Record a borrowing and preview expected interest costs'}
-		onCancel={handleCancel}
-		onSubmit={handleFormSubmit}
-		{isSubmitting}
-		{isEditMode}
-		submitLabel={isSubmitting
-			? isEditMode
-				? 'Saving...'
-				: 'Creating...'
-			: isEditMode
-				? 'Save Changes'
-				: `Create Borrowing${entries.length > 1 ? 's' : ''}`}
-		variant={isModalMode ? 'embedded' : 'page'}
-	/>
+	<form
+		bind:this={formRef}
+		id={formId}
+		class={cn('dashboard-form w-full min-w-0', isModalMode ? 'max-w-none' : 'max-w-4xl')}
+		onsubmit={handleSubmit}
+	>
+	{#if showFormHeader}
+		<FormHeader
+			title={isEditMode ? 'Edit Borrowing' : 'Create Borrowing'}
+			description={isEditMode
+				? 'Update borrowing details and preview expected interest costs'
+				: 'Record a borrowing and preview expected interest costs'}
+			onCancel={handleCancel}
+			onSubmit={handleFormSubmit}
+			{formId}
+			{isSubmitting}
+			{isEditMode}
+			submitLabel={isSubmitting
+				? isEditMode
+					? 'Saving...'
+					: 'Creating...'
+				: isEditMode
+					? 'Save Changes'
+					: `Create Borrowing${entries.length > 1 ? 's' : ''}`}
+			variant={isModalMode ? 'embedded' : 'page'}
+		/>
+	{/if}
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title class="text-lg sm:text-xl">Select Investors</Card.Title>
+			<Card.Title>Select Investors</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-3">
 			<div class="flex items-center gap-2">
@@ -349,14 +364,16 @@
 						onChange={(selected) => (selectedInvestorIds = selected)}
 						placeholder="Select investors"
 						allLabel="Select investors..."
-						triggerClassName="w-full h-10"
+						searchPlaceholder="Search investors..."
+						searchable={true}
+						triggerClassName="w-full"
 					/>
 				</div>
 				<Button
 					type="button"
 					variant="outline"
 					size="sm"
-					class="h-10 shrink-0 px-3"
+					class="shrink-0 px-3"
 					disabled={isSubmitting}
 					onclick={() => (showInvestorModal = true)}
 				>
@@ -426,26 +443,20 @@
 		</Button>
 	{/if}
 
-	<div class="flex flex-col gap-4 sm:flex-row">
-		<Button
-			type="button"
-			variant="outline"
-			class="w-full flex-1"
-			disabled={isSubmitting}
-			onclick={handleCancel}
-		>
-			Cancel
-		</Button>
-		<Button type="submit" class="w-full flex-1" disabled={isSubmitting}>
-			{isSubmitting
-				? isEditMode
-					? 'Saving...'
-					: 'Creating...'
-				: isEditMode
-					? 'Save Changes'
-					: `Create ${totalDebtCount > 1 ? `${totalDebtCount} ` : ''}Borrowing${totalDebtCount !== 1 ? 's' : ''}`}
-		</Button>
-	</div>
+	<FormActions
+		onCancel={handleCancel}
+		{formId}
+		{isSubmitting}
+		submitLabel={isSubmitting
+			? isEditMode
+				? 'Saving...'
+				: 'Creating...'
+			: isEditMode
+				? 'Save Changes'
+				: `Create ${totalDebtCount > 1 ? `${totalDebtCount} ` : ''}Borrowing${totalDebtCount !== 1 ? 's' : ''}`}
+		layout={isModalMode ? 'stacked' : 'responsive'}
+		class={isModalMode ? 'md:hidden' : 'lg:hidden'}
+	/>
 
 	<InvestorFormModal
 		open={showInvestorModal}

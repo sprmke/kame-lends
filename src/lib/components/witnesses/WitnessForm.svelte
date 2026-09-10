@@ -126,6 +126,9 @@
 	{#if renderFormHeader}
 		<FormHeader
 			title={isEditMode ? (existingWitness?.name ?? 'Witness') : 'Create Witness'}
+			description={isEditMode
+				? 'Update witness contact details'
+				: 'Add a witness for loan contracts'}
 			onCancel={handleCancel}
 			onSubmit={handleFormSubmit}
 			{isSubmitting}

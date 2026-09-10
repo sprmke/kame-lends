@@ -27,7 +27,7 @@
 	<div class="mx-auto max-w-7xl px-5 sm:px-8">
 		<ScrollReveal class="mx-auto max-w-2xl text-center">
 			<p class="section-eyebrow">Testimonials</p>
-			<h2 class="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">What operators are saying</h2>
+			<h2 class="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">What operators are saying</h2>
 			<div class="mt-4 flex items-center justify-center gap-1">
 				{#each Array.from({ length: 5 }) as _, i}
 					<Star class="h-5 w-5 fill-primary text-primary" />

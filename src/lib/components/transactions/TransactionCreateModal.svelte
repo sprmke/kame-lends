@@ -1,26 +1,24 @@
 <script lang="ts">
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
-	import DebtForm from '$lib/components/debts/DebtForm.svelte';
+	import TransactionForm from '$lib/components/transactions/TransactionForm.svelte';
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
 	import type { Investor } from '$lib/types';
 
 	interface Props {
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
-		onSuccess?: () => void;
-		preselectedInvestorId?: number;
+		onSuccess?: () => void | Promise<void>;
 	}
 
-	let { open, onOpenChange, onSuccess, preselectedInvestorId }: Props = $props();
+	let { open, onOpenChange, onSuccess }: Props = $props();
 
 	let investors = $state<Investor[]>([]);
 	let isLoading = $state(false);
 	let isSubmitting = $state(false);
 
-	const formId = 'debt-create-form';
-
-	const submitLabel = $derived(isSubmitting ? 'Creating...' : 'Create Borrowing');
+	const formId = 'transaction-create-form';
+	const submitLabel = $derived(isSubmitting ? 'Creating...' : 'Create');
 
 	$effect(() => {
 		if (!open) return;
@@ -40,22 +38,16 @@
 		};
 	});
 
-	function handleSuccess() {
+	async function handleSuccess() {
 		onOpenChange(false);
-		onSuccess?.();
+		await onSuccess?.();
 	}
 </script>
 
-<ResponsiveModal
-	{open}
-	{onOpenChange}
-	showCloseButton={false}
-	contentClass="dashboard-dialog-wide !max-w-4xl"
->
+<ResponsiveModal {open} {onOpenChange} showCloseButton={false} contentClass="sm:max-w-lg">
 	{#snippet header()}
 		<FormHeader
-			title="Create Borrowing"
-			description="Record a borrowing and preview expected interest costs"
+			title="Create Transaction"
 			{formId}
 			onCancel={() => onOpenChange(false)}
 			{isSubmitting}
@@ -68,13 +60,10 @@
 	{#if isLoading}
 		<FormPageSkeleton />
 	{:else}
-		<DebtForm
+		<TransactionForm
 			{investors}
-			{preselectedInvestorId}
 			{formId}
-			showFormHeader={false}
 			bind:isSubmitting
-			cancelHref="#"
 			onSuccess={handleSuccess}
 			onCancel={() => onOpenChange(false)}
 		/>

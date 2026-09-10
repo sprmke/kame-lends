@@ -241,9 +241,11 @@
 			{@const remainingDue = Math.max(0, periodDueAmount - paidLinked)}
 			{@const linkedRows = period?.receivedPayments ?? []}
 			{@const canComplete =
+				!!onPaymentsChange &&
 				!!period &&
 				(periodStatus === 'Pending' || periodStatus === 'Overdue' || periodStatus === 'Incomplete')}
-			{@const canEditPayment = !!period && periodStatus === 'Completed'}
+			{@const canEditPayment =
+				!!onPaymentsChange && !!period && periodStatus === 'Completed'}
 			<div class="space-y-2 rounded-lg border bg-background p-3 text-sm">
 				<div class="flex items-start justify-between gap-3">
 					<div class="flex min-w-0 items-center gap-2">
@@ -270,7 +272,7 @@
 							·
 							{formatCurrency(entry.principalPortion)} principal ·
 						</span>
-						<span class="text-emerald-600">{formatCurrency(entry.interest)} interest</span>
+						<span class="text-chart-2">{formatCurrency(entry.interest)} interest</span>
 						{#if entry.feesPortion > 0}
 							<span class="text-muted-foreground">
 								·
@@ -288,7 +290,7 @@
 						</div>
 						<div>
 							<p class="text-[11px] text-muted-foreground">Amount paid</p>
-							<p class="font-semibold text-emerald-600 tabular-nums">
+							<p class="font-semibold text-chart-2 tabular-nums">
 								{formatCurrency(paidLinked)}
 							</p>
 						</div>
@@ -316,14 +318,14 @@
 					<div class="space-y-1.5">
 						{#each linkedRows as payment (payment.id)}
 							<div
-								class="flex items-center gap-2 rounded-md border border-emerald-200/70 bg-muted/20 px-2 py-1.5 text-xs dark:border-emerald-900/45"
+								class="flex items-center gap-2 rounded-md border border-chart-2/25 bg-muted/20 px-2 py-1.5 text-xs dark:border-chart-2/30"
 							>
 								<div class="flex min-w-0 flex-1 justify-between gap-2">
 									<span class="truncate text-muted-foreground">
 										{formatDateShort(String(payment.receivedDate))}
 									</span>
 									<span
-										class="shrink-0 font-semibold text-emerald-700 tabular-nums dark:text-emerald-400"
+										class="shrink-0 font-semibold text-chart-2 tabular-nums"
 									>
 										{formatCurrency(parseFloat(payment.amount) || 0)}
 									</span>

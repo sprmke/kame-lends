@@ -4,7 +4,7 @@
 	import DetailModalHeader from '$lib/components/common/DetailModalHeader.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import WitnessDetailContent from '$lib/components/witnesses/WitnessDetailContent.svelte';
-	import WitnessForm from '$lib/components/witnesses/WitnessForm.svelte';
+	import PartyUserEditForm from '$lib/components/party/PartyUserEditForm.svelte';
 	import DetailModalHeaderSkeleton from '$lib/components/common/page-skeletons/DetailModalHeaderSkeleton.svelte';
 	import WitnessDetailSkeleton from '$lib/components/common/page-skeletons/WitnessDetailSkeleton.svelte';
 	import { countWitnessedLoans } from '$lib/witness-loans';
@@ -18,6 +18,7 @@
 		onOpenChange: (open: boolean) => void;
 		onUpdate?: () => void | Promise<void>;
 		startInEditMode?: boolean;
+		readOnly?: boolean;
 	}
 
 	let {
@@ -25,7 +26,8 @@
 		open,
 		onOpenChange,
 		onUpdate,
-		startInEditMode = false
+		startInEditMode = false,
+		readOnly = false
 	}: Props = $props();
 
 	let witness = $state<WitnessWithLoans | null>(initialWitness);
@@ -45,7 +47,7 @@
 			if (!open) isLoading = false;
 			return;
 		}
-		isEditing = startInEditMode;
+		isEditing = startInEditMode && !readOnly;
 		isLoading = true;
 		void fetchWitness(initialWitness.id);
 	});
@@ -131,7 +133,8 @@
 						onEdit={() => (isEditing = true)}
 						onDelete={() => (showDeleteDialog = true)}
 						onClose={() => onOpenChange(false)}
-						{canDelete}
+						canEdit={!readOnly}
+						canDelete={!readOnly && canDelete}
 					/>
 				</div>
 			{/if}
@@ -143,9 +146,12 @@
 	{:else if witness}
 		{#if isEditing}
 			{#key `witness-form-edit-${witness.id}-${fetchKey}`}
-				<WitnessForm
-					existingWitness={witness}
+				<PartyUserEditForm
+					entityType="witness"
+					entityId={witness.id}
+					displayName={witness.name}
 					formId={editFormId}
+					embedded
 					showFormHeader={false}
 					bind:isSubmitting
 					onSuccess={handleEditSuccess}

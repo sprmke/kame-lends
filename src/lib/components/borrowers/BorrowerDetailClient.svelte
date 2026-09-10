@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import DetailHeader from '$lib/components/common/DetailHeader.svelte';
-	import BorrowerForm from '$lib/components/borrowers/BorrowerForm.svelte';
+	import PartyUserEditForm from '$lib/components/party/PartyUserEditForm.svelte';
 	import BorrowerDetailContent from '$lib/components/borrowers/BorrowerDetailContent.svelte';
 	import EditFormSheet from '$lib/components/common/EditFormSheet.svelte';
 	import { createIsMobileOverlay } from '$lib/composables/use-media-query.svelte';
@@ -11,12 +11,13 @@
 
 	interface Props {
 		initialBorrower: BorrowerWithLoans;
+		canManage?: boolean;
 	}
 
-	let { initialBorrower }: Props = $props();
+	let { initialBorrower, canManage = true }: Props = $props();
 
 	let borrower = $state<BorrowerWithLoans>(initialBorrower);
-	let isEditing = $state($page.url.searchParams.get('edit') === '1');
+	let isEditing = $state($page.url.searchParams.get('edit') === '1' && canManage);
 	let editSubmitting = $state(false);
 	const mobile = createIsMobileOverlay(
 		typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false
@@ -25,7 +26,7 @@
 
 	$effect(() => mobile.init());
 
-	const canDelete = $derived((borrower.loans?.length ?? 0) === 0);
+	const canDelete = $derived(canManage && (borrower.loans?.length ?? 0) === 0);
 
 	async function refreshBorrower() {
 		try {
@@ -51,10 +52,11 @@
 {#if isEditing && !mobile.matches}
 	<div class="mx-auto max-w-2xl">
 		{#key borrower.id}
-			<BorrowerForm
-				existingBorrower={borrower}
+			<PartyUserEditForm
+				entityType="borrower"
+				entityId={borrower.id}
+				displayName={borrower.name}
 				cancelHref="/borrowers/{borrower.id}"
-				successHref="/borrowers/{borrower.id}"
 				onSuccess={async () => {
 					isEditing = false;
 					await refreshBorrower();
@@ -67,12 +69,14 @@
 	<div class="dashboard-form max-w-3xl">
 		<DetailHeader
 			title={borrower.name}
+			description="Borrower contact and loan history"
 			backLabel="Back to Borrowers"
 			onBack={() => goto('/borrowers')}
-			onEdit={() => (isEditing = true)}
+			onEdit={canManage ? () => (isEditing = true) : undefined}
 			onDelete={handleDelete}
 			deleteTitle="Delete borrower?"
 			deleteDescription={`Delete ${borrower.name}? This cannot be undone.`}
+			canEdit={canManage}
 			{canDelete}
 			deleteWarning={`Cannot delete this borrower because they have ${borrower.loans?.length ?? 0} loan(s).`}
 			showPriceToggle={false}
@@ -96,9 +100,12 @@
 		contentClass="sm:max-w-lg"
 	>
 		{#key borrower.id}
-			<BorrowerForm
-				existingBorrower={borrower}
+			<PartyUserEditForm
+				entityType="borrower"
+				entityId={borrower.id}
+				displayName={borrower.name}
 				formId={editFormId}
+				embedded
 				showFormHeader={false}
 				bind:isSubmitting={editSubmitting}
 				onSuccess={async () => {

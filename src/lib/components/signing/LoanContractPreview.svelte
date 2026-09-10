@@ -21,7 +21,7 @@
 	const clauses = $derived(getContractTermClauses(data, customization));
 </script>
 
-<div class="max-h-[70vh] overflow-y-auto p-4 text-sm leading-relaxed sm:p-6">
+<div class="p-4 text-sm leading-relaxed sm:p-6">
 	<h2 class="mb-4 text-center text-lg font-bold">{title}</h2>
 	<p class="mb-6 whitespace-pre-wrap text-muted-foreground">{intro}</p>
 

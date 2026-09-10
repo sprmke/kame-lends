@@ -1,7 +1,12 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
+	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
+	import {
+		createCardQuickViewHandler,
+		GRID_CARD_ACTION_PROPS
+	} from '$lib/components/common/action-buttons';
 	import { cn } from '$lib/utils';
 	import { formatCurrency, formatDateShort, formatText } from '$lib/format';
 	import { getTransactionDirectionBadge, getTransactionTypeBadge } from '$lib/badge-config';
@@ -66,7 +71,11 @@
 			</div>
 		</div>
 	</Card.Content>
-	<Card.Footer class="border-t px-4 py-3">
-		<Button href={viewHref} variant="outline" size="sm" class="w-full">Open</Button>
+	<Card.Footer class="border-t px-0 py-0">
+		<ActionButtons
+			{viewHref}
+			{...GRID_CARD_ACTION_PROPS}
+			onQuickView={createCardQuickViewHandler(() => goto(viewHref))}
+		/>
 	</Card.Footer>
 </Card.Root>

@@ -9,7 +9,6 @@
 	import SignaturePad from './SignaturePad.svelte';
 	import LoanContractPreview from './LoanContractPreview.svelte';
 	import { toast } from '$lib/toast';
-	import { cn } from '$lib/utils';
 	import {
 		getElectronicSignatureConsentText,
 		getSignedConfirmationMessage,
@@ -20,7 +19,7 @@
 	import { normalizeLoanContractData } from '$lib/loan-contract-data';
 	import type { LoanContractData } from '$lib/loan-contract-data';
 	import type { ContractCustomization } from '$lib/loan-contract-customization';
-	import { CheckCircle2, FileText, Loader2, PenLine, ShieldCheck } from 'lucide-svelte';
+	import { CheckCircle2, Loader2 } from 'lucide-svelte';
 
 	export interface ContractSigningPayload {
 		partyRole: SigningPartyRole;
@@ -123,23 +122,23 @@
 </script>
 
 {#if data.expired}
-	<Card.Root class="mx-auto max-w-2xl rounded-3xl border-amber-300 bg-amber-50/60 shadow-sm">
+	<Card.Root class="mx-auto max-w-2xl rounded-3xl border-chart-5/30 bg-chart-5/10 shadow-sm">
 		<Card.Header class="pb-2">
-			<Card.Title class="text-xl text-amber-900">Signing Link Expired</Card.Title>
+			<Card.Title class="text-xl text-chart-5">Signing Link Expired</Card.Title>
 		</Card.Header>
-		<Card.Content class="text-base leading-relaxed text-amber-800">
+		<Card.Content class="text-base leading-relaxed text-chart-5/90">
 			This signing link is no longer valid. Please contact the loan administrator to request a new
 			link.
 		</Card.Content>
 	</Card.Root>
 {:else if data.signedAt}
 	<div class="mx-auto w-full max-w-5xl space-y-5 sm:space-y-6 md:space-y-8">
-		<Card.Root class="rounded-2xl border-green-200 bg-green-50/50 sm:rounded-3xl">
+		<Card.Root class="rounded-2xl border-chart-2/25 bg-chart-2/10 sm:rounded-3xl">
 			<Card.Content class="flex items-start gap-3 p-5 sm:gap-4 sm:p-6 md:p-7">
-				<CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-green-600 sm:h-6 sm:w-6" />
+				<CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-chart-2 sm:h-6 sm:w-6" />
 				<div class="space-y-1">
-					<p class="text-lg font-semibold text-green-900 sm:text-xl">Signature Recorded</p>
-					<p class="text-sm leading-relaxed text-green-800 sm:text-base">
+					<p class="text-lg font-semibold text-chart-2 sm:text-xl">Signature Recorded</p>
+					<p class="text-sm leading-relaxed text-chart-2/90 sm:text-base">
 						{getSignedConfirmationMessage(data.partyRole, displayName)}
 					</p>
 				</div>
@@ -155,13 +154,13 @@
 		</Card.Root>
 	</div>
 {:else}
-	<div class="mx-auto w-full max-w-7xl space-y-5 pb-28 sm:space-y-6 sm:pb-32 md:space-y-8 md:pb-12">
+	<div class="mx-auto w-full max-w-7xl space-y-5 sm:space-y-6 md:space-y-8">
 		<Card.Root
 			class="overflow-hidden rounded-3xl border-primary/20 bg-gradient-to-br from-primary/8 via-background to-background shadow-sm"
 		>
 			<Card.Content class="space-y-4 p-5 sm:p-7 md:p-8">
 				<div class="flex flex-wrap items-center gap-2 sm:gap-3">
-					<h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">Sign Loan Agreement</h1>
+					<h1 class="text-xl font-semibold tracking-tight">Sign Loan Agreement</h1>
 					<Badge variant="secondary" class="px-2.5 py-1 text-xs">{roleLabel}</Badge>
 				</div>
 				<p class="max-w-4xl text-sm leading-relaxed text-muted-foreground sm:text-base">
@@ -171,8 +170,8 @@
 			</Card.Content>
 		</Card.Root>
 
-		<div class="grid gap-5 xl:grid-cols-[1fr_360px] xl:items-start">
-			<div class="order-1 space-y-5 xl:sticky xl:top-6 xl:order-2">
+		<div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] xl:items-start">
+			<div class="order-2 min-w-0 space-y-5 xl:sticky xl:top-6 xl:order-2 xl:self-start">
 				<Card.Root class="rounded-3xl shadow-sm">
 					<Card.Header class="space-y-1 p-5 pb-3 sm:p-6 sm:pb-4 md:p-7 md:pb-5">
 						<Card.Title class="text-base sm:text-lg">
@@ -198,21 +197,23 @@
 									id="signing-consent"
 									checked={consentChecked}
 									onCheckedChange={(checked) => (consentChecked = checked === true)}
-									class="mt-1"
+									class="mt-1 shrink-0"
 								/>
-								<Label
-									for="signing-consent"
-									class="cursor-pointer text-sm leading-relaxed font-normal text-muted-foreground sm:text-base"
-								>
-									{consent.consentDescription}
+								<div class="min-w-0 flex-1 space-y-2">
+									<Label
+										for="signing-consent"
+										class="cursor-pointer text-sm leading-relaxed font-normal text-muted-foreground"
+									>
+										{consent.consentDescription}
+									</Label>
 									<button
 										type="button"
-										class="font-medium text-primary underline-offset-4 hover:underline"
+										class="text-sm font-normal text-primary underline-offset-4 hover:underline"
 										onclick={() => (consentDetailsOpen = true)}
 									>
 										{consent.detailsLinkLabel}
 									</button>
-								</Label>
+								</div>
 							</div>
 						</div>
 
@@ -231,25 +232,36 @@
 							</div>
 						</ResponsiveModal>
 
-						<Button
-							type="button"
-							size="lg"
-							class="hidden h-12 w-full text-base xl:flex"
-							onclick={handleSubmit}
-							disabled={!canSubmit}
-						>
-							{#if isSubmitting}
-								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-								Submitting Signature...
-							{:else}
-								{consent.submitLabel}
+						<div class="space-y-3 border-t border-border/60 pt-4">
+							{#if !canSubmit && !isSubmitting}
+								<p class="text-sm text-muted-foreground">
+									{!hasSignature && !consentChecked
+										? 'Draw your signature and accept consent to submit.'
+										: !hasSignature
+											? 'Draw your signature above.'
+											: 'Accept electronic consent to submit.'}
+								</p>
 							{/if}
-						</Button>
+							<Button
+								type="button"
+								size="lg"
+								class="touch-target h-12 w-full text-base"
+								onclick={handleSubmit}
+								disabled={!canSubmit}
+							>
+								{#if isSubmitting}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									Submitting...
+								{:else}
+									{consent.submitLabel}
+								{/if}
+							</Button>
+						</div>
 					</Card.Content>
 				</Card.Root>
 			</div>
 
-			<Card.Root class="order-2 overflow-hidden rounded-3xl shadow-sm xl:order-1">
+			<Card.Root class="order-1 min-w-0 overflow-hidden rounded-3xl shadow-sm xl:order-1">
 				<Card.Header class="space-y-1 p-5 pb-3 sm:p-6 sm:pb-4 md:p-7 md:pb-5">
 					<Card.Title class="text-base sm:text-lg">Contract Preview</Card.Title>
 				</Card.Header>
@@ -260,34 +272,6 @@
 					/>
 				</Card.Content>
 			</Card.Root>
-		</div>
-
-		<div
-			class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 pb-safe backdrop-blur xl:hidden"
-		>
-			<div class="mx-auto flex w-full max-w-7xl items-center gap-3">
-				<div class="min-w-0 flex-1">
-					<p class="truncate text-sm font-medium text-foreground">
-						{hasSignature && consentChecked
-							? 'Ready to submit signature'
-							: 'Complete steps to submit'}
-					</p>
-				</div>
-				<Button
-					type="button"
-					size="lg"
-					class="h-11 shrink-0 px-5 text-sm"
-					onclick={handleSubmit}
-					disabled={!canSubmit}
-				>
-					{#if isSubmitting}
-						<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-						Submitting...
-					{:else}
-						Submit Signature
-					{/if}
-				</Button>
-			</div>
 		</div>
 	</div>
 {/if}

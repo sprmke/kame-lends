@@ -10,7 +10,6 @@
 
 <section class="landing-hero relative overflow-x-hidden pt-28 pb-16 sm:pb-24 lg:pb-32">
 	<div class="landing-mesh pointer-events-none absolute inset-0 -z-10"></div>
-	<div class="landing-grid pointer-events-none absolute inset-0 -z-10 opacity-[0.35]"></div>
 
 	<div class="mx-auto max-w-7xl px-5 sm:px-8">
 		<div class="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
@@ -26,7 +25,7 @@
 
 				<ScrollReveal delay={100}>
 					<h1
-						class="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl xl:text-[3.5rem] xl:leading-[1.08]"
+						class="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl xl:text-[3.5rem] xl:leading-[1.08]"
 					>
 						Manage lending with <span class="landing-gradient-text">clarity</span> and control
 					</h1>

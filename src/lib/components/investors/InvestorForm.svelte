@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
+	import FormActions from '$lib/components/common/FormActions.svelte';
+	import { cn } from '$lib/utils';
 	import { toast } from '$lib/toast';
 	import type { Investor } from '$lib/types';
 
@@ -14,6 +15,9 @@
 		successHref?: string;
 		onSuccess?: (investor: Investor) => void | Promise<void>;
 		onCancel?: () => void;
+		showFormHeader?: boolean;
+		formId?: string;
+		isSubmitting?: boolean;
 	}
 
 	let {
@@ -21,7 +25,10 @@
 		cancelHref = '/investors',
 		successHref = '/investors',
 		onSuccess,
-		onCancel
+		onCancel,
+		showFormHeader,
+		formId,
+		isSubmitting = $bindable(false)
 	}: Props = $props();
 
 	const isEditMode = $derived(!!existingInvestor);
@@ -30,11 +37,10 @@
 	let email = $state(existingInvestor?.email ?? '');
 	let contactNumber = $state(existingInvestor?.contactNumber ?? '');
 	let address = $state(existingInvestor?.address ?? '');
-	let isSubmitting = $state(false);
 	let errors = $state<Record<string, string>>({});
 	let formRef = $state<HTMLFormElement | null>(null);
 
-	const showFormHeader = $derived(!onSuccess);
+	const renderFormHeader = $derived(showFormHeader ?? !onSuccess);
 
 	function validate() {
 		const next: Record<string, string> = {};
@@ -99,8 +105,13 @@
 	}
 </script>
 
-<form bind:this={formRef} class="dashboard-form max-w-2xl" onsubmit={handleSubmit}>
-		{#if showFormHeader}
+<form
+	bind:this={formRef}
+	id={formId}
+	class={cn('dashboard-form w-full min-w-0', onSuccess ? 'max-w-none' : 'max-w-2xl')}
+	onsubmit={handleSubmit}
+>
+	{#if renderFormHeader}
 		<FormHeader
 			title={isEditMode ? (existingInvestor?.name ?? 'Investor') : 'Create Investor'}
 			description={isEditMode
@@ -123,7 +134,7 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title class="text-lg sm:text-xl">Contact Details</Card.Title>
+			<Card.Title>Contact Details</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-2">
@@ -147,20 +158,18 @@
 		</Card.Content>
 	</Card.Root>
 
-	{#if !showFormHeader}
-		<div class="mt-4 flex flex-col gap-3 sm:flex-row">
-			<Button
-				type="button"
-				variant="outline"
-				class="touch-target flex-1"
-				disabled={isSubmitting}
-				onclick={() => (onCancel ? onCancel() : goto(cancelHref))}
-			>
-				Cancel
-			</Button>
-			<Button type="submit" class="touch-target flex-1" disabled={isSubmitting}>
-				{isSubmitting ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
-			</Button>
-		</div>
-	{/if}
+	<FormActions
+		onCancel={handleCancel}
+		{formId}
+		{isSubmitting}
+		layout={onSuccess ? 'stacked' : 'responsive'}
+		submitLabel={isSubmitting
+			? isEditMode
+				? 'Updating...'
+				: 'Creating...'
+			: isEditMode
+				? 'Update Investor'
+				: 'Create Investor'}
+		class={onSuccess ? 'md:hidden' : 'lg:hidden'}
+	/>
 </form>

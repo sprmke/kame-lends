@@ -28,7 +28,7 @@
 			<p class="text-xs font-semibold tracking-[0.14em] text-primary uppercase">
 				Guiding Principles
 			</p>
-			<h2 class="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+			<h2 class="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
 				Built the way lending teams actually work
 			</h2>
 		</ScrollReveal>
@@ -44,7 +44,7 @@
 						>
 							<item.icon class="h-7 w-7" />
 						</div>
-						<h3 class="text-xl font-bold text-white">{item.title}</h3>
+						<h3 class="text-xl font-semibold text-white">{item.title}</h3>
 						<p class="mt-3 text-sm leading-relaxed text-white/65">{item.description}</p>
 					</div>
 				</ScrollReveal>

@@ -4,7 +4,7 @@
 	import DetailModalHeader from '$lib/components/common/DetailModalHeader.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import BorrowerDetailContent from '$lib/components/borrowers/BorrowerDetailContent.svelte';
-	import BorrowerForm from '$lib/components/borrowers/BorrowerForm.svelte';
+	import PartyUserEditForm from '$lib/components/party/PartyUserEditForm.svelte';
 	import DetailModalHeaderSkeleton from '$lib/components/common/page-skeletons/DetailModalHeaderSkeleton.svelte';
 	import BorrowerDetailSkeleton from '$lib/components/common/page-skeletons/BorrowerDetailSkeleton.svelte';
 	import { formatText } from '$lib/format';
@@ -17,6 +17,7 @@
 		onOpenChange: (open: boolean) => void;
 		onUpdate?: () => void | Promise<void>;
 		startInEditMode?: boolean;
+		readOnly?: boolean;
 	}
 
 	let {
@@ -24,7 +25,8 @@
 		open,
 		onOpenChange,
 		onUpdate,
-		startInEditMode = false
+		startInEditMode = false,
+		readOnly = false
 	}: Props = $props();
 
 	let borrower = $state<BorrowerWithLoans | null>(initialBorrower);
@@ -44,7 +46,7 @@
 			if (!open) isLoading = false;
 			return;
 		}
-		isEditing = startInEditMode;
+		isEditing = startInEditMode && !readOnly;
 		isLoading = true;
 		void fetchBorrower(initialBorrower.id);
 	});
@@ -130,7 +132,8 @@
 						onEdit={() => (isEditing = true)}
 						onDelete={() => (showDeleteDialog = true)}
 						onClose={() => onOpenChange(false)}
-						canDelete={canDelete}
+						canEdit={!readOnly}
+						canDelete={!readOnly && canDelete}
 					/>
 				</div>
 			{/if}
@@ -142,9 +145,12 @@
 	{:else if borrower}
 		{#if isEditing}
 			{#key `borrower-form-edit-${borrower.id}-${fetchKey}`}
-				<BorrowerForm
-					existingBorrower={borrower}
+				<PartyUserEditForm
+					entityType="borrower"
+					entityId={borrower.id}
+					displayName={borrower.name}
 					formId={editFormId}
+					embedded
 					showFormHeader={false}
 					bind:isSubmitting
 					onSuccess={handleEditSuccess}
