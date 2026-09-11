@@ -24,7 +24,7 @@
 
 	let inputRef = $state<HTMLInputElement | null>(null);
 	let isProcessing = $state(false);
-	const inputId = $derived(idPrefix ? `${idPrefix}-file` : undefined);
+	const inputId = $derived(idPrefix ? `${idPrefix}-valid-id-file` : undefined);
 
 	async function handleFileChange(event: Event) {
 		const target = event.currentTarget as HTMLInputElement;

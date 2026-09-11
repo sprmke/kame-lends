@@ -13,7 +13,7 @@ All signed-in users get:
 
 Party users (linked investor, borrower, or witness contact rows) also get:
 
-- **Identity documents** — valid ID and e-signature. Upload a file or draw in the box (Clear, then Save). Hover (or tap on phone) a preview to Replace or Remove. Saves sync across all CRM rows linked to the signed-in user. Used for contract signing and admin contact records.
+- **Identity documents** — valid ID and e-signature. With no signature yet, use Upload or Draw tabs. Hover (or tap on phone) a valid ID preview to Replace or Remove; on a saved signature, Replace, Draw, or Remove. Saves sync across all CRM rows linked to the signed-in user. Used for contract signing and admin contact records.
 
 Admin workspace owners also get:
 

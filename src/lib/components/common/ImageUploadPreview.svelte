@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
-	import { Trash2, Upload } from 'lucide-svelte';
+	import { PenLine, Trash2, Upload } from 'lucide-svelte';
 
 	interface Props {
 		value?: string | null;
@@ -13,6 +13,7 @@
 		frameClass?: string;
 		onPick: () => void;
 		onRemove: () => void;
+		onDraw?: () => void;
 	}
 
 	let {
@@ -24,7 +25,8 @@
 		previewClass = 'max-h-48 w-full object-contain',
 		frameClass = '',
 		onPick,
-		onRemove
+		onRemove,
+		onDraw
 	}: Props = $props();
 
 	const busy = $derived(disabled || isProcessing);
@@ -54,6 +56,19 @@
 					<Upload class="size-4" aria-hidden="true" />
 					Replace
 				</Button>
+				{#if onDraw}
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						class="min-h-11 gap-1.5"
+						disabled={busy}
+						onclick={onDraw}
+					>
+						<PenLine class="size-4" aria-hidden="true" />
+						Draw
+					</Button>
+				{/if}
 				<Button
 					type="button"
 					variant="outline"

@@ -30,7 +30,7 @@
 	let mode = $state<'upload' | 'draw'>('upload');
 	let draftHasInk = $state(false);
 
-	const inputId = $derived(idPrefix ? `${idPrefix}-file` : undefined);
+	const inputId = $derived(idPrefix ? `${idPrefix}-signature-file` : undefined);
 	const busy = $derived(disabled || isProcessing);
 
 	async function handleFileChange(event: Event) {
@@ -54,6 +54,7 @@
 		onChange(null);
 		drawBox?.clear();
 		draftHasInk = false;
+		mode = 'upload';
 	}
 
 	function handleClearDrawn() {
@@ -76,12 +77,18 @@
 	function handleModeChange(next: string) {
 		mode = next as 'upload' | 'draw';
 	}
+
+	function handleCancelDraw() {
+		drawBox?.clear();
+		draftHasInk = false;
+		mode = 'upload';
+	}
 </script>
 
 <div class="space-y-2">
 	<Label for={inputId}>{label}</Label>
 
-	{#if value}
+	{#if value && mode === 'upload'}
 		<ImageUploadPreview
 			{value}
 			alt="E-signature preview"
@@ -92,45 +99,22 @@
 			frameClass="bg-white px-3 py-2"
 			onPick={() => inputRef?.click()}
 			onRemove={handleRemove}
+			onDraw={() => (mode = 'draw')}
 		/>
-	{/if}
-
-	<Tabs.Root value={mode} onValueChange={handleModeChange}>
-		<Tabs.List class="grid h-9 w-full grid-cols-2 gap-1 p-1">
-			<Tabs.Trigger value="upload" class="h-full w-full px-2 text-xs" disabled={busy}>
-				Upload
-			</Tabs.Trigger>
-			<Tabs.Trigger value="draw" class="h-full w-full px-2 text-xs" disabled={busy}>Draw</Tabs.Trigger>
-		</Tabs.List>
-
-		<Tabs.Content value="upload" class="mt-2">
-			{#if !value}
-				<ImageUploadPreview
-					value={null}
-					alt="E-signature preview"
-					disabled={busy}
-					{isProcessing}
-					emptyLabel="Upload e-signature"
-					previewClass="max-h-24 w-full object-contain object-left"
-					frameClass="bg-white px-3 py-2"
-					onPick={() => inputRef?.click()}
-					onRemove={handleRemove}
-				/>
-			{:else}
+	{:else if mode === 'draw'}
+		<div class="space-y-2">
+			{#if value}
 				<Button
 					type="button"
-					variant="outline"
+					variant="ghost"
 					size="sm"
 					class="min-h-11 w-full sm:w-auto"
 					disabled={busy}
-					onclick={() => inputRef?.click()}
+					onclick={handleCancelDraw}
 				>
-					Upload new file
+					Cancel
 				</Button>
 			{/if}
-		</Tabs.Content>
-
-		<Tabs.Content value="draw" class="mt-2 space-y-2">
 			<SignatureDrawBox
 				bind:this={drawBox}
 				compact
@@ -161,8 +145,64 @@
 					Save
 				</Button>
 			</div>
-		</Tabs.Content>
-	</Tabs.Root>
+		</div>
+	{:else}
+		<Tabs.Root value={mode} onValueChange={handleModeChange}>
+			<Tabs.List class="grid h-9 w-full grid-cols-2 gap-1 p-1">
+				<Tabs.Trigger value="upload" class="h-full w-full px-2 text-xs" disabled={busy}>
+					Upload
+				</Tabs.Trigger>
+				<Tabs.Trigger value="draw" class="h-full w-full px-2 text-xs" disabled={busy}>Draw</Tabs.Trigger>
+			</Tabs.List>
+
+			<Tabs.Content value="upload" class="mt-2">
+				<ImageUploadPreview
+					value={null}
+					alt="E-signature preview"
+					disabled={busy}
+					{isProcessing}
+					emptyLabel="Upload e-signature"
+					previewClass="max-h-24 w-full object-contain object-left"
+					frameClass="bg-white px-3 py-2"
+					onPick={() => inputRef?.click()}
+					onRemove={handleRemove}
+				/>
+			</Tabs.Content>
+
+			<Tabs.Content value="draw" class="mt-2 space-y-2">
+				<SignatureDrawBox
+					bind:this={drawBox}
+					compact
+					liveCommit={false}
+					disabled={busy}
+					onInkChange={(next) => (draftHasInk = next)}
+				/>
+				<div class="flex flex-col gap-2 sm:flex-row">
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						class="min-h-11 w-full sm:w-auto"
+						disabled={busy || !draftHasInk}
+						onclick={handleClearDrawn}
+					>
+						<Eraser class="mr-1.5 h-3.5 w-3.5" />
+						Clear
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						class="min-h-11 w-full sm:flex-1"
+						disabled={busy || !draftHasInk}
+						onclick={handleSaveDrawn}
+					>
+						<Save class="mr-1.5 h-3.5 w-3.5" />
+						Save
+					</Button>
+				</div>
+			</Tabs.Content>
+		</Tabs.Root>
+	{/if}
 
 	<input
 		bind:this={inputRef}
