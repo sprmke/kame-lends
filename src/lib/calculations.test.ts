@@ -51,7 +51,7 @@ describe("calculations", () => {
         },
       ],
       transactions: [],
-    } as InvestorWithLoans);
+    } as unknown as InvestorWithLoans);
 
     expect(stats.totalCapital).toBe(100000);
     expect(stats.totalInterest).toBe(10000);

@@ -68,6 +68,11 @@ const RESOURCE_LABELS: Record<Exclude<ResourceKind, "page">, string> = {
   transaction: "transaction",
 };
 
+function resourceLabel(resource: ResourceKind): string {
+  if (resource === "page") return "page";
+  return RESOURCE_LABELS[resource];
+}
+
 function resolveResource(pathname: string): ResourceKind {
   for (const route of RESOURCE_ROUTES) {
     if (route.pattern.test(pathname)) return route.resource;
@@ -122,7 +127,7 @@ function deniedCopy(
     default:
       return {
         title: "View only access",
-        detail: `You can view this ${RESOURCE_LABELS[resource]} but not edit it.`,
+        detail: `You can view this ${resourceLabel(resource)} but not edit it.`,
       };
   }
 }
@@ -149,7 +154,7 @@ function missingCopy(
       };
     default:
       return {
-        title: `${capitalize(RESOURCE_LABELS[resource])} not available`,
+        title: `${capitalize(resourceLabel(resource))} not available`,
         detail: "It doesn't exist, or your account doesn't have access to it.",
       };
   }
@@ -200,9 +205,7 @@ export function resolveErrorPresentation({
     const viewHref =
       resource === "signing" ? pathname.replace(/\/sign\/?$/, "") : pathname;
     const viewLabel =
-      resource === "signing"
-        ? "View loan"
-        : `View ${RESOURCE_LABELS[resource]}`;
+      resource === "signing" ? "View loan" : `View ${resourceLabel(resource)}`;
     const canView = resource === "signing" || isEditGated(resource);
 
     return {

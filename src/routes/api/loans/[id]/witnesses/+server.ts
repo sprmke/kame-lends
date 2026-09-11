@@ -32,7 +32,9 @@ export const POST: RequestHandler = async (event) => {
     }
 
     const profitType = body.profitType === "fixed" ? "fixed" : "rate";
-    const profitValue = Number.isFinite(Number.parseFloat(String(body.profitValue)))
+    const profitValue = Number.isFinite(
+      Number.parseFloat(String(body.profitValue)),
+    )
       ? Number.parseFloat(String(body.profitValue))
       : 0;
     if (profitValue < 0) {

@@ -153,8 +153,7 @@ function extractJsonBlock(text: string): RawExtraction | null {
 }
 
 type VisionCallResult =
-  | { ok: true; raw: RawExtraction }
-  | { ok: false; status: number };
+  { ok: true; raw: RawExtraction } | { ok: false; status: number };
 
 async function parseVisionResponse(
   response: Response,
@@ -252,9 +251,8 @@ async function callGroqVision(
   return parseVisionResponse(
     response,
     (body) =>
-      (
-        body as { choices?: Array<{ message?: { content?: unknown } }> }
-      )?.choices?.[0]?.message?.content,
+      (body as { choices?: Array<{ message?: { content?: unknown } }> })
+        ?.choices?.[0]?.message?.content,
   );
 }
 

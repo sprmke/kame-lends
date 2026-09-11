@@ -8,7 +8,7 @@ import {
 
 test.describe.configure({ mode: "serial", timeout: 90_000, retries: 1 });
 
-test.beforeEach(({}, testInfo) => {
+test.beforeEach((_fixtures, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 

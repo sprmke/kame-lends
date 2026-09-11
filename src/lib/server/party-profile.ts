@@ -311,17 +311,17 @@ export async function savePartyUserIdentityDocuments(
       .update(investors)
       .set(patch)
       .where(eq(investors.investorUserId, partyUserId))
-      .returning({ id: investors.id }),
+      .returning(),
     db
       .update(borrowers)
       .set(patch)
       .where(eq(borrowers.borrowerUserId, partyUserId))
-      .returning({ id: borrowers.id }),
+      .returning(),
     db
       .update(witnesses)
       .set(patch)
       .where(eq(witnesses.witnessUserId, partyUserId))
-      .returning({ id: witnesses.id }),
+      .returning(),
   ]);
 
   if (investorRows.length + borrowerRows.length + witnessRows.length === 0) {

@@ -4,13 +4,14 @@ import { handle as authHandle } from "$lib/server/auth";
 
 /** Auth.js and Drizzle both wrap errors; the connection failure is at the bottom. */
 function rootCauseMessage(error: unknown): string {
-  let current = error;
+  let current: unknown = error;
   let message = String(error);
-  for (let depth = 0; depth < 5 && current instanceof Error; depth += 1) {
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (!(current instanceof Error)) break;
     message = current.message;
     if (!(current.cause instanceof Error)) break;
     current = current.cause;
-    message = `${message} <- ${current.message}`;
+    message = `${message} <- ${(current as Error).message}`;
   }
   return message;
 }

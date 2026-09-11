@@ -23,12 +23,12 @@ Any signed-in user can create groups. Viewing requires being the creator, an act
 
 ## Implementation map
 
-| Piece          | Path                                             |
-| -------------- | ------------------------------------------------- |
-| Page           | `src/routes/groups/+page.svelte`                   |
-| Load           | `src/routes/groups/+page.server.ts`                |
-| Card           | `src/lib/components/groups/GroupCard.svelte`       |
-| Create modal   | `src/lib/components/groups/GroupFormModal.svelte`  |
-| Form           | `src/lib/components/groups/GroupForm.svelte`       |
-| List API       | `src/routes/api/groups/+server.ts`                 |
-| Access/sync    | `src/lib/server/group-access.ts`                   |
+| Piece        | Path                                              |
+| ------------ | ------------------------------------------------- |
+| Page         | `src/routes/groups/+page.svelte`                  |
+| Load         | `src/routes/groups/+page.server.ts`               |
+| Card         | `src/lib/components/groups/GroupCard.svelte`      |
+| Create modal | `src/lib/components/groups/GroupFormModal.svelte` |
+| Form         | `src/lib/components/groups/GroupForm.svelte`      |
+| List API     | `src/routes/api/groups/+server.ts`                |
+| Access/sync  | `src/lib/server/group-access.ts`                  |

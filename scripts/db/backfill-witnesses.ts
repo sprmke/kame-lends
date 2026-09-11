@@ -408,7 +408,7 @@ async function main() {
   let createCount = 0;
   let linkInvitationCount = 0;
   let linkContractCount = 0;
-  let portalLinkCount = 0;
+  let portalLinkCount: number;
 
   const resolvedWitnessIdByKey = new Map<string, number>();
   let nextDryRunWitnessId = -1;

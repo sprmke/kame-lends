@@ -16,6 +16,7 @@ import type {
   LoanWithInvestors,
   TransactionWithInvestor,
 } from "$lib/types";
+import { stripContractEmbeddedImages } from "./pdf-safe-image";
 
 export async function renderLoansPdfBuffer(
   data: LoanWithInvestors[],
@@ -61,19 +62,35 @@ export async function renderLoanContractPdfBuffer(
   contractDataOverride?: LoanContractData,
 ): Promise<Uint8Array> {
   const contractData = contractDataOverride ?? buildLoanContractData(loan);
-  return renderToBuffer(
-    React.createElement(LoanContractPDFDocument, {
-      data: contractData,
-      customization,
-    }) as any,
-  );
+  try {
+    return await renderToBuffer(
+      React.createElement(LoanContractPDFDocument, {
+        data: contractData,
+        customization,
+      }) as any,
+    );
+  } catch (error) {
+    console.error(
+      "Contract PDF render failed; retrying without embedded images:",
+      error,
+    );
+    const stripped = stripContractEmbeddedImages(contractData, customization);
+    return renderToBuffer(
+      React.createElement(LoanContractPDFDocument, {
+        data: stripped.data,
+        customization: stripped.customization,
+      }) as any,
+    );
+  }
 }
 
 export function pdfResponse(buffer: Uint8Array, filename: string): Response {
-  return new Response(new Blob([new Uint8Array(buffer)]), {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  return new Response(Buffer.from(bytes), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": String(bytes.byteLength),
     },
   });
 }

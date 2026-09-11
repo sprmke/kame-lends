@@ -21,7 +21,9 @@ export function clipCapitalIntervalToRange(
   from: string | null,
   to: string | null,
 ): CapitalInterval | null {
-  let { startKey, endKey, principal } = interval;
+  let startKey = interval.startKey;
+  let endKey = interval.endKey;
+  const { principal } = interval;
   if (from && endKey < from) return null;
   if (to && startKey > to) return null;
   if (from && startKey < from) startKey = from;

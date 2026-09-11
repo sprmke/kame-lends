@@ -21,6 +21,8 @@
 		series,
 		options = {},
 		class: className,
+		// Bindable for parents that need the ApexCharts instance; initial null is intentional.
+		// eslint-disable-next-line no-useless-assignment -- $bindable seed value
 		chart = $bindable(null)
 	}: Props = $props();
 

@@ -4,7 +4,10 @@ import { db } from "$lib/server/db";
 import { loanGroupLoans } from "$lib/server/db/schema";
 import { getSession } from "$lib/server/session";
 import { invalidateGroupData } from "$lib/server/cache-invalidation";
-import { hasGroupEditAccess, syncGroupMembersForLoan } from "$lib/server/group-access";
+import {
+  hasGroupEditAccess,
+  syncGroupMembersForLoan,
+} from "$lib/server/group-access";
 import { hasLoanViewAccess } from "$lib/server/access-control";
 
 export const POST: RequestHandler = async (event) => {

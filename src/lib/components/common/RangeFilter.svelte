@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Input } from '$lib/components/ui/input';
+	import type { IconComponent } from '$lib/types/icon';
 	interface Props {
 		label: string;
-		// lucide-svelte icon component
-		icon?: import('svelte').Component<{ class?: string }>;
+		icon?: IconComponent;
 		minValue: string;
 		maxValue: string;
 		onMinChange: (value: string) => void;

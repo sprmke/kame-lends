@@ -96,7 +96,6 @@
 </script>
 
 <DataTableCard>
-	{#snippet children()}
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
@@ -145,7 +144,6 @@
 				{/if}
 			</Table.Body>
 		</Table.Root>
-	{/snippet}
 	{#snippet footer()}
 		<Pagination
 			embedded

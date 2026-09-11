@@ -17,7 +17,10 @@ export const load: PageServerLoad = async (event) => {
   const groupId = parseInt(event.params.id);
   event.depends("app:groups");
 
-  if (Number.isNaN(groupId) || !(await hasGroupViewAccess(groupId, session.user.id))) {
+  if (
+    Number.isNaN(groupId) ||
+    !(await hasGroupViewAccess(groupId, session.user.id))
+  ) {
     throw redirect(303, "/groups");
   }
 

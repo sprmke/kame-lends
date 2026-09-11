@@ -1,14 +1,15 @@
 <script lang="ts">
-	import type { Component, Snippet } from 'svelte';
+	import type { Snippet } from 'svelte';
 	import { ChevronDown, Filter } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
+	import type { IconComponent } from '$lib/types/icon';
 
 	interface Props {
 		isOpen: boolean;
 		onToggle: () => void;
 		trigger: {
 			label: string;
-			icon?: Component;
+			icon?: IconComponent;
 			showIndicator?: boolean;
 		};
 		children: Snippet;

@@ -5,16 +5,16 @@ import {
   HandCoins,
   UserCheck,
   Users,
-  type Icon,
 } from "lucide-svelte";
 import { SHOW_TRANSACTIONS_UI } from "$lib/feature-flags";
 import type { NavCapabilities } from "$lib/nav/app-nav";
+import type { IconComponent } from "$lib/types/icon";
 
 export interface DashboardQuickAction {
   id: string;
   label: string;
   href: string;
-  icon: Icon;
+  icon: IconComponent;
 }
 
 export function buildDashboardQuickActions(

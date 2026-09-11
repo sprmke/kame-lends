@@ -36,15 +36,15 @@ Sync runs when a loan is added to the group (`POST /api/groups/[id]/loans`) and 
 
 ## Implementation map
 
-| Piece          | Path                                                        |
-| -------------- | ------------------------------------------------------------ |
-| Page           | `src/routes/groups/[id]/+page.svelte`                          |
-| Load           | `src/routes/groups/[id]/+page.server.ts`                       |
-| Members list   | `src/lib/components/groups/GroupMembersList.svelte`            |
-| Loan picker    | `src/lib/components/groups/GroupLoanPicker.svelte`              |
-| Edit modal     | `src/lib/components/groups/GroupFormModal.svelte`               |
-| Group API      | `src/routes/api/groups/[id]/+server.ts`                         |
-| Loan sub-API   | `src/routes/api/groups/[id]/loans/+server.ts`, `[loanId]/+server.ts` |
-| Leave API      | `src/routes/api/groups/[id]/leave/+server.ts`                    |
-| Member API     | `src/routes/api/groups/[id]/members/[userId]/+server.ts`         |
-| Access/sync    | `src/lib/server/group-access.ts`                                |
+| Piece        | Path                                                                 |
+| ------------ | -------------------------------------------------------------------- |
+| Page         | `src/routes/groups/[id]/+page.svelte`                                |
+| Load         | `src/routes/groups/[id]/+page.server.ts`                             |
+| Members list | `src/lib/components/groups/GroupMembersList.svelte`                  |
+| Loan picker  | `src/lib/components/groups/GroupLoanPicker.svelte`                   |
+| Edit modal   | `src/lib/components/groups/GroupFormModal.svelte`                    |
+| Group API    | `src/routes/api/groups/[id]/+server.ts`                              |
+| Loan sub-API | `src/routes/api/groups/[id]/loans/+server.ts`, `[loanId]/+server.ts` |
+| Leave API    | `src/routes/api/groups/[id]/leave/+server.ts`                        |
+| Member API   | `src/routes/api/groups/[id]/members/[userId]/+server.ts`             |
+| Access/sync  | `src/lib/server/group-access.ts`                                     |

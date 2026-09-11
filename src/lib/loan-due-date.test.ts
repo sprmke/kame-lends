@@ -45,19 +45,25 @@ describe("loan due date windows", () => {
 
   it("classifies funded loans due today as maturing", () => {
     expect(
-      isMaturingFundedLoan({
-        status: "Fully Funded",
-        dueDate: "2026-09-10",
-      }),
+      isMaturingFundedLoan(
+        {
+          status: "Fully Funded",
+          dueDate: "2026-09-10",
+        },
+        reference,
+      ),
     ).toBe(true);
   });
 
   it("does not classify funded loans due today as overdue", () => {
     expect(
-      isOverdueLoanForDashboard({
-        status: "Fully Funded",
-        dueDate: "2026-09-10",
-      }),
+      isOverdueLoanForDashboard(
+        {
+          status: "Fully Funded",
+          dueDate: "2026-09-10",
+        },
+        reference,
+      ),
     ).toBe(false);
   });
 

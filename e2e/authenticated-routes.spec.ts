@@ -3,7 +3,7 @@ import { fetchJson, gotoApp, skipIfNoDatabase } from "./helpers";
 
 test.describe.configure({ mode: "serial", timeout: 60_000, retries: 1 });
 
-test.beforeEach(({}, testInfo) => {
+test.beforeEach((_fixtures, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 

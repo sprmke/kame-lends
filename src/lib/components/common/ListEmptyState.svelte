@@ -1,13 +1,16 @@
 <script lang="ts">
-	import type { Component, Snippet } from 'svelte';
+	import type { Snippet } from 'svelte';
+	import type { IconComponent } from '$lib/types/icon';
 
 	interface Props {
 		message: string;
-		icon?: Component;
+		icon?: IconComponent;
 		actions?: Snippet;
+		children?: Snippet;
 	}
 
-	let { message, icon, actions }: Props = $props();
+	let { message, icon, actions, children }: Props = $props();
+	const footerActions = $derived(actions ?? children);
 </script>
 
 <div class="empty-state-well gap-3 text-muted-foreground">
@@ -18,9 +21,9 @@
 		</div>
 	{/if}
 	<p class="text-sm">{message}</p>
-	{#if actions}
+	{#if footerActions}
 		<div class="flex flex-wrap justify-center gap-2">
-			{@render actions()}
+			{@render footerActions()}
 		</div>
 	{/if}
 </div>

@@ -8,6 +8,7 @@ import type { ContractCustomization } from "$lib/loan-contract-customization";
 import {
   applyContractCustomization,
   buildDefaultContractCustomizationFromLoan,
+  parseStoredContractCustomization,
 } from "$lib/loan-contract-customization";
 import { buildLoanContractData } from "$lib/loan-contract-data";
 import {
@@ -30,6 +31,10 @@ import {
   pdfResponse,
   renderLoanContractPdfBuffer,
 } from "$lib/server/pdf/render";
+
+export const config = {
+  maxDuration: 60,
+};
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -69,11 +74,10 @@ export const GET: RequestHandler = async (event) => {
     }
 
     const baseData = buildLoanContractData(loan);
-    const storedCustomization = loan.loanContract?.customization as
-      ContractCustomization | undefined;
-    const customization =
-      storedCustomization ??
-      buildDefaultContractCustomizationFromLoan(baseData);
+    const customization = parseStoredContractCustomization(
+      loan.loanContract?.customization,
+      buildDefaultContractCustomizationFromLoan(baseData),
+    );
     const appliedData = applyContractCustomization(baseData, customization);
     const investorEmailById = buildInvestorEmailMap(loan);
     const merged = applySigningSignatures(
@@ -194,11 +198,10 @@ export const POST: RequestHandler = async (event) => {
     }
 
     const baseData = buildLoanContractData(loan);
-    const storedCustomization = loan.loanContract?.customization as
-      ContractCustomization | undefined;
-    const customization =
-      storedCustomization ??
-      buildDefaultContractCustomizationFromLoan(baseData);
+    const customization = parseStoredContractCustomization(
+      loan.loanContract?.customization,
+      buildDefaultContractCustomizationFromLoan(baseData),
+    );
     const appliedData = applyContractCustomization(baseData, customization);
     const investorEmailById = buildInvestorEmailMap(loan);
     const merged = applySigningSignatures(

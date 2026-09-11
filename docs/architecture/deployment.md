@@ -11,10 +11,23 @@ push / merge → main
   → deploy (Vercel production via CLI --prebuilt)
 ```
 
-| Workflow                                                     | Trigger                          | Role                            |
-| ------------------------------------------------------------ | -------------------------------- | ------------------------------- |
-| [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) | PRs + non-`main` pushes          | Quality only                    |
-| [`.github/workflows/cd.yml`](../../.github/workflows/cd.yml) | Push to `main` + manual dispatch | Quality → migrate → Vercel prod |
+| Workflow                                                     | Trigger                          | Role                                                    |
+| ------------------------------------------------------------ | -------------------------------- | ------------------------------------------------------- |
+| [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) | PRs + non-`main` pushes          | Typecheck, format, lint, tests, build, commitlint (PRs) |
+| [`.github/workflows/cd.yml`](../../.github/workflows/cd.yml) | Push to `main` + manual dispatch | Same quality gate → migrate → Vercel prod               |
+
+### Quality gate (CI and CD)
+
+| Step            | Command                                       |
+| --------------- | --------------------------------------------- |
+| Typecheck       | `bun run check` (`svelte-check` + TypeScript) |
+| Format          | `bun run format:check` (Prettier)             |
+| Lint            | `bun run lint:js` (ESLint)                    |
+| Unit tests      | `bun run test:unit` (Vitest)                  |
+| AI tooling sync | `bun run check:ai-tooling-sync`               |
+| Build           | `bun run build`                               |
+
+Locally: `bun run ci:quality`.
 
 Concurrency group `cd-main` with `cancel-in-progress: false` so a mid-migration run is never cancelled by a newer push.
 

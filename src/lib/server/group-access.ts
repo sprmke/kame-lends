@@ -127,7 +127,13 @@ export async function syncGroupMembersForLoan(
 
   await db
     .insert(loanGroupMembers)
-    .values(missingIds.map((userId) => ({ groupId, userId, status: "active" as const })))
+    .values(
+      missingIds.map((userId) => ({
+        groupId,
+        userId,
+        status: "active" as const,
+      })),
+    )
     .onConflictDoNothing();
 }
 

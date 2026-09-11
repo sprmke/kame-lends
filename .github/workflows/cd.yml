@@ -24,16 +24,28 @@ concurrency:
 
 jobs:
   quality:
+    name: Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun run check
-      - run: bun run test
-      - run: bun run build
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Typecheck (svelte-check)
+        run: bun run check
+      - name: Format (Prettier)
+        run: bun run format:check
+      - name: Lint (ESLint)
+        run: bun run lint:js
+      - name: Unit tests
+        run: bun run test:unit
+      - name: AI tooling sync
+        run: bun run check:ai-tooling-sync
+      - name: Build
+        run: bun run build
 
   migrate:
+    name: Migrate
     needs: quality
     runs-on: ubuntu-latest
     environment: production
@@ -47,6 +59,7 @@ jobs:
         run: bash scripts/db/migrate-pending.sh --yes
 
   deploy:
+    name: Deploy
     needs: migrate
     runs-on: ubuntu-latest
     environment: production
@@ -56,7 +69,8 @@ jobs:
         with:
           node-version: 22
       - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
       - name: Deploy to Vercel production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

@@ -254,7 +254,9 @@ export const loanInvestors = pgTable(
     /** Evidence of the investor's fund transfer, as an uploaded data URL (same convention as validIdUrl). */
     receiptImageUrl: text("receipt_image_url"),
     /** AI-extracted snapshot from receiptImageUrl at upload time; kept for audit even if fields are later hand-edited. */
-    receiptExtractedData: jsonb("receipt_extracted_data").$type<ReceiptExtractedData | null>(),
+    receiptExtractedData: jsonb(
+      "receipt_extracted_data",
+    ).$type<ReceiptExtractedData | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -405,7 +407,9 @@ export const receivedPayments = pgTable(
     /** Evidence of the borrower's repayment, as an uploaded data URL (same convention as validIdUrl). */
     receiptImageUrl: text("receipt_image_url"),
     /** AI-extracted snapshot from receiptImageUrl at upload time; kept for audit even if fields are later hand-edited. */
-    receiptExtractedData: jsonb("receipt_extracted_data").$type<ReceiptExtractedData | null>(),
+    receiptExtractedData: jsonb(
+      "receipt_extracted_data",
+    ).$type<ReceiptExtractedData | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -756,19 +760,16 @@ export const loanGroupsRelations = relations(loanGroups, ({ one, many }) => ({
   members: many(loanGroupMembers),
 }));
 
-export const loanGroupLoansRelations = relations(
-  loanGroupLoans,
-  ({ one }) => ({
-    group: one(loanGroups, {
-      fields: [loanGroupLoans.groupId],
-      references: [loanGroups.id],
-    }),
-    loan: one(loans, {
-      fields: [loanGroupLoans.loanId],
-      references: [loans.id],
-    }),
+export const loanGroupLoansRelations = relations(loanGroupLoans, ({ one }) => ({
+  group: one(loanGroups, {
+    fields: [loanGroupLoans.groupId],
+    references: [loanGroups.id],
   }),
-);
+  loan: one(loans, {
+    fields: [loanGroupLoans.loanId],
+    references: [loans.id],
+  }),
+}));
 
 export const loanGroupMembersRelations = relations(
   loanGroupMembers,

@@ -1,4 +1,6 @@
 <script lang="ts">
+	/* Local edits need $state; props sync uses $effect (not a pure derived). */
+	/* eslint-disable svelte/prefer-writable-derived */
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Button } from '$lib/components/ui/button';
@@ -53,6 +55,8 @@
 		isFormOpen && editingId != null ? methods.filter((m) => m.id !== editingId) : methods
 	);
 
+	// Keep local editable list in sync when the server props change.
+	// eslint-disable-next-line svelte/prefer-writable-derived -- local mutations require $state
 	$effect(() => {
 		methods = [...initialMethods];
 	});

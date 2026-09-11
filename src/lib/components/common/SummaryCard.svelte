@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Component } from 'svelte';
+	import type { IconComponent } from '$lib/types/icon';
 	import * as Card from '$lib/components/ui/card';
 	import { cn } from '$lib/utils';
 	import { getOddLastVisibleMobileSpan, getSummaryMetricGridCols } from '$lib/summary-grid';
@@ -16,7 +16,7 @@
 		subValueTemplate?: string;
 		subAmount?: number;
 		valueClassName?: string;
-		icon?: Component<{ class?: string }>;
+		icon?: IconComponent;
 		accentClassName?: string;
 		empty?: boolean;
 	}

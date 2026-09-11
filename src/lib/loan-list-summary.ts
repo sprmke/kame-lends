@@ -265,7 +265,10 @@ export function computeBorrowerProfitStats(
       loan.profitType,
     );
 
-  const profitEstimate = openLoans.reduce((sum, loan) => sum + profitFor(loan), 0);
+  const profitEstimate = openLoans.reduce(
+    (sum, loan) => sum + profitFor(loan),
+    0,
+  );
   const profitEarned = completedLoans.reduce(
     (sum, loan) => sum + profitFor(loan),
     0,

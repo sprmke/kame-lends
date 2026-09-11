@@ -88,7 +88,12 @@ async function compressValidIdImage(file: File): Promise<string> {
   try {
     const image = await loadImage(objectUrl);
     const canvas = drawImageToCanvas(image, 1200);
-    return encodeJpegUnderLimit(canvas, MAX_VALID_ID_DATA_URL_LENGTH, 0.85, 0.45);
+    return encodeJpegUnderLimit(
+      canvas,
+      MAX_VALID_ID_DATA_URL_LENGTH,
+      0.85,
+      0.45,
+    );
   } finally {
     URL.revokeObjectURL(objectUrl);
   }

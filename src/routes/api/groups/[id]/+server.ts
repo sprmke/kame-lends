@@ -5,7 +5,10 @@ import { loanGroups } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateGroupData } from "$lib/server/cache-invalidation";
-import { hasGroupViewAccess, hasGroupEditAccess } from "$lib/server/group-access";
+import {
+  hasGroupViewAccess,
+  hasGroupEditAccess,
+} from "$lib/server/group-access";
 
 export const GET: RequestHandler = async (event) => {
   const { params } = event;

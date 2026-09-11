@@ -173,9 +173,11 @@ Pre-cutover snapshot: `docs/archive/operations/vercel-production-snapshot.md`
 
 ## QA / CI
 
-- `bun run check:all` runs `svelte-check`, Prettier + ESLint, and Vitest.
+- `bun run ci:quality` is the local equivalent of GitHub Actions quality: typecheck (`svelte-check`), Prettier, ESLint, Vitest, AI tooling sync, and production build.
+- CI (PRs / non-`main` pushes): same quality steps + Commitlint on pull requests.
+- CD (`main`): quality → migrate → Vercel deploy (see [`architecture/deployment.md`](./architecture/deployment.md)).
 - `bun run build:clean` removes `.svelte-kit` and `.vercel/output`, then runs `svelte-kit sync` and `vite build` to avoid stale-cache and symlink build flakes from `adapter-vercel`.
-- Playwright E2E tests run against `bun run dev` on port 4174; the dev server is started and stopped automatically by `playwright.config.ts`.
+- Playwright E2E tests run against `bun run dev` on port 4174; the dev server is started and stopped automatically by `playwright.config.ts`. E2E is not part of the default CD quality gate (slower; run locally or as a follow-up job when needed).
 - E2E CRUD coverage creates and cleans up investors, transactions, borrowings, and loans (including a preselected investor, a borrower, principal, and due date), then verifies the generated signing link is authenticated `/loans/{id}/sign` (legacy `/sign/[token]` redirects after login). It revealed and validated fixes for number-input validation in `TransactionForm.svelte` and `LoanForm.svelte` (`String(value).trim()` instead of assuming a string from `type="number"` inputs).
 - E2E advanced-controls coverage verifies the settings maintenance controls, the new-borrower modal from the loan form, the valid signing page controls, and loan duplication from the detail page. The duplication test exposed a UTF-8 `btoa` crash when duplicate data contained non-Latin1 characters; it now uses `src/lib/base64-url.ts` helpers for safe encoding/decoding.
 - Inline edit forms on detail pages are keyed by entity ID so client-side navigation between different investors/borrowers/witnesses/debts/loans resets form state instead of showing stale data from the previously viewed entity.

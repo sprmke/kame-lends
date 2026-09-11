@@ -131,9 +131,7 @@ async function loadWitnessedLoanIds(userId: string) {
       .where(inArray(loanWitnesses.witnessId, witnessIds)),
   ]);
   return [
-    ...new Set(
-      [...viaInvitations, ...viaLoanWitnesses].map((r) => r.loanId),
-    ),
+    ...new Set([...viaInvitations, ...viaLoanWitnesses].map((r) => r.loanId)),
   ];
 }
 
@@ -142,7 +140,7 @@ async function loadLoans(
   mode: LoanCacheMode,
   scope: LoanListScope,
 ) {
-  let ids: number[] = [];
+  let ids: number[];
 
   if (scope === "owned") {
     ids = await loadOwnedLoanIds(userId);

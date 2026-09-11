@@ -25,8 +25,13 @@ export const PATCH: RequestHandler = async (event) => {
 
     const { id } = params;
     const periodId = parseInt(id);
-    const { status, receivedAmount, receivedDate, receiptImageUrl, receiptExtractedData } =
-      await request.json();
+    const {
+      status,
+      receivedAmount,
+      receivedDate,
+      receiptImageUrl,
+      receiptExtractedData,
+    } = await request.json();
 
     if (!status || !["Pending", "Completed", "Overdue"].includes(status)) {
       return json(

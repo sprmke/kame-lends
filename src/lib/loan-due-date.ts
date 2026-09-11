@@ -60,22 +60,33 @@ export function isLoanPastDueByCalendarDate(
   return dueKey < todayKey;
 }
 
-export function isMaturingFundedLoan(loan: {
-  status: string;
-  dueDate: Date | string;
-}): boolean {
+export function isMaturingFundedLoan(
+  loan: {
+    status: string;
+    dueDate: Date | string;
+  },
+  referenceDate?: Date,
+): boolean {
   return (
     MATURING_LOAN_STATUSES.has(loan.status) &&
-    isLoanDueWithinMaturingWindow(loan.dueDate)
+    isLoanDueWithinMaturingWindow(
+      loan.dueDate,
+      MATURING_LOAN_WINDOW_DAYS,
+      referenceDate,
+    )
   );
 }
 
-export function isOverdueLoanForDashboard(loan: {
-  status: string;
-  dueDate: Date | string;
-}): boolean {
+export function isOverdueLoanForDashboard(
+  loan: {
+    status: string;
+    dueDate: Date | string;
+  },
+  referenceDate?: Date,
+): boolean {
   return (
     loan.status === "Overdue" ||
-    (loan.status !== "Completed" && isLoanPastDueByCalendarDate(loan.dueDate))
+    (loan.status !== "Completed" &&
+      isLoanPastDueByCalendarDate(loan.dueDate, referenceDate))
   );
 }

@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extractReceiptInfo } from "./receipt-extraction";
 
 const SAMPLE_DATA_URL =
-  "data:image/jpeg;base64," + Buffer.from("fake-image-bytes").toString("base64");
+  "data:image/jpeg;base64," +
+  Buffer.from("fake-image-bytes").toString("base64");
 
 function geminiResponse(json: Record<string, unknown>) {
   return {
@@ -165,9 +166,11 @@ describe("extractReceiptInfo", () => {
 
   it("nulls out an unparseable transaction date instead of failing", async () => {
     process.env.GEMINI_API_KEY = "key-1";
-    const fetchMock = vi.fn().mockResolvedValue(
-      geminiResponse({ ...VALID_JSON, transaction_date: "not-a-date" }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        geminiResponse({ ...VALID_JSON, transaction_date: "not-a-date" }),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await extractReceiptInfo(SAMPLE_DATA_URL);

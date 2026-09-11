@@ -20,10 +20,7 @@ export const PATCH: RequestHandler = async (event) => {
       return json({ error: "Invalid loan ID." }, { status: 400 });
     }
 
-    const allowed = await hasBorrowerProfitWriteAccess(
-      loanId,
-      session.user.id,
-    );
+    const allowed = await hasBorrowerProfitWriteAccess(loanId, session.user.id);
     if (!allowed) {
       return json({ error: "Forbidden" }, { status: 403 });
     }

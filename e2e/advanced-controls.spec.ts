@@ -5,7 +5,7 @@ import type { Borrower, Investor, LoanWithInvestors } from "$lib/types";
 test.describe.configure({ mode: "serial", timeout: 120_000, retries: 1 });
 
 // eslint-disable-next-line no-empty-pattern
-test.beforeEach(({}, testInfo) => {
+test.beforeEach((_fixtures, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 

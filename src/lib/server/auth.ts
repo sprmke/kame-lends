@@ -71,7 +71,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
   },
   events: {
     async createUser({ user }) {
-      if (isWorkspaceOwnerEmail(user.email)) {
+      if (isWorkspaceOwnerEmail(user.email) && user.id) {
         await db
           .update(users)
           .set({ role: "admin" })

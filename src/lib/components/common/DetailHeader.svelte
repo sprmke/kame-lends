@@ -153,13 +153,13 @@
 
 <div class="lg:hidden">
 	<PageBackHeader {title} {description} {backLabel} {onBack}>
-		{#if signContractHref}
-			{#snippet actions()}
+		{#snippet actions()}
+			{#if signContractHref}
 				<Button href={signContractHref} size="sm" class="w-full">
 					Sign contract
 				</Button>
-			{/snippet}
-		{/if}
+			{/if}
+		{/snippet}
 	</PageBackHeader>
 </div>
 

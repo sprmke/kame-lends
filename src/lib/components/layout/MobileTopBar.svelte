@@ -29,7 +29,7 @@
 				class="min-w-0 truncate text-[15px] font-semibold tracking-tight text-primary-foreground"
 			>
 				{brandPrimary}{#if brandAccent}<span class="font-semibold text-primary-foreground/80"
-					>{' '}{brandAccent}</span
+					>&nbsp;{brandAccent}</span
 				>{/if}
 			</span>
 		</a>
