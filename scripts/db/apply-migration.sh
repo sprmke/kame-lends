@@ -55,8 +55,12 @@ elif [[ "$DATABASE_URL" == *"127.0.0.1:5433"* || "$DATABASE_URL" == *"localhost:
     exit 1
   fi
   docker compose exec -T db psql -U kame_lends -d kame_lends -v ON_ERROR_STOP=1 -f - <"$PATH_FILE"
+elif command -v docker >/dev/null 2>&1; then
+  echo "→ psql (docker postgres:17)"
+  docker run --rm -i -e DATABASE_URL postgres:17 \
+    sh -c 'psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f -' <"$PATH_FILE"
 else
-  echo "psql is not installed and DATABASE_URL is not local Docker. Install psql or run the SQL in the Neon console." >&2
+  echo "psql is not installed and Docker is unavailable. Install psql or run the SQL in the Neon console." >&2
   exit 1
 fi
 

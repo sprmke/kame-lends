@@ -2,23 +2,59 @@
 # Read-only Neon Postgres backup (custom format). Writes OUTSIDE the repo.
 # Usage:
 #   bun run backup:neon
-#     Uses DATABASE_URL from the environment, else .env.local DATABASE_URL.
-#   DATABASE_URL='postgresql://...' bun run backup:neon
+#     Uses DATABASE_URL_PROD from .env.local (or DATABASE_URL when it points at Neon).
+#   DATABASE_URL='postgresql://...@....neon.tech/...' bun run backup:neon
 #     One-off backup (e.g. legacy Pawn Tracker us-east-1 before project delete).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
+load_env_var() {
+  local key="$1"
+  local file="$2"
+  [[ -f "$file" ]] || return 1
+  local line
+  line="$(grep -E "^${key}=" "$file" | head -1 || true)"
+  [[ -n "$line" ]] || return 1
+  printf '%s' "${line#*=}" | tr -d '"'
+}
+
+is_local_db_url() {
+  [[ "$1" == *"127.0.0.1"* || "$1" == *"localhost"* ]]
+}
+
+is_neon_db_url() {
+  [[ "$1" == *"neon.tech"* ]]
+}
+
 if [[ -z "${DATABASE_URL:-}" && -f .env.local ]]; then
-  DATABASE_URL="$(grep -E '^DATABASE_URL=' .env.local | head -1 | cut -d= -f2- | tr -d '"')"
-  export DATABASE_URL
+  DATABASE_URL="$(load_env_var DATABASE_URL .env.local || true)"
+fi
+
+if [[ -n "${DATABASE_URL:-}" ]] && is_local_db_url "$DATABASE_URL" && [[ -f .env.local ]]; then
+  PROD_URL="$(load_env_var DATABASE_URL_PROD .env.local || true)"
+  if [[ -n "${PROD_URL:-}" ]]; then
+    echo "→ Using DATABASE_URL_PROD from .env.local (DATABASE_URL is local Docker)."
+    DATABASE_URL="$PROD_URL"
+  fi
+fi
+
+if [[ -z "${DATABASE_URL:-}" && -f .env.local ]]; then
+  DATABASE_URL="$(load_env_var DATABASE_URL_PROD .env.local || true)"
 fi
 
 if [[ -z "${DATABASE_URL:-}" ]]; then
-  echo "ERROR: DATABASE_URL is not set. Add it to .env.local or export it."
+  echo "ERROR: Set DATABASE_URL_PROD in .env.local or export a Neon DATABASE_URL."
   exit 1
 fi
+
+if ! is_neon_db_url "$DATABASE_URL"; then
+  echo "ERROR: backup:neon expects a Neon URL (*.neon.tech). Got a non-Neon host."
+  exit 1
+fi
+
+export DATABASE_URL
 
 BACKUP_ROOT="${KAME_LENDS_BACKUP_DIR:-$HOME/Backups/kame-lends}"
 mkdir -p "$BACKUP_ROOT"
