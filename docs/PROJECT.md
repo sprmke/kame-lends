@@ -76,7 +76,7 @@ scripts/              # Backup, AI tooling, migration helpers
 
 See `.env.example`. Production uses the same names as before cutover; public vars use SvelteKit `PUBLIC_*` where noted in `.env.example`.
 
-During local SvelteKit QA, set **`DATABASE_URL`** to `DATABASE_URL_LOCAL` (Docker at `127.0.0.1:5433`) or `DATABASE_URL_PROD` (Singapore Neon). Pull a Neon snapshot into Docker with `bun run db:local:sync-prod`. Auth.js selects `user.role`; a DB that cannot run queries (e.g. Neon data-transfer quota) surfaces as `/auth/error?error=Configuration` after Google redirects back.
+During local SvelteKit QA, set **`DATABASE_URL`** to `DATABASE_URL_LOCAL` (Docker at `127.0.0.1:5433`) or `DATABASE_URL_PROD` (Singapore Neon). Pull a Neon snapshot into Docker with `bun run db:local:sync-prod`. Auth.js exposes `user.role` on the session (nullable). Shipped SQL patches live in `db/migrations/`; apply with `bun run db:apply:migration -- <file.sql>` after review and backup. A DB that cannot run queries (e.g. Neon data-transfer quota) surfaces as `/auth/error?error=Configuration` after Google redirects back.
 
 A `DATABASE_URL` **exported in the shell overrides `.env.local`** (`$env/dynamic/private` reads `process.env` first) and is inherited by `bun dev`. An `.env.example` placeholder (`…@ep-....us-east-1…`) exported that way reaches no host, so every Auth.js adapter query fails with `AdapterError` / `SessionTokenError`. `src/lib/server/db/index.ts` now ignores placeholder URLs, warns, and falls back to `.env.local`. Fix the shell with `unset DATABASE_URL`, then restart `bun dev`.
 
@@ -107,10 +107,11 @@ SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, i
 
 ## Auth & roles
 
-- Google sign-in via Auth.js. Invited party users already have a `users` row (email from CRM). First Google login links that row (`allowDangerousEmailAccountLinking`). Unknown Google emails are rejected (`AccessDenied`); they are not auto-created as `admin`. An empty workspace still accepts the first Google user.
+- Google sign-in via Auth.js. Invited party users already have a `users` row (email from CRM). First Google login links that row (`allowDangerousEmailAccountLinking`). Unknown Google emails are rejected (`AccessDenied`); they are not auto-created. An empty workspace still accepts the first Google user. New Auth.js users get `users.role = NULL` unless they are the sitewide workspace owner.
 - Custom UI: `/signin` (`src/routes/signin/`). Auth.js endpoints stay at `/auth/*` (callback, session, csrf). Auth errors return to `/signin?error=…`. Do not host the custom page at `/auth/signin` (Auth.js owns that path).
-- `admin`: workspace owner (full create/edit/delete on owned records)
-- `investor` / `borrower` / `witness`: display labels only. Access is membership-based. One Google account can be linked as investor, borrower, and witness via the same `users` row (`investors.investor_user_id`, `borrowers.borrower_user_id`, `witnesses.witness_user_id`). Party linking reuses the email; it does not create extra users.
+- **Sitewide `admin`:** only `michaeldmanlulu@gmail.com` (`src/lib/server/workspace-owner.ts`). The `admin` role is not a workspace-operator flag.
+- **Workspace operator UI** (`isAdminWorkspace`): derived from owned loans, CRM contacts, or borrowings (`getNavCapabilities`). Not from `users.role`.
+- `investor` / `borrower` / `witness`: optional display labels set when party contacts are linked. Access is membership-based. One Google account can be linked as investor, borrower, and witness via the same `users` row (`investors.investor_user_id`, `borrowers.borrower_user_id`, `witnesses.witness_user_id`). Party linking reuses the email; it does not create extra users.
 - Loan access (`src/lib/server/access-control.ts`): owner full edit; investor/borrower/witness read-only (signing still allowed for their slot)
 - Menus: party users see Dashboard, Investments, Borrowed, Witnessed, and Settings (empty party views stay open). Workspace admins also see Loans, Borrowings, Investors, Borrowers, Witnesses, and Transactions (when enabled). Create/edit/delete stay workspace-admin only.
 - Contract signing: authenticated `/loans/[id]/sign` (Google email must match party). Legacy `/sign/[token]` redirects after login

@@ -29,7 +29,8 @@
     "db:local:push": "bash scripts/db/local-db-push.sh",
     "db:local:sync-prod": "bash scripts/db/sync-prod-to-local.sh",
     "db:backfill:investor-links": "bash scripts/db/backfill-investor-user-links.sh",
-    "db:backfill:witnesses": "bash scripts/db/backfill-witnesses.sh"
+    "db:backfill:witnesses": "bash scripts/db/backfill-witnesses.sh",
+    "db:apply:migration": "bash scripts/db/apply-migration.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.7.1",

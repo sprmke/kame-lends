@@ -422,7 +422,7 @@ export const users = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
-  role: userRoleEnum("role").notNull().default("admin"),
+  role: userRoleEnum("role"),
 });
 
 /** Bank / QR details for receiving loan payments. Visible to borrowers on loan detail only. */

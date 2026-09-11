@@ -358,20 +358,15 @@ export async function getNavCapabilities(userId: string): Promise<{
   hasWitnessed: boolean;
 }> {
   const [
-    userRow,
     ownedLoan,
     ownedInvestorContact,
     ownedBorrowerContact,
     ownedWitnessContact,
+    ownedDebt,
     investorLink,
     borrowerLink,
     witnessLink,
   ] = await Promise.all([
-    db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1),
     db
       .select({ id: loans.id })
       .from(loans)
@@ -393,6 +388,11 @@ export async function getNavCapabilities(userId: string): Promise<{
       .where(eq(witnesses.userId, userId))
       .limit(1),
     db
+      .select({ id: debts.id })
+      .from(debts)
+      .where(eq(debts.userId, userId))
+      .limit(1),
+    db
       .select({ id: investors.id })
       .from(investors)
       .where(eq(investors.investorUserId, userId))
@@ -409,15 +409,13 @@ export async function getNavCapabilities(userId: string): Promise<{
       .limit(1),
   ]);
 
-  const isAdminRole = userRow[0]?.role === "admin";
-
   return {
     isAdminWorkspace:
-      isAdminRole ||
       ownedLoan.length > 0 ||
       ownedInvestorContact.length > 0 ||
       ownedBorrowerContact.length > 0 ||
-      ownedWitnessContact.length > 0,
+      ownedWitnessContact.length > 0 ||
+      ownedDebt.length > 0,
     hasInvestments: investorLink.length > 0,
     hasBorrowed: borrowerLink.length > 0,
     hasWitnessed: witnessLink.length > 0,

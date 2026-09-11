@@ -4,6 +4,10 @@ import { db } from "$lib/server/db";
 import { sessions, users } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { normalizeEmail } from "$lib/loan-signing";
+import {
+  WORKSPACE_OWNER_EMAIL,
+  loadWorkspaceDataOwnerUsers,
+} from "$lib/server/workspace-owner";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 
@@ -43,16 +47,18 @@ export const POST: RequestHandler = async ({ request }) => {
     : null;
 
   if (!user && !bodyEmail) {
-    const candidates = await db.query.users.findMany({
-      where: eq(users.role, "admin"),
-      with: { loans: { columns: { id: true } } },
-    });
-    user =
-      candidates.sort(
-        (a, b) => (b.loans?.length ?? 0) - (a.loans?.length ?? 0),
-      )[0] ??
-      candidates[0] ??
-      null;
+    const fallbackEmail =
+      normalizeEmail(env.E2E_USER_EMAIL) ||
+      normalizeEmail(WORKSPACE_OWNER_EMAIL);
+    user = fallbackEmail
+      ? await db.query.users.findFirst({
+          where: eq(users.email, fallbackEmail),
+        })
+      : null;
+    if (!user) {
+      const owners = await loadWorkspaceDataOwnerUsers();
+      user = owners[0] ?? null;
+    }
   }
 
   if (!user) {

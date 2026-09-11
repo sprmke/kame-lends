@@ -1,8 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { db } from "$lib/server/db";
-import { users } from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
+import { loadWorkspaceDataOwnerUsers } from "$lib/server/workspace-owner";
 import { format } from "date-fns";
 import { Resend } from "resend";
 import { APP_NAME, backupFilename } from "$lib/brand";
@@ -49,14 +47,11 @@ export const GET: RequestHandler = async (event) => {
       }
     }
 
-    // Get all admin users to backup their data
-    const adminUsers = await db.query.users.findMany({
-      where: eq(users.role, "admin"),
-    });
+    const adminUsers = await loadWorkspaceDataOwnerUsers();
 
     if (adminUsers.length === 0) {
       return json({
-        message: "No admin users found",
+        message: "No workspace data owners found",
         timestamp: new Date().toISOString(),
       });
     }

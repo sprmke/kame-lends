@@ -18,6 +18,7 @@ Only if **`DATABASE_URL` points at Neon prod** and you run:
 
 - `bun run db:push` (blocked without **`lendwave`** in the command)
 - `bun run db:migrate` (applies pending SQL migrations — review files first)
+- `bun run db:apply:migration -- <file.sql>` (hand-maintained `db/migrations/` patches)
 - Normal app writes (loans, payments, overdue status updates)
 
 Back up before prod schema work: `bun run backup:neon`.

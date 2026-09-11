@@ -6,7 +6,7 @@ Use when touching sign-in, sessions, or route protection.
 
 - `@auth/sveltekit` with Google provider (`allowDangerousEmailAccountLinking`).
 - `@auth/drizzle-adapter` — tables: `users`, `accounts`, `sessions`, `verificationToken`.
-- `role` column on `users`: `admin` | `investor` | `borrower` | `witness` (label only; access is membership-based). One email maps to one user who can be linked as any party.
+- `role` column on `users`: nullable `admin` | `investor` | `borrower` | `witness`. Only `michaeldmanlulu@gmail.com` may keep `admin` (see `workspace-owner.ts`). Workspace operator UI uses owned CRM/loan rows (`getNavCapabilities`), not `users.role`. One email maps to one user who can be linked as any party.
 - Sign-in allows existing emails only (`src/lib/server/auth-sign-in.ts`). Unknown Google accounts are not auto-created. Empty workspace accepts the first user.
 
 ## Setup files
