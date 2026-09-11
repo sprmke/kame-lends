@@ -9,6 +9,10 @@ export async function downloadLoanContract(
     await downloadLoanContractPdf(loan.id);
   } catch (error) {
     console.error("Error generating loan contract PDF:", error);
-    toast.error("Failed to generate contract PDF.");
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Failed to generate contract PDF.";
+    toast.error(message);
   }
 }

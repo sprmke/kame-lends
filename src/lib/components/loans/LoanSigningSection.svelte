@@ -21,6 +21,7 @@
 	}: Props = $props();
 
 	let invitations = $state<SigningInvitationSummary[]>([]);
+	let viewerInvitationId = $state<number | null>(null);
 	let isLoading = $state(true);
 	let loadError = $state<string | null>(null);
 	let loadSeq = 0;
@@ -35,11 +36,13 @@
 			if (!response.ok) {
 				loadError = 'Could not load contract signing status.';
 				invitations = [];
+				viewerInvitationId = null;
 				onStatsChange?.(0, 0);
 				return;
 			}
 			const data = await response.json();
 			invitations = data.invitations ?? [];
+			viewerInvitationId = data.viewerInvitationId ?? null;
 			const signed = invitations.filter((item) => item.signedAt).length;
 			onStatsChange?.(signed, invitations.length);
 		} catch (error) {
@@ -47,6 +50,7 @@
 			console.error('Error loading signing links:', error);
 			loadError = 'Could not load contract signing status.';
 			invitations = [];
+			viewerInvitationId = null;
 			onStatsChange?.(0, 0);
 		} finally {
 			if (seq === loadSeq) {
@@ -90,7 +94,7 @@
 		id="contract-signing-section"
 		class={highlight && variant === 'card' ? 'rounded-xl ring-2 ring-primary/30' : undefined}
 	>
-		<LoanSigningLinksPanel {loanId} {invitations} {variant} />
+		<LoanSigningLinksPanel {loanId} {invitations} {viewerInvitationId} {variant} />
 	</div>
 {:else if loadError}
 	<p class="text-sm text-destructive">{loadError}</p>

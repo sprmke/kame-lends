@@ -7,6 +7,11 @@
 		type LoanContractDraftInput
 	} from '$lib/loan-contract-data';
 	import {
+		applySigningSignatures,
+		buildSavedPartySignaturesFromDraft
+	} from '$lib/loan-signing';
+	import {
+		applyContractCustomization,
 		areContractCustomizationsEqual,
 		buildDefaultContractCustomization,
 		CONTRACT_CUSTOMIZATION_FIELDS,
@@ -52,7 +57,20 @@
 			: internalCustomization
 	);
 
-	const contractData = $derived(buildLoanContractDataFromDraft(draft));
+	const previewMerged = $derived(
+		applySigningSignatures(
+			applyContractCustomization(
+				buildLoanContractDataFromDraft(draft),
+				customization
+			),
+			customization,
+			[],
+			new Map(),
+			buildSavedPartySignaturesFromDraft(draft)
+		)
+	);
+	const contractData = $derived(previewMerged.data);
+	const previewCustomization = $derived(previewMerged.customization);
 
 	$effect(() => {
 		const merged = mergeCustomizationWithDefaults(customization, defaults, dirtyFields);
@@ -122,8 +140,9 @@
 				<LoanContractCustomizationForm
 					value={customization}
 					contractData={contractData}
+					previewCustomization={previewCustomization}
 					borrowerName={contractData.borrowerName}
-					borrowerHasSignature={Boolean(contractData.borrowerESignatureUrl)}
+					borrowerHasSignature={Boolean(draft.borrowerESignatureUrl)}
 					lenders={contractData.lenders}
 					{borrowers}
 					{investors}

@@ -12,6 +12,12 @@
 		parseStoredContractCustomization,
 		type ContractCustomization
 	} from '$lib/loan-contract-customization';
+	import {
+		applySigningSignatures,
+		buildInvestorEmailMap,
+		buildSavedPartySignaturesFromLoan,
+		type SigningInvitationRecord
+	} from '$lib/loan-signing';
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
 
@@ -39,6 +45,7 @@
 	let investors = $state<Investor[]>(investorsProp);
 	let isLoadingContacts = $state(false);
 	let isSaving = $state(false);
+	let signingInvitations = $state<SigningInvitationRecord[]>([]);
 
 	const baseContractData = $derived(buildLoanContractData(loan));
 	const defaults = $derived(buildDefaultContractCustomizationFromLoan(baseContractData));
@@ -53,7 +60,17 @@
 	let savedSnapshot = $state<ContractCustomization>(storedCustomization);
 	let dirtyFields = $state(createEmptyDirtyFields());
 
-	const previewData = $derived(applyContractCustomization(baseContractData, customization));
+	const previewMerged = $derived(
+		applySigningSignatures(
+			applyContractCustomization(baseContractData, customization),
+			customization,
+			signingInvitations,
+			buildInvestorEmailMap(loan),
+			buildSavedPartySignaturesFromLoan(loan)
+		)
+	);
+	const previewData = $derived(previewMerged.data);
+	const previewCustomization = $derived(previewMerged.customization);
 	const isDirty = $derived(!areContractCustomizationsEqual(customization, savedSnapshot));
 
 	$effect(() => {
@@ -81,6 +98,25 @@
 	$effect(() => {
 		onRegisterSave?.(handleSave);
 	});
+
+	$effect(() => {
+		void loadSigningInvitations(loan.id);
+	});
+
+	async function loadSigningInvitations(loanId: number) {
+		try {
+			const response = await fetch(`/api/loans/${loanId}/contract`);
+			if (!response.ok) return;
+			const payload = (await response.json()) as {
+				signingInvitations?: SigningInvitationRecord[];
+			};
+			if (Array.isArray(payload.signingInvitations)) {
+				signingInvitations = payload.signingInvitations;
+			}
+		} catch (error) {
+			console.error('Failed to load contract signing invitations', error);
+		}
+	}
 
 	async function loadContacts() {
 		isLoadingContacts = true;
@@ -157,8 +193,9 @@
 	<LoanContractCustomizationForm
 		value={customization}
 		contractData={previewData}
+		previewCustomization={previewCustomization}
 		borrowerName={previewData.borrowerName}
-		borrowerHasSignature={Boolean(previewData.borrowerESignatureUrl)}
+		borrowerHasSignature={Boolean(loan.borrower?.eSignatureUrl)}
 		lenders={previewData.lenders}
 		{borrowers}
 		{investors}
@@ -169,7 +206,7 @@
 {:else}
 	<div class="overflow-hidden rounded-xl border border-border bg-background shadow-sm">
 		<div class="max-h-[min(720px,70vh)] overflow-y-auto">
-			<LoanContractDocumentBody data={previewData} customization={customization} />
+			<LoanContractDocumentBody data={previewData} customization={previewCustomization} />
 		</div>
 	</div>
 {/if}

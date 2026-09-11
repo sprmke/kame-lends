@@ -15,7 +15,9 @@ import {
   resolveSigningPartyDisplayName,
   sortSigningInvitations,
   toSigningInvitationSummary,
+  type SigningInvitationRecord,
 } from "$lib/loan-signing";
+import { pickSigningInvitationForUser } from "$lib/server/loan-signing-server";
 import {
   buildDefaultContractCustomizationFromLoan,
   type ContractCustomization,
@@ -115,9 +117,16 @@ export const GET: RequestHandler = async (event) => {
         ),
     );
 
+    const viewerInvitation = pickSigningInvitationForUser({
+      invitations: activeInvitations as SigningInvitationRecord[],
+      signingPartyRoles: access.signingPartyRoles,
+      sessionEmail: session.user.email,
+    });
+
     return json({
       hasContract: Boolean(loan.loanContract),
       invitations: summaries,
+      viewerInvitationId: viewerInvitation?.id ?? null,
     });
   } catch (error) {
     console.error("Error fetching signing invitations:", error);

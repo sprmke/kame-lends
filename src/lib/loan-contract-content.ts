@@ -2,10 +2,6 @@ import type { LoanContractData } from "./loan-contract-data";
 import { coerceToDate, formatContractDate } from "./loan-contract-data";
 import { calculateLoanDuration } from "./calculations";
 import type { ContractCustomization } from "./loan-contract-customization";
-import {
-  isBorrowerSignatureIncluded,
-  isLenderSignatureIncluded,
-} from "./loan-contract-customization";
 import type { LoanType } from "./types";
 
 export const CONTRACT_DISPUTE_VENUE = "Pampanga, Philippines";
@@ -365,29 +361,10 @@ export function getContractSignatureParties(
 }
 
 export function shouldShowPartySignatureImage(
-  customization: ContractCustomization | undefined,
+  _customization: ContractCustomization | undefined,
   party: SignaturePartyDetails,
 ): boolean {
-  if (party.role === "Borrower") {
-    return isBorrowerSignatureIncluded(customization);
-  }
-
-  if (
-    (party.role === "Lender" || party.role.startsWith("Lender ")) &&
-    party.email
-  ) {
-    return isLenderSignatureIncluded(customization, party.email);
-  }
-
-  if (party.role === "Witness 1") {
-    return customization?.witness1SignatureIncluded !== false;
-  }
-
-  if (party.role === "Witness 2") {
-    return customization?.witness2SignatureIncluded !== false;
-  }
-
-  return true;
+  return Boolean(party.eSignatureUrl?.trim());
 }
 
 export function getContractSignaturePartiesForDisplay(

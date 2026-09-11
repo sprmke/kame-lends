@@ -11,10 +11,11 @@
 	interface Props {
 		invitations: SigningInvitationSummary[];
 		loanId: number;
+		viewerInvitationId?: number | null;
 		variant?: 'card' | 'plain';
 	}
 
-	let { invitations, loanId, variant = 'card' }: Props = $props();
+	let { invitations, loanId, viewerInvitationId = null, variant = 'card' }: Props = $props();
 
 	let copiedId = $state<number | null>(null);
 
@@ -42,6 +43,7 @@
 		{#each invitations as invitation (invitation.id)}
 			{@const isSigned = Boolean(invitation.signedAt)}
 			{@const isCopied = copiedId === invitation.id}
+			{@const isViewerSlot = viewerInvitationId === invitation.id}
 			{@const roleLabel = getSigningPartyRoleLabel(invitation.partyRole)}
 			{@const showRoleSubtitle = roleLabel !== invitation.partyName}
 			<li
@@ -69,6 +71,11 @@
 							<Clock class="mr-1 h-3 w-3" />
 							Pending
 						</Badge>
+						{#if isViewerSlot}
+							<Button href="/loans/{loanId}/sign" size="sm">
+								Open
+							</Button>
+						{/if}
 						<Button
 							type="button"
 							variant={isCopied ? 'secondary' : 'outline'}

@@ -8,6 +8,7 @@
 	import * as Popover from '$lib/components/ui/popover';
 	import ValidIdUpload from '$lib/components/common/ValidIdUpload.svelte';
 	import ESignatureUpload from '$lib/components/common/ESignatureUpload.svelte';
+	import SelectTriggerSkeleton from '$lib/components/common/page-skeletons/SelectTriggerSkeleton.svelte';
 	import type { ContractCustomization } from '$lib/loan-contract-customization';
 	import type { ContractLender } from '$lib/loan-contract-data';
 	import { toast } from '$lib/toast';
@@ -52,6 +53,7 @@
 	}: Props = $props();
 
 	let witnesses = $state<Witness[]>([]);
+	let loadingWitnesses = $state(true);
 	let contactPickerOpen = $state(false);
 	let contactPickerQuery = $state('');
 	let witness1Saving = $state(false);
@@ -104,6 +106,7 @@
 	});
 
 	onMount(async () => {
+		loadingWitnesses = true;
 		try {
 			const response = await fetch('/api/witnesses');
 			if (!response.ok) return;
@@ -111,6 +114,8 @@
 			if (Array.isArray(data)) witnesses = data;
 		} catch (error) {
 			console.error('Error loading witnesses:', error);
+		} finally {
+			loadingWitnesses = false;
 		}
 	});
 
@@ -129,7 +134,7 @@
 			[`${prefix}Address`]: contact.address ?? '',
 			[`${prefix}ValidIdUrl`]: contact.validIdUrl ?? '',
 			[`${prefix}ESignatureUrl`]: contact.eSignatureUrl ?? '',
-			[`${prefix}SignatureIncluded`]: Boolean(contact.eSignatureUrl)
+			[`${prefix}SignatureIncluded`]: false
 		});
 		contactPickerOpen = false;
 		contactPickerQuery = '';
@@ -187,7 +192,7 @@
 	{@const address = value[`${prefix}Address`]}
 	{@const validIdUrl = value[`${prefix}ValidIdUrl`]}
 	{@const eSignatureUrl = value[`${prefix}ESignatureUrl`]}
-	{@const signatureIncluded = value[`${prefix}SignatureIncluded`] !== false}
+	{@const signatureIncluded = value[`${prefix}SignatureIncluded`] === true}
 	{@const isSaving = number === 1 ? witness1Saving : witness2Saving}
 
 	<div class="space-y-4 rounded-xl border border-border bg-background p-4">
@@ -201,70 +206,74 @@
 			</div>
 		</div>
 
-		<Popover.Root bind:open={contactPickerOpen}>
-			<Popover.Trigger>
-				{#snippet child({ props })}
-					<Button
-						{...props}
-						type="button"
-						variant="outline"
-						class="w-full justify-between font-normal"
-					>
-						<span class="flex items-center gap-2">
-							<Search class="h-4 w-4 text-muted-foreground" />
-							Find an existing contact
-						</span>
-						<ChevronDown class="h-4 w-4 text-muted-foreground" />
-					</Button>
-				{/snippet}
-			</Popover.Trigger>
-			<Popover.Content class="w-[var(--bits-popover-anchor-width)] p-0">
-				<div class="border-b border-border p-2">
-					<div class="relative">
-						<Search
-							class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-						/>
-						<Input
-							value={contactPickerQuery}
-							oninput={(e) => (contactPickerQuery = e.currentTarget.value)}
-							placeholder="Search name, email, or phone..."
-							class="pl-9"
-						/>
-					</div>
-				</div>
-				<div class="max-h-64 overflow-y-auto p-1">
-					{#if filteredContacts().length}
-						{#each filteredContacts() as contact (contact.key)}
-							<button
-								type="button"
-								class="flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left hover:bg-muted"
-								onclick={() => selectContactForWitness(number, contact)}
-							>
-								<div class="mt-0.5 rounded-full bg-primary/10 p-1.5 text-primary">
-									<UserRound class="h-3.5 w-3.5" />
-								</div>
-								<div class="min-w-0 flex-1">
-									<div class="flex items-center gap-2">
-										<span class="truncate text-sm font-medium">{contact.name}</span>
-										<Badge variant="secondary" class="shrink-0">{contact.kind}</Badge>
-									</div>
-									<p class="truncate text-xs text-muted-foreground">
-										{contact.email || contact.contactNumber || 'No contact info'}
-									</p>
-								</div>
-								{#if contact.eSignatureUrl}
-									<Check class="mt-1 h-4 w-4 shrink-0 text-chart-2" />
-								{/if}
-							</button>
-						{/each}
-					{:else}
-						<div class="px-3 py-8 text-center text-sm text-muted-foreground">
-							No matching contacts found.
+		{#if loadingWitnesses}
+			<SelectTriggerSkeleton />
+		{:else}
+			<Popover.Root bind:open={contactPickerOpen}>
+				<Popover.Trigger>
+					{#snippet child({ props })}
+						<Button
+							{...props}
+							type="button"
+							variant="outline"
+							class="w-full justify-between font-normal"
+						>
+							<span class="flex items-center gap-2">
+								<Search class="h-4 w-4 text-muted-foreground" />
+								Find an existing contact
+							</span>
+							<ChevronDown class="h-4 w-4 text-muted-foreground" />
+						</Button>
+					{/snippet}
+				</Popover.Trigger>
+				<Popover.Content class="w-[var(--bits-popover-anchor-width)] p-0">
+					<div class="border-b border-border p-2">
+						<div class="relative">
+							<Search
+								class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+							/>
+							<Input
+								value={contactPickerQuery}
+								oninput={(e) => (contactPickerQuery = e.currentTarget.value)}
+								placeholder="Search name, email, or phone..."
+								class="pl-9"
+							/>
 						</div>
-					{/if}
-				</div>
-			</Popover.Content>
-		</Popover.Root>
+					</div>
+					<div class="max-h-64 overflow-y-auto p-1">
+						{#if filteredContacts().length}
+							{#each filteredContacts() as contact (contact.key)}
+								<button
+									type="button"
+									class="flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left hover:bg-muted"
+									onclick={() => selectContactForWitness(number, contact)}
+								>
+									<div class="mt-0.5 rounded-full bg-primary/10 p-1.5 text-primary">
+										<UserRound class="h-3.5 w-3.5" />
+									</div>
+									<div class="min-w-0 flex-1">
+										<div class="flex items-center gap-2">
+											<span class="truncate text-sm font-medium">{contact.name}</span>
+											<Badge variant="secondary" class="shrink-0">{contact.kind}</Badge>
+										</div>
+										<p class="truncate text-xs text-muted-foreground">
+											{contact.email || contact.contactNumber || 'No contact info'}
+										</p>
+									</div>
+									{#if contact.eSignatureUrl}
+										<Check class="mt-1 h-4 w-4 shrink-0 text-chart-2" />
+									{/if}
+								</button>
+							{/each}
+						{:else}
+							<div class="px-3 py-8 text-center text-sm text-muted-foreground">
+								No matching contacts found.
+							</div>
+						{/if}
+					</div>
+				</Popover.Content>
+			</Popover.Root>
+		{/if}
 
 		<div class="grid gap-4 sm:grid-cols-2">
 			<div class="space-y-2">
@@ -370,7 +379,7 @@
 				<div class="flex items-center gap-2">
 					<Checkbox
 						id="include-borrower-signature"
-						checked={value.includeBorrowerSignature !== false}
+						checked={value.includeBorrowerSignature === true}
 						onCheckedChange={(checked) => onChange('includeBorrowerSignature', checked === true)}
 					/>
 					<Label for="include-borrower-signature" class="text-xs font-normal">
@@ -389,7 +398,8 @@
 			</div>
 
 			{#each lenders as lender, index (lender.email)}
-				{@const included = value.lenderSignaturesIncluded?.[lender.email] !== false}
+				{@const included = value.lenderSignaturesIncluded?.[lender.email] === true}
+				{@const savedSignature = investors.find((investor) => investor.email === lender.email)?.eSignatureUrl}
 				<div
 					class="grid gap-3 rounded-lg border border-border bg-muted/20 p-4 sm:grid-cols-[1fr_auto]"
 				>
@@ -399,7 +409,7 @@
 							<Badge variant="secondary">
 								{lenders.length > 1 ? `Lender ${index + 1}` : 'Lender'}
 							</Badge>
-							{@render signatureStatus(Boolean(lender.eSignatureUrl))}
+							{@render signatureStatus(Boolean(savedSignature))}
 						</div>
 						<p class="mt-1 truncate text-xs text-muted-foreground">{lender.email}</p>
 					</div>

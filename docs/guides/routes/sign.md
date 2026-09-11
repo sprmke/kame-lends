@@ -5,7 +5,9 @@
 
 ## Behavior
 
-Authenticated e-signature for a loan party. Google session email must match the invitation `partyEmail`. The server picks the matching slot (`borrower`, `lender`, `witness_1`, `witness_2`) from memberships.
+Authenticated e-signature for a loan party. Google session email must match the invitation `partyEmail`. The server picks the matching slot (`borrower`, `lender`, `witness_1`, `witness_2`) from memberships. When the loan owner changes the borrower or lender on a saved loan, `syncSigningInvitationsForLoan` updates the matching invitation name and email (and clears an unsigned signature if the email changed).
+
+A drawn signature on this page is stored on the contract invitation and takes priority over any saved CRM e-signature. Saved profile signatures appear on the contract PDF only when the loan owner checked **Use saved signature** for that party in Contract Details.
 
 Legacy `/sign/[token]` requires login and redirects to `/loans/[id]/sign`.
 
@@ -22,10 +24,10 @@ Access failures render `+error.svelte`, not a bare 404: no signature slot for th
 
 ## APIs
 
-| Method   | Path                      | Auth                                                                                               |
-| -------- | ------------------------- | -------------------------------------------------------------------------------------------------- |
-| GET/POST | `/api/loans/[id]/sign`    | Session + party email match                                                                        |
-| GET      | `/api/loans/[id]/signing` | Any loan party with view access. Admin syncs missing invitations; parties read existing rows only. |
+| Method   | Path                      | Auth                                                                                                                                                                                                           |
+| -------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET/POST | `/api/loans/[id]/sign`    | Session + party email match                                                                                                                                                                                    |
+| GET      | `/api/loans/[id]/signing` | Any loan party with view access. Admin syncs missing invitations; parties read existing rows only. Response includes `viewerInvitationId` for the logged-in party's slot (used for Contract Details **Open**). |
 
 ## Implementation
 

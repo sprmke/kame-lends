@@ -66,7 +66,14 @@ export async function downloadLoanContractPdf(loanId: number): Promise<void> {
     method: "POST",
   });
   if (!response.ok) {
-    throw new Error("Failed to generate contract PDF");
+    const detail = (await response.text()).trim();
+    if (response.status === 401) {
+      throw new Error("Sign in again to download the contract.");
+    }
+    if (response.status === 404) {
+      throw new Error("Loan not found or you do not have access.");
+    }
+    throw new Error(detail || "Failed to generate contract PDF");
   }
   const blob = await response.blob();
   const disposition = response.headers.get("Content-Disposition");

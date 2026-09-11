@@ -7,6 +7,7 @@ import { applyContractCustomization } from "$lib/loan-contract-customization";
 import { buildLoanContractData } from "$lib/loan-contract-data";
 import {
   applySigningSignatures,
+  buildSavedPartySignaturesFromLoan,
   buildInvestorEmailMap,
   emailsMatch,
   resolveContractCustomization,
@@ -112,6 +113,7 @@ export async function buildSigningPagePayload(
     customization,
     allInvitations as SigningInvitationRecord[],
     investorEmailById,
+    buildSavedPartySignaturesFromLoan(loan),
   );
 
   const expired = invitation.expiresAt

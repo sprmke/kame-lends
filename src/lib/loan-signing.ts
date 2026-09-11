@@ -6,6 +6,7 @@ import {
 import {
   buildLoanContractData,
   type LoanContractData,
+  type LoanContractDraftInput,
 } from "./loan-contract-data";
 import type { LoanWithInvestors } from "./types";
 
@@ -97,11 +98,106 @@ export function resolveContractCustomization(
   return buildDefaultContractCustomizationFromLoan(data);
 }
 
+export interface SavedPartySignatures {
+  borrower: string | null;
+  lenders: Map<string, string>;
+}
+
+/** Manual contract signature wins; saved CRM signature only when admin opted in. */
+export function resolvePartySignature(
+  manualSignature: string | null | undefined,
+  savedSignature: string | null | undefined,
+  includeSavedSignature: boolean,
+): string | null {
+  const manual = manualSignature?.trim() || null;
+  if (manual) return manual;
+  if (includeSavedSignature) {
+    const saved = savedSignature?.trim() || null;
+    if (saved) return saved;
+  }
+  return null;
+}
+
+export function buildSavedPartySignaturesFromLoan(
+  loan: LoanWithInvestors,
+): SavedPartySignatures {
+  const lenders = new Map<string, string>();
+  for (const loanInvestor of loan.loanInvestors) {
+    const email = loanInvestor.investor.email;
+    const signature = loanInvestor.investor.eSignatureUrl?.trim();
+    if (signature && !lenders.has(email)) {
+      lenders.set(email, signature);
+    }
+  }
+
+  return {
+    borrower: loan.borrower?.eSignatureUrl?.trim() || null,
+    lenders,
+  };
+}
+
+export function buildSavedPartySignaturesFromDraft(
+  draft: LoanContractDraftInput,
+): SavedPartySignatures {
+  const lenders = new Map<string, string>();
+  for (const allocation of draft.investors) {
+    const signature = allocation.investor.eSignatureUrl?.trim();
+    if (signature && !lenders.has(allocation.investor.email)) {
+      lenders.set(allocation.investor.email, signature);
+    }
+  }
+
+  return {
+    borrower: draft.borrowerESignatureUrl?.trim() || null,
+    lenders,
+  };
+}
+
+function findInvitationSignature(
+  invitations: SigningInvitationRecord[],
+  partyRole: SigningPartyRole,
+  investorEmailById: Map<number, string>,
+  lenderEmail?: string,
+): string | null {
+  for (const invitation of invitations) {
+    if (invitation.partyRole !== partyRole) continue;
+    if (partyRole === "lender") {
+      if (!lenderEmail || !invitation.investorId) continue;
+      if (investorEmailById.get(invitation.investorId) !== lenderEmail) {
+        continue;
+      }
+    }
+    return invitation.signatureDataUrl?.trim() || null;
+  }
+  return null;
+}
+
+function findInvitationSignedDate(
+  invitations: SigningInvitationRecord[],
+  partyRole: SigningPartyRole,
+  investorEmailById: Map<number, string>,
+  lenderEmail?: string,
+): string | undefined {
+  for (const invitation of invitations) {
+    if (invitation.partyRole !== partyRole) continue;
+    if (partyRole === "lender") {
+      if (!lenderEmail || !invitation.investorId) continue;
+      if (investorEmailById.get(invitation.investorId) !== lenderEmail) {
+        continue;
+      }
+    }
+    if (invitation.signedAt == null) continue;
+    return new Date(invitation.signedAt).toISOString().slice(0, 10);
+  }
+  return undefined;
+}
+
 export function applySigningSignatures(
   data: LoanContractData,
   customization: ContractCustomization,
   invitations: SigningInvitationRecord[],
   investorEmailById: Map<number, string>,
+  savedSignatures: SavedPartySignatures,
 ): { data: LoanContractData; customization: ContractCustomization } {
   const nextData: LoanContractData = {
     ...data,
@@ -112,51 +208,88 @@ export function applySigningSignatures(
     lenderDateSigned: { ...customization.lenderDateSigned },
   };
 
-  for (const invitation of invitations) {
-    if (!invitation.signatureDataUrl) continue;
+  const borrowerManual = findInvitationSignature(
+    invitations,
+    "borrower",
+    investorEmailById,
+  );
+  nextData.borrowerESignatureUrl = resolvePartySignature(
+    borrowerManual,
+    savedSignatures.borrower,
+    customization.includeBorrowerSignature === true,
+  );
+  const borrowerSignedDate = findInvitationSignedDate(
+    invitations,
+    "borrower",
+    investorEmailById,
+  );
+  if (borrowerSignedDate) {
+    nextCustomization.borrowerDateSigned = borrowerSignedDate;
+  }
 
-    const signedDate =
-      invitation.signedAt != null
-        ? new Date(invitation.signedAt).toISOString().slice(0, 10)
-        : undefined;
-
-    switch (invitation.partyRole) {
-      case "borrower":
-        nextData.borrowerESignatureUrl = invitation.signatureDataUrl;
-        if (signedDate) {
-          nextCustomization.borrowerDateSigned = signedDate;
-        }
-        break;
-      case "lender": {
-        const lenderEmail =
-          invitation.investorId != null
-            ? investorEmailById.get(invitation.investorId)
-            : undefined;
-        if (!lenderEmail) break;
-
-        nextData.lenders = nextData.lenders.map((lender) =>
-          lender.email === lenderEmail
-            ? { ...lender, eSignatureUrl: invitation.signatureDataUrl }
-            : lender,
-        );
-        if (signedDate) {
-          nextCustomization.lenderDateSigned[lenderEmail] = signedDate;
-        }
-        break;
-      }
-      case "witness_1":
-        nextCustomization.witness1ESignatureUrl = invitation.signatureDataUrl;
-        if (signedDate) {
-          nextCustomization.witness1DateSigned = signedDate;
-        }
-        break;
-      case "witness_2":
-        nextCustomization.witness2ESignatureUrl = invitation.signatureDataUrl;
-        if (signedDate) {
-          nextCustomization.witness2DateSigned = signedDate;
-        }
-        break;
+  nextData.lenders = nextData.lenders.map((lender) => {
+    const manual = findInvitationSignature(
+      invitations,
+      "lender",
+      investorEmailById,
+      lender.email,
+    );
+    const saved = savedSignatures.lenders.get(lender.email) ?? null;
+    const includeSaved =
+      customization.lenderSignaturesIncluded?.[lender.email] === true;
+    const signedDate = findInvitationSignedDate(
+      invitations,
+      "lender",
+      investorEmailById,
+      lender.email,
+    );
+    if (signedDate) {
+      nextCustomization.lenderDateSigned[lender.email] = signedDate;
     }
+    return {
+      ...lender,
+      eSignatureUrl: resolvePartySignature(manual, saved, includeSaved),
+    };
+  });
+
+  const witness1Manual = findInvitationSignature(
+    invitations,
+    "witness_1",
+    investorEmailById,
+  );
+  nextCustomization.witness1ESignatureUrl =
+    resolvePartySignature(
+      witness1Manual,
+      customization.witness1ESignatureUrl?.trim() || null,
+      customization.witness1SignatureIncluded === true,
+    ) ?? "";
+  const witness1SignedDate = findInvitationSignedDate(
+    invitations,
+    "witness_1",
+    investorEmailById,
+  );
+  if (witness1SignedDate) {
+    nextCustomization.witness1DateSigned = witness1SignedDate;
+  }
+
+  const witness2Manual = findInvitationSignature(
+    invitations,
+    "witness_2",
+    investorEmailById,
+  );
+  nextCustomization.witness2ESignatureUrl =
+    resolvePartySignature(
+      witness2Manual,
+      customization.witness2ESignatureUrl?.trim() || null,
+      customization.witness2SignatureIncluded === true,
+    ) ?? "";
+  const witness2SignedDate = findInvitationSignedDate(
+    invitations,
+    "witness_2",
+    investorEmailById,
+  );
+  if (witness2SignedDate) {
+    nextCustomization.witness2DateSigned = witness2SignedDate;
   }
 
   return { data: nextData, customization: nextCustomization };

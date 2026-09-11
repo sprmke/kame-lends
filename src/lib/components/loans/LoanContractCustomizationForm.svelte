@@ -14,6 +14,7 @@
 	interface Props {
 		value: ContractCustomization;
 		contractData: LoanContractData;
+		previewCustomization?: ContractCustomization;
 		borrowerName: string;
 		borrowerHasSignature: boolean;
 		lenders: ContractLender[];
@@ -30,6 +31,7 @@
 	let {
 		value,
 		contractData,
+		previewCustomization = undefined,
 		borrowerName,
 		borrowerHasSignature,
 		lenders,
@@ -39,6 +41,8 @@
 		onChanges,
 		onReset
 	}: Props = $props();
+
+	const documentCustomization = $derived(previewCustomization ?? value);
 </script>
 
 <div class="overflow-hidden rounded-xl border border-border bg-muted/20">
@@ -139,7 +143,7 @@
 		<Tabs.Content value="preview" class="mt-4">
 			<div class="overflow-hidden rounded-xl border border-border bg-background shadow-sm">
 				<div class="max-h-[min(720px,70vh)] overflow-y-auto">
-					<LoanContractDocumentBody data={contractData} customization={value} />
+					<LoanContractDocumentBody data={contractData} customization={documentCustomization} />
 				</div>
 			</div>
 		</Tabs.Content>

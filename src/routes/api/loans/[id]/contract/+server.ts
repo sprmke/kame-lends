@@ -13,9 +13,13 @@ import { buildLoanContractData } from "$lib/loan-contract-data";
 import {
   applySigningSignatures,
   buildInvestorEmailMap,
+  buildSavedPartySignaturesFromLoan,
   type SigningInvitationRecord,
 } from "$lib/loan-signing";
-import { hasLoanAdminAccess } from "$lib/server/access-control";
+import {
+  getLoanAccessContext,
+  hasLoanAdminAccess,
+} from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import {
   syncSigningInvitationsForLoan,
@@ -27,22 +31,21 @@ import {
   renderLoanContractPdfBuffer,
 } from "$lib/server/pdf/render";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
 export const GET: RequestHandler = async (event) => {
-  const { params, request } = event;
   try {
     const session = await getSession(event);
     if (!session?.user?.id) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const loanId = Number(id);
+    const loanId = Number(event.params.id);
     if (Number.isNaN(loanId)) {
       return json({ error: "Invalid loan ID" }, { status: 400 });
+    }
+
+    const access = await getLoanAccessContext(loanId, session.user.id);
+    if (!access.canView) {
+      return json({ error: "Loan not found" }, { status: 404 });
     }
 
     const loan = await db.query.loans.findFirst({
@@ -61,7 +64,7 @@ export const GET: RequestHandler = async (event) => {
       },
     });
 
-    if (!loan || loan.userId !== session.user.id) {
+    if (!loan) {
       return json({ error: "Loan not found" }, { status: 404 });
     }
 
@@ -78,11 +81,13 @@ export const GET: RequestHandler = async (event) => {
       customization,
       (loan.signingInvitations ?? []) as SigningInvitationRecord[],
       investorEmailById,
+      buildSavedPartySignaturesFromLoan(loan),
     );
 
     return json({
       contractData: merged.data,
       customization: merged.customization,
+      signingInvitations: loan.signingInvitations ?? [],
       hasStoredContract: Boolean(loan.loanContract),
     });
   } catch (error) {
@@ -92,14 +97,14 @@ export const GET: RequestHandler = async (event) => {
 };
 
 export const PATCH: RequestHandler = async (event) => {
-  const { params, request } = event;
+  const { request } = event;
   try {
     const session = await getSession(event);
     if (!session?.user?.id) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const loanId = Number(params.id);
+    const loanId = Number(event.params.id);
     if (Number.isNaN(loanId)) {
       return json({ error: "Invalid loan ID" }, { status: 400 });
     }
@@ -152,16 +157,20 @@ export const PATCH: RequestHandler = async (event) => {
 };
 
 export const POST: RequestHandler = async (event) => {
-  const { params } = event;
   try {
     const session = await getSession(event);
     if (!session?.user?.id) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const loanId = Number(params.id);
+    const loanId = Number(event.params.id);
     if (Number.isNaN(loanId)) {
       return new Response("Invalid loan ID", { status: 400 });
+    }
+
+    const access = await getLoanAccessContext(loanId, session.user.id);
+    if (!access.canView) {
+      return new Response("Loan not found", { status: 404 });
     }
 
     const loan = await db.query.loans.findFirst({
@@ -180,7 +189,7 @@ export const POST: RequestHandler = async (event) => {
       },
     });
 
-    if (!loan || loan.userId !== session.user.id) {
+    if (!loan) {
       return new Response("Loan not found", { status: 404 });
     }
 
@@ -197,6 +206,7 @@ export const POST: RequestHandler = async (event) => {
       customization,
       (loan.signingInvitations ?? []) as SigningInvitationRecord[],
       investorEmailById,
+      buildSavedPartySignaturesFromLoan(loan),
     );
 
     const buffer = await renderLoanContractPdfBuffer(

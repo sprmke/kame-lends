@@ -116,7 +116,7 @@ export function buildDefaultContractCustomization(
     witness1Address: "",
     witness1ValidIdUrl: "",
     witness1ESignatureUrl: "",
-    witness1SignatureIncluded: true,
+    witness1SignatureIncluded: false,
     includeSecondWitness: false,
     witness2Id: null,
     witness2Name: "",
@@ -124,9 +124,9 @@ export function buildDefaultContractCustomization(
     witness2Address: "",
     witness2ValidIdUrl: "",
     witness2ESignatureUrl: "",
-    witness2SignatureIncluded: true,
+    witness2SignatureIncluded: false,
     includeWitnesses: true,
-    includeBorrowerSignature: true,
+    includeBorrowerSignature: false,
     lenderSignaturesIncluded: buildDefaultLenderSignaturesIncluded(
       data.lenders.map((lender) => lender.email),
     ),
@@ -154,7 +154,7 @@ export function buildDefaultContractCustomizationFromLoan(
     witness1Address: "",
     witness1ValidIdUrl: "",
     witness1ESignatureUrl: "",
-    witness1SignatureIncluded: true,
+    witness1SignatureIncluded: false,
     includeSecondWitness: false,
     witness2Id: null,
     witness2Name: "",
@@ -162,9 +162,9 @@ export function buildDefaultContractCustomizationFromLoan(
     witness2Address: "",
     witness2ValidIdUrl: "",
     witness2ESignatureUrl: "",
-    witness2SignatureIncluded: true,
+    witness2SignatureIncluded: false,
     includeWitnesses: true,
-    includeBorrowerSignature: true,
+    includeBorrowerSignature: false,
     lenderSignaturesIncluded: buildDefaultLenderSignaturesIncluded(
       data.lenders.map((lender) => lender.email),
     ),
@@ -471,23 +471,20 @@ function mergeLenderBooleanMap(
 export function buildDefaultLenderSignaturesIncluded(
   lenderEmails: string[],
 ): Record<string, boolean> {
-  return Object.fromEntries(lenderEmails.map((email) => [email, true]));
+  return Object.fromEntries(lenderEmails.map((email) => [email, false]));
 }
 
 export function isBorrowerSignatureIncluded(
   customization?: ContractCustomization,
 ): boolean {
-  return customization?.includeBorrowerSignature !== false;
+  return customization?.includeBorrowerSignature === true;
 }
 
 export function isLenderSignatureIncluded(
   customization: ContractCustomization | undefined,
   lenderEmail: string,
 ): boolean {
-  if (!customization?.lenderSignaturesIncluded) {
-    return true;
-  }
-  return customization.lenderSignaturesIncluded[lenderEmail] !== false;
+  return customization?.lenderSignaturesIncluded?.[lenderEmail] === true;
 }
 
 function sortRecordKeys<T>(record: Record<string, T>): Record<string, T> {
