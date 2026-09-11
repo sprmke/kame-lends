@@ -9,8 +9,9 @@ import {
   PiggyBank,
   Eye,
   UserCheck,
+  Folders,
 } from "lucide-svelte";
-import { SHOW_TRANSACTIONS_UI } from "$lib/feature-flags";
+import { SHOW_TRANSACTIONS_UI, SHOW_GROUPS_UI } from "$lib/feature-flags";
 
 export interface NavCapabilities {
   isAdminWorkspace: boolean;
@@ -49,6 +50,13 @@ const DASHBOARD_ITEM: AppNavItem = {
   title: "Dashboard",
   href: "/dashboard",
   icon: Home,
+};
+
+const GROUPS_ITEM: AppNavItem = {
+  id: "groups",
+  title: "Groups",
+  href: "/groups",
+  icon: Folders,
 };
 
 const PARTY_ITEMS: AppNavItem[] = [
@@ -146,12 +154,18 @@ export function buildSidebarGroups(
     ];
   }
 
+  const overviewItems = SHOW_GROUPS_UI
+    ? [DASHBOARD_ITEM, GROUPS_ITEM]
+    : [DASHBOARD_ITEM];
   const workspaceItems = destinations.filter(
-    (item) => item.id !== "dashboard" && !PARTY_ITEM_IDS.has(item.id),
+    (item) =>
+      item.id !== "dashboard" &&
+      item.id !== "groups" &&
+      !PARTY_ITEM_IDS.has(item.id),
   );
 
   return [
-    { id: "overview", items: [DASHBOARD_ITEM] },
+    { id: "overview", items: overviewItems },
     {
       id: "your-roles",
       label: "Your roles",
@@ -166,6 +180,10 @@ export function buildDestinationItems(
   caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES,
 ): AppNavItem[] {
   const items: AppNavItem[] = [DASHBOARD_ITEM];
+
+  if (SHOW_GROUPS_UI) {
+    items.push(GROUPS_ITEM);
+  }
 
   if (caps.isAdminWorkspace) {
     items.push({
@@ -226,6 +244,9 @@ export function resolveMobileDockHighlight(
 }
 
 export function resolveMobilePageTitle(pathname: string): string {
+  if (pathname.startsWith("/groups/new")) return "New group";
+  if (pathname.startsWith("/groups/")) return "Group";
+  if (pathname.startsWith("/groups")) return "Groups";
   if (pathname.startsWith("/loans/new")) return "New loan";
   if (pathname.startsWith("/loans/")) return "Loan";
   if (pathname.startsWith("/loans")) return "Loans";
@@ -254,6 +275,7 @@ export function resolveMobilePageTitle(pathname: string): string {
 
 export function isDetailRoute(pathname: string): boolean {
   return (
+    /^\/groups\/[^/]+/.test(pathname) ||
     /^\/loans\/[^/]+/.test(pathname) ||
     /^\/debts\/[^/]+/.test(pathname) ||
     /^\/investors\/[^/]+/.test(pathname) ||
