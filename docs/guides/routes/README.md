@@ -7,6 +7,8 @@ Per-page behavior specs mirroring SvelteKit URLs under `src/routes/`.
 | `/signin`          | [signin.md](./signin.md)                     | Documented |
 | `/dashboard`       | [dashboard.md](./dashboard.md)               | Documented |
 | `/loans`           | [loans.md](./loans.md)                       | Documented |
+| `/groups`          | [groups.md](./groups.md)                     | Documented |
+| `/groups/[id]`     | [groups-detail.md](./groups-detail.md)       | Documented |
 | `/investments`     | [investments.md](./investments.md)           | Documented |
 | `/borrowed`        | [borrowed.md](./borrowed.md)                 | Documented |
 | `/witnessed`       | [witnessed.md](./witnessed.md)               | Documented |
