@@ -24,6 +24,9 @@ export function buildAllocationsFromExistingLoan(
       interestType: li.interestType,
       sentDate: toLocalDateString(li.sentDate),
       isPaid: li.isPaid,
+      dateTouched: true,
+      receiptImageUrl: li.receiptImageUrl ?? null,
+      receiptExtractedData: li.receiptExtractedData ?? null,
     });
     investorMap.set(li.investor.id, transactions);
   }
@@ -109,6 +112,9 @@ export function buildAllocationsFromDuplicateData(
       interestRate: row.interestType === "rate" ? row.interestRate : "",
       interestAmount: row.interestType === "fixed" ? row.interestRate : "",
       isPaid: row.isPaid,
+      dateTouched: true,
+      receiptImageUrl: null,
+      receiptExtractedData: null,
     });
   }
 

@@ -6,6 +6,7 @@ import { db } from "$lib/server/db";
 import { loanInvestors, loans } from "$lib/server/db/schema";
 import { hasLoanAdminAccess } from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { normalizeReceiptImageUrl } from "$lib/receipt-image";
 
 export const POST: RequestHandler = async (event) => {
   const { params, request } = event;
@@ -92,6 +93,8 @@ export const POST: RequestHandler = async (event) => {
       sentDate,
       isPaid,
       hasMultipleInterest: Boolean(scheduleSource),
+      receiptImageUrl: normalizeReceiptImageUrl(body.receiptImageUrl),
+      receiptExtractedData: body.receiptExtractedData ?? null,
     });
 
     const allPayments = await db.query.loanInvestors.findMany({

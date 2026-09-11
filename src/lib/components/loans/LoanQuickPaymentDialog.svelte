@@ -13,6 +13,9 @@
 	import { formatCurrency, formatDate } from '$lib/format';
 	import { toast } from '$lib/toast';
 	import type { LoanWithInvestors } from '$lib/types';
+	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
+	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
+	import { normalizeReceiptImageUrl } from '$lib/receipt-image';
 
 	export type LoanQuickPaymentKind = 'payment' | 'received';
 
@@ -21,10 +24,13 @@
 		investorId: string;
 		amount: string;
 		date: string;
+		dateTouched: boolean;
 		interestType: 'rate' | 'fixed';
 		interestValue: string;
 		isPaid: boolean;
 		interestPeriodId: string;
+		receiptImageUrl: string | null;
+		receiptExtractedData: ReceiptExtractedData | null;
 	}
 
 	interface Props {
@@ -54,11 +60,60 @@
 			investorId: defaultInvestorId,
 			amount: '',
 			date: toLocalDateString(new Date()),
+			dateTouched: false,
 			interestType: 'rate',
 			interestValue: '10',
 			isPaid: true,
-			interestPeriodId: 'general'
+			interestPeriodId: 'general',
+			receiptImageUrl: null,
+			receiptExtractedData: null
 		};
+	}
+
+	/** Matches an extracted sender name against a single lender, ignoring case/spacing. */
+	function findMatchingLender(
+		senderName: string | null,
+		candidates: { id: number; name: string }[]
+	) {
+		if (!senderName) return null;
+		const normalize = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
+		const sender = normalize(senderName);
+		const matches = candidates.filter((candidate) => {
+			const name = normalize(candidate.name);
+			return name === sender || name.includes(sender) || sender.includes(name);
+		});
+		return matches.length === 1 ? matches[0] : null;
+	}
+
+	function handleReceiptExtracted(
+		entryId: string,
+		dataUrl: string,
+		extracted: ReceiptExtractedData | null
+	) {
+		const entry = entries.find((item) => item.id === entryId);
+		if (!entry) return;
+
+		const changes: Partial<PaymentEntry> = {
+			receiptImageUrl: dataUrl,
+			receiptExtractedData: extracted
+		};
+
+		if (extracted) {
+			if (!entry.amount && extracted.amount) {
+				changes.amount = String(extracted.amount);
+			}
+			if (!entry.dateTouched && extracted.transactionDate) {
+				changes.date = extracted.transactionDate;
+			}
+			if (!isReceived && !entry.investorId) {
+				const match = findMatchingLender(extracted.senderName, lenders);
+				if (match) {
+					changes.investorId = String(match.id);
+				}
+			}
+		}
+
+		updateEntry(entryId, changes);
 	}
 
 	const lenders = $derived.by(() => {
@@ -172,18 +227,24 @@
 					: isReceived
 						? `/api/loans/${loan.id}/received-payments`
 						: `/api/loans/${loan.id}/payments`;
+				const receiptFields = {
+					receiptImageUrl: normalizeReceiptImageUrl(entry.receiptImageUrl),
+					receiptExtractedData: entry.receiptExtractedData
+				};
 				const payload = isPeriodPayment
 					? {
 							status: 'Completed',
 							receivedAmount: Number.parseFloat(entry.amount),
-							receivedDate: entry.date
+							receivedDate: entry.date,
+							...receiptFields
 						}
 					: isReceived
 						? {
 								investorId: context.selectedInvestorId,
 								amount: entry.amount,
 								receivedDate: entry.date,
-								interestPeriodId: null
+								interestPeriodId: null,
+								...receiptFields
 							}
 						: {
 								investorId: context.selectedInvestorId,
@@ -191,7 +252,8 @@
 								sentDate: entry.date,
 								interestType: entry.interestType,
 								interestValue: entry.interestValue,
-								isPaid: entry.isPaid
+								isPaid: entry.isPaid,
+								...receiptFields
 							};
 
 				const response = await fetch(endpoint, {
@@ -283,6 +345,17 @@
 								{/if}
 							</div>
 
+							<ReceiptUploadField
+								idPrefix="{kind}-{entry.id}"
+								value={entry.receiptImageUrl}
+								extracted={entry.receiptExtractedData}
+								disabled={isSubmitting}
+								onExtracted={(dataUrl, extracted) =>
+									handleReceiptExtracted(entry.id, dataUrl, extracted)}
+								onRemove={() =>
+									updateEntry(entry.id, { receiptImageUrl: null, receiptExtractedData: null })}
+							/>
+
 							<div class="space-y-2">
 								<Label for="{kind}-lender-{entry.id}">Lender</Label>
 								<SearchableSelect
@@ -334,7 +407,8 @@
 										disabled={isSubmitting}
 										oninput={(event) =>
 											updateEntry(entry.id, {
-												date: (event.currentTarget as HTMLInputElement).value
+												date: (event.currentTarget as HTMLInputElement).value,
+												dateTouched: true
 											})}
 									/>
 								</div>

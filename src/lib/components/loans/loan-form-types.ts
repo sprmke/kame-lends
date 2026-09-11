@@ -1,5 +1,6 @@
 import type { InterestPeriodStatus, InterestType, Investor } from "$lib/types";
 import type { InterestPeriodData } from "./multiple-interest-types";
+import type { ReceiptExtractedData } from "$lib/receipt-extraction-types";
 
 export interface LoanFormTransaction {
   id: string;
@@ -9,6 +10,9 @@ export interface LoanFormTransaction {
   interestRate: string;
   interestAmount: string;
   isPaid: boolean;
+  dateTouched: boolean;
+  receiptImageUrl: string | null;
+  receiptExtractedData: ReceiptExtractedData | null;
 }
 
 export interface LoanFormReceivedPayment {

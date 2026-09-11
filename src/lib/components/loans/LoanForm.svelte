@@ -46,6 +46,8 @@
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import type { Borrower, Investor, LoanStatus, LoanType, LoanWithInvestors } from '$lib/types';
 	import { ChevronDown, Copy, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-svelte';
+	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
+	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
 
 	interface Props {
 		investors?: Investor[];
@@ -85,10 +87,6 @@
 	let showInvestorModal = $state(false);
 	let copySourceInvestorId = $state<number | null>(null);
 	let formRef = $state<HTMLFormElement | null>(null);
-	let borrowerSelectValue = $state(
-		duplicateData?.borrowerId ? String(duplicateData.borrowerId) : ''
-	);
-
 	const loanTypes: LoanType[] = ['Lot Title', 'OR/CR', 'Agent'];
 
 	function createReceivedPayment(): LoanFormReceivedPayment {
@@ -107,7 +105,10 @@
 			interestType: 'rate',
 			interestRate: '10',
 			interestAmount: '',
-			isPaid: true
+			isPaid: true,
+			dateTouched: false,
+			receiptImageUrl: null,
+			receiptExtractedData: null
 		};
 	}
 
@@ -423,6 +424,49 @@
 		});
 	}
 
+	function updateTransactionFields(
+		investorId: number,
+		transactionId: string,
+		changes: Partial<LoanFormTransaction>
+	) {
+		selectedInvestors = selectedInvestors.map((si) => {
+			if (si.investor.id !== investorId) return si;
+			return {
+				...si,
+				transactions: si.transactions.map((t) =>
+					t.id === transactionId ? { ...t, ...changes } : t
+				)
+			};
+		});
+	}
+
+	function handleTransactionReceiptExtracted(
+		investorId: number,
+		transactionId: string,
+		dataUrl: string,
+		extracted: ReceiptExtractedData | null
+	) {
+		const si = selectedInvestors.find((row) => row.investor.id === investorId);
+		const transaction = si?.transactions.find((t) => t.id === transactionId);
+		if (!transaction) return;
+
+		const changes: Partial<LoanFormTransaction> = {
+			receiptImageUrl: dataUrl,
+			receiptExtractedData: extracted
+		};
+
+		if (extracted) {
+			if (!transaction.amount && extracted.amount) {
+				changes.amount = String(extracted.amount);
+			}
+			if (!transaction.dateTouched && extracted.transactionDate) {
+				changes.sentDate = extracted.transactionDate;
+			}
+		}
+
+		updateTransactionFields(investorId, transactionId, changes);
+	}
+
 	function addReceivedPayment(investorId: number) {
 		selectedInvestors = selectedInvestors.map((si) =>
 			si.investor.id === investorId
@@ -522,6 +566,8 @@
 			sentDate: string;
 			isPaid: boolean;
 			hasMultipleInterest: boolean;
+			receiptImageUrl: string | null;
+			receiptExtractedData: ReceiptExtractedData | null;
 			interestPeriods?: Array<{
 				dueDate: string;
 				interestRate: string;
@@ -579,6 +625,8 @@
 					sentDate: transaction.sentDate,
 					isPaid: transaction.isPaid,
 					hasMultipleInterest: si.hasMultipleInterest,
+					receiptImageUrl: transaction.receiptImageUrl,
+					receiptExtractedData: transaction.receiptExtractedData,
 					interestPeriods
 				});
 			}
@@ -667,7 +715,6 @@
 			showBorrowerModal = true;
 			return;
 		}
-		borrowerSelectValue = value;
 		borrowerId = value;
 	}
 
@@ -676,14 +723,20 @@
 			(a, b) => a.name.localeCompare(b.name)
 		);
 		borrowerId = String(borrower.id);
-		borrowerSelectValue = String(borrower.id);
+	}
+
+	function resolveExistingLoanBorrower(): Borrower | undefined {
+		if (existingLoan?.borrower) return existingLoan.borrower;
+		if (!existingLoan?.borrowerId) return undefined;
+		return initialBorrowers.find((borrower) => borrower.id === existingLoan.borrowerId);
 	}
 
 	$effect(() => {
-		if (initialBorrowers.length === 0 && !existingLoan?.borrower) return;
+		const loanBorrower = resolveExistingLoanBorrower();
+		if (initialBorrowers.length === 0 && !loanBorrower && !existingLoan?.borrowerId) return;
 		const merged = new Map<number, Borrower>();
 		for (const borrower of initialBorrowers) merged.set(borrower.id, borrower);
-		if (existingLoan?.borrower) merged.set(existingLoan.borrower.id, existingLoan.borrower);
+		if (loanBorrower) merged.set(loanBorrower.id, loanBorrower);
 		for (const borrower of borrowerList) merged.set(borrower.id, borrower);
 		const next = Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
 		const nextIds = next.map((borrower) => borrower.id).join(',');
@@ -784,7 +837,7 @@
 					<SearchableSelect
 						id="borrowerId"
 						options={borrowerOptions}
-						value={borrowerSelectValue}
+						value={borrowerId}
 						onValueChange={handleBorrowerSelect}
 						placeholder="Select a borrower..."
 						searchPlaceholder="Search borrowers..."
@@ -971,6 +1024,25 @@
 										{/if}
 									</div>
 
+									<ReceiptUploadField
+										idPrefix="tx-{transaction.id}"
+										value={transaction.receiptImageUrl}
+										extracted={transaction.receiptExtractedData}
+										disabled={isSubmitting}
+										onExtracted={(dataUrl, extracted) =>
+											handleTransactionReceiptExtracted(
+												si.investor.id,
+												transaction.id,
+												dataUrl,
+												extracted
+											)}
+										onRemove={() =>
+											updateTransactionFields(si.investor.id, transaction.id, {
+												receiptImageUrl: null,
+												receiptExtractedData: null
+											})}
+									/>
+
 									<div class="grid gap-3 sm:grid-cols-3">
 										<div class="space-y-2">
 											<Label>Principal</Label>
@@ -996,12 +1068,10 @@
 												value={transaction.sentDate}
 												disabled={isSubmitting}
 												oninput={(e) =>
-													updateTransaction(
-														si.investor.id,
-														transaction.id,
-														'sentDate',
-														e.currentTarget.value
-													)}
+													updateTransactionFields(si.investor.id, transaction.id, {
+														sentDate: e.currentTarget.value,
+														dateTouched: true
+													})}
 											/>
 										</div>
 										<div class="flex items-end gap-2 pb-2">

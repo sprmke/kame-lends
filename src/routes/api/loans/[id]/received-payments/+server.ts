@@ -11,6 +11,7 @@ import {
   recalculateInterestPeriodStatusFromLinkedPayments,
   syncLoanStatusFromInterestPeriods,
 } from "$lib/server/loan-interest-period-sync";
+import { normalizeReceiptImageUrl } from "$lib/receipt-image";
 
 const AMOUNT_TOLERANCE = 0.02;
 
@@ -145,6 +146,8 @@ export const POST: RequestHandler = async (event) => {
       interestPeriodId: requestedPeriodId,
       amount: String(amount),
       receivedDate,
+      receiptImageUrl: normalizeReceiptImageUrl(body.receiptImageUrl),
+      receiptExtractedData: body.receiptExtractedData ?? null,
     });
 
     if (requestedPeriodId !== null) {
