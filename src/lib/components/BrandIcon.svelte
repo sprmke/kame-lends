@@ -20,12 +20,13 @@
 		xl: 'h-11 w-11 rounded-2xl'
 	};
 
+	/** ~62% of the container, matching the mark-to-tile ratio of the app icon. */
 	const markClasses: Record<Size, string> = {
-		xs: 'h-3.5 w-3.5',
-		sm: 'h-4 w-4',
-		md: 'h-[18px] w-[18px]',
-		lg: 'h-5 w-5',
-		xl: 'h-6 w-6'
+		xs: 'size-[18px]',
+		sm: 'size-5',
+		md: 'size-[22px]',
+		lg: 'size-6',
+		xl: 'size-[27px]'
 	};
 </script>
 
@@ -33,10 +34,12 @@
 	class={cn(
 		'inline-flex shrink-0 items-center justify-center',
 		containerClasses[size],
-		variant === 'solid' && 'bg-primary text-primary-foreground shadow-[var(--shadow-soft)]',
+		// Same gradient as static/brand/kame-lends-icon.svg (scripts/brand/generate-brand-assets.ts).
+		variant === 'solid' &&
+			'bg-[linear-gradient(135deg,#ffbf73_0%,#fb9f44_50%,#e4702a_100%)] text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.28),var(--shadow-soft)]',
 		variant === 'glass' && 'bg-white/15 text-primary-foreground',
 		className
 	)}
 >
-	<BrandMark class={markClasses[size]} strokeWidth={size === 'xs' || size === 'sm' ? 1.85 : 2} />
+	<BrandMark class={markClasses[size]} />
 </span>

@@ -1,6 +1,8 @@
 export const APP_NAME = "Kame Lends";
 export const APP_NAME_SLUG = "kame-lends";
 export const APP_NAME_UPPER = "KAME LENDS";
+export const APP_DESCRIPTION =
+  "Manage loans, investors, and cashflow in one place.";
 export const APP_DEFAULT_URL = "https://kame-lends.vercel.app";
 export const APP_DOMAIN = "kame-lends.vercel.app";
 

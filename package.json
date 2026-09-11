@@ -24,6 +24,7 @@
     "backup:neon:branches": "bash scripts/backup/create-neon-branches.sh",
     "setup:ai-tooling": "bash scripts/dev/setup-ai-tooling.sh",
     "check:ai-tooling-sync": "bash scripts/dev/check-ai-tooling-sync.sh",
+    "brand:assets": "bun scripts/brand/generate-brand-assets.ts",
     "build:clean": "rm -rf .svelte-kit .vercel/output && svelte-kit sync && vite build",
     "db:local:start": "docker compose up -d",
     "db:local:push": "bash scripts/db/local-db-push.sh",
