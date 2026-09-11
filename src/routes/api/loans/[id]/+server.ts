@@ -20,6 +20,7 @@ import {
   upsertLoanContractCustomization,
 } from "$lib/server/loan-contract-persistence";
 import type { ContractCustomization } from "$lib/loan-contract-customization";
+import { normalizeReceiptImageUrl } from "$lib/receipt-image";
 
 export const GET: RequestHandler = async (event) => {
   const { params } = event;
@@ -48,6 +49,11 @@ export const GET: RequestHandler = async (event) => {
             receivedPayments: true,
           },
         },
+        loanWitnesses: {
+          with: {
+            witness: true,
+          },
+        },
         transactions: {
           orderBy: (transactions, { asc }) => [asc(transactions.date)],
         },
@@ -66,6 +72,7 @@ export const GET: RequestHandler = async (event) => {
 
     return json({
       ...loan,
+      access,
       ...(access.memberships.includes("borrower") ? { paymentMethods } : {}),
     });
   } catch (error) {
@@ -124,6 +131,16 @@ export const PUT: RequestHandler = async (event) => {
       dueDate: new Date(loanData.dueDate),
       freeLotSqm: loanData.freeLotSqm ? Number(loanData.freeLotSqm) : null,
       notes: loanData.notes || null,
+      // Borrower profit is optional in this payload — preserve the existing
+      // value when the caller (e.g. an older LoanForm submission) omits it.
+      profitType:
+        loanData.profitType === "fixed" || loanData.profitType === "rate"
+          ? loanData.profitType
+          : existingLoan.profitType,
+      profitValue:
+        loanData.profitValue !== undefined && loanData.profitValue !== null
+          ? String(loanData.profitValue)
+          : existingLoan.profitValue,
       updatedAt: new Date(),
     };
 
@@ -174,6 +191,8 @@ export const PUT: RequestHandler = async (event) => {
         sentDate: new Date(inv.sentDate),
         isPaid: inv.isPaid ?? true, // Default to true for backward compatibility
         hasMultipleInterest: inv.hasMultipleInterest || false,
+        receiptImageUrl: normalizeReceiptImageUrl(inv.receiptImageUrl),
+        receiptExtractedData: inv.receiptExtractedData ?? null,
       }));
 
       const insertedLoanInvestors = await db

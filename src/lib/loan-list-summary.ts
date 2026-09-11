@@ -1,4 +1,5 @@
 import {
+  calculateInterest,
   calculateTotalInterest,
   calculateTotalPrincipal,
   isOpenLoan,
@@ -9,7 +10,12 @@ import {
   toCapitalDayKey,
 } from "$lib/capital-intervals";
 import { toLoanDueDayKey } from "$lib/loan-due-date";
-import type { Loan, LoanInvestor, LoanWithInvestors } from "$lib/types";
+import type {
+  Loan,
+  LoanInvestor,
+  LoanWitness,
+  LoanWithInvestors,
+} from "$lib/types";
 
 export function passesLoanDueDateRangeFilter(
   loan: { dueDate: Date | string },
@@ -230,5 +236,93 @@ export function computeLoanListSummaryStats(
     interestEarned: capital.interestEarned,
     completedCount,
     totalLoanCount: loans.length,
+  };
+}
+
+export interface ProfitStats {
+  totalPrincipal: number;
+  profitEstimate: number;
+  profitEarned: number;
+  totalProfitScheduled: number;
+  completedCount: number;
+  totalLoanCount: number;
+}
+
+/**
+ * Profit stats for a borrower across their loans.
+ * Estimate = open loans, Earned = completed loans — same split as investor interest.
+ */
+export function computeBorrowerProfitStats(
+  loans: LoanWithInvestors[],
+): ProfitStats {
+  const openLoans = loans.filter(isOpenLoan);
+  const completedLoans = loans.filter((loan) => !isOpenLoan(loan));
+
+  const profitFor = (loan: LoanWithInvestors) =>
+    calculateInterest(
+      calculateTotalPrincipal(loan.loanInvestors),
+      loan.profitValue,
+      loan.profitType,
+    );
+
+  const profitEstimate = openLoans.reduce((sum, loan) => sum + profitFor(loan), 0);
+  const profitEarned = completedLoans.reduce(
+    (sum, loan) => sum + profitFor(loan),
+    0,
+  );
+
+  return {
+    totalPrincipal: calculateTotalPrincipal(
+      loans.flatMap((loan) => loan.loanInvestors),
+    ),
+    profitEstimate,
+    profitEarned,
+    totalProfitScheduled: profitEstimate + profitEarned,
+    completedCount: completedLoans.length,
+    totalLoanCount: loans.length,
+  };
+}
+
+export type WitnessLoanAllocation = LoanWitness & { loan: LoanWithInvestors };
+
+/**
+ * Profit stats for a witness across the loans they witness.
+ * Estimate = open loans, Earned = completed loans — same split as investor interest.
+ */
+export function computeWitnessProfitStats(
+  allocations: WitnessLoanAllocation[],
+): ProfitStats {
+  const openAllocations = allocations.filter((allocation) =>
+    isOpenLoan(allocation.loan),
+  );
+  const completedAllocations = allocations.filter(
+    (allocation) => !isOpenLoan(allocation.loan),
+  );
+
+  const profitFor = (allocation: WitnessLoanAllocation) =>
+    calculateInterest(
+      calculateTotalPrincipal(allocation.loan.loanInvestors),
+      allocation.profitValue,
+      allocation.profitType,
+    );
+
+  const profitEstimate = openAllocations.reduce(
+    (sum, allocation) => sum + profitFor(allocation),
+    0,
+  );
+  const profitEarned = completedAllocations.reduce(
+    (sum, allocation) => sum + profitFor(allocation),
+    0,
+  );
+
+  return {
+    totalPrincipal: calculateTotalPrincipal(
+      allocations.flatMap((allocation) => allocation.loan.loanInvestors),
+    ),
+    profitEstimate,
+    profitEarned,
+    totalProfitScheduled: profitEstimate + profitEarned,
+    completedCount: completedAllocations.length,
+    totalLoanCount: allocations.length,
   };
 }

@@ -23,6 +23,9 @@
 		status?: LoanStatus;
 		balance?: number;
 		title?: string;
+		profit?: number;
+		profitRate?: number;
+		profitType?: 'rate' | 'fixed';
 	}
 
 	let {
@@ -35,7 +38,10 @@
 		uniqueInvestors,
 		status,
 		balance,
-		title = 'Summary'
+		title = 'Summary',
+		profit,
+		profitRate,
+		profitType
 	}: Props = $props();
 
 	const rateDisplay = $derived(
@@ -44,6 +50,10 @@
 			: totalInterest > 0
 				? formatText('Fixed')
 				: formatPercentage(0)
+	);
+
+	const profitRateDisplay = $derived(
+		profitType === 'fixed' ? formatText('Fixed') : formatPercentage(profitRate ?? 0)
 	);
 </script>
 
@@ -75,6 +85,18 @@
 					{formatCurrency(totalAmount)}
 				</p>
 			</div>
+			{#if profit !== undefined}
+				<div class="dashboard-metric-cell">
+					<p class="text-caption mb-1">Profit Rate</p>
+					<p class="text-sm font-semibold">{profitRateDisplay}</p>
+				</div>
+				<div class="dashboard-metric-cell">
+					<p class="text-caption mb-1">Profit</p>
+					<p class="text-sm font-semibold break-all tabular-nums">
+						{formatCurrency(profit)}
+					</p>
+				</div>
+			{/if}
 			<div class="dashboard-metric-cell">
 				<p class="text-caption mb-1">Total Received</p>
 				<p class="text-sm font-semibold break-all tabular-nums">

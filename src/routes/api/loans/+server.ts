@@ -14,6 +14,7 @@ import { toSigningInvitationSummary } from "$lib/loan-signing";
 import { getCachedLoans } from "$lib/server/cached-data";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import { workspaceAdminForbidden } from "$lib/server/workspace-admin";
+import { normalizeReceiptImageUrl } from "$lib/receipt-image";
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -60,6 +61,14 @@ export const POST: RequestHandler = async (event) => {
       dueDate: new Date(loanData.dueDate),
       freeLotSqm: loanData.freeLotSqm ? Number(loanData.freeLotSqm) : null,
       notes: loanData.notes || null,
+      profitType:
+        loanData.profitType === "fixed"
+          ? ("fixed" as const)
+          : ("rate" as const),
+      profitValue:
+        loanData.profitValue !== undefined && loanData.profitValue !== null
+          ? String(loanData.profitValue)
+          : "0",
     };
 
     console.log("Processed loan data:", processedLoanData);
@@ -83,6 +92,8 @@ export const POST: RequestHandler = async (event) => {
       sentDate: new Date(inv.sentDate),
       isPaid: inv.isPaid ?? true, // Default to true for backward compatibility
       hasMultipleInterest: inv.hasMultipleInterest || false,
+      receiptImageUrl: normalizeReceiptImageUrl(inv.receiptImageUrl),
+      receiptExtractedData: inv.receiptExtractedData ?? null,
     }));
 
     console.log("Loan investor data:", loanInvestorData);

@@ -168,6 +168,7 @@
 			readOnly={!access.canAdminEdit}
 			editableInvestorIds={access.editableInvestorIds}
 			{paymentMethods}
+			{access}
 		/>
 
 		{#if access.canAdminEdit}

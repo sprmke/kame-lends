@@ -6,16 +6,20 @@
 	import LoanPaymentMethodsSection from './LoanPaymentMethodsSection.svelte';
 	import { formatDate, formatText, formatSqm } from '$lib/format';
 	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
+	import LoanWitnessesSection from './LoanWitnessesSection.svelte';
+	import LoanBorrowerProfitCard from './LoanBorrowerProfitCard.svelte';
 	import {
 		calculateTotalPrincipal,
 		calculateTotalInterest,
 		calculateTotalAmount,
 		calculateAverageRate,
+		calculateInterest,
 		countUniqueInvestors,
 		groupByInvestor,
 		calculateLoanDuration
 	} from '$lib/calculations';
 	import type { LoanWithInvestors, PaymentMethod } from '$lib/types';
+	import type { LoanAccessContext } from '$lib/loan-access';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -25,6 +29,7 @@
 		readOnly?: boolean;
 		editableInvestorIds?: number[];
 		paymentMethods?: PaymentMethod[];
+		access?: LoanAccessContext;
 	}
 
 	let {
@@ -34,7 +39,8 @@
 		loanId,
 		readOnly = false,
 		editableInvestorIds = [],
-		paymentMethods = []
+		paymentMethods = [],
+		access
 	}: Props = $props();
 
 	const totalPrincipal = $derived(calculateTotalPrincipal(loan.loanInvestors));
@@ -42,6 +48,16 @@
 	const totalAmount = $derived(calculateTotalAmount(loan.loanInvestors));
 	const averageRate = $derived(calculateAverageRate(loan.loanInvestors));
 	const uniqueInvestors = $derived(countUniqueInvestors(loan.loanInvestors));
+
+	const profit = $derived(
+		calculateInterest(totalPrincipal, loan.profitValue, loan.profitType)
+	);
+	const profitRate = $derived(loan.profitType === 'rate' ? Number(loan.profitValue) : 0);
+
+	const canEditBorrowerProfit = $derived(
+		access ? access.canAdminEdit || access.memberships.includes('borrower') : false
+	);
+	const myLoanWitnessId = $derived(access?.linkedLoanWitnessId ?? null);
 
 	const totalReceived = $derived(
 		loan.loanInvestors.reduce(
@@ -120,7 +136,14 @@
 		{uniqueInvestors}
 		status={loan.status}
 		{balance}
+		{profit}
+		{profitRate}
+		profitType={loan.profitType}
 	/>
+
+	{#if canEditBorrowerProfit}
+		<LoanBorrowerProfitCard {loan} {onRefresh} />
+	{/if}
 
 	<LoanPaymentMethodsSection {paymentMethods} />
 
@@ -184,5 +207,14 @@
 		{onRefresh}
 		{readOnly}
 		{editableInvestorIds}
+	/>
+
+	<LoanWitnessesSection
+		loanWitnesses={loan.loanWitnesses ?? []}
+		loanId={loanId ?? loan.id}
+		{totalPrincipal}
+		{onRefresh}
+		canAdminEdit={access?.canAdminEdit ?? false}
+		{myLoanWitnessId}
 	/>
 </div>
