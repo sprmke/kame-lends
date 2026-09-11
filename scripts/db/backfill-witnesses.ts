@@ -8,7 +8,7 @@
  *   bun run db:backfill:witnesses --use-prod --dry-run
  *   bun run db:backfill:witnesses --email=you@example.com
  *
- * Hosted Neon writes: LENDWAVE=lendwave in the command string. Dry-run is read-only.
+ * Hosted Neon writes: prefer a backup first (`bun run backup:neon`). Dry-run is read-only.
  */
 import postgres from "postgres";
 
@@ -62,14 +62,10 @@ function assertTargetAllowed(url: string): void {
   const isLocal = /(?:localhost|127\.0\.0\.1)/.test(url);
   const isHosted = url.includes("neon.tech");
 
-  if (isHosted && !dryRun && process.env.LENDWAVE !== "lendwave") {
-    console.error(
-      "Refusing hosted Neon update without LENDWAVE=lendwave in the command.",
+  if (isHosted && !dryRun) {
+    console.warn(
+      "WARN: writing to hosted Neon. Prefer a backup first (bun run backup:neon).",
     );
-    console.error(
-      "Example: LENDWAVE=lendwave bun run db:backfill:witnesses --use-prod",
-    );
-    process.exit(1);
   }
 
   if (!isLocal && !isHosted) {

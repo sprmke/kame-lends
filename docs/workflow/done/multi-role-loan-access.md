@@ -359,7 +359,7 @@ Page loads: `/investors/[id]`, `/borrowers/[id]` stay owner-scoped for CRM. Part
 - Personal Google Calendar OAuth or Domain-Wide Delegation attendees (decision **3A**).
 - Letting investors edit loan shell, borrower, co-investor rows, or delete the loan.
 - Letting borrowers/witnesses mutate payments or status.
-- Production Neon/Vercel deploy (still requires **`lendwave`**).
+- Production Neon/Vercel deploy (via GitHub Actions CD on `main`).
 
 ---
 

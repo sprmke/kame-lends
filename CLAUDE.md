@@ -22,13 +22,12 @@ bun run build
 
 # Database
 bun run db:generate
-bun run db:migrate
-bun run db:studio
+bun run db:migrate:pending   # apply pending db/migrations/*.sql
 bun run backup:neon
 bun run backup:neon:branches
 ```
 
-Prod deploy / schema push to Neon prod: blocked unless user says **`lendwave`** in the same message (`.cursor/rules/no-prod-deploy.mdc`).
+Production: push to **`main`** runs GitHub Actions CD (quality → migrate → Vercel). See `docs/architecture/deployment.md`.
 
 ## Architecture
 
@@ -67,8 +66,8 @@ Canonical: `.agent/skills/<name>/SKILL.md` (symlinked to `.claude/skills/`). Inv
 
 - Next.js patterns in `src/` (use SvelteKit).
 - Edit shipped files in `db/migrations/` (add new migration).
-- Prod Neon/Vercel deploy without **`lendwave`**.
 - Client-side React in SvelteKit (except server-only PDF).
 - Use kame-homes Supabase rules in this repo.
+- Bypass CD for routine prod releases (prefer merge to `main`).
 
 Index: `.claude/README.md` · Rules: `.cursor/rules/README.md`

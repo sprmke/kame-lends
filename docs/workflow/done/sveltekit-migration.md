@@ -2,7 +2,7 @@
 
 Branch: **`feat/sveltekit-migration`**. **Cutover done:** SvelteKit app promoted to repo root (legacy Next.js archived locally as `_legacy-next-*`, gitignored).
 
-**Post-cutover:** Run manual QA on dev Neon branch (`docs/workflow/qa/sveltekit-manual-qa.md`). Production deploy requires **`lendwave`** unlock. The Next.js `app/`, `components/`, `lib/`, `hooks/`, and `stores/` trees were removed from git; schema lives at `src/lib/server/db/schema.ts`.
+**Post-cutover:** Production releases go through GitHub Actions CD on `main` (`docs/architecture/deployment.md`). The Next.js `app/`, `components/`, `lib/`, `hooks/`, and `stores/` trees were removed from git; schema lives at `src/lib/server/db/schema.ts`.
 
 ---
 
@@ -20,10 +20,10 @@ Branch: **`feat/sveltekit-migration`**. **Cutover done:** SvelteKit app promoted
 ## Phase 1 — AI tooling & documentation scaffolding
 
 - [x] `.agent/skills/` canonical skills
-- [x] `.cursor/rules/*.mdc` (project-context, tech-stack, no-prod-deploy, etc.)
+- [x] `.cursor/rules/*.mdc` (project-context, tech-stack, deployment, etc.)
 - [x] `CLAUDE.md`, `opencode.json`, `.claude/settings.json` + hooks
 - [x] `.mcp.json` (neon, context7, playwright, markitdown)
-- [x] Hooks: prod-deploy guard (`lendwave`), shipped-migration guard, stack-terminology
+- [x] Hooks: shell safety guard, shipped-migration guard, stack-terminology
 - [x] `scripts/dev/setup-ai-tooling.sh` + `check-ai-tooling-sync.sh`
 - [x] `docs/README.md`, `docs/PROJECT.md`
 - [x] This tracker file
@@ -120,7 +120,7 @@ Branch: **`feat/sveltekit-migration`**. **Cutover done:** SvelteKit app promoted
 - [x] Promote `new-app/*` to repo root
 - [x] Delete legacy Next.js tree and unused deps
 - [ ] Update Vercel build config + `vercel.json` cron
-- [ ] Explicit prod deploy (requires **`lendwave`**)
+- [x] Explicit prod deploy via GitHub Actions CD on `main`
 - [ ] Post-cutover monitoring; keep Next.js deployment rollback-ready
 
 ## Phase 11 — Cleanup & documentation

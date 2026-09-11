@@ -1,0 +1,24 @@
+---
+description: Production releases go through GitHub Actions CD on main
+alwaysApply: true
+---
+
+# Production releases (CI/CD)
+
+**Source of truth for production:** push (or merge) to **`main`**. GitHub Actions CD runs quality checks, applies pending `db/migrations/*.sql`, then deploys to Vercel.
+
+## Do
+
+- Ship schema + app together: add a new file under `db/migrations/`, then merge to `main`.
+- Prefer GitHub Actions over one-off `vercel --prod` or remote SQL for routine releases.
+- Keep GitHub secrets in sync with Vercel Production `DATABASE_URL`.
+
+## Avoid
+
+- Editing shipped migration files (hooks block this; add a new file).
+- Relying on Vercel Git auto-deploy for production if CD owns prod (disable Production auto-deploy so migrate-then-deploy stays ordered).
+- Pointing local `.env.local` `DATABASE_URL` at production while developing (use Docker or Singapore QA).
+
+## Details
+
+See `docs/architecture/deployment.md`.

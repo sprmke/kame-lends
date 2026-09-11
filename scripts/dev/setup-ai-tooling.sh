@@ -2,7 +2,7 @@
 # One-shot team dev setup: Cursor + Claude Code + OpenCode rules/skills/hooks/MCP parity.
 # Idempotent — safe to re-run after clone or when symlinks break.
 #
-# Prod deploy unlock word for shell hooks: lendwave (see .cursor/rules/no-prod-deploy.mdc)
+# Production releases: push to main → GitHub Actions CD (docs/architecture/deployment.md)
 #
 # Usage: bun run setup:ai-tooling [options]
 

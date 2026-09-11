@@ -1,9 +1,9 @@
 name: CI
 
 on:
-  push:
-    branches: [main, feat/sveltekit-migration]
   pull_request:
+  push:
+    branches-ignore: [main]
 
 jobs:
   sveltekit:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      - run: bun install --frozen-lockfile
       - run: bun run check
       - run: bun run test
       - run: bun run build

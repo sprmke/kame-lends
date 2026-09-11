@@ -40,16 +40,16 @@ Apply on Neon prod (writes; backup first):
 
 ```bash
 bun run backup:neon
-LENDWAVE=lendwave bun run db:backfill:witnesses --use-prod
+bun run db:backfill:witnesses --use-prod
 ```
 
 ## Safety
 
-| Target                            | Allowed                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------ |
-| Local (`127.0.0.1` / `localhost`) | Yes                                                                                  |
-| Neon dev branch                   | Yes                                                                                  |
-| Neon production                   | Only with `LENDWAVE=lendwave` in the command string; run `bun run backup:neon` first |
+| Target                            | Allowed                                                        |
+| --------------------------------- | -------------------------------------------------------------- |
+| Local (`127.0.0.1` / `localhost`) | Yes                                                            |
+| Neon dev branch                   | Yes                                                            |
+| Neon production                   | Prefer backup first (`bun run backup:neon`); then `--use-prod` |
 
 ## What it updates
 

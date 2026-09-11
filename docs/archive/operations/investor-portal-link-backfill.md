@@ -45,21 +45,21 @@ Apply on Neon prod (writes; backup first):
 
 ```bash
 bun run backup:neon
-LENDWAVE=lendwave bun run db:backfill:investor-links --use-prod
+bun run db:backfill:investor-links --use-prod
 ```
 
 ## Safety
 
-| Target                            | Allowed                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------ |
-| Local (`127.0.0.1` / `localhost`) | Yes                                                                                  |
-| Neon dev branch                   | Yes                                                                                  |
-| Neon production                   | Only with `LENDWAVE=lendwave` in the command string; run `bun run backup:neon` first |
+| Target                            | Allowed                                                        |
+| --------------------------------- | -------------------------------------------------------------- |
+| Local (`127.0.0.1` / `localhost`) | Yes                                                            |
+| Neon dev branch                   | Yes                                                            |
+| Neon production                   | Prefer backup first (`bun run backup:neon`); then `--use-prod` |
 
 Example prod (human-only unless unlocked in chat):
 
 ```bash
-LENDWAVE=lendwave bun run db:backfill:investor-links
+bun run db:backfill:investor-links
 ```
 
 ## After running

@@ -36,7 +36,7 @@ Stale if a skill mentions Supabase, tRPC, Next.js App Router, or React Router fo
 - Claude Code: **`.claude/README.md`** + **`CLAUDE.md`**
 - OpenCode: **`opencode.json`**
 - Once after clone: **`bun run setup:ai-tooling`**
-- Prod safety: unlock **`lendwave`** (`.cursor/rules/no-prod-deploy.mdc`)
+- Prod releases: push to `main` → GitHub Actions CD (`.cursor/rules/deployment.mdc`, `docs/architecture/deployment.md`)
 
 ## Where to edit
 

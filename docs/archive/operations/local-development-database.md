@@ -16,7 +16,7 @@ Optional **Docker Postgres** for fast iteration. It is completely separate from 
 
 Only if **`DATABASE_URL` points at Neon prod** and you run:
 
-- `bun run db:push` (blocked without **`lendwave`** in the command)
+- `bun run db:push` (prefer `db:migrate:pending` / CD for hosted Neon)
 - `bun run db:migrate` (applies pending SQL migrations — review files first)
 - `bun run db:apply:migration -- <file.sql>` (hand-maintained `db/migrations/` patches)
 - Normal app writes (loans, payments, overdue status updates)

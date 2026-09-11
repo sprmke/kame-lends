@@ -18,30 +18,14 @@ permission="allow"
 user_message=""
 agent_message=""
 
-if prod_deploy_is_blocked "$command_str"; then
+if shell_guard_is_blocked "$command_str"; then
   permission="deny"
-  user_message="Blocked: production Neon/Vercel deploy. Say unlock word lendwave in chat, then rerun with lendwave in the command."
-  agent_message=$(prod_deploy_block_reason)
-else
-  case "$command_str" in
-    *"rm -rf /"*|*"rm -rf /*"*|*"rm -rf ~"*)
-      permission="deny"
-      user_message="Blocked: recursive delete of root or home is not allowed."
-      agent_message="The command was blocked because it would delete system or home directory. Use a specific path instead."
-      ;;
-    *"drop table"*|*"DROP TABLE"*)
-      permission="ask"
-      user_message="This command may drop database tables. Confirm before running."
-      agent_message="The command contains DROP TABLE. The user must confirm before running."
-      ;;
-    *"push --force"*|*"push -f "*|*"push -f"*)
-      permission="ask"
-      user_message="Force-push can overwrite remote history. Confirm before running."
-      agent_message="Force-push requires explicit user confirmation."
-      ;;
-    *)
-      ;;
-  esac
+  user_message="Blocked: destructive shell command (system delete or Neon project/branch delete)."
+  agent_message=$(shell_guard_block_reason)
+elif shell_guard_needs_ask "$command_str"; then
+  permission="ask"
+  user_message="Confirm before running this potentially destructive command."
+  agent_message=$(shell_guard_ask_reason)
 fi
 
 if command -v jq >/dev/null 2>&1; then

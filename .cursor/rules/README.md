@@ -4,16 +4,16 @@ Agent context for **SvelteKit 2 + Svelte 5 + Neon + Drizzle + Auth.js**.
 
 ## Always-on rules
 
-| File                            | Purpose                                       |
-| ------------------------------- | --------------------------------------------- |
-| `project-context.mdc`           | Stack, migration layout, doc index            |
-| `ai-usage.mdc`                  | Session hygiene, MCP discipline               |
-| `documentation-maintenance.mdc` | Sync docs with code                           |
-| `ui-minimal-copy.mdc`           | No extra UI prose                             |
-| `human-copy.mdc`                | Production-grade copy                         |
-| `git-commits.mdc`               | No AI attribution in commits                  |
-| `no-prod-deploy.mdc`            | Block prod Neon/Vercel (unlock: **lendwave**) |
-| `route-guides.mdc`              | Route docs in `docs/guides/routes/`           |
+| File                            | Purpose                              |
+| ------------------------------- | ------------------------------------ |
+| `project-context.mdc`           | Stack, migration layout, doc index   |
+| `ai-usage.mdc`                  | Session hygiene, MCP discipline      |
+| `documentation-maintenance.mdc` | Sync docs with code                  |
+| `ui-minimal-copy.mdc`           | No extra UI prose                    |
+| `human-copy.mdc`                | Production-grade copy                |
+| `git-commits.mdc`               | No AI attribution in commits         |
+| `deployment.mdc`                | Prod via GitHub Actions CD on `main` |
+| `route-guides.mdc`              | Route docs in `docs/guides/routes/`  |
 
 ## Conditional rules (by glob)
 

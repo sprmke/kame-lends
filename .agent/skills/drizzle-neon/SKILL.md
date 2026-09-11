@@ -9,34 +9,34 @@ Use for schema, queries, and migrations.
 | `src/lib/server/db/schema.ts` | Drizzle schema                                                                                    |
 | `src/lib/server/db/index.ts`  | DB client — local URLs use `postgres.js`; Neon URLs use WebSocket `Pool` (reused on `globalThis`) |
 | `drizzle.config.ts`           | Kit config (`schema` points at `src/lib/server/db/schema.ts`)                                     |
-| `db/migrations/*.sql`         | Shipped SQL migrations                                                                            |
+| `db/migrations/*.sql`         | Shipped SQL migrations (applied by `db:migrate:pending` / CD)                                     |
 
 ## Rules
 
 - **Never edit shipped migrations** — add a new file under `db/migrations/`. Hooks enforce this.
-- Use `drizzle-kit generate` then `drizzle-kit migrate` for schema changes.
+- After changing `schema.ts`, add a matching hand-maintained SQL file under `db/migrations/`.
+- Production applies pending files automatically on push to `main` (see `docs/architecture/deployment.md`).
 
-## Neon branches
+## Neon targets
 
-- **Prod branch**: do not push schema without **lendwave**.
-- **Singapore `production` branch**: hosted QA (`DATABASE_URL_PROD`). Do not treat as Vercel prod until cutover.
-- Backups: `bun run backup:neon`, `bun run backup:neon:branches`.
+| Target            | Env / secret                                       | Use             |
+| ----------------- | -------------------------------------------------- | --------------- |
+| Local Docker      | `DATABASE_URL` → `127.0.0.1:5433`                  | Day-to-day dev  |
+| Singapore QA      | `DATABASE_URL_PROD`                                | Hosted QA       |
+| Vercel production | GitHub `DATABASE_URL` secret (= Vercel Production) | Live app via CD |
 
 ## Commands
 
 ```bash
-bun run db:generate   # drizzle-kit generate
-bun run db:migrate    # drizzle-kit migrate
-bun run db:studio     # drizzle-kit studio
+bun run db:generate          # drizzle-kit generate (kit output; hand SQL still required)
+bun run db:migrate:pending   # apply pending db/migrations/*.sql (journal: schema_migrations)
+bun run db:studio
 bun run db:local:start
-bun run db:local:push   # always 127.0.0.1:5433 — never Neon
+bun run db:local:push        # always 127.0.0.1:5433 — never Neon
 bun run db:local:sync-prod   # read-only pg_dump from DATABASE_URL_PROD → local restore
-bun run db:local:sync-prod --from-dump   # restore latest ~/Backups/kame-lends/*.dump
 ```
 
-Local Postgres guide: `docs/archive/operations/local-development-database.md`. Use `db:local:push` (not `db:migrate`) for a fresh Docker database.
-
-`db:push` is blocked against prod-shaped URLs unless unlock word **lendwave** is in the command (see `no-prod-deploy.mdc`).
+Local Postgres guide: `docs/archive/operations/local-development-database.md`.
 
 ## Query patterns
 
@@ -46,4 +46,4 @@ Local Postgres guide: `docs/archive/operations/local-development-database.md`. U
 
 ## MCP
 
-Neon MCP (`https://mcp.neon.tech/mcp`) can list branches and run read-only SQL — prefer dev branch scope.
+Neon MCP (`https://mcp.neon.tech/mcp`) can list branches and run read-only SQL — prefer QA/dev scope for exploration.

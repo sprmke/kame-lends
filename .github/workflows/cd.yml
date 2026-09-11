@@ -1,0 +1,65 @@
+name: CD
+
+# Production continuous delivery for main.
+# Order: quality → migrate → deploy (never deploy schema-breaking code before SQL lands).
+#
+# Required GitHub Environment secrets on environment "production":
+#   DATABASE_URL       — same Neon connection string as Vercel Production
+#   VERCEL_TOKEN       — https://vercel.com/account/tokens
+#   VERCEL_ORG_ID      — from `vercel link` / project settings
+#   VERCEL_PROJECT_ID  — from `vercel link` / project settings
+#
+# Turn off Vercel Git "Production" auto-deploy for main so this workflow owns
+# production releases (Project → Settings → Git → Ignored Build Step, or disable
+# production branch auto-deploy). Preview deploys for PRs can stay enabled.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run test
+      - run: bun run build
+
+  migrate:
+    needs: quality
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: bash scripts/db/migrate-pending.sh --yes
+
+  deploy:
+    needs: migrate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Deploy to Vercel production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: bash scripts/deploy/vercel-prod.sh

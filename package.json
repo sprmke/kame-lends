@@ -31,7 +31,13 @@
     "db:local:sync-prod": "bash scripts/db/sync-prod-to-local.sh",
     "db:backfill:investor-links": "bash scripts/db/backfill-investor-user-links.sh",
     "db:backfill:witnesses": "bash scripts/db/backfill-witnesses.sh",
-    "db:apply:migration": "bash scripts/db/apply-migration.sh"
+    "db:apply:migration": "bash scripts/db/apply-migration.sh",
+    "db:apply:migration:prod": "bash scripts/db/apply-migration.sh --prod",
+    "db:apply:migration:vercel": "bash scripts/db/apply-migration.sh --vercel",
+    "db:migrate:pending": "bash scripts/db/migrate-pending.sh",
+    "db:migrate:pending:prod": "bash scripts/db/migrate-pending.sh --prod",
+    "db:migrate:pending:vercel": "bash scripts/db/migrate-pending.sh --vercel",
+    "deploy:prod": "bash scripts/deploy/vercel-prod.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.7.1",

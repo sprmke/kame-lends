@@ -30,10 +30,10 @@ Key domain skills: `loan-domain`, `sveltekit-conventions`, `drizzle-neon`, `auth
 
 ## Hooks (`.claude/settings.json`)
 
-| Script                        | Event             | Purpose                               |
-| ----------------------------- | ----------------- | ------------------------------------- |
-| `guard-shell.sh`              | PreToolUse / Bash | Deny prod deploy without **lendwave** |
-| `guard-shipped-migrations.sh` | PreToolUse / Edit | Deny editing `db/migrations/*`        |
+| Script                        | Event             | Purpose                                                 |
+| ----------------------------- | ----------------- | ------------------------------------------------------- |
+| `guard-shell.sh`              | PreToolUse / Bash | Block destructive shell (rm -rf /, Neon project delete) |
+| `guard-shipped-migrations.sh` | PreToolUse / Edit | Deny editing `db/migrations/*`                          |
 
 ## MCP (`.mcp.json`)
 

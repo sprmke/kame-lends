@@ -7,6 +7,7 @@ Index for architecture, route guides, and workflow docs.
 | Doc                                                                                                      | Purpose                               |
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | [`PROJECT.md`](./PROJECT.md)                                                                             | Architecture, API inventory, env vars |
+| [`architecture/deployment.md`](./architecture/deployment.md)                                             | CI/CD: migrate + Vercel on `main`     |
 | [`guides/routes/README.md`](./guides/routes/README.md)                                                   | Per-page behavior specs               |
 | [`workflow/done/sveltekit-migration.md`](./workflow/done/sveltekit-migration.md)                         | SvelteKit migration history           |
 | [`archive/operations/pre-migration-backup.md`](./archive/operations/pre-migration-backup.md)             | Neon backup before migration          |

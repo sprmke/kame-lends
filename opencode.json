@@ -7,7 +7,7 @@
     ".cursor/rules/ui-minimal-copy.mdc",
     ".cursor/rules/human-copy.mdc",
     ".cursor/rules/git-commits.mdc",
-    ".cursor/rules/no-prod-deploy.mdc",
+    ".cursor/rules/deployment.mdc",
     ".cursor/rules/route-guides.mdc",
     ".cursor/rules/tech-stack.mdc",
     "CLAUDE.md"

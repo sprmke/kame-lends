@@ -1,21 +1,22 @@
-# Vercel production deploy (SvelteKit cutover)
+# Vercel production deploy
 
-**Status:** Config ready; **no production deploy executed** by migration agents.
+**Current process:** GitHub Actions CD on `main` (quality → migrate → deploy). See [`docs/architecture/deployment.md`](../architecture/deployment.md).
 
-## Before first SvelteKit production deploy
+## One-time setup
 
-1. Complete manual QA on `dev-sveltekit-migration` Neon branch (`docs/workflow/qa/sveltekit-manual-qa.md`).
-2. Run `bun run backup:neon` and confirm Neon backup branch exists.
-3. In Vercel project settings:
-   - **Framework preset:** SvelteKit (or Other → build command below)
-   - **Build command:** `bun run build`
-   - **Output:** SvelteKit adapter-vercel default
-   - **Install:** `bun install`
-4. Env vars: same names as `docs/archive/operations/vercel-production-snapshot.md`. Add `PUBLIC_APP_URL` if replacing `NEXT_PUBLIC_APP_URL`.
-5. Google OAuth: add SvelteKit callback URL if path changed (Auth.js route under `/auth/...`).
-6. Deploy Preview from `feat/sveltekit-migration` first; smoke-test sign-in and one loan read.
-7. Production deploy only after explicit approval with unlock word **`lendwave`**.
+1. Add GitHub Actions secrets: `DATABASE_URL`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
+2. Confirm Vercel Production env vars match the snapshot list in `vercel-production-snapshot.md` (plus `PUBLIC_APP_URL` if used).
+3. Disable Vercel Git **Production** auto-deploy for `main` so CD owns migrate-then-deploy ordering. Preview deploys for PRs can stay enabled.
+4. Google OAuth: Auth.js callback under `/auth/...`.
+
+## Manual / emergency
+
+```bash
+DATABASE_URL='…same as Vercel Production…' bun run db:migrate:pending --yes
+export VERCEL_TOKEN=… VERCEL_ORG_ID=… VERCEL_PROJECT_ID=…
+bun run deploy:prod
+```
 
 ## Rollback
 
-Redeploy last successful **Next.js** deployment from Vercel. Neon prod unchanged if dev branch was used for migration QA.
+Redeploy the previous Vercel production deployment from the dashboard. For schema issues, restore from Neon backup / branch snapshot (`bun run backup:neon`).

@@ -84,7 +84,7 @@ scripts/              # Backup, AI tooling, migration helpers
 
 See `.env.example`. Production uses the same names as before cutover; public vars use SvelteKit `PUBLIC_*` where noted in `.env.example`.
 
-During local SvelteKit QA, set **`DATABASE_URL`** to `DATABASE_URL_LOCAL` (Docker at `127.0.0.1:5433`) or `DATABASE_URL_PROD` (Singapore Neon). Pull a Neon snapshot into Docker with `bun run db:local:sync-prod`. Auth.js exposes `user.role` on the session (nullable). Shipped SQL patches live in `db/migrations/`; apply with `bun run db:apply:migration -- <file.sql>` after review and backup. **Production:** after deploying code that uses loan groups, witness profit, borrower profit, or receipt columns, apply `0016_loan_groups.sql` then `0017_loan_witnesses_profit_receipts.sql` (backup first). Missing columns/tables surface as SvelteKit `Internal Error` on `/loans` and other loan list loads. A DB that cannot run queries (e.g. Neon data-transfer quota) surfaces as `/auth/error?error=Configuration` after Google redirects back.
+During local SvelteKit QA, set **`DATABASE_URL`** to `DATABASE_URL_LOCAL` (Docker at `127.0.0.1:5433`) or `DATABASE_URL_PROD` (Singapore Neon). Pull a Neon snapshot into Docker with `bun run db:local:sync-prod`. Auth.js exposes `user.role` on the session (nullable). Shipped SQL patches live in `db/migrations/`. **Production CD** applies pending files via `bun run db:migrate:pending --yes` on every push to `main` (see [`architecture/deployment.md`](./architecture/deployment.md)). Locally: **`db:migrate:pending`** → `DATABASE_URL`; **`db:migrate:pending:prod`** → Singapore QA; **`db:migrate:pending:vercel`** → `DATABASE_URL_VERCEL` for manual prod repair. Journal table: `schema_migrations`. Missing columns/tables surface as SvelteKit `Internal Error` on `/loans`. A DB that cannot run queries (e.g. Neon data-transfer quota) surfaces as `/auth/error?error=Configuration` after Google redirects back.
 
 A `DATABASE_URL` **exported in the shell overrides `.env.local`** (`$env/dynamic/private` reads `process.env` first) and is inherited by `bun dev`. An `.env.example` placeholder (`…@ep-....us-east-1…`) exported that way reaches no host, so every Auth.js adapter query fails with `AdapterError` / `SessionTokenError`. `src/lib/server/db/index.ts` now ignores placeholder URLs, warns, and falls back to `.env.local`. Fix the shell with `unset DATABASE_URL`, then restart `bun dev`.
 
@@ -96,7 +96,7 @@ A `DATABASE_URL` **exported in the shell overrides `.env.local`** (`$env/dynamic
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `/dashboard`                                                                  | Streams `queryDashboardSummary` then `queryDashboardCharts`. Summary cards: Total Principal, Active, Interest Estimate, Interest Earned (all-time peak concurrent capital + scheduled interest). See [`guides/routes/dashboard.md`](./guides/routes/dashboard.md). |
 | `/loans`, `/investors`, `/borrowers`, `/witnesses`, `/debts`, `/transactions` | Stream list data; `ListPageSkeleton` paints before queries finish. List cache modes omit heavy relations.                                                                                                                                                          |
-| `/groups`, `/groups/[id]`                                                    | User-created loan groups. Any signed-in user can create/manage their own; view + leave on others'. Behind `SHOW_GROUPS_UI`. See [`guides/routes/groups.md`](./guides/routes/groups.md) and [`guides/routes/groups-detail.md`](./guides/routes/groups-detail.md). |
+| `/groups`, `/groups/[id]`                                                     | User-created loan groups. Any signed-in user can create/manage their own; view + leave on others'. Behind `SHOW_GROUPS_UI`. See [`guides/routes/groups.md`](./guides/routes/groups.md) and [`guides/routes/groups-detail.md`](./guides/routes/groups-detail.md).   |
 
 ## Performance
 
@@ -112,7 +112,7 @@ A `DATABASE_URL` **exported in the shell overrides `.env.local`** (`$env/dynamic
 
 ## API routes
 
-SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, investors, borrowers, debts, transactions, signing, cron backup, witnesses, interest periods, payment methods). `PATCH /api/loans/[id]/contract` saves contract customization only (loan admin); syncs signing invitations.
+SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, investors, borrowers, debts, transactions, signing, cron backup, witnesses, interest periods, payment methods). `GET` / `POST /api/loans/[id]/contract` load or download the contract PDF (any party with loan view access). `PATCH` saves customization (loan admin) and syncs signing invitations. PDF render embeds JPEG/PNG valid IDs and signatures only; WebP or unreadable images are omitted so the download still succeeds.
 
 **Party profiles (admin):** `GET` / `PUT` `/api/party-profiles/{investor|borrower|witness}/[entityId]` loads or saves unified contact data (name, email, phone, address, valid ID, e-signature) and syncs across all investor/borrower/witness CRM rows linked to the same party user. **Party self-service:** `GET` / `PUT` `/api/party-profile/me` lets a signed-in party user update valid ID and e-signature across all linked CRM rows. **Party payment methods (admin):** `/api/party-users/[userId]/payment-methods` when editing a linked contact.
 
@@ -139,28 +139,30 @@ SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, i
 
 - Schema: `src/lib/server/db/schema.ts` (includes `payment_methods` for owner bank/QR details; `loans.profit_type`/`profit_value` for borrower profit and the `loan_witnesses` junction table for witness profit — see "Borrower & witness profit" under API routes; `loan_groups`/`loan_group_loans`/`loan_group_members` for the Groups feature — see "Auth & roles")
 - Client: `src/lib/server/db/index.ts` — **local** URLs (`localhost` / `127.0.0.1`) use `postgres.js`; **Neon** URLs use a WebSocket `Pool` (`drizzle-orm/neon-serverless`), not one HTTP round-trip per query. The pool is reused on `globalThis` and recreated when `DATABASE_URL` changes so Vite HMR does not leak dead Neon sockets (Auth.js `AdapterError` / `Failed query` on `account` / `session`). Placeholder URLs (`...`, `<`, `…`) are rejected in favor of `.env.local`.
-- Commands: `bun run db:generate`, `db:migrate`, `db:studio`
+- Commands: `bun run db:generate`, `db:migrate:pending`, `db:studio`
 - **Local Docker:** `bun run db:local:start` → `bun run db:local:push` → set `DATABASE_URL` to `DATABASE_URL_LOCAL`. See [`archive/operations/local-development-database.md`](./archive/operations/local-development-database.md).
 - **Hosted (Singapore):** project `Kame Lends` (`twilight-bar-00845805`, `ap-southeast-1`). `.env.local` keeps `DATABASE_URL_PROD` (pooled) and copies it into `DATABASE_URL` when you want hosted QA. Data was copied from US East 1 with `pg_dump` / `pg_restore`. Auth stays Auth.js, not Neon Auth. `neon.ts` must not declare Neon Auth, Functions, Object Storage, or AI Gateway (those extras are US-Ohio beta and unused here).
-- **Vercel production (until cutover):** old **Pawn Tracker** project in `us-east-1`. Do not change Vercel `DATABASE_URL` without **`lendwave`**.
+- **Vercel production:** Neon URL in Vercel Production `DATABASE_URL` (and the matching GitHub Actions `DATABASE_URL` secret). CD migrates then deploys on every push to `main`.
 
 ### Data safety (prod)
 
-Performance work does **not** delete or reset production data. No new migrations were added for these changes.
+Performance work does **not** delete or reset production data. Schema changes ship as new files under `db/migrations/` and are applied by CD before the Vercel deploy.
 
-| Safe without `lendwave`                                   | Can change prod when `DATABASE_URL` is prod      |
-| --------------------------------------------------------- | ------------------------------------------------ |
-| `bun dev`, deploy app code                                | `db:migrate`, app writes, overdue status updates |
-| `db:local:*` (`local-db-push.sh` → `127.0.0.1:5433` only) | `db:push` (hook-blocked without `lendwave`)      |
-| `backup:neon`, `db:studio` (read-mostly)                  |                                                  |
+| Prefer                                           | Avoid for routine releases                      |
+| ------------------------------------------------ | ----------------------------------------------- |
+| Merge to `main` (CD: quality → migrate → deploy) | One-off `vercel --prod` without migrating first |
+| Additive SQL in a new migration file             | Editing shipped migration files                 |
+| `backup:neon` before risky manual SQL            | `db:push` against hosted Neon without review    |
 
 `db:local:push` ignores `.env.local` and cannot target Neon.
 
 ## Deployment
 
-- Vercel project: PawnTracker
+See **[`architecture/deployment.md`](./architecture/deployment.md)** for the full CI/CD runbook (secrets, Vercel settings, rollback).
+
+- Vercel project: PawnTracker / kame-lends
+- CD: `.github/workflows/cd.yml` on `main`
 - Cron: `/api/cron/backup` at 06:00 UTC (`vercel.json`)
-- Prod deploy guard: unlock **`lendwave`** (`.cursor/rules/no-prod-deploy.mdc`)
 - Backups: `bun run backup:neon`
 
 ## Migration history

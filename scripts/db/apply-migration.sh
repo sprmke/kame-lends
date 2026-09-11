@@ -1,14 +1,60 @@
 #!/usr/bin/env bash
-# Apply one hand-maintained SQL file from db/migrations/ to DATABASE_URL.
-# Usage: bun run db:apply:migration -- 0015_user_role_nullable.sql
+# Apply one hand-maintained SQL file from db/migrations/.
+#
+# Usage:
+#   bun run db:apply:migration -- 0017_loan_witnesses_profit_receipts.sql
+#     → DATABASE_URL from .env.local (usually local Docker)
+#   bun run db:apply:migration:prod -- 0017_loan_witnesses_profit_receipts.sql
+#     → DATABASE_URL_PROD (Singapore Neon QA)
+#   bun run db:apply:migration:vercel -- 0017_loan_witnesses_profit_receipts.sql
+#     → DATABASE_URL_VERCEL (live Vercel prod, US East 1 until cutover)
+#
+# One-off override:
+#   DATABASE_URL='postgresql://...@....neon.tech/...' bun run db:apply:migration -- 0017_....sql
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-FILE="${1:-}"
+# shellcheck source=scripts/db/resolve-database-url.sh
+source "$ROOT/scripts/db/resolve-database-url.sh"
+
+TARGET="app"
+FILE=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --prod|--target=prod)
+      TARGET="prod"
+      shift
+      ;;
+    --vercel|--target=vercel)
+      TARGET="vercel"
+      shift
+      ;;
+    --app|--target=app)
+      TARGET="app"
+      shift
+      ;;
+    --)
+      shift
+      FILE="${1:-}"
+      break
+      ;;
+    *)
+      if [[ -z "$FILE" ]]; then
+        FILE="$1"
+        shift
+      else
+        echo "Unexpected argument: $1" >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
+
 if [[ -z "$FILE" ]]; then
-  echo "Usage: bun run db:apply:migration -- <filename.sql>" >&2
+  echo "Usage: bun run db:apply:migration [--prod|--vercel] -- <filename.sql>" >&2
   exit 1
 fi
 
@@ -18,31 +64,27 @@ if [[ ! -f "$PATH_FILE" ]]; then
   exit 1
 fi
 
-if [[ -z "${DATABASE_URL:-}" && -f .env.local ]]; then
-  DATABASE_URL="$(
-    node -e '
-      const fs = require("fs");
-      const dotenv = require("dotenv");
-      const parsed = dotenv.parse(fs.readFileSync(".env.local"));
-      const url = parsed.DATABASE_URL || "";
-      process.stdout.write(url);
-    '
-  )"
+if [[ -n "${DATABASE_URL:-}" && "$TARGET" == "app" ]]; then
+  RESOLVED_DATABASE_URL="$DATABASE_URL"
+  RESOLVED_DATABASE_LABEL="$(db_url_host_label "$DATABASE_URL")"
+else
+  resolve_database_url "$TARGET"
 fi
 
-if [[ -z "${DATABASE_URL:-}" ]]; then
-  echo "DATABASE_URL is not set. Add it to .env.local or export it." >&2
-  exit 1
-fi
+export DATABASE_URL="$RESOLVED_DATABASE_URL"
+
+echo "Target: $RESOLVED_DATABASE_LABEL"
+echo "Migration: $PATH_FILE"
 
 if [[ "$DATABASE_URL" == *"neon.tech"* ]]; then
-  echo "Target looks like Neon hosted Postgres."
-  echo "Review $PATH_FILE, back up first (bun run backup:neon), then confirm."
-  read -r -p "Apply to this DATABASE_URL? [y/N] " confirm
+  echo "Review the SQL file and confirm backup (bun run backup:neon or a Vercel-target dump)."
+  read -r -p "Apply to this Neon database? [y/N] " confirm
   if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
     echo "Aborted."
     exit 1
   fi
+elif is_local_db_url "$DATABASE_URL"; then
+  echo "Applying to local Docker only. Live Vercel prod is unchanged."
 fi
 
 echo "Applying $PATH_FILE"
@@ -62,6 +104,30 @@ elif command -v docker >/dev/null 2>&1; then
 else
   echo "psql is not installed and Docker is unavailable. Install psql or run the SQL in the Neon console." >&2
   exit 1
+fi
+
+# Record in schema_migrations so db:migrate:pending stays in sync.
+RECORD_SQL="$(cat <<SQL
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  filename text PRIMARY KEY,
+  applied_at timestamptz NOT NULL DEFAULT now(),
+  checksum text
+);
+INSERT INTO schema_migrations (filename, checksum)
+VALUES ('${FILE//\'/\'\'}', '$(
+  if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$PATH_FILE" | awk '{print $1}'; else sha256sum "$PATH_FILE" | awk '{print $1}'; fi
+)')
+ON CONFLICT (filename) DO UPDATE SET applied_at = now(), checksum = EXCLUDED.checksum;
+SQL
+)"
+
+if command -v psql >/dev/null 2>&1; then
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "$RECORD_SQL" >/dev/null
+elif [[ "$DATABASE_URL" == *"127.0.0.1:5433"* || "$DATABASE_URL" == *"localhost:5433"* ]]; then
+  docker compose exec -T db psql -U kame_lends -d kame_lends -v ON_ERROR_STOP=1 -c "$RECORD_SQL" >/dev/null
+elif command -v docker >/dev/null 2>&1; then
+  printf '%s\n' "$RECORD_SQL" | docker run --rm -i -e DATABASE_URL postgres:17 \
+    sh -c 'psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f -' >/dev/null
 fi
 
 echo "Done."

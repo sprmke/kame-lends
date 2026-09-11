@@ -180,7 +180,7 @@ bun run db:local:start
 bun run db:local:push
 ```
 
-For Neon, use `bun run db:migrate` against a non-prod branch. Do not run `db:push` against production without the **lendwave** unlock.
+For Neon schema changes, add a file under `db/migrations/` and merge to `main` (CD applies pending SQL before deploy). Locally: `bun run db:migrate:pending`. Prefer not using `db:push` against production.
 
 If you upgrade an older database and see missing column errors, run `db/migrations/0001_interest_incomplete_and_period_link.sql` in the Neon SQL editor (see comments in that file for Postgres version notes).
 
@@ -196,18 +196,19 @@ Open [http://localhost:5173](http://localhost:5173). Sign in with Google to acce
 
 ## Scripts
 
-| Command                  | Description                         |
-| ------------------------ | ----------------------------------- |
-| `bun run dev`            | Vite / SvelteKit development server |
-| `bun run build`          | Production build                    |
-| `bun run preview`        | Preview the production build        |
-| `bun run check`          | svelte-check                        |
-| `bun run test`           | Vitest unit tests                   |
-| `bun run db:local:start` | Start Docker Postgres               |
-| `bun run db:local:push`  | Push schema to local Postgres only  |
-| `bun run db:generate`    | Generate Drizzle migrations         |
-| `bun run db:migrate`     | Run migrations                      |
-| `bun run db:studio`      | Open Drizzle Studio                 |
+| Command                      | Description                              |
+| ---------------------------- | ---------------------------------------- |
+| `bun run dev`                | Vite / SvelteKit development server      |
+| `bun run build`              | Production build                         |
+| `bun run preview`            | Preview the production build             |
+| `bun run check`              | svelte-check                             |
+| `bun run test`               | Vitest unit tests                        |
+| `bun run db:local:start`     | Start Docker Postgres                    |
+| `bun run db:local:push`      | Push schema to local Postgres only       |
+| `bun run db:generate`        | Generate Drizzle migrations              |
+| `bun run db:migrate:pending` | Apply pending `db/migrations/*.sql`      |
+| `bun run deploy:prod`        | Manual Vercel prod (prefer CD on `main`) |
+| `bun run db:studio`          | Open Drizzle Studio                      |
 
 ---
 
