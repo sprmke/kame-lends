@@ -1,3 +1,5 @@
+<img src="./static/icon-512.png" alt="Kame Lends logo" width="88" />
+
 # Kame Lends
 
 **A web app for lending teams to manage loans, investors, and cashflow in one place.**
