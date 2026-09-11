@@ -7,6 +7,7 @@ import { buildLoanContractData } from "$lib/loan-contract-data";
 import {
   buildSigningInvitationsForLoan,
   getWitnessInvitationPartyName,
+  normalizeEmail,
 } from "$lib/loan-signing";
 import type { SigningPartyRole } from "$lib/loan-signing";
 import type { LoanWithInvestors } from "$lib/types";
@@ -106,7 +107,78 @@ async function insertSigningInvitationInputs(
     .returning();
 }
 
-async function syncSigningInvitationPartyNames(
+async function syncSigningInvitationBorrowerAndLenders(
+  loan: LoanWithInvestors,
+) {
+  if (loan.borrower) {
+    const existingBorrower = await db.query.loanSigningInvitations.findFirst({
+      where: and(
+        eq(loanSigningInvitations.loanId, loan.id),
+        eq(loanSigningInvitations.partyRole, "borrower"),
+      ),
+    });
+
+    if (existingBorrower) {
+      const emailChanged =
+        normalizeEmail(existingBorrower.partyEmail) !==
+        normalizeEmail(loan.borrower.email);
+
+      await db
+        .update(loanSigningInvitations)
+        .set({
+          partyName: loan.borrower.name,
+          partyEmail: loan.borrower.email,
+          ...(emailChanged
+            ? {
+                signatureDataUrl: null,
+                signedAt: null,
+                consentedAt: null,
+              }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(loanSigningInvitations.id, existingBorrower.id));
+    }
+  }
+
+  const seenInvestorIds = new Set<number>();
+  for (const li of loan.loanInvestors) {
+    if (seenInvestorIds.has(li.investorId)) continue;
+    seenInvestorIds.add(li.investorId);
+
+    const existingLender = await db.query.loanSigningInvitations.findFirst({
+      where: and(
+        eq(loanSigningInvitations.loanId, loan.id),
+        eq(loanSigningInvitations.partyRole, "lender"),
+        eq(loanSigningInvitations.investorId, li.investorId),
+      ),
+    });
+
+    if (!existingLender) continue;
+
+    const emailChanged =
+      normalizeEmail(existingLender.partyEmail) !==
+      normalizeEmail(li.investor.email);
+
+    await db
+      .update(loanSigningInvitations)
+      .set({
+        partyName: li.investor.name,
+        partyEmail: li.investor.email,
+        ...(emailChanged
+          ? {
+              signatureDataUrl: null,
+              signedAt: null,
+              consentedAt: null,
+            }
+          : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(loanSigningInvitations.id, existingLender.id));
+  }
+}
+
+async function syncSigningInvitationWitnesses(
   loanId: number,
   customization: ContractCustomization,
 ) {
@@ -153,7 +225,7 @@ export async function upsertLoanContractCustomization(
       })
       .where(eq(loanContracts.id, existing.id))
       .returning();
-    await syncSigningInvitationPartyNames(loan.id, customization);
+    await syncSigningInvitationWitnesses(loan.id, customization);
     return updated;
   }
 
@@ -165,7 +237,7 @@ export async function upsertLoanContractCustomization(
     })
     .returning();
 
-  await syncSigningInvitationPartyNames(loan.id, customization);
+  await syncSigningInvitationWitnesses(loan.id, customization);
   return created;
 }
 
@@ -203,14 +275,14 @@ export async function syncSigningInvitationsForLoan(loan: LoanWithInvestors) {
       ),
   );
 
-  if (missing.length === 0) {
-    await syncSigningInvitationPartyNames(loan.id, customization);
-    return existing;
+  if (missing.length > 0) {
+    const inserted = await insertSigningInvitationInputs(missing);
+    existing.push(...inserted);
   }
 
-  const inserted = await insertSigningInvitationInputs(missing);
-  await syncSigningInvitationPartyNames(loan.id, customization);
-  return [...existing, ...inserted];
+  await syncSigningInvitationBorrowerAndLenders(loan);
+  await syncSigningInvitationWitnesses(loan.id, customization);
+  return existing;
 }
 
 export async function ensureLoanSigningSetup(loan: LoanWithInvestors) {
