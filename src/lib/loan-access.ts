@@ -9,4 +9,6 @@ export type LoanAccessContext = {
   editableInvestorIds: number[];
   signingPartyRoles: SigningPartyRole[];
   linkedInvestorId: number | null;
+  /** The caller's own loan_witnesses row id, when they are a witness on this loan. */
+  linkedLoanWitnessId: number | null;
 };

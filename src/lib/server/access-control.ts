@@ -2,6 +2,7 @@ import { db } from "$lib/server/db";
 import {
   loans,
   loanInvestors,
+  loanWitnesses,
   investors,
   borrowers,
   witnesses,
@@ -132,6 +133,7 @@ export async function getLoanAccessContext(
     editableInvestorIds: [],
     signingPartyRoles: [],
     linkedInvestorId: null,
+    linkedLoanWitnessId: null,
   };
 
   const [sessionUser, loan] = await Promise.all([
@@ -165,6 +167,14 @@ export async function getLoanAccessContext(
             },
           },
         },
+        loanWitnesses: {
+          columns: { id: true, witnessId: true },
+          with: {
+            witness: {
+              columns: { id: true, witnessUserId: true, email: true },
+            },
+          },
+        },
       },
     }),
   ]);
@@ -175,6 +185,7 @@ export async function getLoanAccessContext(
   const memberships = new Set<LoanMembership>();
   const signingPartyRoles = new Set<SigningPartyRole>();
   let linkedInvestorId: number | null = null;
+  let linkedLoanWitnessId: number | null = null;
 
   const emailMatchesParty = (partyEmail: string | null | undefined) =>
     !!sessionEmail && emailsMatch(sessionEmail, partyEmail);
@@ -244,6 +255,16 @@ export async function getLoanAccessContext(
     }
   }
 
+  for (const lw of loan.loanWitnesses ?? []) {
+    if (
+      lw.witness?.witnessUserId === userId ||
+      emailMatchesParty(lw.witness?.email)
+    ) {
+      memberships.add("witness");
+      linkedLoanWitnessId = lw.id;
+    }
+  }
+
   const witnessOnLoan = await db
     .select({ id: witnesses.id })
     .from(witnesses)
@@ -274,7 +295,48 @@ export async function getLoanAccessContext(
       : [],
     signingPartyRoles: [...signingPartyRoles],
     linkedInvestorId,
+    linkedLoanWitnessId,
   };
+}
+
+/** Writes to a loan's own borrowerProfit field. Owner or the loan's linked borrower. */
+export async function hasBorrowerProfitWriteAccess(
+  loanId: number,
+  userId: string,
+): Promise<boolean> {
+  const ctx = await getLoanAccessContext(loanId, userId);
+  return ctx.canAdminEdit || ctx.memberships.includes("borrower");
+}
+
+/**
+ * Resolves the loan_witnesses row id the caller may write profit fields on.
+ * Owner may write any row on the loan (id passed in by the caller); a witness
+ * may write only their own linked row.
+ */
+export async function resolveWitnessProfitWriteAccess(
+  loanId: number,
+  userId: string,
+  witnessLoanId: number,
+): Promise<boolean> {
+  const ctx = await getLoanAccessContext(loanId, userId);
+  if (ctx.canAdminEdit) return true;
+  return (
+    ctx.memberships.includes("witness") &&
+    ctx.linkedLoanWitnessId === witnessLoanId
+  );
+}
+
+/** True when this witness contact was created by (and thus is manageable by) this workspace owner. */
+export async function isOwnedWitness(
+  witnessId: number,
+  userId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: witnesses.id })
+    .from(witnesses)
+    .where(and(eq(witnesses.id, witnessId), eq(witnesses.userId, userId)))
+    .limit(1);
+  return rows.length > 0;
 }
 
 export async function hasBorrowerContactViewAccess(

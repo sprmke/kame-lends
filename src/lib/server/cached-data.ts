@@ -9,8 +9,11 @@ import {
   borrowers,
   debts,
   investors,
+  loanGroupMembers,
+  loanGroups,
   loanInvestors,
   loanSigningInvitations,
+  loanWitnesses,
   loans,
   transactions,
   witnesses,
@@ -36,6 +39,9 @@ const listRelations = {
       witness: { columns: { id: true, name: true } },
     },
   },
+  loanWitnesses: {
+    columns: { id: true, witnessId: true, profitType: true, profitValue: true },
+  },
 } as const;
 
 const fullRelations = {
@@ -45,6 +51,11 @@ const fullRelations = {
       investor: true,
       interestPeriods: true,
       receivedPayments: true,
+    },
+  },
+  loanWitnesses: {
+    with: {
+      witness: true,
     },
   },
 } as const;
@@ -109,11 +120,21 @@ async function loadWitnessedLoanIds(userId: string) {
   });
   if (witnessRecords.length === 0) return [];
   const witnessIds = witnessRecords.map((w) => w.id);
-  const rows = await db
-    .select({ loanId: loanSigningInvitations.loanId })
-    .from(loanSigningInvitations)
-    .where(inArray(loanSigningInvitations.witnessId, witnessIds));
-  return [...new Set(rows.map((r) => r.loanId))];
+  const [viaInvitations, viaLoanWitnesses] = await Promise.all([
+    db
+      .select({ loanId: loanSigningInvitations.loanId })
+      .from(loanSigningInvitations)
+      .where(inArray(loanSigningInvitations.witnessId, witnessIds)),
+    db
+      .select({ loanId: loanWitnesses.loanId })
+      .from(loanWitnesses)
+      .where(inArray(loanWitnesses.witnessId, witnessIds)),
+  ]);
+  return [
+    ...new Set(
+      [...viaInvitations, ...viaLoanWitnesses].map((r) => r.loanId),
+    ),
+  ];
 }
 
 async function loadLoans(
@@ -328,6 +349,48 @@ export async function getCachedDebts(
       orderBy: (table, { desc }) => [desc(table.date)],
       with: { investor: true },
     });
+  });
+}
+
+const groupRelations = {
+  creator: { columns: { id: true, name: true, email: true } },
+  groupLoans: { columns: { loanId: true } },
+  members: { columns: { userId: true, status: true } },
+} as const;
+
+export async function getCachedGroupsForUser(userId: string, isAdmin: boolean) {
+  return remember(`groups:${userId}:${isAdmin}`, () =>
+    loadGroupsForUser(userId, isAdmin),
+  );
+}
+
+async function loadGroupsForUser(userId: string, isAdmin: boolean) {
+  if (isAdmin) {
+    return db.query.loanGroups.findMany({
+      with: groupRelations,
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
+    });
+  }
+
+  const memberships = await db.query.loanGroupMembers.findMany({
+    where: and(
+      eq(loanGroupMembers.userId, userId),
+      eq(loanGroupMembers.status, "active"),
+    ),
+    columns: { groupId: true },
+  });
+  const memberGroupIds = memberships.map((m) => m.groupId);
+
+  return db.query.loanGroups.findMany({
+    where:
+      memberGroupIds.length > 0
+        ? or(
+            eq(loanGroups.creatorUserId, userId),
+            inArray(loanGroups.id, memberGroupIds),
+          )
+        : eq(loanGroups.creatorUserId, userId),
+    with: groupRelations,
+    orderBy: (table, { desc }) => [desc(table.createdAt)],
   });
 }
 

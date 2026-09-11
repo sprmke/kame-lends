@@ -9,6 +9,7 @@ export const CACHE_TAGS = {
   debts: "debts",
   transactions: "transactions",
   dashboard: "dashboard",
+  groups: "groups",
 } as const;
 
 function drop(prefixes: string[]): void {
@@ -37,4 +38,8 @@ export function invalidateDebtData() {
 
 export function invalidateTransactionData() {
   drop(["transactions:", "dashboard:", "investors:"]);
+}
+
+export function invalidateGroupData() {
+  drop(["groups:"]);
 }
