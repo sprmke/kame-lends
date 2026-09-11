@@ -10,9 +10,11 @@ import {
   pgEnum,
   primaryKey,
   index,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { AdapterAccount } from "@auth/core/adapters";
+import type { ReceiptExtractedData } from "$lib/receipt-extraction-types";
 
 // Enums
 export const userRoleEnum = pgEnum("user_role", [
@@ -55,6 +57,11 @@ export const signingPartyRoleEnum = pgEnum("signing_party_role", [
   "lender",
   "witness_1",
   "witness_2",
+]);
+export const groupMemberStatusEnum = pgEnum("group_member_status", [
+  "active",
+  "left",
+  "removed",
 ]);
 
 // Investors Table
@@ -161,6 +168,10 @@ export const loans = pgTable(
     freeLotSqm: integer("free_lot_sqm"),
     notes: text("notes"),
     googleCalendarEventIds: jsonb("google_calendar_event_ids"), // Store array of event IDs for sent/due/interest events
+    profitType: interestTypeEnum("profit_type").notNull().default("rate"),
+    profitValue: decimal("profit_value", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -240,12 +251,112 @@ export const loanInvestors = pgTable(
     hasMultipleInterest: boolean("has_multiple_interest")
       .notNull()
       .default(false),
+    /** Evidence of the investor's fund transfer, as an uploaded data URL (same convention as validIdUrl). */
+    receiptImageUrl: text("receipt_image_url"),
+    /** AI-extracted snapshot from receiptImageUrl at upload time; kept for audit even if fields are later hand-edited. */
+    receiptExtractedData: jsonb("receipt_extracted_data").$type<ReceiptExtractedData | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     loanIdIdx: index("loan_investors_loan_id_idx").on(table.loanId),
     investorIdIdx: index("loan_investors_investor_id_idx").on(table.investorId),
+  }),
+);
+
+// Loan Witnesses (Junction Table — witness profit per loan)
+export const loanWitnesses = pgTable(
+  "loan_witnesses",
+  {
+    id: serial("id").primaryKey(),
+    loanId: integer("loan_id")
+      .references(() => loans.id, { onDelete: "cascade" })
+      .notNull(),
+    witnessId: integer("witness_id")
+      .references(() => witnesses.id, { onDelete: "cascade" })
+      .notNull(),
+    profitType: interestTypeEnum("profit_type").notNull().default("rate"),
+    profitValue: decimal("profit_value", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    loanIdIdx: index("loan_witnesses_loan_id_idx").on(table.loanId),
+    witnessIdIdx: index("loan_witnesses_witness_id_idx").on(table.witnessId),
+    loanWitnessUnique: unique("loan_witnesses_loan_witness_unique").on(
+      table.loanId,
+      table.witnessId,
+    ),
+  }),
+);
+
+// Loan Groups (user-created collections of loans, shared with the loans' parties)
+export const loanGroups = pgTable(
+  "loan_groups",
+  {
+    id: serial("id").primaryKey(),
+    creatorUserId: text("creator_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    creatorUserIdIdx: index("loan_groups_creator_user_id_idx").on(
+      table.creatorUserId,
+    ),
+  }),
+);
+
+// Loan Group Loans (Junction Table)
+export const loanGroupLoans = pgTable(
+  "loan_group_loans",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .references(() => loanGroups.id, { onDelete: "cascade" })
+      .notNull(),
+    loanId: integer("loan_id")
+      .references(() => loans.id, { onDelete: "cascade" })
+      .notNull(),
+    addedAt: timestamp("added_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    groupIdIdx: index("loan_group_loans_group_id_idx").on(table.groupId),
+    loanIdIdx: index("loan_group_loans_loan_id_idx").on(table.loanId),
+    groupLoanUnique: unique("loan_group_loans_group_loan_unique").on(
+      table.groupId,
+      table.loanId,
+    ),
+  }),
+);
+
+/** Sticky membership: once "left" or "removed", never silently re-added by loan sync. */
+export const loanGroupMembers = pgTable(
+  "loan_group_members",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .references(() => loanGroups.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: text("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    status: groupMemberStatusEnum("status").notNull().default("active"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    groupIdIdx: index("loan_group_members_group_id_idx").on(table.groupId),
+    userIdIdx: index("loan_group_members_user_id_idx").on(table.userId),
+    groupUserUnique: unique("loan_group_members_group_user_unique").on(
+      table.groupId,
+      table.userId,
+    ),
   }),
 );
 
@@ -291,6 +402,10 @@ export const receivedPayments = pgTable(
     ),
     amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
     receivedDate: timestamp("received_date").notNull(),
+    /** Evidence of the borrower's repayment, as an uploaded data URL (same convention as validIdUrl). */
+    receiptImageUrl: text("receipt_image_url"),
+    /** AI-extracted snapshot from receiptImageUrl at upload time; kept for audit even if fields are later hand-edited. */
+    receiptExtractedData: jsonb("receipt_extracted_data").$type<ReceiptExtractedData | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -510,7 +625,19 @@ export const witnessesRelations = relations(witnesses, ({ one, many }) => ({
     fields: [witnesses.witnessUserId],
     references: [users.id],
   }),
+  loanWitnesses: many(loanWitnesses),
   signingInvitations: many(loanSigningInvitations),
+}));
+
+export const loanWitnessesRelations = relations(loanWitnesses, ({ one }) => ({
+  loan: one(loans, {
+    fields: [loanWitnesses.loanId],
+    references: [loans.id],
+  }),
+  witness: one(witnesses, {
+    fields: [loanWitnesses.witnessId],
+    references: [witnesses.id],
+  }),
 }));
 
 export const investorsRelations = relations(investors, ({ one, many }) => ({
@@ -541,6 +668,7 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
     references: [loanContracts.loanId],
   }),
   loanInvestors: many(loanInvestors),
+  loanWitnesses: many(loanWitnesses),
   signingInvitations: many(loanSigningInvitations),
   transactions: many(transactions),
 }));
@@ -619,6 +747,43 @@ export const interestPeriodsRelations = relations(
   }),
 );
 
+export const loanGroupsRelations = relations(loanGroups, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [loanGroups.creatorUserId],
+    references: [users.id],
+  }),
+  groupLoans: many(loanGroupLoans),
+  members: many(loanGroupMembers),
+}));
+
+export const loanGroupLoansRelations = relations(
+  loanGroupLoans,
+  ({ one }) => ({
+    group: one(loanGroups, {
+      fields: [loanGroupLoans.groupId],
+      references: [loanGroups.id],
+    }),
+    loan: one(loans, {
+      fields: [loanGroupLoans.loanId],
+      references: [loans.id],
+    }),
+  }),
+);
+
+export const loanGroupMembersRelations = relations(
+  loanGroupMembers,
+  ({ one }) => ({
+    group: one(loanGroups, {
+      fields: [loanGroupMembers.groupId],
+      references: [loanGroups.id],
+    }),
+    user: one(users, {
+      fields: [loanGroupMembers.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
 export const debtsRelations = relations(debts, ({ one, many }) => ({
   user: one(users, {
     fields: [debts.userId],
@@ -676,6 +841,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   transactions: many(transactions),
   debts: many(debts),
   paymentMethods: many(paymentMethods),
+  loanGroups: many(loanGroups),
+  loanGroupMemberships: many(loanGroupMembers),
 }));
 
 export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({

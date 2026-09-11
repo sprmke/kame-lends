@@ -1,3 +1,5 @@
+import type { ReceiptExtractedData } from "$lib/receipt-extraction-types";
+
 export type LoanType = "Lot Title" | "OR/CR" | "Agent";
 export type LoanStatus =
   "Partially Funded" | "Fully Funded" | "Overdue" | "Completed";
@@ -106,6 +108,8 @@ export interface Loan {
   notes: string | null;
   googleCalendarEventIds?: unknown; // JSON array of event IDs
   userId?: string;
+  profitType: InterestType;
+  profitValue: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,8 +131,45 @@ export interface ReceivedPayment {
   interestPeriodId?: number | null;
   amount: string;
   receivedDate: Date;
+  receiptImageUrl?: string | null;
+  receiptExtractedData?: ReceiptExtractedData | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export type GroupMemberStatus = "active" | "left" | "removed";
+
+export interface LoanGroupMember {
+  userId: string;
+  status: GroupMemberStatus;
+  name?: string | null;
+  email?: string | null;
+}
+
+export interface LoanGroup {
+  id: number;
+  creatorUserId: string;
+  name: string;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface LoanGroupWithDetails extends LoanGroup {
+  creator?: { id: string; name: string | null; email: string } | null;
+  groupLoans: Array<{ loanId: number }>;
+  members: LoanGroupMember[];
+  canEdit?: boolean;
+  canLeave?: boolean;
+  isCreator?: boolean;
+}
+
+export interface GroupLoanSummary {
+  id: number;
+  loanName: string;
+  type: LoanType;
+  status: LoanStatus;
+  dueDate: string | Date;
 }
 
 export interface LoanInvestor {
@@ -141,6 +182,8 @@ export interface LoanInvestor {
   sentDate: Date;
   isPaid: boolean;
   hasMultipleInterest: boolean;
+  receiptImageUrl?: string | null;
+  receiptExtractedData?: ReceiptExtractedData | null;
   createdAt: Date;
   updatedAt: Date;
   interestPeriods?: InterestPeriod[];
@@ -168,9 +211,21 @@ export interface LoanListSigningInvitation {
   witness?: Pick<Witness, "id" | "name"> | null;
 }
 
+export interface LoanWitness {
+  id: number;
+  loanId: number;
+  witnessId: number;
+  profitType: InterestType;
+  profitValue: string;
+  createdAt: Date;
+  updatedAt: Date;
+  witness: Witness;
+}
+
 export interface LoanWithInvestors extends Loan {
   borrower?: Borrower | null;
   loanInvestors: (LoanInvestor & { investor: Investor })[];
+  loanWitnesses?: LoanWitness[];
   signingInvitations?: LoanListSigningInvitation[];
   transactions?: Transaction[];
   loanContract?: {
