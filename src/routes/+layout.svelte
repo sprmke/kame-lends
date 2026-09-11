@@ -2,7 +2,7 @@
 	import './layout.css';
 	import '$lib/styles/accessibility.css';
 	import { ModeWatcher } from 'mode-watcher';
-	import favicon from '$lib/assets/favicon.svg';
+	import { APP_DESCRIPTION, APP_NAME } from '$lib/brand';
 	import Nav from '$lib/components/Nav.svelte';
 	import PriceVisibilityShell from '$lib/components/common/PriceVisibilityShell.svelte';
 	import DashboardSkeleton from '$lib/components/common/DashboardSkeleton.svelte';
@@ -14,7 +14,7 @@
 	} from '$lib/components/common/DetailPageSkeleton.svelte';
 	import NavigationProgress from '$lib/components/common/NavigationProgress.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
-	import { navigating } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import {
 		THEME_COLOR_DARK,
 		THEME_COLOR_DASHBOARD,
@@ -111,7 +111,22 @@
 	themeColors={themeColors}
 />
 
-<svelte:head><link rel="icon" href={favicon} /></svelte:head>
+<!-- Icons live in app.html; social cards need an absolute image URL per deploy origin. -->
+<svelte:head>
+	<meta name="description" content={APP_DESCRIPTION} />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content={APP_NAME} />
+	<meta property="og:title" content={APP_NAME} />
+	<meta property="og:description" content={APP_DESCRIPTION} />
+	<meta property="og:image" content="{page.url.origin}/og-image.png" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image:alt" content="{APP_NAME} logo" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={APP_NAME} />
+	<meta name="twitter:description" content={APP_DESCRIPTION} />
+	<meta name="twitter:image" content="{page.url.origin}/og-image.png" />
+</svelte:head>
 
 <NavigationProgress />
 

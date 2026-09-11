@@ -35,12 +35,12 @@
 	import { downloadLoansPdf } from '$lib/pdf-download';
 	import { loanPDFSections } from '$lib/pdf-sections';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
+	import { createLoanFormOptions } from '$lib/composables/use-loan-form-options.svelte';
 	import { Plus, X, Filter } from 'lucide-svelte';
 	import { toast } from '$lib/toast';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import type { PendingDisbursement } from '$lib/server/dashboard-data';
 	import type {
-		Borrower,
 		DebtWithInvestor,
 		Investor,
 		InvestorWithLoans,
@@ -95,11 +95,13 @@
 	let selectedLoan = $state<LoanWithInvestors | null>(null);
 	let showLoanDetailModal = $state(false);
 	let showLoanCreateModal = $state(false);
-	let createModalInvestors = $state<Investor[]>([]);
-	let createModalBorrowers = $state<Borrower[]>([]);
 	let createModalDuplicateData = $state<DuplicateLoanData | null>(null);
-	let loadingCreateFormData = $state(false);
 	const debtsViewMode = createResponsiveViewMode();
+	const loanFormOptions = createLoanFormOptions();
+
+	$effect(() => {
+		loanFormOptions.prefetch();
+	});
 
 	/** Use `loans` graph (includes interestPeriods), not `investor.loanInvestors` from entity load. */
 	const investorLoanInvestors = $derived(
@@ -277,30 +279,10 @@
 		await invalidateAll();
 	}
 
-	async function loadCreateFormData() {
-		if (createModalInvestors.length > 0 && createModalBorrowers.length > 0) return;
-		loadingCreateFormData = true;
-		try {
-			const [investorRes, borrowerRes] = await Promise.all([
-				fetch('/api/investors?simple=true'),
-				fetch('/api/borrowers?simple=true')
-			]);
-			const investorData = await investorRes.json();
-			const borrowerData = await borrowerRes.json();
-			if (Array.isArray(investorData)) createModalInvestors = investorData;
-			if (Array.isArray(borrowerData)) createModalBorrowers = borrowerData;
-		} catch (error) {
-			console.error('Failed to load loan form data', error);
-			toast.error('Failed to load form data');
-		} finally {
-			loadingCreateFormData = false;
-		}
-	}
-
-	async function openLoanCreate(duplicateData: DuplicateLoanData | null = null) {
+	function openLoanCreate(duplicateData: DuplicateLoanData | null = null) {
 		createModalDuplicateData = duplicateData;
 		showLoanCreateModal = true;
-		await loadCreateFormData();
+		void loanFormOptions.load();
 	}
 
 	function clearOverviewFilters() {
@@ -727,10 +709,10 @@
 			if (!open) createModalDuplicateData = null;
 		}}
 		preselectedInvestorId={investor.id}
-		investors={createModalInvestors}
-		borrowers={createModalBorrowers}
+		investors={loanFormOptions.investors}
+		borrowers={loanFormOptions.borrowers}
 		duplicateData={createModalDuplicateData}
-		loadingFormData={loadingCreateFormData}
+		loadingFormData={loanFormOptions.loading}
 		onSuccess={refresh}
 	/>
 
@@ -743,7 +725,7 @@
 		}}
 		onUpdate={refresh}
 		onDuplicate={(duplicateData) => {
-			void openLoanCreate(duplicateData);
+			openLoanCreate(duplicateData);
 		}}
 	/>
 </div>

@@ -34,39 +34,61 @@ export async function readValidIdFileAsDataUrl(file: File): Promise<string> {
   return dataUrl;
 }
 
+/**
+ * Draws `image` onto a canvas scaled down to fit within `maxDimension`.
+ * Pass `background` to flatten transparency (e.g. before JPEG encoding).
+ */
+export function drawImageToCanvas(
+  image: HTMLImageElement,
+  maxDimension: number,
+  background?: string,
+): HTMLCanvasElement {
+  const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Unable to process image.");
+  }
+
+  if (background) {
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+  }
+  context.drawImage(image, 0, 0, width, height);
+  return canvas;
+}
+
+/** Encodes `canvas` as JPEG, backing off quality until it fits under `maxLength` chars. */
+export function encodeJpegUnderLimit(
+  canvas: HTMLCanvasElement,
+  maxLength: number,
+  initialQuality: number,
+  minQuality: number,
+): string {
+  let quality = initialQuality;
+  let dataUrl = canvas.toDataURL("image/jpeg", quality);
+
+  while (dataUrl.length > maxLength && quality > minQuality) {
+    quality -= 0.1;
+    dataUrl = canvas.toDataURL("image/jpeg", quality);
+  }
+
+  return dataUrl;
+}
+
 async function compressValidIdImage(file: File): Promise<string> {
   const objectUrl = URL.createObjectURL(file);
 
   try {
     const image = await loadImage(objectUrl);
-    const maxDimension = 1200;
-    const scale = Math.min(
-      1,
-      maxDimension / Math.max(image.width, image.height),
-    );
-    const width = Math.max(1, Math.round(image.width * scale));
-    const height = Math.max(1, Math.round(image.height * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-
-    const context = canvas.getContext("2d");
-    if (!context) {
-      throw new Error("Unable to process image.");
-    }
-
-    context.drawImage(image, 0, 0, width, height);
-
-    let quality = 0.85;
-    let dataUrl = canvas.toDataURL("image/jpeg", quality);
-
-    while (dataUrl.length > MAX_VALID_ID_DATA_URL_LENGTH && quality > 0.45) {
-      quality -= 0.1;
-      dataUrl = canvas.toDataURL("image/jpeg", quality);
-    }
-
-    return dataUrl;
+    const canvas = drawImageToCanvas(image, 1200);
+    return encodeJpegUnderLimit(canvas, MAX_VALID_ID_DATA_URL_LENGTH, 0.85, 0.45);
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -96,42 +118,18 @@ async function compressSignatureImage(file: File): Promise<string> {
 
   try {
     const image = await loadImage(objectUrl);
-    const maxDimension = 800;
-    const scale = Math.min(
-      1,
-      maxDimension / Math.max(image.width, image.height),
-    );
-    const width = Math.max(1, Math.round(image.width * scale));
-    const height = Math.max(1, Math.round(image.height * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-
-    const context = canvas.getContext("2d");
-    if (!context) {
-      throw new Error("Unable to process image.");
-    }
-
     // Transparent PNG/WebP signatures become black when flattened to JPEG
     // without an explicit background.
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, width, height);
-    context.drawImage(image, 0, 0, width, height);
+    const canvas = drawImageToCanvas(image, 800, "#ffffff");
 
     let dataUrl = canvas.toDataURL("image/png");
-
     if (dataUrl.length > MAX_SIGNATURE_IMAGE_DATA_URL_LENGTH) {
-      let quality = 0.92;
-      dataUrl = canvas.toDataURL("image/jpeg", quality);
-
-      while (
-        dataUrl.length > MAX_SIGNATURE_IMAGE_DATA_URL_LENGTH &&
-        quality > 0.5
-      ) {
-        quality -= 0.1;
-        dataUrl = canvas.toDataURL("image/jpeg", quality);
-      }
+      dataUrl = encodeJpegUnderLimit(
+        canvas,
+        MAX_SIGNATURE_IMAGE_DATA_URL_LENGTH,
+        0.92,
+        0.5,
+      );
     }
 
     return dataUrl;
@@ -140,7 +138,7 @@ async function compressSignatureImage(file: File): Promise<string> {
   }
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);

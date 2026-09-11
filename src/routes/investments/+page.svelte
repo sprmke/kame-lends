@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { invalidate } from '$app/navigation';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
@@ -50,9 +49,12 @@
 	import LoanListSummaryCards from '$lib/components/loans/LoanListSummaryCards.svelte';
 	import { createLoanListDateRange } from '$lib/composables/use-loan-list-date-range.svelte';
 	import { createLoanListParticipantFilters } from '$lib/composables/use-loan-list-participant-filters.svelte';
+	import { createLoanFormOptions } from '$lib/composables/use-loan-form-options.svelte';
+	import { refreshLoanList } from '$lib/composables/refresh-loan-list';
+	import { refreshLoanIfCurrent } from '$lib/loan-modal-utils';
 	import { loanListRowActionHandlers } from '$lib/components/common/action-buttons';
 	import { PiggyBank, PlusCircle, X } from 'lucide-svelte';
-	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
+	import type { LoanWithInvestors } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 
 	let { data } = $props();
@@ -99,62 +101,32 @@
 	let contractDetailsLoan = $state<LoanWithInvestors | null>(null);
 	let showContractDetailsModal = $state(false);
 	let showCreateModal = $state(false);
-	let createModalInvestors = $state<Investor[]>([]);
-	let createModalBorrowers = $state<Borrower[]>([]);
 	let createModalDuplicateData = $state<DuplicateLoanData | null>(null);
-	let loadingCreateFormData = $state(false);
+	let duplicateSourceLoanId = $state<number | null>(null);
 	let detailStartInEdit = $state(false);
+	const loanFormOptions = createLoanFormOptions();
 
 	onMount(() => {
 		viewModeState.init();
 		isMobileShell.init();
 		void participantFilters.loadFilterOptions();
+		loanFormOptions.prefetch();
 	});
 
-	async function loadCreateFormData() {
-		if (createModalInvestors.length > 0 && createModalBorrowers.length > 0) return;
-		loadingCreateFormData = true;
-		try {
-			const [investorRes, borrowerRes] = await Promise.all([
-				fetch('/api/investors?simple=true'),
-				fetch('/api/borrowers?simple=true')
-			]);
-			const investorData = await investorRes.json();
-			const borrowerData = await borrowerRes.json();
-			if (Array.isArray(investorData)) createModalInvestors = investorData;
-			if (Array.isArray(borrowerData)) createModalBorrowers = borrowerData;
-		} catch (error) {
-			console.error('Failed to load loan form data', error);
-			toast.error('Failed to load form data');
-		} finally {
-			loadingCreateFormData = false;
-		}
-	}
-
-	async function openCreateModal(duplicateData: DuplicateLoanData | null = null) {
+	function openCreateModal(duplicateData: DuplicateLoanData | null = null) {
 		createModalDuplicateData = duplicateData;
 		showCreateModal = true;
-		await loadCreateFormData();
+		void loanFormOptions.load();
 	}
 
 	function closeCreateModal() {
 		showCreateModal = false;
 		createModalDuplicateData = null;
+		duplicateSourceLoanId = null;
 	}
 
 	async function refreshLoans() {
-		await invalidate('app:loans');
-		loans = (await data.loans) as LoanWithInvestors[];
-	}
-
-	async function fetchFullLoan(loan: LoanWithInvestors): Promise<LoanWithInvestors> {
-		try {
-			const response = await fetch(`/api/loans/${loan.id}`);
-			if (response.ok) return (await response.json()) as LoanWithInvestors;
-		} catch {
-			// Fall back to list row data.
-		}
-		return loan;
+		loans = await refreshLoanList();
 	}
 
 	function handleQuickView(loan: LoanWithInvestors) {
@@ -162,40 +134,65 @@
 			goto(`/loans/${loan.id}`);
 			return;
 		}
+		detailStartInEdit = false;
 		selectedLoan = loan;
 		isModalOpen = true;
 	}
 
 	function handleRowEdit(loan: LoanWithInvestors) {
-		if (isMobileShellViewport()) {
-			selectedLoan = loan;
-			detailStartInEdit = true;
-			isModalOpen = true;
-			return;
-		}
-		goto(`/loans/${loan.id}`);
+		selectedLoan = loan;
+		detailStartInEdit = true;
+		isModalOpen = true;
 	}
 
-	async function handleRowDuplicate(loan: LoanWithInvestors) {
-		const sourceLoan = await fetchFullLoan(loan);
-		const duplicateData = createDuplicateDataFromLoan(sourceLoan);
-		await openCreateModal(duplicateData);
+	function handleRowDuplicate(loan: LoanWithInvestors) {
+		duplicateSourceLoanId = loan.id;
+		openCreateModal(createDuplicateDataFromLoan(loan));
+		refreshLoanIfCurrent(
+			() => (duplicateSourceLoanId === loan.id ? loan : null),
+			(full) => {
+				if (showCreateModal && duplicateSourceLoanId === full.id) {
+					createModalDuplicateData = createDuplicateDataFromLoan(full);
+				}
+			},
+			loan
+		);
 	}
 
-	async function handleQuickPayment(loan: LoanWithInvestors, kind: LoanQuickPaymentKind) {
-		quickPaymentLoan = await fetchFullLoan(loan);
+	function handleQuickPayment(loan: LoanWithInvestors, kind: LoanQuickPaymentKind) {
+		quickPaymentLoan = loan;
 		quickPaymentKind = kind;
+		refreshLoanIfCurrent(
+			() => quickPaymentLoan,
+			(full) => {
+				quickPaymentLoan = full;
+			},
+			loan
+		);
 	}
 
-	async function handleRowContractDetails(loan: LoanWithInvestors) {
-		contractDetailsLoan = await fetchFullLoan(loan);
+	function handleRowContractDetails(loan: LoanWithInvestors) {
+		contractDetailsLoan = loan;
 		showContractDetailsModal = true;
+		refreshLoanIfCurrent(
+			() => contractDetailsLoan,
+			(full) => {
+				contractDetailsLoan = full;
+			},
+			loan
+		);
 	}
 
 	async function handleContractDetailsSaved() {
 		await refreshLoans();
 		if (contractDetailsLoan) {
-			contractDetailsLoan = await fetchFullLoan(contractDetailsLoan);
+			refreshLoanIfCurrent(
+				() => contractDetailsLoan,
+				(full) => {
+					contractDetailsLoan = full;
+				},
+				contractDetailsLoan
+			);
 		}
 	}
 
@@ -528,10 +525,10 @@
 				if (!open) closeCreateModal();
 				else showCreateModal = true;
 			}}
-			investors={createModalInvestors}
-			borrowers={createModalBorrowers}
+			investors={loanFormOptions.investors}
+			borrowers={loanFormOptions.borrowers}
 			duplicateData={createModalDuplicateData}
-			loadingFormData={loadingCreateFormData}
+			loadingFormData={loanFormOptions.loading}
 			onSuccess={refreshLoans}
 		/>
 
@@ -547,8 +544,8 @@
 				}
 			}}
 			onUpdate={refreshLoans}
-			onDuplicate={async (duplicateData) => {
-				await openCreateModal(duplicateData);
+			onDuplicate={(duplicateData) => {
+				openCreateModal(duplicateData);
 			}}
 			readOnly={!canManage}
 		/>

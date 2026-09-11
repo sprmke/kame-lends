@@ -10,6 +10,7 @@
 	import PaymentMethodsManager from '$lib/components/settings/PaymentMethodsManager.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import FormActions from '$lib/components/common/FormActions.svelte';
+	import PartyProfileFormSkeleton from '$lib/components/common/page-skeletons/PartyProfileFormSkeleton.svelte';
 	import { cn } from '$lib/utils';
 	import { toast } from '$lib/toast';
 	import { normalizeSignatureImageUrl, normalizeValidIdUrl } from '$lib/valid-id-document';
@@ -187,11 +188,7 @@
 	{/if}
 
 	{#if isLoading}
-		<Card.Root>
-			<Card.Content class="py-8">
-				<p class="text-muted-foreground text-sm">Loading...</p>
-			</Card.Content>
-		</Card.Root>
+		<PartyProfileFormSkeleton />
 	{:else}
 		<Card.Root>
 			<Card.Header>

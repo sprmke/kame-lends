@@ -11,7 +11,7 @@ Read-focused list with in-app calendar. No New Loan or Google Calendar sync cont
 
 **Date range + summary cards** match `/loans`: `from`/`to` due-date filter in the header (defaults to current month), or `?range=all` for all-time. Summary row (Principal, Interest Estimate, Interest Earned, Completed completed/total) scoped to the date range. Principal dedupes reused capital across non-overlapping loan periods; all-completed ranges show capital used. See `docs/guides/routes/loans.md` for URL and filter semantics.
 
-On desktop, table rows and calendar event cards open `LoanDetailModal`; on phone, navigation goes to `/loans/[id]`. Row/card ⋯ menu is view-only (Contract Details). Investors cannot record payments; only the workspace admin can create, edit, or delete.
+On desktop, table rows and calendar event cards open `LoanDetailModal`; on phone, navigation goes to `/loans/[id]`. Row/card ⋯ menu is view-only (Contract Details). Contract Details shows an **Open** button on the investor's own unsigned signing row (links to `/loans/[id]/sign`) alongside copy link. Investors cannot record payments; only the workspace admin can create, edit, or delete.
 
 ## Load
 
