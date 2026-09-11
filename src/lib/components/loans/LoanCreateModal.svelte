@@ -1,10 +1,11 @@
 <script lang="ts">
+	import type { Component } from 'svelte';
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
-	import LoanForm from '$lib/components/loans/LoanForm.svelte';
 	import type { Borrower, Investor } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
+	import { createOverlayContentReady } from '$lib/composables/use-overlay-content-ready.svelte';
 
 	interface Props {
 		open: boolean;
@@ -29,6 +30,9 @@
 	}: Props = $props();
 
 	let isSubmitting = $state(false);
+	let LoanFormComponent = $state<Component | null>(null);
+	let loadingLoanFormModule = $state(false);
+	const overlayContent = createOverlayContentReady();
 
 	const formId = 'loan-create-form';
 
@@ -43,9 +47,35 @@
 	);
 
 	async function handleSuccess() {
-		onOpenChange(false);
 		await onSuccess?.();
+		onOpenChange(false);
 	}
+
+	$effect(() => {
+		overlayContent.armWhenOpen(open);
+	});
+
+	$effect(() => {
+		if (!open || loadingFormData || !overlayContent.ready) {
+			if (!open) {
+				LoanFormComponent = null;
+				loadingLoanFormModule = false;
+			}
+			return;
+		}
+
+		if (LoanFormComponent) return;
+
+		loadingLoanFormModule = true;
+		void import('$lib/components/loans/LoanForm.svelte').then((mod) => {
+			LoanFormComponent = mod.default;
+			loadingLoanFormModule = false;
+		});
+	});
+
+	const showFormSkeleton = $derived(
+		loadingFormData || !overlayContent.ready || loadingLoanFormModule || !LoanFormComponent
+	);
 </script>
 
 <ResponsiveModal
@@ -67,11 +97,11 @@
 		/>
 	{/snippet}
 
-	{#if loadingFormData}
+	{#if showFormSkeleton}
 		<FormPageSkeleton />
 	{:else}
 		{#key duplicateData ? `dup-${duplicateData.name}` : 'new'}
-			<LoanForm
+			<LoanFormComponent
 				{investors}
 				{borrowers}
 				{preselectedInvestorId}

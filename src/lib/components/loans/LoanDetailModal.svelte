@@ -5,8 +5,9 @@
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import LoanDetailContent from './LoanDetailContent.svelte';
 	import LoanContractDetailsModal from './LoanContractDetailsModal.svelte';
-	import LoanForm from './LoanForm.svelte';
+	import type { Component } from 'svelte';
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
+	import { createOverlayContentReady } from '$lib/composables/use-overlay-content-ready.svelte';
 	import DetailModalHeaderSkeleton from '$lib/components/common/page-skeletons/DetailModalHeaderSkeleton.svelte';
 	import LoanDetailSkeleton from '$lib/components/common/page-skeletons/LoanDetailSkeleton.svelte';
 	import LoanQuickPaymentDialog, {
@@ -17,6 +18,7 @@
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, LoanWithInvestors, PaymentMethod } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
+	import type { LoanAccessContext } from '$lib/loan-access';
 
 	interface Props {
 		loan: LoanWithInvestors | null;
@@ -40,6 +42,7 @@
 
 	let loan = $state<LoanWithInvestors | null>(initialLoan);
 	let paymentMethods = $state<PaymentMethod[]>([]);
+	let access = $state<LoanAccessContext | null>(null);
 	let loanFetchKey = $state(0);
 	let isEditing = $state(false);
 	let showDeleteDialog = $state(false);
@@ -53,9 +56,22 @@
 	let loadingFormData = $state(false);
 	let isLoadingLoan = $state(false);
 	let isSubmitting = $state(false);
+	let LoanFormComponent = $state<Component | null>(null);
+	let loadingLoanFormModule = $state(false);
+	const editOverlayContent = createOverlayContentReady();
 
 	$effect.pre(() => {
 		if (initialLoan) loan = initialLoan;
+	});
+
+	$effect.pre(() => {
+		if (!open) {
+			isEditing = false;
+			paymentMethods = [];
+			access = null;
+			return;
+		}
+		isEditing = startInEditMode && !readOnly;
 	});
 
 	$effect(() => {
@@ -64,16 +80,8 @@
 			return;
 		}
 		paymentMethods = [];
-		isEditing = startInEditMode && !readOnly;
 		isLoadingLoan = true;
 		void fetchLoanData(initialLoan.id);
-	});
-
-	$effect(() => {
-		if (!open) {
-			isEditing = false;
-			paymentMethods = [];
-		}
 	});
 
 	const isOverdue = $derived(loan?.status === 'Overdue');
@@ -87,10 +95,12 @@
 			if (!response.ok) throw new Error('Failed to fetch loan');
 			const payload = (await response.json()) as LoanWithInvestors & {
 				paymentMethods?: PaymentMethod[];
+				access?: LoanAccessContext;
 			};
-			const { paymentMethods: nextMethods, ...rest } = payload;
+			const { paymentMethods: nextMethods, access: nextAccess, ...rest } = payload;
 			loan = rest;
 			paymentMethods = Array.isArray(nextMethods) ? nextMethods : [];
+			access = nextAccess ?? null;
 			loanFetchKey += 1;
 		} catch (error) {
 			console.error('Error fetching loan:', error);
@@ -125,10 +135,40 @@
 		}
 	}
 
-	async function enterEditMode() {
-		await loadFormData();
+	function enterEditMode() {
 		isEditing = true;
 	}
+
+	$effect(() => {
+		if (!open || !isEditing) return;
+		void loadFormData();
+	});
+
+	$effect(() => {
+		editOverlayContent.armWhenOpen(open && isEditing);
+	});
+
+	$effect(() => {
+		if (!open || !isEditing || loadingFormData || !editOverlayContent.ready) {
+			if (!open || !isEditing) {
+				LoanFormComponent = null;
+				loadingLoanFormModule = false;
+			}
+			return;
+		}
+
+		if (LoanFormComponent) return;
+
+		loadingLoanFormModule = true;
+		void import('./LoanForm.svelte').then((mod) => {
+			LoanFormComponent = mod.default;
+			loadingLoanFormModule = false;
+		});
+	});
+
+	const showEditFormSkeleton = $derived(
+		loadingFormData || !editOverlayContent.ready || loadingLoanFormModule || !LoanFormComponent
+	);
 
 	function handlePayBalance() {
 		document
@@ -252,11 +292,11 @@
 		{@const modalLoan = loan}
 		<div>
 			{#if isEditing}
-				{#if loadingFormData}
+				{#if showEditFormSkeleton}
 					<FormPageSkeleton />
 				{:else}
 					{#key `loan-form-edit-${modalLoan.id}-${loanFetchKey}`}
-						<LoanForm
+						<LoanFormComponent
 							{investors}
 							{borrowers}
 							existingLoan={modalLoan}
@@ -277,6 +317,7 @@
 						loanId={modalLoan.id}
 						readOnly={readOnly}
 						{paymentMethods}
+						access={access ?? undefined}
 					/>
 				</div>
 			{/if}

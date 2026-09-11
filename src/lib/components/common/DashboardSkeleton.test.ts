@@ -4,6 +4,9 @@ import DashboardSkeleton from "./DashboardSkeleton.svelte";
 import ListPageSkeleton from "./ListPageSkeleton.svelte";
 import DetailPageSkeleton from "./DetailPageSkeleton.svelte";
 import DebtDetailSkeleton from "./page-skeletons/DebtDetailSkeleton.svelte";
+import PartyProfileFormSkeleton from "./page-skeletons/PartyProfileFormSkeleton.svelte";
+import SelectTriggerSkeleton from "./page-skeletons/SelectTriggerSkeleton.svelte";
+import SearchableSelect from "./SearchableSelect.svelte";
 import { SHOW_TRANSACTIONS_UI } from "$lib/feature-flags";
 
 describe("DashboardSkeleton", () => {
@@ -63,5 +66,34 @@ describe("DebtDetailSkeleton", () => {
     const { body } = render(DebtDetailSkeleton);
     expect(body).toContain('aria-label="Loading borrowing details"');
     expect(body).toContain("md:grid-cols-3");
+  });
+});
+
+describe("PartyProfileFormSkeleton", () => {
+  it("renders contact and payment method placeholders", () => {
+    const { body } = render(PartyProfileFormSkeleton);
+    expect(body).toContain('aria-label="Loading profile"');
+    expect(body).toContain("lg:grid-cols-2");
+  });
+});
+
+describe("SearchableSelect loading", () => {
+  it("renders a trigger skeleton while options load", () => {
+    const { body } = render(SearchableSelect, {
+      props: {
+        options: [],
+        loading: true,
+      },
+    });
+    expect(body).toContain("rounded-2xl");
+    expect(body).not.toContain("Select...");
+  });
+});
+
+describe("SelectTriggerSkeleton", () => {
+  it("renders a full-width combobox placeholder", () => {
+    const { body } = render(SelectTriggerSkeleton);
+    expect(body).toContain("h-11");
+    expect(body).toContain("rounded-2xl");
   });
 });

@@ -11,6 +11,7 @@
 		type DropdownOption
 	} from '$lib/dropdown-ux';
 	import { cn } from '$lib/utils';
+	import SelectTriggerSkeleton from '$lib/components/common/page-skeletons/SelectTriggerSkeleton.svelte';
 
 	interface HeaderContext {
 		select: (value: string) => void;
@@ -24,6 +25,7 @@
 		searchPlaceholder?: string;
 		emptyMessage?: string;
 		disabled?: boolean;
+		loading?: boolean;
 		id?: string;
 		class?: string;
 		triggerClassName?: string;
@@ -39,6 +41,7 @@
 		searchPlaceholder = 'Search...',
 		emptyMessage = 'No results found.',
 		disabled = false,
+		loading = false,
 		id,
 		class: className,
 		triggerClassName,
@@ -72,6 +75,9 @@
 	});
 </script>
 
+{#if loading}
+	<SelectTriggerSkeleton class={triggerClassName} />
+{:else}
 <Popover.Root bind:open>
 	<Popover.Trigger {disabled}>
 		{#snippet child({ props })}
@@ -140,3 +146,4 @@
 		</div>
 	</Popover.Content>
 </Popover.Root>
+{/if}
