@@ -251,7 +251,7 @@ export const loanInvestors = pgTable(
     hasMultipleInterest: boolean("has_multiple_interest")
       .notNull()
       .default(false),
-    /** Evidence of the investor's fund transfer, as an uploaded data URL (same convention as validIdUrl). */
+    /** Evidence of the investor's fund transfer (`data:` URL legacy or `storage:` R2 ref). */
     receiptImageUrl: text("receipt_image_url"),
     /** AI-extracted snapshot from receiptImageUrl at upload time; kept for audit even if fields are later hand-edited. */
     receiptExtractedData: jsonb(
@@ -404,7 +404,7 @@ export const receivedPayments = pgTable(
     ),
     amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
     receivedDate: timestamp("received_date").notNull(),
-    /** Evidence of the borrower's repayment, as an uploaded data URL (same convention as validIdUrl). */
+    /** Evidence of the borrower's repayment (`data:` URL legacy or `storage:` R2 ref). */
     receiptImageUrl: text("receipt_image_url"),
     /** AI-extracted snapshot from receiptImageUrl at upload time; kept for audit even if fields are later hand-edited. */
     receiptExtractedData: jsonb(
