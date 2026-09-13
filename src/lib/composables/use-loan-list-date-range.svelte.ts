@@ -1,4 +1,4 @@
-import { goto } from "$app/navigation";
+import { replaceState } from "$app/navigation";
 import { createDateNavigation } from "$lib/composables/use-date-navigation.svelte";
 import {
   ALL_TIME_RANGE_PARAM,
@@ -43,7 +43,7 @@ export function createLoanListDateRange(getPage: () => Page) {
     }
     const href = `${url.pathname}${url.search}${url.hash}`;
     if (href === `${current.pathname}${current.search}${current.hash}`) return;
-    goto(href, { replaceState: true, keepFocus: true, noScroll: true });
+    replaceState(href, getPage().state);
   }
 
   function applyDateRangeToUrl() {

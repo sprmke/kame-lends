@@ -1,5 +1,6 @@
 import type { MultiSelectOption } from "$lib/components/common/MultiSelectFilter.svelte";
 import { UNASSIGNED_PARTICIPANT_FILTER_OPTION } from "$lib/list-filters";
+import { loadPartyOptions } from "$lib/composables/party-options";
 import {
   getLoanWitnessIds,
   hasActiveLoanParticipantFilters,
@@ -85,43 +86,25 @@ export function createLoanListParticipantFilters(
     if (loaded) return;
 
     try {
-      const [investorRes, borrowerRes, witnessRes] = await Promise.all([
-        fetch("/api/investors?simple=true"),
-        fetch("/api/borrowers?simple=true"),
-        fetch("/api/witnesses?simple=true"),
-      ]);
-
-      const investorData = await investorRes.json();
-      const borrowerData = await borrowerRes.json();
-      const witnessData = await witnessRes.json();
-
-      if (Array.isArray(investorData)) {
-        investorOptions = sortByName(
-          investorData.map((investor: PersonOption) => ({
-            id: investor.id,
-            name: investor.name,
-          })),
-        );
-      }
-
-      if (Array.isArray(borrowerData)) {
-        borrowerOptions = sortByName(
-          borrowerData.map((borrower: PersonOption) => ({
-            id: borrower.id,
-            name: borrower.name,
-          })),
-        );
-      }
-
-      if (Array.isArray(witnessData)) {
-        apiWitnessOptions = sortByName(
-          witnessData.map((witness: PersonOption) => ({
-            id: witness.id,
-            name: witness.name,
-          })),
-        );
-      }
-
+      const options = await loadPartyOptions();
+      investorOptions = sortByName(
+        options.investors.map((investor) => ({
+          id: investor.id,
+          name: investor.name,
+        })),
+      );
+      borrowerOptions = sortByName(
+        options.borrowers.map((borrower) => ({
+          id: borrower.id,
+          name: borrower.name,
+        })),
+      );
+      apiWitnessOptions = sortByName(
+        options.witnesses.map((witness) => ({
+          id: witness.id,
+          name: witness.name,
+        })),
+      );
       loaded = true;
     } catch (error) {
       console.error("Failed to load loan list participant filters", error);

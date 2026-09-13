@@ -1,7 +1,10 @@
-import { json, redirect } from "@sveltejs/kit";
-import type { RequestEvent } from "@sveltejs/kit";
+import { json, redirect, type RequestEvent } from "@sveltejs/kit";
 import { getNavCapabilities } from "$lib/server/access-control";
 import { requireUserSession } from "$lib/server/request-auth";
+
+type PageLoadEvent = RequestEvent & {
+  parent: () => Promise<{ navCapabilities?: { isAdminWorkspace: boolean } }>;
+};
 
 export async function isWorkspaceAdmin(userId: string): Promise<boolean> {
   const caps = await getNavCapabilities(userId);
@@ -10,10 +13,16 @@ export async function isWorkspaceAdmin(userId: string): Promise<boolean> {
 
 /** Redirect non-admins away from create/edit pages. */
 export async function requireWorkspaceAdminPage(
-  event: RequestEvent,
+  event: PageLoadEvent,
   fallbackHref: string,
 ) {
   const session = requireUserSession(event);
+  const parent = await event.parent();
+  const fromLayout = parent.navCapabilities?.isAdminWorkspace;
+  if (fromLayout === false) {
+    throw redirect(303, fallbackHref);
+  }
+  if (fromLayout === true) return session;
   if (!(await isWorkspaceAdmin(session.user.id))) {
     throw redirect(303, fallbackHref);
   }

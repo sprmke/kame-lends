@@ -23,7 +23,7 @@ export const GET: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    return json(await getCachedLoans(session.user.id));
+    return json(await getCachedLoans(session.user.id, "list"));
   } catch (error) {
     console.error("Error fetching loans:", error);
     return json({ error: "Failed to fetch loans" }, { status: 500 });

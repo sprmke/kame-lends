@@ -1,4 +1,5 @@
 import { toast } from "$lib/toast";
+import { loadPartyOptions } from "$lib/composables/party-options";
 import type { Borrower, Investor } from "$lib/types";
 
 /** Cached investors/borrowers for loan create/edit modals. Prefetch on list pages for instant opens. */
@@ -16,14 +17,9 @@ export function createLoanFormOptions() {
     loadPromise = (async () => {
       loading = true;
       try {
-        const [investorRes, borrowerRes] = await Promise.all([
-          fetch("/api/investors?simple=true"),
-          fetch("/api/borrowers?simple=true"),
-        ]);
-        const investorData = await investorRes.json();
-        const borrowerData = await borrowerRes.json();
-        if (Array.isArray(investorData)) investors = investorData;
-        if (Array.isArray(borrowerData)) borrowers = borrowerData;
+        const options = await loadPartyOptions();
+        investors = options.investors;
+        borrowers = options.borrowers;
         loaded = true;
       } catch (error) {
         console.error("Failed to load loan form data", error);

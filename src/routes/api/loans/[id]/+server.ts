@@ -9,12 +9,9 @@ import {
 } from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
-import {
-  getLoanAccessContext,
-  hasLoanAdminAccess,
-} from "$lib/server/access-control";
-import { listPaymentMethodsForBorrowerLoanView } from "$lib/server/payment-methods";
+import { hasLoanAdminAccess } from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { loadLoanDetail } from "$lib/server/loan-detail";
 import {
   syncSigningInvitationsForLoan,
   upsertLoanContractCustomization,
@@ -30,51 +27,17 @@ export const GET: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const loanId = parseInt(id);
-
-    const access = await getLoanAccessContext(loanId, session.user.id);
-    if (!access.canView) {
+    const loanId = parseInt(params.id);
+    const includeContract =
+      event.url.searchParams.get("include") === "contract";
+    const payload = await loadLoanDetail(loanId, session.user.id, {
+      includeContract,
+    });
+    if (!payload) {
       return json({ error: "Loan not found" }, { status: 404 });
     }
 
-    const loan = await db.query.loans.findFirst({
-      where: eq(loans.id, loanId),
-      with: {
-        borrower: true,
-        loanInvestors: {
-          with: {
-            investor: true,
-            interestPeriods: true,
-            receivedPayments: true,
-          },
-        },
-        loanWitnesses: {
-          with: {
-            witness: true,
-          },
-        },
-        transactions: {
-          orderBy: (transactions, { asc }) => [asc(transactions.date)],
-        },
-        loanContract: true,
-      },
-    });
-
-    if (!loan) {
-      return json({ error: "Loan not found" }, { status: 404 });
-    }
-
-    const paymentMethods = await listPaymentMethodsForBorrowerLoanView(
-      loan.userId,
-      access,
-    );
-
-    return json({
-      ...loan,
-      access,
-      ...(access.memberships.includes("borrower") ? { paymentMethods } : {}),
-    });
+    return json(payload);
   } catch (error) {
     console.error("Error fetching loan:", error);
     return json({ error: "Failed to fetch loan" }, { status: 500 });

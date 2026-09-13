@@ -24,8 +24,9 @@ Full loan detail for any party with membership (owner, investor, borrower, witne
 
 [`src/routes/loans/[id]/+page.server.ts`](../../../src/routes/loans/[id]/+page.server.ts)
 
-- `getLoanAccessContext` gates view/edit.
+- `loadLoanDetail` (`src/lib/server/loan-detail.ts`) gates view/edit via `getLoanAccessContext`.
 - `paymentMethods` loaded only when membership includes `borrower` (loan owner’s methods).
+- Page load includes `loanContract`. List-modal `GET /api/loans/[id]` omits it unless `?include=contract`. Responses strip leftover `data:image…` payloads; `storage:` refs remain.
 
 `GET /api/loans/[id]` returns the same `paymentMethods` field for borrower viewers (used by the borrowed list modal).
 

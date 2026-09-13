@@ -223,6 +223,7 @@ export const loanSigningInvitations = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
+    loanIdIdx: index("loan_signing_invitations_loan_id_idx").on(table.loanId),
     witnessIdIdx: index("loan_signing_invitations_witness_id_idx").on(
       table.witnessId,
     ),
