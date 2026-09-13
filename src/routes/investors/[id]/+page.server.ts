@@ -3,9 +3,9 @@ import type { PageServerLoad } from "./$types";
 import { db } from "$lib/server/db";
 import { investors, loans } from "$lib/server/db/schema";
 import { eq, inArray } from "drizzle-orm";
+import { stripDataImageUrls } from "$lib/json-safe-images";
 import { requireUserSession } from "$lib/server/request-auth";
 import { hasInvestorContactViewAccess } from "$lib/server/access-control";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 
 async function fetchOne(id: number) {
   return db.query.investors.findFirst({
@@ -55,14 +55,14 @@ export const load: PageServerLoad = async (event) => {
   const id = Number(event.params.id);
   if (Number.isNaN(id)) throw error(400, "Invalid id");
 
-  const entity = await fetchOne(id);
+  const entity = stripDataImageUrls(await fetchOne(id));
   if (!entity || !(await hasInvestorContactViewAccess(id, session.user.id))) {
     throw error(404, "Not found");
   }
 
+  const { navCapabilities } = await event.parent();
   const canManage =
-    entity.userId === session.user.id &&
-    (await isWorkspaceAdmin(session.user.id));
+    entity.userId === session.user.id && navCapabilities.isAdminWorkspace;
 
   if (event.url.searchParams.get("edit") === "1" && !canManage) {
     throw error(403, "Read only");
@@ -71,7 +71,7 @@ export const load: PageServerLoad = async (event) => {
   const investorLoanIds = [
     ...new Set(entity.loanInvestors.map((li) => li.loanId)),
   ];
-  const loans = await fetchInvestorLoans(investorLoanIds);
+  const loans = stripDataImageUrls(await fetchInvestorLoans(investorLoanIds));
 
   return { entity, loans, canManage };
 };

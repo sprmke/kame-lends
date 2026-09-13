@@ -1,13 +1,5 @@
 import { isR2ConfiguredClientHint } from "$lib/storage-config";
 
-type UploadUrlResponse = {
-  uploadUrl: string;
-  storageRef: string;
-  headers: {
-    "Content-Type": string;
-  };
-};
-
 function dataUrlToBlob(dataUrl: string): { blob: Blob; contentType: string } {
   const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
   if (!match) {
@@ -27,28 +19,6 @@ function dataUrlToBlob(dataUrl: string): { blob: Blob; contentType: string } {
   };
 }
 
-async function requestUploadUrl(
-  contentType: string,
-  contentLength: number,
-): Promise<UploadUrlResponse> {
-  const response = await fetch("/api/storage/upload-url", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contentType, contentLength }),
-  });
-
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) {
-    const message =
-      payload && typeof payload.error === "string"
-        ? payload.error
-        : "Failed to prepare upload.";
-    throw new Error(message);
-  }
-
-  return payload as UploadUrlResponse;
-}
-
 /** Upload a compressed image data URL to R2 when configured; otherwise return the data URL. */
 export async function persistImageDataUrl(dataUrl: string): Promise<string> {
   if (!isR2ConfiguredClientHint()) {
@@ -56,20 +26,24 @@ export async function persistImageDataUrl(dataUrl: string): Promise<string> {
   }
 
   const { blob, contentType } = dataUrlToBlob(dataUrl);
-  const { uploadUrl, storageRef, headers } = await requestUploadUrl(
-    contentType,
-    blob.size,
-  );
-
-  const uploadResponse = await fetch(uploadUrl, {
-    method: "PUT",
-    headers,
+  const response = await fetch("/api/storage/upload", {
+    method: "POST",
+    headers: { "Content-Type": contentType },
     body: blob,
   });
 
-  if (!uploadResponse.ok) {
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message =
+      payload && typeof payload.error === "string"
+        ? payload.error
+        : "Failed to upload image.";
+    throw new Error(message);
+  }
+
+  if (!payload || typeof payload.storageRef !== "string") {
     throw new Error("Failed to upload image.");
   }
 
-  return storageRef;
+  return payload.storageRef;
 }

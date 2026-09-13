@@ -26,10 +26,32 @@ Without these vars (or with `PUBLIC_R2_ENABLED` unset), uploads stay as compress
 
 ## API surface
 
-| Route                                   | Role                                                                    |
-| --------------------------------------- | ----------------------------------------------------------------------- |
-| `POST /api/storage/upload-url`          | Authenticated presigned PUT for a new object under `uploads/{userId}/…` |
-| `GET /api/storage/object?ref=storage:…` | RBAC check, then 302 to a short-lived presigned GET                     |
+| Route                                   | Role                                                                          |
+| --------------------------------------- | ----------------------------------------------------------------------------- |
+| `POST /api/storage/upload`              | Authenticated server-side PUT to R2 (browser uploads here; no R2 CORS needed) |
+| `POST /api/storage/upload-url`          | Optional presigned PUT (requires bucket CORS if called from the browser)      |
+| `GET /api/storage/object?ref=storage:…` | RBAC check, then 302 to a short-lived presigned GET                           |
+
+### Optional: R2 bucket CORS (only for direct browser → R2 presigned PUT)
+
+Not required for normal app uploads (`POST /api/storage/upload`). If you use `upload-url` from the browser, set **bucket → Settings → CORS policy**:
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "http://localhost:5173",
+      "https://kame-lends.vercel.app"
+    ],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Add your production domain to `AllowedOrigins`.
 
 Implementation: `src/lib/server/storage/`.
 

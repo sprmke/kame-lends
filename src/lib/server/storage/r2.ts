@@ -52,6 +52,9 @@ function getClient(): S3Client {
         secretAccessKey: config.secretAccessKey,
       },
       forcePathStyle: true,
+      // Presigned PUT URLs must not embed a CRC32 of an empty body.
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
     });
   }
 

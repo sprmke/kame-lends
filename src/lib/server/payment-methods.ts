@@ -1,6 +1,7 @@
 import { db } from "$lib/server/db";
 import { paymentMethods } from "$lib/server/db/schema";
 import { eq, asc, count } from "drizzle-orm";
+import { jsonSafeImageRef } from "$lib/json-safe-images";
 import type { LoanAccessContext } from "$lib/loan-access";
 import type { PaymentMethod } from "$lib/types";
 import {
@@ -24,7 +25,7 @@ export function toPublicPaymentMethod(row: PaymentMethodRow): PaymentMethod {
     id: row.id,
     bankName: row.bankName,
     accountNumber: row.accountNumber,
-    qrCodeUrl: row.qrCodeUrl,
+    qrCodeUrl: jsonSafeImageRef(row.qrCodeUrl),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

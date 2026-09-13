@@ -1,5 +1,6 @@
 import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "$lib/server/db";
+import { stripDataImageUrls } from "$lib/json-safe-images";
 import { remember } from "$lib/server/memory-cache";
 import {
   loadInvestmentLoanIds,
@@ -44,18 +45,30 @@ const listRelations = {
   },
 } as const;
 
+const partyContactColumns = {
+  id: true,
+  name: true,
+  email: true,
+  contactNumber: true,
+  address: true,
+  validIdUrl: true,
+  eSignatureUrl: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 const fullRelations = {
-  borrower: true,
+  borrower: { columns: { ...partyContactColumns, notes: true } },
   loanInvestors: {
     with: {
-      investor: true,
+      investor: { columns: partyContactColumns },
       interestPeriods: true,
       receivedPayments: true,
     },
   },
   loanWitnesses: {
     with: {
-      witness: true,
+      witness: { columns: partyContactColumns },
     },
   },
 } as const;
@@ -80,15 +93,17 @@ export async function getCachedLoansByScope(
 
 async function loadLoansByIds(ids: number[], mode: LoanCacheMode) {
   if (ids.length === 0) return [];
-  return mode === "list"
-    ? db.query.loans.findMany({
-        where: inArray(loans.id, ids),
-        with: listRelations,
-      })
-    : db.query.loans.findMany({
-        where: inArray(loans.id, ids),
-        with: fullRelations,
-      });
+  const rows =
+    mode === "list"
+      ? await db.query.loans.findMany({
+          where: inArray(loans.id, ids),
+          with: listRelations,
+        })
+      : await db.query.loans.findMany({
+          where: inArray(loans.id, ids),
+          with: fullRelations,
+        });
+  return stripDataImageUrls(rows);
 }
 
 async function loadOwnedLoanIds(userId: string) {
@@ -140,11 +155,24 @@ async function loadLoans(
   mode: LoanCacheMode,
   scope: LoanListScope,
 ) {
-  let ids: number[];
-
   if (scope === "owned") {
-    ids = await loadOwnedLoanIds(userId);
-  } else if (scope === "investments") {
+    const rows =
+      mode === "list"
+        ? await db.query.loans.findMany({
+            where: eq(loans.userId, userId),
+            with: listRelations,
+            orderBy: (table, { desc }) => [desc(table.createdAt)],
+          })
+        : await db.query.loans.findMany({
+            where: eq(loans.userId, userId),
+            with: fullRelations,
+            orderBy: (table, { desc }) => [desc(table.createdAt)],
+          });
+    return stripDataImageUrls(rows);
+  }
+
+  let ids: number[];
+  if (scope === "investments") {
     ids = await loadInvestmentLoanIds(userId);
   } else if (scope === "borrowed") {
     ids = await loadBorrowedLoanIds(userId);
@@ -219,6 +247,17 @@ function loadInvestorsByWhere(
   if (mode === "list") {
     return db.query.investors.findMany({
       where,
+      columns: {
+        id: true,
+        name: true,
+        email: true,
+        contactNumber: true,
+        address: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+        investorUserId: true,
+      },
       with: investorListRelations,
     });
   }
@@ -229,20 +268,22 @@ function loadInvestorsByWhere(
 }
 
 async function loadInvestors(userId: string, mode: InvestorCacheMode) {
-  const ownedInvestors = await loadInvestorsByWhere(
-    eq(investors.userId, userId),
-    mode,
-  );
-
-  const linkedInvestorIds = await loadLinkedInvestorContactIds(userId);
-  if (linkedInvestorIds.length === 0) return ownedInvestors;
+  const [ownedInvestors, linkedInvestorIds] = await Promise.all([
+    loadInvestorsByWhere(eq(investors.userId, userId), mode),
+    loadLinkedInvestorContactIds(userId),
+  ]);
+  if (linkedInvestorIds.length === 0) {
+    return stripDataImageUrls(ownedInvestors);
+  }
 
   const sharedLinks = await db.query.loanInvestors.findMany({
     where: inArray(loanInvestors.investorId, linkedInvestorIds),
     columns: { loanId: true },
   });
   const sharedLoanIds = [...new Set(sharedLinks.map((row) => row.loanId))];
-  if (sharedLoanIds.length === 0) return ownedInvestors;
+  if (sharedLoanIds.length === 0) {
+    return stripDataImageUrls(ownedInvestors);
+  }
 
   const coInvestorRows = await db.query.loanInvestors.findMany({
     where: inArray(loanInvestors.loanId, sharedLoanIds),
@@ -252,26 +293,41 @@ async function loadInvestors(userId: string, mode: InvestorCacheMode) {
   const missingIds = [
     ...new Set(coInvestorRows.map((row) => row.investorId)),
   ].filter((id) => !ownedIds.has(id));
-  if (missingIds.length === 0) return ownedInvestors;
+  if (missingIds.length === 0) {
+    return stripDataImageUrls(ownedInvestors);
+  }
 
   const sharedInvestors = await loadInvestorsByWhere(
     inArray(investors.id, missingIds),
     mode,
   );
-  return [...ownedInvestors, ...sharedInvestors];
+  return stripDataImageUrls([...ownedInvestors, ...sharedInvestors]);
 }
 
 export async function getCachedBorrowers(
   userId: string,
   mode: "simple" | "list" | "full" = "full",
 ) {
-  return remember(`borrowers:${userId}:${mode}`, () =>
-    db.query.borrowers.findMany({
+  return remember(`borrowers:${userId}:${mode}`, async () => {
+    const rows = await db.query.borrowers.findMany({
       where: or(
         eq(borrowers.userId, userId),
         eq(borrowers.borrowerUserId, userId),
       ),
       orderBy: (table, { asc }) => [asc(table.name)],
+      columns:
+        mode === "list"
+          ? {
+              id: true,
+              name: true,
+              email: true,
+              contactNumber: true,
+              address: true,
+              notes: true,
+              createdAt: true,
+              updatedAt: true,
+            }
+          : undefined,
       with:
         mode === "simple"
           ? undefined
@@ -286,21 +342,34 @@ export async function getCachedBorrowers(
                 },
               },
             },
-    }),
-  );
+    });
+    return stripDataImageUrls(rows);
+  });
 }
 
 export async function getCachedWitnesses(
   userId: string,
   mode: "simple" | "list" | "full" = "full",
 ) {
-  return remember(`witnesses:${userId}:${mode}`, () =>
-    db.query.witnesses.findMany({
+  return remember(`witnesses:${userId}:${mode}`, async () => {
+    const rows = await db.query.witnesses.findMany({
       where: or(
         eq(witnesses.userId, userId),
         eq(witnesses.witnessUserId, userId),
       ),
       orderBy: (table, { asc }) => [asc(table.name)],
+      columns:
+        mode === "list"
+          ? {
+              id: true,
+              name: true,
+              email: true,
+              contactNumber: true,
+              address: true,
+              createdAt: true,
+              updatedAt: true,
+            }
+          : undefined,
       with:
         mode === "simple"
           ? undefined
@@ -324,8 +393,9 @@ export async function getCachedWitnesses(
                 },
               },
             },
-    }),
-  );
+    });
+    return stripDataImageUrls(rows);
+  });
 }
 
 export async function getCachedDebts(
@@ -335,18 +405,20 @@ export async function getCachedDebts(
   return remember(`debts:${userId}:${investorId ?? "all"}`, async () => {
     const linkedInvestorIds = await loadLinkedInvestorContactIds(userId);
 
-    return db.query.debts.findMany({
-      where: investorId
-        ? and(eq(debts.userId, userId), eq(debts.investorId, investorId))
-        : linkedInvestorIds.length > 0
-          ? or(
-              eq(debts.userId, userId),
-              inArray(debts.investorId, linkedInvestorIds),
-            )
-          : eq(debts.userId, userId),
-      orderBy: (table, { desc }) => [desc(table.date)],
-      with: { investor: true },
-    });
+    return stripDataImageUrls(
+      await db.query.debts.findMany({
+        where: investorId
+          ? and(eq(debts.userId, userId), eq(debts.investorId, investorId))
+          : linkedInvestorIds.length > 0
+            ? or(
+                eq(debts.userId, userId),
+                inArray(debts.investorId, linkedInvestorIds),
+              )
+            : eq(debts.userId, userId),
+        orderBy: (table, { desc }) => [desc(table.date)],
+        with: { investor: { columns: partyContactColumns } },
+      }),
+    );
   });
 }
 
