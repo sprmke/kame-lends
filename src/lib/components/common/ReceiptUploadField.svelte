@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Label } from '$lib/components/ui/label';
 	import ImageUploadPreview from '$lib/components/common/ImageUploadPreview.svelte';
+	import { persistImageDataUrl } from '$lib/storage-upload-client';
 	import { readReceiptFileAsDataUrl } from '$lib/receipt-image';
 	import { extractReceiptInfo } from '$lib/receipt-extraction-client';
 	import { formatCurrency, formatDateVeryShort } from '$lib/format';
@@ -64,16 +65,18 @@
 			return;
 		}
 
-		onExtracted(dataUrl, null);
-
 		isExtracting = true;
 		try {
 			const result = await extractReceiptInfo(dataUrl);
+			const storageRef = await persistImageDataUrl(dataUrl);
 			if (result.success) {
-				onExtracted(dataUrl, result.data);
+				onExtracted(storageRef, result.data);
 			} else {
+				onExtracted(storageRef, null);
 				scanError = result.error;
 			}
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'Failed to upload receipt.');
 		} finally {
 			isExtracting = false;
 		}

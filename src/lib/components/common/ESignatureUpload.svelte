@@ -4,6 +4,7 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import ImageUploadPreview from '$lib/components/common/ImageUploadPreview.svelte';
 	import SignatureDrawBox from '$lib/components/common/SignatureDrawBox.svelte';
+	import { persistImageDataUrl } from '$lib/storage-upload-client';
 	import { readSignatureImageFileAsDataUrl } from '$lib/valid-id-document';
 	import { toast } from '$lib/toast';
 	import { Eraser, Save } from 'lucide-svelte';
@@ -41,7 +42,8 @@
 
 		isProcessing = true;
 		try {
-			onChange(await readSignatureImageFileAsDataUrl(file));
+			const dataUrl = await readSignatureImageFileAsDataUrl(file);
+			onChange(await persistImageDataUrl(dataUrl));
 			mode = 'upload';
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Failed to upload signature.');
@@ -68,10 +70,19 @@
 			toast.error('Draw your signature first.');
 			return;
 		}
-		onChange(dataUrl);
-		drawBox?.clear();
-		draftHasInk = false;
-		mode = 'upload';
+		void (async () => {
+			isProcessing = true;
+			try {
+				onChange(await persistImageDataUrl(dataUrl));
+				drawBox?.clear();
+				draftHasInk = false;
+				mode = 'upload';
+			} catch (error) {
+				toast.error(error instanceof Error ? error.message : 'Failed to save signature.');
+			} finally {
+				isProcessing = false;
+			}
+		})();
 	}
 
 	function handleModeChange(next: string) {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Label } from '$lib/components/ui/label';
 	import ImageUploadPreview from '$lib/components/common/ImageUploadPreview.svelte';
+	import { persistImageDataUrl } from '$lib/storage-upload-client';
 	import { readValidIdFileAsDataUrl } from '$lib/valid-id-document';
 	import { toast } from '$lib/toast';
 
@@ -34,7 +35,8 @@
 
 		isProcessing = true;
 		try {
-			onChange(await readValidIdFileAsDataUrl(file));
+			const dataUrl = await readValidIdFileAsDataUrl(file);
+			onChange(await persistImageDataUrl(dataUrl));
 		} catch (error) {
 			toast.error(
 				error instanceof Error ? error.message : `Failed to upload ${label.toLowerCase()}.`

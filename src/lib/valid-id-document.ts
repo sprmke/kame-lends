@@ -1,24 +1,9 @@
+import { normalizeStoredImageRef } from "$lib/storage-reference";
+
 export const MAX_VALID_ID_DATA_URL_LENGTH = 1_100_000;
 
 export function normalizeValidIdUrl(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  if (
-    !trimmed.startsWith("data:image/jpeg;base64,") &&
-    !trimmed.startsWith("data:image/png;base64,") &&
-    !trimmed.startsWith("data:image/webp;base64,")
-  ) {
-    return null;
-  }
-
-  if (trimmed.length > MAX_VALID_ID_DATA_URL_LENGTH) {
-    return null;
-  }
-
-  return trimmed;
+  return normalizeStoredImageRef(value, MAX_VALID_ID_DATA_URL_LENGTH);
 }
 
 export async function readValidIdFileAsDataUrl(file: File): Promise<string> {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
+	import { imagePreviewSrc } from '$lib/storage-reference';
 	import { PenLine, Trash2, Upload } from 'lucide-svelte';
 
 	interface Props {
@@ -30,9 +31,10 @@
 	}: Props = $props();
 
 	const busy = $derived(disabled || isProcessing);
+	const previewSrc = $derived(imagePreviewSrc(value));
 </script>
 
-{#if value}
+{#if previewSrc}
 	<div
 		class={cn(
 			'group/upload relative min-h-[5.5rem] overflow-hidden rounded-xl border border-border bg-muted/20',
@@ -40,7 +42,7 @@
 			busy && 'opacity-60'
 		)}
 	>
-		<img src={value} {alt} class={cn('block w-full', previewClass)} />
+		<img src={previewSrc} {alt} class={cn('block w-full', previewClass)} />
 		<div
 			class={cn(
 				'absolute inset-0 flex flex-wrap items-center justify-center gap-2 bg-background/80 px-3 transition-opacity motion-reduce:transition-none',

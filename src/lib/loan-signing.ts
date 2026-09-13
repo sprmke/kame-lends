@@ -9,6 +9,7 @@ import {
   type LoanContractDraftInput,
 } from "./loan-contract-data";
 import type { LoanWithInvestors } from "./types";
+import { normalizeSignatureImageUrl } from "./valid-id-document";
 
 export type SigningPartyRole =
   "borrower" | "lender" | "witness_1" | "witness_2";
@@ -81,9 +82,11 @@ export function emailsMatch(
 }
 
 export function isValidSignatureDataUrl(value: string): boolean {
-  if (!value.startsWith("data:image/png;base64,")) return false;
-  if (value.length > MAX_SIGNATURE_DATA_URL_LENGTH) return false;
-  const base64 = value.slice("data:image/png;base64,".length);
+  const normalized = normalizeSignatureImageUrl(value);
+  if (!normalized) return false;
+  if (normalized.startsWith("storage:")) return true;
+  if (!normalized.startsWith("data:image/png;base64,")) return false;
+  const base64 = normalized.slice("data:image/png;base64,".length);
   return base64.length > 100;
 }
 
@@ -122,10 +125,10 @@ export function buildSavedPartySignaturesFromLoan(
   loan: LoanWithInvestors,
 ): SavedPartySignatures {
   const lenders = new Map<string, string>();
-  for (const loanInvestor of loan.loanInvestors) {
-    const email = loanInvestor.investor.email;
-    const signature = loanInvestor.investor.eSignatureUrl?.trim();
-    if (signature && !lenders.has(email)) {
+  for (const loanInvestor of loan.loanInvestors ?? []) {
+    const email = loanInvestor.investor?.email;
+    const signature = loanInvestor.investor?.eSignatureUrl?.trim();
+    if (email && signature && !lenders.has(email)) {
       lenders.set(email, signature);
     }
   }
