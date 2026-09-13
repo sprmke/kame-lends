@@ -12,6 +12,6 @@
 <SheetPrimitive.Overlay
 	bind:ref
 	data-slot="sheet-overlay"
-	class={cn("modal-scrim bg-black/40 data-closed:pointer-events-none fixed inset-0 z-50", className)}
+	class={cn("modal-scrim bg-black/40 pointer-events-auto data-closed:pointer-events-none fixed inset-0 z-50", className)}
 	{...restProps}
 />
