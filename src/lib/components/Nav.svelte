@@ -154,7 +154,7 @@
 					{#each group.items as item (item.id)}
 						<a
 							href={item.href}
-							data-sveltekit-preload-data="hover"
+							data-sveltekit-preload-data="tap"
 							data-sveltekit-preload-code="hover"
 							title={isCollapsed ? item.title : undefined}
 							class={cn(

@@ -2,6 +2,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { formatText } from '$lib/format';
+	import { imagePreviewSrc } from '$lib/storage-reference';
 	import {
 		formatPaymentAccountNumberDisplay,
 		paymentProviderLabel,
@@ -90,14 +91,14 @@
 							</div>
 						</div>
 					</div>
-					{#if method.qrCodeUrl}
+					{#if imagePreviewSrc(method.qrCodeUrl)}
 						<div class="space-y-1">
 							<p class="text-caption">QR code</p>
 							<div
 								class="mx-auto max-w-xs overflow-hidden rounded-md border border-border bg-white p-3"
 							>
 								<img
-									src={method.qrCodeUrl}
+									src={imagePreviewSrc(method.qrCodeUrl)}
 									alt={paymentQrAltText(method.bankName)}
 									class="mx-auto h-auto w-full object-contain"
 								/>

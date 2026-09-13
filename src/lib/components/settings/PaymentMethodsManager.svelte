@@ -10,6 +10,7 @@
 	import PaymentProviderSelect from '$lib/components/settings/PaymentProviderSelect.svelte';
 	import { toast } from '$lib/toast';
 	import { normalizeValidIdUrl } from '$lib/valid-id-document';
+	import { imagePreviewSrc } from '$lib/storage-reference';
 	import {
 		DEFAULT_PAYMENT_PROVIDER,
 		formatPaymentAccountNumberDisplay,
@@ -263,9 +264,9 @@
 							<p class="text-muted-foreground text-sm break-all tabular-nums">
 								{formatPaymentAccountNumberDisplay(method.bankName, method.accountNumber)}
 							</p>
-							{#if method.qrCodeUrl}
+							{#if imagePreviewSrc(method.qrCodeUrl)}
 								<img
-									src={method.qrCodeUrl}
+									src={imagePreviewSrc(method.qrCodeUrl)}
 									alt={paymentQrAltText(method.bankName)}
 									class="mt-2 max-h-28 rounded-lg border border-border bg-white object-contain p-1"
 								/>

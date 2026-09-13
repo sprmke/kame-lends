@@ -68,7 +68,7 @@
 								{@const active = isNavActive(pathname, item.href)}
 								<a
 									href={item.href}
-									data-sveltekit-preload-data="hover"
+									data-sveltekit-preload-data="tap"
 									aria-current={active ? 'page' : undefined}
 									class={cn(
 										'native-press flex min-h-11 w-full items-center gap-2.5 px-4 py-2 text-[13px] font-medium leading-snug transition-colors',

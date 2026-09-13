@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import LoanDetailClient from '$lib/components/loans/LoanDetailClient.svelte';
+	import { loadPartyOptions } from '$lib/composables/party-options';
 	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
 
 	let { data } = $props();
@@ -22,14 +23,9 @@
 			return;
 		}
 		try {
-			const [investorRes, borrowerRes] = await Promise.all([
-				fetch('/api/investors?simple=true'),
-				fetch('/api/borrowers?simple=true')
-			]);
-			const investorData = await investorRes.json();
-			const borrowerData = await borrowerRes.json();
-		if (Array.isArray(investorData)) investors = investorData;
-			if (Array.isArray(borrowerData)) borrowers = borrowerData;
+			const options = await loadPartyOptions();
+			investors = options.investors;
+			borrowers = options.borrowers;
 		} catch (error) {
 			console.error('Failed to load form data', error);
 		} finally {

@@ -18,6 +18,7 @@
 		buildSavedPartySignaturesFromLoan,
 		type SigningInvitationRecord
 	} from '$lib/loan-signing';
+	import { loadPartyOptions } from '$lib/composables/party-options';
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
 
@@ -121,14 +122,9 @@
 	async function loadContacts() {
 		isLoadingContacts = true;
 		try {
-			const [investorRes, borrowerRes] = await Promise.all([
-				fetch('/api/investors?simple=true'),
-				fetch('/api/borrowers?simple=true')
-			]);
-			const investorData = await investorRes.json();
-			const borrowerData = await borrowerRes.json();
-			if (Array.isArray(investorData)) investors = investorData;
-			if (Array.isArray(borrowerData)) borrowers = borrowerData;
+			const options = await loadPartyOptions();
+			investors = options.investors;
+			borrowers = options.borrowers;
 		} catch (error) {
 			console.error('Failed to load contract editor contacts', error);
 			toast.error('Failed to load contacts');

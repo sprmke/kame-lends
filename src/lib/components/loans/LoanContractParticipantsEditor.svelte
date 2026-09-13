@@ -11,6 +11,7 @@
 	import SelectTriggerSkeleton from '$lib/components/common/page-skeletons/SelectTriggerSkeleton.svelte';
 	import type { ContractCustomization } from '$lib/loan-contract-customization';
 	import type { ContractLender } from '$lib/loan-contract-data';
+	import { loadPartyOptions, clearPartyOptionsCache } from '$lib/composables/party-options';
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, Witness } from '$lib/types';
 	import { Check, ChevronDown, PenLine, Save, Search, UserRound, UsersRound } from 'lucide-svelte';
@@ -108,10 +109,8 @@
 	onMount(async () => {
 		loadingWitnesses = true;
 		try {
-			const response = await fetch('/api/witnesses');
-			if (!response.ok) return;
-			const data = await response.json();
-			if (Array.isArray(data)) witnesses = data;
+			const options = await loadPartyOptions();
+			witnesses = options.witnesses;
 		} catch (error) {
 			console.error('Error loading witnesses:', error);
 		} finally {
@@ -166,6 +165,7 @@
 			const result = await response.json().catch(() => null);
 			if (!response.ok) throw new Error(result?.error || 'Failed to save witness.');
 			const witness = result as Witness;
+			clearPartyOptionsCache();
 			handleWitnessCreated(witness);
 			onChanges({ [`${prefix}Id`]: witness.id });
 			toast.success(`${witness.name} saved to the witness directory.`);

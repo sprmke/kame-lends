@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -325,7 +325,7 @@
 		dateRangeState.clearDateFilter();
 		const url = new URL(page.url);
 		url.searchParams.delete('dueDate');
-		goto(`${url.pathname}${url.search}`, { replaceState: true, keepFocus: true, noScroll: true });
+		replaceState(`${url.pathname}${url.search}`, page.state);
 	}
 </script>
 

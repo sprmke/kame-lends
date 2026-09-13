@@ -37,7 +37,7 @@
 
 <header class={cn('space-y-2.5', !showBack && 'space-y-0', className)}>
 	{#if showBack && backHref}
-		<a href={backHref} data-sveltekit-preload-data="hover" class={backClass}>
+		<a href={backHref} data-sveltekit-preload-data="tap" class={backClass}>
 			<ChevronLeft class="size-4 shrink-0" strokeWidth={2} />
 			<span>{backLabel}</span>
 		</a>

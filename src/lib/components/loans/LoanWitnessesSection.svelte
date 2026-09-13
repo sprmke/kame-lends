@@ -8,6 +8,7 @@
 	import { calculateInterest } from '$lib/calculations';
 	import { formatCurrency, formatPercentage, formatText } from '$lib/format';
 	import { toast } from '$lib/toast';
+	import { loadPartyOptions } from '$lib/composables/party-options';
 	import type { LoanWitness } from '$lib/types';
 	import type { DropdownOption } from '$lib/dropdown-ux';
 
@@ -98,14 +99,11 @@
 		if (witnessOptions.length > 0) return;
 		loadingOptions = true;
 		try {
-			const response = await fetch('/api/witnesses?simple=true');
-			const data = await response.json();
-			if (Array.isArray(data)) {
-				witnessOptions = data.map((w: { id: number; name: string }) => ({
-					value: String(w.id),
-					label: w.name
-				}));
-			}
+			const options = await loadPartyOptions();
+			witnessOptions = options.witnesses.map((w) => ({
+				value: String(w.id),
+				label: w.name
+			}));
 		} catch (error) {
 			console.error('Failed to load witnesses', error);
 		} finally {

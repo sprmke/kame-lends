@@ -9,6 +9,7 @@
 	import FormActions from '$lib/components/common/FormActions.svelte';
 	import { cn } from '$lib/utils';
 	import { toast } from '$lib/toast';
+	import { clearPartyOptionsCache } from '$lib/composables/party-options';
 	import { normalizeValidIdUrl, normalizeSignatureImageUrl } from '$lib/valid-id-document';
 	import type { Witness } from '$lib/types';
 
@@ -93,6 +94,7 @@
 			}
 
 			const saved = (await response.json()) as Witness;
+			clearPartyOptionsCache();
 			toast.success(isEditMode ? 'Witness updated' : 'Witness created');
 
 			if (onSuccess) {

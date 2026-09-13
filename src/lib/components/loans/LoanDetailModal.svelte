@@ -15,6 +15,7 @@
 	} from './LoanQuickPaymentDialog.svelte';
 	import { createDuplicateDataFromLoan } from '$lib/loan-duplicate';
 	import { formatText } from '$lib/format';
+	import { loadPartyOptions } from '$lib/composables/party-options';
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, LoanWithInvestors, PaymentMethod } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
@@ -81,7 +82,7 @@
 		}
 		paymentMethods = [];
 		isLoadingLoan = true;
-		void fetchLoanData(initialLoan.id);
+		void fetchLoanData(initialLoan.id, startInEditMode);
 	});
 
 	const isOverdue = $derived(loan?.status === 'Overdue');
@@ -89,9 +90,10 @@
 	const editFormId = $derived(loan ? `loan-edit-form-${loan.id}` : undefined);
 	const editSubmitLabel = $derived(isSubmitting ? 'Updating...' : 'Update Loan');
 
-	async function fetchLoanData(loanId: number) {
+	async function fetchLoanData(loanId: number, includeContract = false) {
 		try {
-			const response = await fetch(`/api/loans/${loanId}`);
+			const query = includeContract ? '?include=contract' : '';
+			const response = await fetch(`/api/loans/${loanId}${query}`);
 			if (!response.ok) throw new Error('Failed to fetch loan');
 			const payload = (await response.json()) as LoanWithInvestors & {
 				paymentMethods?: PaymentMethod[];
@@ -119,14 +121,9 @@
 		if (investors.length > 0 && borrowers.length > 0) return;
 		loadingFormData = true;
 		try {
-			const [investorRes, borrowerRes] = await Promise.all([
-				fetch('/api/investors?simple=true'),
-				fetch('/api/borrowers?simple=true')
-			]);
-			const investorData = await investorRes.json();
-			const borrowerData = await borrowerRes.json();
-			if (Array.isArray(investorData)) investors = investorData;
-			if (Array.isArray(borrowerData)) borrowers = borrowerData;
+			const options = await loadPartyOptions();
+			investors = options.investors;
+			borrowers = options.borrowers;
 		} catch (error) {
 			console.error('Failed to load loan form data', error);
 			toast.error('Failed to load form data');
@@ -137,6 +134,9 @@
 
 	function enterEditMode() {
 		isEditing = true;
+		if (loan?.id && !loan.loanContract) {
+			void fetchLoanData(loan.id, true);
+		}
 	}
 
 	$effect(() => {
@@ -180,7 +180,7 @@
 		if (!loan) return;
 		let sourceLoan = loan;
 		try {
-			const response = await fetch(`/api/loans/${loan.id}`);
+			const response = await fetch(`/api/loans/${loan.id}?include=contract`);
 			if (response.ok) sourceLoan = (await response.json()) as LoanWithInvestors;
 		} catch {
 			// Fall back to loaded loan.

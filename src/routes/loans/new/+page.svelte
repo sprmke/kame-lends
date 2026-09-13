@@ -4,8 +4,9 @@
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import type { Borrower, Investor } from '$lib/types';
+	import { loadPartyOptions } from '$lib/composables/party-options';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
+	import type { Borrower, Investor } from '$lib/types';
 
 	let investors = $state<Investor[]>([]);
 	let borrowers = $state<Borrower[]>([]);
@@ -31,14 +32,9 @@
 		}
 
 		try {
-			const [investorRes, borrowerRes] = await Promise.all([
-				fetch('/api/investors?simple=true'),
-				fetch('/api/borrowers?simple=true')
-			]);
-			const investorData = await investorRes.json();
-			const borrowerData = await borrowerRes.json();
-			if (Array.isArray(investorData)) investors = investorData;
-			if (Array.isArray(borrowerData)) borrowers = borrowerData;
+			const options = await loadPartyOptions();
+			investors = options.investors;
+			borrowers = options.borrowers;
 		} catch (error) {
 			console.error('Failed to load form data', error);
 		} finally {

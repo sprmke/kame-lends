@@ -2,9 +2,11 @@ import type { LoanWithInvestors } from "$lib/types";
 
 export async function fetchFullLoan(
   loan: LoanWithInvestors,
+  options: { includeContract?: boolean } = {},
 ): Promise<LoanWithInvestors> {
   try {
-    const response = await fetch(`/api/loans/${loan.id}`);
+    const query = options.includeContract ? "?include=contract" : "";
+    const response = await fetch(`/api/loans/${loan.id}${query}`);
     if (response.ok) return (await response.json()) as LoanWithInvestors;
   } catch {
     // Fall back to list row data.

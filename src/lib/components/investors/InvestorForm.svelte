@@ -7,6 +7,7 @@
 	import FormActions from '$lib/components/common/FormActions.svelte';
 	import { cn } from '$lib/utils';
 	import { toast } from '$lib/toast';
+	import { clearPartyOptionsCache } from '$lib/composables/party-options';
 	import type { Investor } from '$lib/types';
 
 	interface Props {
@@ -78,6 +79,7 @@
 			}
 
 			const savedInvestor = (await response.json()) as Investor;
+			clearPartyOptionsCache();
 			toast.success(isEditMode ? 'Investor updated' : 'Investor created');
 			if (onSuccess) {
 				await onSuccess(savedInvestor);

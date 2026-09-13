@@ -44,7 +44,7 @@
 				{@const active = isNavActive(pathname, item.href) && !moreActive}
 				<a
 					href={item.href}
-					data-sveltekit-preload-data="hover"
+					data-sveltekit-preload-data="tap"
 					data-sveltekit-preload-code="hover"
 					aria-current={active ? 'page' : undefined}
 					class={cn(
