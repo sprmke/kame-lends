@@ -18,6 +18,7 @@
 	} from '$lib/loan-contract-content';
 	import type { SigningPartyRole } from '$lib/loan-signing';
 	import { signingPartyRoleMatchesBlock } from '$lib/loan-signing';
+	import { imagePreviewSrc } from '$lib/storage-reference';
 	import { cn } from '$lib/utils';
 
 	interface SigningContext {
@@ -262,9 +263,9 @@
 					<div
 						class="mb-2 flex h-12 items-end overflow-hidden rounded border border-border bg-white px-2 py-1 sm:h-16"
 					>
-						{#if party.eSignatureUrl}
+						{#if imagePreviewSrc(party.eSignatureUrl)}
 							<img
-								src={party.eSignatureUrl}
+								src={imagePreviewSrc(party.eSignatureUrl)}
 								alt="{party.role} e-signature"
 								class="max-h-full w-full object-contain object-left"
 							/>
@@ -295,10 +296,10 @@
 							>
 								Valid ID:
 							</p>
-							{#if party.validIdUrl}
+							{#if imagePreviewSrc(party.validIdUrl)}
 								<div class="overflow-hidden rounded border border-border bg-muted/20">
 									<img
-										src={party.validIdUrl}
+										src={imagePreviewSrc(party.validIdUrl)}
 										alt="{party.role} valid ID"
 										class="max-h-28 w-full object-contain sm:max-h-36"
 									/>

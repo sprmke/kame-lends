@@ -32,6 +32,7 @@ import {
   type SignaturePartyDetails,
 } from "$lib/loan-contract-content";
 import type { LoanWithInvestors } from "$lib/types";
+import { pdfSafeImageSrc } from "./pdf-safe-image";
 
 Font.registerHyphenationCallback((word) => [word]);
 
@@ -82,6 +83,44 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textTransform: "uppercase",
     letterSpacing: 0.4,
+  },
+  sectionTitleDetails: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    minPresenceAhead: MIN_DETAIL_ROW,
+  },
+  sectionTitleLenders: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    minPresenceAhead: MIN_LENDER_BLOCK,
+  },
+  sectionTitleTerms: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    minPresenceAhead: MIN_SECTION_INTRO,
+  },
+  paragraphKeep: {
+    marginBottom: 6,
+    textAlign: "justify",
+    color: "#334155",
+    orphans: 3,
+    widows: 3,
+  },
+  signatureIntroKeep: {
+    fontSize: 8,
+    color: "#64748b",
+    marginBottom: 10,
+    fontStyle: "italic",
+    minPresenceAhead: MIN_SIGNATURE_BLOCK,
   },
   paragraph: {
     marginBottom: 6,
@@ -139,12 +178,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTop: "1 solid #cbd5e1",
     marginBottom: 10,
-  },
-  signatureIntro: {
-    fontSize: 8,
-    color: "#64748b",
-    marginBottom: 10,
-    fontStyle: "italic",
   },
   signatureGrid: {
     flexDirection: "row",
@@ -236,10 +269,13 @@ function ContractDetailsGrid({ data }: { data: LoanContractData }) {
 }
 
 function SignatureBlock({ party }: { party: SignaturePartyDetails }) {
+  const signatureSrc = pdfSafeImageSrc(party.eSignatureUrl);
+  const validIdSrc = pdfSafeImageSrc(party.validIdUrl);
+
   return (
     <View style={styles.signatureBlock} wrap={false}>
-      {party.eSignatureUrl ? (
-        <Image src={party.eSignatureUrl} style={styles.eSignatureImage} />
+      {signatureSrc ? (
+        <Image src={signatureSrc} style={styles.eSignatureImage} />
       ) : (
         <View style={styles.signatureLine} />
       )}
@@ -253,8 +289,8 @@ function SignatureBlock({ party }: { party: SignaturePartyDetails }) {
       {shouldShowValidId(party) ? (
         <>
           <Text style={styles.signatureField}>Valid ID:</Text>
-          {party.validIdUrl ? (
-            <Image src={party.validIdUrl} style={styles.validIdImage} />
+          {validIdSrc ? (
+            <Image src={validIdSrc} style={styles.validIdImage} />
           ) : (
             <Text style={styles.validIdPlaceholder}>No valid ID uploaded</Text>
           )}
@@ -317,20 +353,13 @@ function LoanContractPDFDocument({
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle} minPresenceAhead={MIN_DETAIL_ROW}>
-            Loan Terms
-          </Text>
+          <Text style={styles.sectionTitleDetails}>Loan Terms</Text>
           <ContractDetailsGrid data={displayData} />
         </View>
 
         {displayData.lenders.length > 0 && (
           <View style={styles.section}>
-            <Text
-              style={styles.sectionTitle}
-              minPresenceAhead={MIN_LENDER_BLOCK}
-            >
-              Lender Allocation
-            </Text>
+            <Text style={styles.sectionTitleLenders}>Lender Allocation</Text>
             {displayData.lenders.map((lender) => (
               <View key={lender.email} style={styles.lenderBlock} wrap={false}>
                 <Text style={styles.lenderName}>{lender.name}</Text>
@@ -352,14 +381,9 @@ function LoanContractPDFDocument({
         )}
 
         <View style={styles.section}>
-          <Text
-            style={styles.sectionTitle}
-            minPresenceAhead={MIN_SECTION_INTRO}
-          >
-            Terms and Conditions
-          </Text>
+          <Text style={styles.sectionTitleTerms}>Terms and Conditions</Text>
           {termClauses.map((clause, index) => (
-            <Text key={index} style={styles.paragraph} orphans={3} widows={3}>
+            <Text key={index} style={styles.paragraphKeep}>
               {index + 1}. {clause.text}
             </Text>
           ))}
@@ -367,10 +391,7 @@ function LoanContractPDFDocument({
 
         <View style={styles.signatureSection}>
           <View style={styles.signatureSectionHeader} wrap={false}>
-            <Text
-              style={styles.signatureIntro}
-              minPresenceAhead={MIN_SIGNATURE_BLOCK}
-            >
+            <Text style={styles.signatureIntroKeep}>
               {getWitnessAttestationText(customization)}
             </Text>
           </View>

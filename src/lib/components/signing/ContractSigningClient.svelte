@@ -21,6 +21,7 @@
 	import { normalizeLoanContractData } from '$lib/loan-contract-data';
 	import type { LoanContractData } from '$lib/loan-contract-data';
 	import type { ContractCustomization } from '$lib/loan-contract-customization';
+	import { persistImageDataUrl } from '$lib/storage-upload-client';
 	import { CheckCircle2, Loader2 } from 'lucide-svelte';
 
 	export interface ContractSigningPayload {
@@ -106,12 +107,13 @@
 
 		isSubmitting = true;
 		try {
+			const persistedSignature = await persistImageDataUrl(signatureDataUrl);
 			const response = await fetch(`${signApiBase}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					action: 'sign',
-					signatureDataUrl,
+					signatureDataUrl: persistedSignature,
 					consentAccepted: true
 				})
 			});
