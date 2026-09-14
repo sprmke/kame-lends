@@ -1,4 +1,5 @@
 import { replaceState } from "$app/navigation";
+import { untrack } from "svelte";
 import { createDateNavigation } from "$lib/composables/use-date-navigation.svelte";
 import {
   ALL_TIME_RANGE_PARAM,
@@ -84,25 +85,33 @@ export function createLoanListDateRange(getPage: () => Page) {
   $effect(() => {
     if (isAllTime) return;
     if (urlFrom && urlTo) return;
-    dateNav.setDatePreset("month");
-    applyDateRangeToUrl();
+    untrack(() => {
+      dateNav.setDatePreset("month");
+      applyDateRangeToUrl();
+    });
   });
 
   // Keep picker aligned when URL changes (back/forward, deep links).
   $effect(() => {
-    if (isAllTime) {
-      if (dateNav.datePreset !== "all-time") {
-        dateNav.setDatePreset("all-time");
+    const allTime = isAllTime;
+    const fromParam = urlFrom;
+    const toParam = urlTo;
+
+    untrack(() => {
+      if (allTime) {
+        if (dateNav.datePreset !== "all-time") {
+          dateNav.setDatePreset("all-time");
+        }
+        return;
       }
-      return;
-    }
-    if (!urlFrom || !urlTo) return;
-    const from = fromIsoDate(urlFrom);
-    const to = fromIsoDate(urlTo);
-    if (!from || !to) return;
-    const current = dateNav.getIsoRange();
-    if (current.from === urlFrom && current.to === urlTo) return;
-    dateNav.setDateRange({ from, to });
+      if (!fromParam || !toParam) return;
+      const from = fromIsoDate(fromParam);
+      const to = fromIsoDate(toParam);
+      if (!from || !to) return;
+      const current = dateNav.getIsoRange();
+      if (current.from === fromParam && current.to === toParam) return;
+      dateNav.setDateRange({ from, to });
+    });
   });
 
   return {

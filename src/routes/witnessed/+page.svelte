@@ -26,7 +26,8 @@
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 	import { createLoanListParticipantFilters } from '$lib/composables/use-loan-list-participant-filters.svelte';
 	import { createLoanFormOptions } from '$lib/composables/use-loan-form-options.svelte';
-	import { refreshLoanList } from '$lib/composables/refresh-loan-list';
+	import { applyLoanListChange, refreshLoanList } from '$lib/composables/refresh-loan-list';
+	import type { LoanListChange } from '$lib/composables/refresh-loan-list';
 	import { refreshLoanIfCurrent } from '$lib/loan-modal-utils';
 	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
 	import { downloadLoansPdf } from '$lib/pdf-download';
@@ -126,8 +127,12 @@
 		duplicateSourceLoanId = null;
 	}
 
-	async function refreshLoans() {
-		loans = await refreshLoanList();
+	async function refreshLoans(change?: LoanListChange) {
+		if (!loans) {
+			loans = await refreshLoanList();
+			return;
+		}
+		loans = await applyLoanListChange(loans, change ?? { kind: 'reload' });
 	}
 
 	function handleQuickView(loan: LoanWithInvestors) {
@@ -180,21 +185,26 @@
 			(full) => {
 				contractDetailsLoan = full;
 			},
-			loan
+			loan,
+			{ includeContract: true }
 		);
 	}
 
 	async function handleContractDetailsSaved() {
-		await refreshLoans();
-		if (contractDetailsLoan) {
-			refreshLoanIfCurrent(
-				() => contractDetailsLoan,
-				(full) => {
-					contractDetailsLoan = full;
-				},
-				contractDetailsLoan
-			);
+		const current = contractDetailsLoan;
+		if (!current) {
+			await refreshLoans();
+			return;
 		}
+		await refreshLoans({ kind: 'upsert', loanId: current.id });
+		refreshLoanIfCurrent(
+			() => contractDetailsLoan,
+			(full) => {
+				contractDetailsLoan = full;
+			},
+			current,
+			{ includeContract: true }
+		);
 	}
 
 	async function handleRowDelete(loan: LoanWithInvestors) {
@@ -205,7 +215,7 @@
 		}
 		toast.success('Loan deleted');
 		selectedRowIds = new Set([...selectedRowIds].filter((id) => id !== loan.id));
-		await refreshLoans();
+		await refreshLoans({ kind: 'remove', loanId: loan.id });
 	}
 
 	const rowActions = $derived(
@@ -519,7 +529,11 @@
 					quickPaymentLoan = null;
 				}
 			}}
-			onSuccess={refreshLoans}
+			onSuccess={() => {
+				const id = quickPaymentLoan?.id;
+				if (id) void refreshLoans({ kind: 'upsert', loanId: id });
+				else void refreshLoans();
+			}}
 		/>
 
 		{#if contractDetailsLoan}

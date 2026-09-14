@@ -131,6 +131,31 @@ export function calculateTotalAmount(
   return principal + interest;
 }
 
+/** Match received-payment APIs: amounts are stored to 2 decimal places. */
+export const LOAN_AMOUNT_TOLERANCE = 0.02;
+
+export function calculateTotalReceived(
+  loanInvestors: Array<{
+    receivedPayments?: Array<{ amount: string }>;
+  }>,
+): number {
+  return loanInvestors.reduce((sum, li) => {
+    const payments = li.receivedPayments ?? [];
+    return (
+      sum + payments.reduce((inner, rp) => inner + safeParseFloat(rp.amount), 0)
+    );
+  }, 0);
+}
+
+/** True when received payments cover principal + interest. */
+export function isLoanFullyReceived(
+  totalDue: number,
+  totalReceived: number,
+  tolerance = LOAN_AMOUNT_TOLERANCE,
+): boolean {
+  return totalDue > 0 && totalReceived + tolerance >= totalDue;
+}
+
 /**
  * Calculate weighted average interest rate for a loan.
  * Only rate-based interest is used for the average; fixed-amount interest

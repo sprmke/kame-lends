@@ -45,6 +45,7 @@
 	} from '$lib/components/loans/loan-form-types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import type { Borrower, Investor, LoanStatus, LoanType, LoanWithInvestors } from '$lib/types';
+	import { isLoanFullyReceived } from '$lib/calculations';
 	import { ChevronDown, Copy, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-svelte';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
@@ -267,8 +268,7 @@
 		if (hasUnpaidTransactions) return 'Partially Funded';
 
 		const totalAmount = selectedInvestors.reduce((sum, si) => sum + estimateInvestorTotal(si), 0);
-		const balance = totalAmount - totalReceived;
-		if (totalAmount > 0 && balance <= 0.01) return 'Completed';
+		if (isLoanFullyReceived(totalAmount, totalReceived)) return 'Completed';
 
 		if (dueDate) {
 			const today = getTodayAtMidnight();

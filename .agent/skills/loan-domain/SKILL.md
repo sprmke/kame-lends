@@ -5,7 +5,7 @@ Use when changing loans, investors, interest periods, payments, debts, or the in
 ## Loan types
 
 - **Lot Title**, **OR/CR**, **Agent** — each has type-specific fields and contract templates.
-- Status flow is mostly manual completion today; overdue is derived from due dates and period state.
+- Status flow: `Completed` when received payments cover principal + interest (`isLoanFullyReceived`). Overdue is derived from due dates and period state only while a balance remains. Manual complete still exists for overdue unpaid loans.
 
 ## Interest periods
 
@@ -50,12 +50,12 @@ Use when changing loans, investors, interest periods, payments, debts, or the in
 
 ## Where to look
 
-| Concern        | Path                                |
-| -------------- | ----------------------------------- |
-| Schema         | `src/lib/server/db/schema.ts`       |
-| Calculations   | `src/lib/calculations.ts`           |
-| Access control | `src/lib/server/access-control.ts`  |
-| Feature flag   | `src/lib/feature-flags.ts`          |
-| Calendar       | `src/lib/server/google-calendar.ts` |
+| Concern        | Path                                                |
+| -------------- | --------------------------------------------------- |
+| Schema         | `src/lib/server/db/schema.ts`                       |
+| Calculations   | `src/lib/calculations.ts`, `src/lib/loan-status.ts` |
+| Access control | `src/lib/server/access-control.ts`                  |
+| Feature flag   | `src/lib/feature-flags.ts`                          |
+| Calendar       | `src/lib/server/google-calendar.ts`                 |
 
 Preserve behavior exactly; add Vitest coverage for calculation changes.

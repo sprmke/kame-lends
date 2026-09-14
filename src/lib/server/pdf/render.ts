@@ -66,10 +66,24 @@ export async function renderLoanContractPdfBuffer(
   contractDataOverride?: LoanContractData,
 ): Promise<Uint8Array> {
   const contractData = contractDataOverride ?? buildLoanContractData(loan);
-  const resolvedData = await resolveLoanContractDataImages(contractData);
-  const resolvedCustomization = customization
-    ? await resolveContractCustomizationImages(customization)
-    : customization;
+  let resolvedData = contractData;
+  let resolvedCustomization = customization;
+
+  try {
+    resolvedData = await resolveLoanContractDataImages(contractData);
+    resolvedCustomization = customization
+      ? await resolveContractCustomizationImages(customization)
+      : customization;
+  } catch (error) {
+    console.error(
+      "Contract PDF image resolution failed; rendering without embedded images:",
+      error,
+    );
+    const stripped = stripContractEmbeddedImages(contractData, customization);
+    resolvedData = stripped.data;
+    resolvedCustomization = stripped.customization;
+  }
+
   try {
     return await renderToBuffer(
       React.createElement(LoanContractPDFDocument, {

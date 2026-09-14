@@ -16,6 +16,11 @@
 	import { createDuplicateDataFromLoan } from '$lib/loan-duplicate';
 	import { formatText } from '$lib/format';
 	import { loadPartyOptions } from '$lib/composables/party-options';
+	import {
+		clearLoanClientCaches,
+		fetchLoanDetailClient
+	} from '$lib/composables/loan-detail-client-cache';
+	import type { LoanListChange } from '$lib/composables/refresh-loan-list';
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, LoanWithInvestors, PaymentMethod } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
@@ -25,7 +30,7 @@
 		loan: LoanWithInvestors | null;
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
-		onUpdate?: () => void | Promise<void>;
+		onUpdate?: (change?: LoanListChange) => void | Promise<void>;
 		onDuplicate?: (duplicateData: DuplicateLoanData) => void | Promise<void>;
 		startInEditMode?: boolean;
 		readOnly?: boolean;
@@ -80,9 +85,12 @@
 			if (!open) isLoadingLoan = false;
 			return;
 		}
-		paymentMethods = [];
-		isLoadingLoan = true;
-		void fetchLoanData(initialLoan.id, startInEditMode);
+		const hasRow = Boolean(loan);
+		isLoadingLoan = !hasRow;
+		void fetchLoanData(
+			initialLoan.id,
+			Boolean(startInEditMode && !initialLoan.loanContract)
+		);
 	});
 
 	const isOverdue = $derived(loan?.status === 'Overdue');
@@ -92,20 +100,17 @@
 
 	async function fetchLoanData(loanId: number, includeContract = false) {
 		try {
-			const query = includeContract ? '?include=contract' : '';
-			const response = await fetch(`/api/loans/${loanId}${query}`);
-			if (!response.ok) throw new Error('Failed to fetch loan');
-			const payload = (await response.json()) as LoanWithInvestors & {
-				paymentMethods?: PaymentMethod[];
-				access?: LoanAccessContext;
-			};
+			const payload = await fetchLoanDetailClient(loanId, { includeContract });
+			if (!payload) throw new Error('Failed to fetch loan');
 			const { paymentMethods: nextMethods, access: nextAccess, ...rest } = payload;
 			loan = rest;
 			paymentMethods = Array.isArray(nextMethods) ? nextMethods : [];
 			access = nextAccess ?? null;
 			loanFetchKey += 1;
+			return rest;
 		} catch (error) {
 			console.error('Error fetching loan:', error);
+			return null;
 		} finally {
 			isLoadingLoan = false;
 		}
@@ -113,8 +118,13 @@
 
 	async function refreshLoan() {
 		if (!loan?.id) return;
-		await fetchLoanData(loan.id);
-		await onUpdate?.();
+		clearLoanClientCaches(loan.id);
+		const next = await fetchLoanData(loan.id);
+		if (next) {
+			await onUpdate?.({ kind: 'replace', loan: next });
+			return;
+		}
+		await onUpdate?.({ kind: 'upsert', loanId: loan.id });
 	}
 
 	async function loadFormData() {
@@ -180,8 +190,8 @@
 		if (!loan) return;
 		let sourceLoan = loan;
 		try {
-			const response = await fetch(`/api/loans/${loan.id}?include=contract`);
-			if (response.ok) sourceLoan = (await response.json()) as LoanWithInvestors;
+			const payload = await fetchLoanDetailClient(loan.id, { includeContract: true });
+			if (payload) sourceLoan = payload as LoanWithInvestors;
 		} catch {
 			// Fall back to loaded loan.
 		}
@@ -202,7 +212,7 @@
 			if (!response.ok) throw new Error('Failed to delete loan');
 			showDeleteDialog = false;
 			onOpenChange(false);
-			await onUpdate?.();
+			await onUpdate?.({ kind: 'remove', loanId: loan.id });
 		} catch (error) {
 			console.error('Error deleting loan:', error);
 			toast.error('Failed to delete loan');
@@ -275,7 +285,12 @@
 						showComplete={!readOnly && isOverdue}
 						onDuplicate={handleDuplicate}
 						showDuplicate={!readOnly}
-						onContractDetails={() => (showContractDetailsModal = true)}
+						onContractDetails={() => {
+							showContractDetailsModal = true;
+							if (loan?.id && !loan.loanContract) {
+								void fetchLoanData(loan.id, true);
+							}
+						}}
 						canEdit={!readOnly}
 						canDelete={!readOnly}
 						onAddPayment={readOnly ? undefined : () => (quickPaymentKind = 'payment')}

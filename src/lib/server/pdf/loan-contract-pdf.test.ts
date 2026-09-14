@@ -24,6 +24,7 @@ const WEBP =
 const CORRUPT_JPEG = "data:image/jpeg;base64,not-a-jpeg";
 
 const dummyLoan = { id: 1, loanName: "Test" } as LoanWithInvestors;
+const hasDatabase = Boolean(process.env.DATABASE_URL?.trim());
 
 function fixtureContractData(
   overrides: Partial<LoanContractData> = {},
@@ -98,6 +99,19 @@ describe("loan contract PDF", () => {
     expect(buffer.byteLength).toBeGreaterThan(1000);
   });
 
+  it("renders when party signatures are storage refs", async () => {
+    const data = fixtureContractData({
+      borrowerESignatureUrl: "storage:uploads/user/signature.png",
+    });
+    const customization = buildDefaultContractCustomizationFromLoan(data);
+    const buffer = await renderLoanContractPdfBuffer(
+      dummyLoan,
+      customization,
+      data,
+    );
+    expect(buffer.byteLength).toBeGreaterThan(1000);
+  });
+
   it("retries without images when a JPEG data URL is unreadable", async () => {
     const data = fixtureContractData({ borrowerValidIdUrl: CORRUPT_JPEG });
     const customization = buildDefaultContractCustomizationFromLoan(data);
@@ -109,97 +123,103 @@ describe("loan contract PDF", () => {
     expect(buffer.byteLength).toBeGreaterThan(1000);
   });
 
-  it("renders a buffer for the latest local loan", async () => {
-    const loan = await db.query.loans.findFirst({
-      orderBy: [desc(loans.id)],
-      with: {
-        borrower: true,
-        loanContract: true,
-        signingInvitations: true,
-        loanInvestors: {
-          with: {
-            investor: true,
-            interestPeriods: true,
-            receivedPayments: true,
+  it.skipIf(!hasDatabase)(
+    "renders a buffer for the latest local loan",
+    async () => {
+      const loan = await db.query.loans.findFirst({
+        orderBy: [desc(loans.id)],
+        with: {
+          borrower: true,
+          loanContract: true,
+          signingInvitations: true,
+          loanInvestors: {
+            with: {
+              investor: true,
+              interestPeriods: true,
+              receivedPayments: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    expect(loan).toBeTruthy();
+      expect(loan).toBeTruthy();
 
-    const baseData = buildLoanContractData(loan!);
-    const storedCustomization = loan!.loanContract?.customization as
-      | import("$lib/loan-contract-customization").ContractCustomization
-      | undefined;
-    const customization =
-      storedCustomization ??
-      buildDefaultContractCustomizationFromLoan(baseData);
-    const appliedData = applyContractCustomization(baseData, customization);
-    const investorEmailById = buildInvestorEmailMap(loan!);
-    const merged = applySigningSignatures(
-      appliedData,
-      customization,
-      (loan!.signingInvitations ?? []) as SigningInvitationRecord[],
-      investorEmailById,
-      buildSavedPartySignaturesFromLoan(loan!),
-    );
+      const baseData = buildLoanContractData(loan!);
+      const storedCustomization = loan!.loanContract?.customization as
+        | import("$lib/loan-contract-customization").ContractCustomization
+        | undefined;
+      const customization =
+        storedCustomization ??
+        buildDefaultContractCustomizationFromLoan(baseData);
+      const appliedData = applyContractCustomization(baseData, customization);
+      const investorEmailById = buildInvestorEmailMap(loan!);
+      const merged = applySigningSignatures(
+        appliedData,
+        customization,
+        (loan!.signingInvitations ?? []) as SigningInvitationRecord[],
+        investorEmailById,
+        buildSavedPartySignaturesFromLoan(loan!),
+      );
 
-    const buffer = await renderLoanContractPdfBuffer(
-      loan!,
-      merged.customization,
-      merged.data,
-    );
+      const buffer = await renderLoanContractPdfBuffer(
+        loan!,
+        merged.customization,
+        merged.data,
+      );
 
-    expect(buffer.byteLength).toBeGreaterThan(1000);
-  });
+      expect(buffer.byteLength).toBeGreaterThan(1000);
+    },
+  );
 
-  it("renders a loan with stored e-signatures", async () => {
-    const loan = await db.query.loans.findFirst({
-      where: eq(loans.id, 56),
-      with: {
-        borrower: true,
-        loanContract: true,
-        signingInvitations: true,
-        loanInvestors: {
-          with: {
-            investor: true,
-            interestPeriods: true,
-            receivedPayments: true,
+  it.skipIf(!hasDatabase)(
+    "renders a loan with stored e-signatures",
+    async () => {
+      const loan = await db.query.loans.findFirst({
+        where: eq(loans.id, 56),
+        with: {
+          borrower: true,
+          loanContract: true,
+          signingInvitations: true,
+          loanInvestors: {
+            with: {
+              investor: true,
+              interestPeriods: true,
+              receivedPayments: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!loan) return;
+      if (!loan) return;
 
-    const baseData = buildLoanContractData(loan);
-    const storedCustomization = loan.loanContract?.customization as
-      | import("$lib/loan-contract-customization").ContractCustomization
-      | undefined;
-    const customization =
-      storedCustomization ??
-      buildDefaultContractCustomizationFromLoan(baseData);
-    const appliedData = applyContractCustomization(baseData, customization);
-    const investorEmailById = buildInvestorEmailMap(loan);
-    const merged = applySigningSignatures(
-      appliedData,
-      customization,
-      (loan.signingInvitations ?? []) as SigningInvitationRecord[],
-      investorEmailById,
-      buildSavedPartySignaturesFromLoan(loan),
-    );
+      const baseData = buildLoanContractData(loan);
+      const storedCustomization = loan.loanContract?.customization as
+        | import("$lib/loan-contract-customization").ContractCustomization
+        | undefined;
+      const customization =
+        storedCustomization ??
+        buildDefaultContractCustomizationFromLoan(baseData);
+      const appliedData = applyContractCustomization(baseData, customization);
+      const investorEmailById = buildInvestorEmailMap(loan);
+      const merged = applySigningSignatures(
+        appliedData,
+        customization,
+        (loan.signingInvitations ?? []) as SigningInvitationRecord[],
+        investorEmailById,
+        buildSavedPartySignaturesFromLoan(loan),
+      );
 
-    const buffer = await renderLoanContractPdfBuffer(
-      loan,
-      merged.customization,
-      merged.data,
-    );
+      const buffer = await renderLoanContractPdfBuffer(
+        loan,
+        merged.customization,
+        merged.data,
+      );
 
-    expect(buffer.byteLength).toBeGreaterThan(1000);
-  });
+      expect(buffer.byteLength).toBeGreaterThan(1000);
+    },
+  );
 
-  it("renders loan 87 specifically", async () => {
+  it.skipIf(!hasDatabase)("renders loan 87 specifically", async () => {
     const loan = await db.query.loans.findFirst({
       where: eq(loans.id, 87),
       with: {

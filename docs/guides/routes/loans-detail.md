@@ -19,14 +19,16 @@ Full loan detail for any party with membership (owner, investor, borrower, witne
 - **Desktop (`lg+`):** floating sidebar; list View / row click opens this content in `LoanDetailModal` with a `text-base font-medium` title and the same control chrome as the last Next.js app. Visual snapshots live in `e2e/visual-parity.spec.ts`.
 - **Phone (`<lg`):** `LoanSummarySection` is a 2-column metric grid. When the tile count is odd, the last tile spans full width only while the grid is 2 columns (below `lg`). Desktop `lg+` stays 4 columns with no stretch. Edit and duplicate open a bottom sheet over the detail (`EditFormSheet` / `LoanCreateModal`). Cancel / submit scroll with the form.
 - **Loading:** `LoanDetailSkeleton` mirrors the page: header, summary metric grid in a card, payment-method tiles, signing party rows, and investor sections. Signing status uses the same card + identity rows while `/api/loans/[id]/signing` loads.
+- **Status:** `Completed` when received payments cover principal + interest (same threshold as the investor Settled badge). A past due date does not keep the loan Overdue once the total is paid. Opening the page or list modal persists that status if the stored row is still Overdue. `POST /api/loans/check-overdue` does the same for the rest of the list. Owners can still mark an unpaid overdue loan complete from the header.
 
 ## Load
 
 [`src/routes/loans/[id]/+page.server.ts`](../../../src/routes/loans/[id]/+page.server.ts)
 
-- `loadLoanDetail` (`src/lib/server/loan-detail.ts`) gates view/edit via `getLoanAccessContext`.
+- `loadLoanDetail` (`src/lib/server/loan-detail.ts`) loads the loan graph and session email together, then `computeLoanAccessContext` (`src/lib/loan-access-compute.ts`). View/edit follow that membership. No second access query. If the loan is fully paid and not yet `Completed`, the load writes `Completed` and invalidates the loan cache.
 - `paymentMethods` loaded only when membership includes `borrower` (loan owner’s methods).
-- Page load includes `loanContract`. List-modal `GET /api/loans/[id]` omits it unless `?include=contract`. Responses strip leftover `data:image…` payloads; `storage:` refs remain.
+- Page load includes `loanContract`. List-modal `GET /api/loans/[id]` omits it unless `?include=contract` (edit, duplicate, or Contract Details). Responses strip leftover `data:image…` payloads; `storage:` refs remain.
+- List-modal Contract Details fetches signing and contract JSON only while that modal is open. Those GETs plus loan detail share a 45s per-loan client cache.
 
 `GET /api/loans/[id]` returns the same `paymentMethods` field for borrower viewers (used by the borrowed list modal).
 

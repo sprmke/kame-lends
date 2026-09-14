@@ -4,6 +4,8 @@ import {
   calculateBorrowerStats,
   calculateInvestorStats,
   calculateTotalPrincipal,
+  calculateTotalReceived,
+  isLoanFullyReceived,
   isOpenLoan,
 } from "$lib/calculations";
 import type { BorrowerWithLoans, InvestorWithLoans } from "$lib/types";
@@ -26,6 +28,22 @@ describe("calculations", () => {
     expect(isOpenLoan({ status: "Fully Funded" })).toBe(true);
     expect(isOpenLoan({ status: "Overdue" })).toBe(true);
     expect(isOpenLoan({ status: "Completed" })).toBe(false);
+  });
+
+  it("sums received payments across investors", () => {
+    expect(
+      calculateTotalReceived([
+        {
+          receivedPayments: [{ amount: "267000" }, { amount: "19000" }],
+        },
+      ]),
+    ).toBe(286000);
+  });
+
+  it("treats a zero-balance loan as fully received", () => {
+    expect(isLoanFullyReceived(286000, 286000)).toBe(true);
+    expect(isLoanFullyReceived(286000, 267000)).toBe(false);
+    expect(isLoanFullyReceived(0, 0)).toBe(false);
   });
 
   it("excludes completed loans from investor capital and interest", () => {

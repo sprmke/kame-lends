@@ -17,7 +17,7 @@ Party users (linked investor, borrower, or witness contact rows) also get:
 
 Admin workspace owners also get:
 
-- **Data & maintenance** — sync/calendar/backup tools (full-width stacked actions on phone). Calendar sync/clear opens a bottom sheet under `lg` (dropdown at `lg+`).
+- **Data & maintenance** — sync/calendar/backup tools (full-width stacked actions on phone). Calendar sync/clear opens a bottom sheet under `lg` (dropdown at `lg+`). Google Calendar API failures show in the toast (`details` from `GET /api/loans/sync-calendar` or `POST /api/loans/cleanup-calendar`).
 
 ## Load
 
@@ -33,7 +33,7 @@ Admin workspace owners also get:
 
 CRUD via `/api/payment-methods` and `/api/payment-methods/[id]` (session user owns rows only).
 
-Valid ID and e-signature via `GET` / `PUT` `/api/party-profile/me` (updates all investor/borrower/witness rows linked to the session user).
+Valid ID and e-signature via `GET` / `PUT` `/api/party-profile/me` (updates all investor/borrower/witness rows linked to the session user). JSON keeps `storage:` refs and drops leftover `data:image…` values.
 
 ## Permissions
 

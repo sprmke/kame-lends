@@ -154,8 +154,8 @@ export const POST: RequestHandler = async (event) => {
       await recalculateInterestPeriodStatusFromLinkedPayments(
         requestedPeriodId,
       );
-      await syncLoanStatusFromInterestPeriods(loanId);
     }
+    await syncLoanStatusFromInterestPeriods(loanId);
 
     invalidateLoanData();
     return json({ success: true }, { status: 201 });

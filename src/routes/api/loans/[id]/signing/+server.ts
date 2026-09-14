@@ -3,12 +3,9 @@ import type { RequestHandler } from "./$types";
 import { eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { db } from "$lib/server/db";
-import { loans, loanSigningInvitations } from "$lib/server/db/schema";
+import { loans, users } from "$lib/server/db/schema";
 import { ensureLoanSigningSetup } from "$lib/server/loan-contract-persistence";
-import {
-  getLoanAccessContext,
-  hasLoanAdminAccess,
-} from "$lib/server/access-control";
+import { computeLoanAccessContext } from "$lib/loan-access-compute";
 import {
   isSigningInvitationIncluded,
   resolveContractCustomization,
@@ -24,12 +21,8 @@ import {
 } from "$lib/loan-contract-customization";
 import { buildLoanContractData } from "$lib/loan-contract-data";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
 export const GET: RequestHandler = async (event) => {
-  const { params, request } = event;
+  const { params } = event;
   try {
     const session = await getSession(event);
     if (!session?.user?.id) {
@@ -42,35 +35,47 @@ export const GET: RequestHandler = async (event) => {
       return json({ error: "Invalid loan ID" }, { status: 400 });
     }
 
-    const access = await getLoanAccessContext(loanId, session.user.id);
-    if (!access.canView) {
-      return json({ error: "Loan not found" }, { status: 404 });
-    }
-
-    const loan = await db.query.loans.findFirst({
-      where: eq(loans.id, loanId),
-      with: {
-        borrower: true,
-        loanContract: true,
-        loanInvestors: {
-          with: {
-            investor: true,
-            interestPeriods: true,
-            receivedPayments: true,
+    const [sessionUser, loan] = await Promise.all([
+      db.query.users.findFirst({
+        where: eq(users.id, session.user.id),
+        columns: { email: true },
+      }),
+      db.query.loans.findFirst({
+        where: eq(loans.id, loanId),
+        with: {
+          borrower: true,
+          loanContract: true,
+          signingInvitations: true,
+          loanWitnesses: {
+            with: { witness: true },
+          },
+          loanInvestors: {
+            with: {
+              investor: true,
+              interestPeriods: true,
+              receivedPayments: true,
+            },
           },
         },
-      },
-    });
+      }),
+    ]);
 
     if (!loan) {
       return json({ error: "Loan not found" }, { status: 404 });
     }
 
-    const invitations = (await hasLoanAdminAccess(loanId, session.user.id))
+    const access = computeLoanAccessContext(
+      loan,
+      session.user.id,
+      sessionUser?.email ?? session.user.email ?? null,
+    );
+    if (!access.canView) {
+      return json({ error: "Loan not found" }, { status: 404 });
+    }
+
+    const invitations = access.canAdminEdit
       ? await ensureLoanSigningSetup(loan)
-      : await db.query.loanSigningInvitations.findMany({
-          where: eq(loanSigningInvitations.loanId, loanId),
-        });
+      : (loan.signingInvitations ?? []);
     const contractData = buildLoanContractData(loan);
     const defaults = buildDefaultContractCustomizationFromLoan(contractData);
     const storedCustomization = loan.loanContract?.customization as

@@ -15,10 +15,11 @@ describe("pdfSafeImageSrc", () => {
     expect(pdfSafeImageSrc(` ${JPEG} `)).toBe(JPEG);
   });
 
-  it("drops webp, empty, and non-data URLs", () => {
+  it("drops webp, empty, storage refs, and non-data URLs", () => {
     expect(pdfSafeImageSrc(WEBP)).toBeNull();
     expect(pdfSafeImageSrc("")).toBeNull();
     expect(pdfSafeImageSrc("https://example.com/id.png")).toBeNull();
+    expect(pdfSafeImageSrc("storage:uploads/user/signature.png")).toBeNull();
     expect(pdfSafeImageSrc(null)).toBeNull();
   });
 });

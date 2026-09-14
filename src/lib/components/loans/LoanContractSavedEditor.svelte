@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import LoanContractCustomizationForm from '$lib/components/loans/LoanContractCustomizationForm.svelte';
 	import LoanContractDocumentBody from '$lib/components/loans/LoanContractDocumentBody.svelte';
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
@@ -7,7 +8,6 @@
 		applyContractCustomization,
 		areContractCustomizationsEqual,
 		buildDefaultContractCustomizationFromLoan,
-		CONTRACT_CUSTOMIZATION_FIELDS,
 		createEmptyDirtyFields,
 		parseStoredContractCustomization,
 		type ContractCustomization
@@ -19,6 +19,10 @@
 		type SigningInvitationRecord
 	} from '$lib/loan-signing';
 	import { loadPartyOptions } from '$lib/composables/party-options';
+	import {
+		clearLoanClientCaches,
+		fetchContractClient
+	} from '$lib/composables/loan-detail-client-cache';
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
 
@@ -79,9 +83,13 @@
 	});
 
 	$effect(() => {
-		customization = storedCustomization;
-		savedSnapshot = storedCustomization;
-		dirtyFields = createEmptyDirtyFields();
+		const next = storedCustomization;
+		untrack(() => {
+			if (!areContractCustomizationsEqual(customization, savedSnapshot)) return;
+			customization = next;
+			savedSnapshot = next;
+			dirtyFields = createEmptyDirtyFields();
+		});
 	});
 
 	$effect(() => {
@@ -106,13 +114,20 @@
 
 	async function loadSigningInvitations(loanId: number) {
 		try {
-			const response = await fetch(`/api/loans/${loanId}/contract`);
-			if (!response.ok) return;
-			const payload = (await response.json()) as {
-				signingInvitations?: SigningInvitationRecord[];
-			};
-			if (Array.isArray(payload.signingInvitations)) {
+			const payload = await fetchContractClient(loanId);
+			if (Array.isArray(payload?.signingInvitations)) {
 				signingInvitations = payload.signingInvitations;
+			}
+			if (payload?.customization) {
+				const next = parseStoredContractCustomization(
+					payload.customization as ContractCustomization,
+					defaults
+				);
+				if (areContractCustomizationsEqual(customization, savedSnapshot)) {
+					customization = next;
+					savedSnapshot = next;
+					dirtyFields = createEmptyDirtyFields();
+				}
 			}
 		} catch (error) {
 			console.error('Failed to load contract signing invitations', error);
@@ -172,6 +187,7 @@
 			savedSnapshot = next;
 			dirtyFields = createEmptyDirtyFields();
 			toast.success('Contract saved');
+			clearLoanClientCaches(loan.id);
 			onSaved?.(next);
 		} catch (error) {
 			console.error('Error saving contract:', error);

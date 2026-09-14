@@ -1,9 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { eq } from "drizzle-orm";
-import { getSession } from "$lib/server/session";
-import { db } from "$lib/server/db";
-import { loans } from "$lib/server/db/schema";
+import { stripDataImageUrls } from "$lib/json-safe-images";
 import type { ContractCustomization } from "$lib/loan-contract-customization";
 import {
   applyContractCustomization,
@@ -17,11 +14,9 @@ import {
   buildSavedPartySignaturesFromLoan,
   type SigningInvitationRecord,
 } from "$lib/loan-signing";
-import {
-  getLoanAccessContext,
-  hasLoanAdminAccess,
-} from "$lib/server/access-control";
+import { hasLoanAdminAccess } from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { loadLoanForContractAccess } from "$lib/server/loan-contract-load";
 import {
   syncSigningInvitationsForLoan,
   upsertLoanContractCustomization,
@@ -31,6 +26,10 @@ import {
   pdfResponse,
   renderLoanContractPdfBuffer,
 } from "$lib/server/pdf/render";
+import { getSession } from "$lib/server/session";
+import { db } from "$lib/server/db";
+import { loans } from "$lib/server/db/schema";
+import { eq } from "drizzle-orm";
 
 export const config = {
   maxDuration: 60,
@@ -48,31 +47,12 @@ export const GET: RequestHandler = async (event) => {
       return json({ error: "Invalid loan ID" }, { status: 400 });
     }
 
-    const access = await getLoanAccessContext(loanId, session.user.id);
-    if (!access.canView) {
+    const loaded = await loadLoanForContractAccess(loanId, session.user.id);
+    if (!loaded) {
       return json({ error: "Loan not found" }, { status: 404 });
     }
 
-    const loan = await db.query.loans.findFirst({
-      where: eq(loans.id, loanId),
-      with: {
-        borrower: true,
-        loanContract: true,
-        signingInvitations: true,
-        loanInvestors: {
-          with: {
-            investor: true,
-            interestPeriods: true,
-            receivedPayments: true,
-          },
-        },
-      },
-    });
-
-    if (!loan) {
-      return json({ error: "Loan not found" }, { status: 404 });
-    }
-
+    const { loan } = loaded;
     const baseData = buildLoanContractData(loan);
     const customization = parseStoredContractCustomization(
       loan.loanContract?.customization,
@@ -88,12 +68,14 @@ export const GET: RequestHandler = async (event) => {
       buildSavedPartySignaturesFromLoan(loan),
     );
 
-    return json({
-      contractData: merged.data,
-      customization: merged.customization,
-      signingInvitations: loan.signingInvitations ?? [],
-      hasStoredContract: Boolean(loan.loanContract),
-    });
+    return json(
+      stripDataImageUrls({
+        contractData: merged.data,
+        customization: merged.customization,
+        signingInvitations: loan.signingInvitations ?? [],
+        hasStoredContract: Boolean(loan.loanContract),
+      }),
+    );
   } catch (error) {
     console.error("Error fetching loan contract:", error);
     return json({ error: "Failed to fetch loan contract" }, { status: 500 });
@@ -172,31 +154,12 @@ export const POST: RequestHandler = async (event) => {
       return new Response("Invalid loan ID", { status: 400 });
     }
 
-    const access = await getLoanAccessContext(loanId, session.user.id);
-    if (!access.canView) {
+    const loaded = await loadLoanForContractAccess(loanId, session.user.id);
+    if (!loaded) {
       return new Response("Loan not found", { status: 404 });
     }
 
-    const loan = await db.query.loans.findFirst({
-      where: eq(loans.id, loanId),
-      with: {
-        borrower: true,
-        loanContract: true,
-        signingInvitations: true,
-        loanInvestors: {
-          with: {
-            investor: true,
-            interestPeriods: true,
-            receivedPayments: true,
-          },
-        },
-      },
-    });
-
-    if (!loan) {
-      return new Response("Loan not found", { status: 404 });
-    }
-
+    const { loan } = loaded;
     const baseData = buildLoanContractData(loan);
     const customization = parseStoredContractCustomization(
       loan.loanContract?.customization,

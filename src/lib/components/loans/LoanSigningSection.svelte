@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import LoanSigningLinksPanel from './LoanSigningLinksPanel.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { fetchSigningClient } from '$lib/composables/loan-detail-client-cache';
 	import type { SigningInvitationSummary } from '$lib/loan-signing';
 
 	interface Props {
@@ -28,19 +29,18 @@
 
 	async function loadSigningLinks() {
 		const seq = ++loadSeq;
-		isLoading = true;
+		if (invitations.length === 0) isLoading = true;
 		loadError = null;
 		try {
-			const response = await fetch(`/api/loans/${loanId}/signing`);
+			const data = await fetchSigningClient(loanId);
 			if (seq !== loadSeq) return;
-			if (!response.ok) {
+			if (!data) {
 				loadError = 'Could not load contract signing status.';
 				invitations = [];
 				viewerInvitationId = null;
 				onStatsChange?.(0, 0);
 				return;
 			}
-			const data = await response.json();
 			invitations = data.invitations ?? [];
 			viewerInvitationId = data.viewerInvitationId ?? null;
 			const signed = invitations.filter((item) => item.signedAt).length;

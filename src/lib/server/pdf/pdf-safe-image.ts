@@ -1,3 +1,4 @@
+import { isStorageRef } from "$lib/storage-reference";
 import type { ContractCustomization } from "$lib/loan-contract-customization";
 import type { LoanContractData } from "$lib/loan-contract-data";
 
@@ -5,8 +6,9 @@ const PDF_EMBEDDABLE_IMAGE = /^data:image\/(jpeg|jpg|png);base64,/i;
 
 /** @react-pdf Image supports JPEG, PNG, and SVG data URLs. WebP and other formats throw. */
 export function pdfSafeImageSrc(src: string | null | undefined): string | null {
-  const trimmed = src?.trim();
-  if (!trimmed) return null;
+  if (typeof src !== "string") return null;
+  const trimmed = src.trim();
+  if (!trimmed || isStorageRef(trimmed)) return null;
   return PDF_EMBEDDABLE_IMAGE.test(trimmed) ? trimmed : null;
 }
 

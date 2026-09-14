@@ -2,7 +2,6 @@ import { db } from "$lib/server/db";
 import {
   loans,
   loanInvestors,
-  loanWitnesses,
   investors,
   borrowers,
   witnesses,
@@ -13,13 +12,15 @@ import {
 } from "$lib/server/db/schema";
 import { eq, and, or, isNotNull, inArray } from "drizzle-orm";
 import { loadLinkedInvestorContactIds } from "$lib/server/party-investor-links";
-import type { SigningPartyRole } from "$lib/loan-signing";
 import { emailsMatch, normalizeEmail } from "$lib/loan-signing";
 import type { LoanAccessContext, LoanMembership } from "$lib/loan-access";
+import {
+  computeLoanAccessContext,
+  emptyLoanAccess,
+} from "$lib/loan-access-compute";
 
 export type { LoanAccessContext, LoanMembership };
-
-/** View access for any loan party. Prefer getLoanAccessContext for writes/UI. */
+export { computeLoanAccessContext };
 export async function hasLoanAccess(
   loanId: number,
   userId: string,
@@ -126,16 +127,6 @@ export async function getLoanAccessContext(
   loanId: number,
   userId: string,
 ): Promise<LoanAccessContext> {
-  const empty: LoanAccessContext = {
-    memberships: [],
-    canView: false,
-    canAdminEdit: false,
-    editableInvestorIds: [],
-    signingPartyRoles: [],
-    linkedInvestorId: null,
-    linkedLoanWitnessId: null,
-  };
-
   const [sessionUser, loan] = await Promise.all([
     db.query.users.findFirst({
       where: eq(users.id, userId),
@@ -179,124 +170,8 @@ export async function getLoanAccessContext(
     }),
   ]);
 
-  if (!loan) return empty;
-
-  const sessionEmail = sessionUser?.email ?? null;
-  const memberships = new Set<LoanMembership>();
-  const signingPartyRoles = new Set<SigningPartyRole>();
-  let linkedInvestorId: number | null = null;
-  let linkedLoanWitnessId: number | null = null;
-
-  const emailMatchesParty = (partyEmail: string | null | undefined) =>
-    !!sessionEmail && emailsMatch(sessionEmail, partyEmail);
-
-  if (loan.userId === userId) {
-    memberships.add("owner");
-  }
-
-  for (const li of loan.loanInvestors) {
-    if (li.investor?.investorUserId === userId) {
-      memberships.add("investor");
-      linkedInvestorId = li.investorId;
-      signingPartyRoles.add("lender");
-    }
-  }
-
-  if (
-    loan.borrower?.borrowerUserId === userId ||
-    emailMatchesParty(loan.borrower?.email)
-  ) {
-    if (
-      loan.borrower?.borrowerUserId === userId ||
-      emailMatchesParty(loan.borrower?.email)
-    ) {
-      memberships.add("borrower");
-      signingPartyRoles.add("borrower");
-    }
-  }
-
-  for (const invitation of loan.signingInvitations ?? []) {
-    const witnessLinked = invitation.witness?.witnessUserId === userId;
-    const emailLinked = emailMatchesParty(invitation.partyEmail);
-
-    if (
-      invitation.partyRole === "witness_1" ||
-      invitation.partyRole === "witness_2"
-    ) {
-      if (witnessLinked || emailLinked) {
-        memberships.add("witness");
-        signingPartyRoles.add(invitation.partyRole);
-      }
-    }
-
-    if (
-      invitation.partyRole === "borrower" &&
-      (loan.borrower?.borrowerUserId === userId || emailLinked)
-    ) {
-      memberships.add("borrower");
-      signingPartyRoles.add("borrower");
-    }
-
-    if (invitation.partyRole === "lender") {
-      const linkedByInvestor =
-        !!invitation.investorId &&
-        loan.loanInvestors.some(
-          (li) =>
-            li.investorId === invitation.investorId &&
-            li.investor?.investorUserId === userId,
-        );
-      if (linkedByInvestor || emailLinked) {
-        memberships.add("investor");
-        signingPartyRoles.add("lender");
-        if (invitation.investorId && linkedByInvestor) {
-          linkedInvestorId = invitation.investorId;
-        }
-      }
-    }
-  }
-
-  for (const lw of loan.loanWitnesses ?? []) {
-    if (
-      lw.witness?.witnessUserId === userId ||
-      emailMatchesParty(lw.witness?.email)
-    ) {
-      memberships.add("witness");
-      linkedLoanWitnessId = lw.id;
-    }
-  }
-
-  const witnessOnLoan = await db
-    .select({ id: witnesses.id })
-    .from(witnesses)
-    .innerJoin(
-      loanSigningInvitations,
-      eq(loanSigningInvitations.witnessId, witnesses.id),
-    )
-    .where(
-      and(
-        eq(loanSigningInvitations.loanId, loanId),
-        eq(witnesses.witnessUserId, userId),
-      ),
-    )
-    .limit(1);
-  if (witnessOnLoan.length > 0) {
-    memberships.add("witness");
-  }
-
-  const list = [...memberships];
-  const canAdminEdit = memberships.has("owner");
-
-  return {
-    memberships: list,
-    canView: list.length > 0,
-    canAdminEdit,
-    editableInvestorIds: canAdminEdit
-      ? loan.loanInvestors.map((li) => li.investorId)
-      : [],
-    signingPartyRoles: [...signingPartyRoles],
-    linkedInvestorId,
-    linkedLoanWitnessId,
-  };
+  if (!loan) return emptyLoanAccess;
+  return computeLoanAccessContext(loan, userId, sessionUser?.email ?? null);
 }
 
 /** Writes to a loan's own borrowerProfit field. Owner or the loan's linked borrower. */

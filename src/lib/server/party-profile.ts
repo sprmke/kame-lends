@@ -15,6 +15,7 @@ import type {
   PartyProfileSaveInput,
   PartyUserProfile,
 } from "$lib/party-profile";
+import { jsonSafeImageRef } from "$lib/json-safe-images";
 import {
   invalidateBorrowerData,
   invalidateInvestorData,
@@ -48,8 +49,10 @@ function mergeContactRows(
     contactNumber: pickString(...rows.map((r) => r.contactNumber)),
     address: pickString(...rows.map((r) => r.address)),
     notes: pickString(...rows.map((r) => r.notes)),
-    validIdUrl: pickString(...rows.map((r) => r.validIdUrl)),
-    eSignatureUrl: pickString(...rows.map((r) => r.eSignatureUrl)),
+    validIdUrl: jsonSafeImageRef(pickString(...rows.map((r) => r.validIdUrl))),
+    eSignatureUrl: jsonSafeImageRef(
+      pickString(...rows.map((r) => r.eSignatureUrl)),
+    ),
   };
 }
 
@@ -289,8 +292,12 @@ export async function loadPartyUserIdentityDocuments(
 
   const rows = [...investorRows, ...borrowerRows, ...witnessRows];
   return {
-    validIdUrl: pickString(...rows.map((row) => row.validIdUrl)),
-    eSignatureUrl: pickString(...rows.map((row) => row.eSignatureUrl)),
+    validIdUrl: jsonSafeImageRef(
+      pickString(...rows.map((row) => row.validIdUrl)),
+    ),
+    eSignatureUrl: jsonSafeImageRef(
+      pickString(...rows.map((row) => row.eSignatureUrl)),
+    ),
   };
 }
 
@@ -332,7 +339,10 @@ export async function savePartyUserIdentityDocuments(
   if (borrowerRows.length > 0) invalidateBorrowerData();
   if (witnessRows.length > 0) invalidateWitnessData();
 
-  return { validIdUrl, eSignatureUrl };
+  return {
+    validIdUrl: jsonSafeImageRef(validIdUrl),
+    eSignatureUrl: jsonSafeImageRef(eSignatureUrl),
+  };
 }
 
 export async function savePartyProfileForEntity(
