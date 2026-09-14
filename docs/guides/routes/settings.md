@@ -17,7 +17,7 @@ Party users (linked investor, borrower, or witness contact rows) also get:
 
 Admin workspace owners also get:
 
-- **Data & maintenance** — sync/calendar/backup tools (full-width stacked actions on phone). Calendar sync/clear opens a bottom sheet under `lg` (dropdown at `lg+`). Full Google Calendar sync can take a few minutes. Google Calendar API failures show in the toast (`details` from `GET /api/loans/sync-calendar` or `POST /api/loans/cleanup-calendar`).
+- **Data & maintenance** — sync/calendar/backup tools (full-width stacked actions on phone). Calendar sync/clear opens a bottom sheet under `lg` (dropdown at `lg+`). Sync asks **All dates**, **Open loans**, or **Today and later**, then shows a live progress dialog (phase, loan name, dates, counts). The client loops small `POST /api/loans/sync-calendar` batches (`prepare` / `wipe` / `loans` / `summaries`) and `POST /api/loans/cleanup-calendar` until done. Failures show in the toast. After a wipe, Google events are one loan event per date (investors in the description) plus **Total Summary** on dates that actually have cashflow.
 
 ## Load
 
@@ -41,10 +41,11 @@ Any signed-in user can open Settings and manage their own payment methods. Party
 
 ## Implementation map
 
-| Piece                | Path                                                               |
-| -------------------- | ------------------------------------------------------------------ |
-| Page                 | `src/routes/settings/+page.svelte`                                 |
-| Account roles        | `src/lib/account-roles.ts`, `src/lib/server/account-roles.ts`      |
-| Payment methods UI   | `src/lib/components/settings/PaymentMethodsManager.svelte`         |
-| Identity documents   | `src/lib/components/settings/PartyIdentityDocumentsManager.svelte` |
-| Image upload preview | `src/lib/components/common/ImageUploadPreview.svelte`              |
+| Piece                | Path                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Page                 | `src/routes/settings/+page.svelte`                                                                                                   |
+| Account roles        | `src/lib/account-roles.ts`, `src/lib/server/account-roles.ts`                                                                        |
+| Payment methods UI   | `src/lib/components/settings/PaymentMethodsManager.svelte`                                                                           |
+| Identity documents   | `src/lib/components/settings/PartyIdentityDocumentsManager.svelte`                                                                   |
+| Image upload preview | `src/lib/components/common/ImageUploadPreview.svelte`                                                                                |
+| Calendar sync        | `src/lib/components/common/SyncCalendarButton.svelte`, `src/routes/api/loans/sync-calendar/+server.ts`, `src/lib/calendar-events.ts` |

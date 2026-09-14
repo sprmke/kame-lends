@@ -262,13 +262,12 @@ Update Playwright coverage that currently only opens `/sign/[token]`: sign in as
 
 Audit and fix as needed:
 
-| Path                                                                  | Expected                                                                                                                      |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `createCalendarEvent` / `updateCalendarEvent` / `deleteCalendarEvent` | Service account credentials + `GOOGLE_CALENDAR_ID`                                                                            |
-| `GET /api/loans/sync-calendar`                                        | Owner’s loans only; regenerate events; persist `loans.googleCalendarEventIds`                                                 |
-| `POST /api/loans/sync-calendar`                                       | Per-loan sync/remove; **admin owner only** after permission split (investors should not mutate the shared workspace calendar) |
-| `POST /api/loans/cleanup-calendar`                                    | Admin only; document that it clears the **shared** calendar                                                                   |
-| Settings / Loans `SyncCalendarButton`                                 | Visible to admin workspace users only                                                                                         |
+| Path                                                                  | Expected                                                                                                                                               |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `createCalendarEvent` / `updateCalendarEvent` / `deleteCalendarEvent` | Service account credentials + `GOOGLE_CALENDAR_ID`                                                                                                     |
+| `POST /api/loans/sync-calendar`                                       | Batched owner sync (`prepare` / `wipe` / `loans` / `summaries`) or per-loan `sync`/`remove`. Persist `loans.googleCalendarEventIds`. Admin owner only. |
+| `POST /api/loans/cleanup-calendar`                                    | Admin only; document that it clears the **shared** calendar                                                                                            |
+| Settings / Loans `SyncCalendarButton`                                 | Visible to admin workspace users only                                                                                                                  |
 
 Manual QA on **dev/test calendar** (never prod calendar): create loan → sync → confirm sent/due/interest events → update due date → sync → confirm update → delete/remove → confirm delete.
 
