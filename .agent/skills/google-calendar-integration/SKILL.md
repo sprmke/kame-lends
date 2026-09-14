@@ -8,12 +8,15 @@ Service account (not user OAuth):
 
 - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
 - `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
-- `GOOGLE_CALENDAR_ID`
+- `GOOGLE_CALENDAR_ID` (shared calendar id, never `primary`)
+
+Read at runtime via `$env/dynamic/private` (`src/lib/server/google-calendar-config.ts`). Use a **kame-lends / pawn-tracker** Google Cloud service account, never kame-homes. The account must exist and have **Make changes to events** on `GOOGLE_CALENDAR_ID`. `invalid_grant: account not found` means that SA was deleted; create a new key in this project's GCP account and re-share the calendar.
 
 ## Implementation
 
 - `src/lib/server/google-calendar.ts` (`googleapis` client)
 - Events: disbursements, due dates, interest due, daily summaries with links back to filtered loans.
+- Google API failures throw `GoogleCalendarError`. Sync/cleanup must not swallow them as empty event lists.
 
 ## Sync model
 

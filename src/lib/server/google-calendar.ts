@@ -1,27 +1,60 @@
 import { google } from "googleapis";
+import { env } from "$env/dynamic/private";
 import { APP_DEFAULT_URL } from "$lib/brand";
 import type { LoanWithInvestors } from "$lib/types";
 import { toLocalDateString } from "$lib/date-utils";
+import {
+  GoogleCalendarError,
+  formatGoogleCalendarApiError,
+  readGoogleCalendarConfig,
+  type GoogleCalendarConfig,
+} from "./google-calendar-config";
 
-// Initialize Google Calendar API
-function getCalendarClient() {
-  const credentials = {
-    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(
-      /\\n/g,
-      "\n",
-    ),
+export { GoogleCalendarError } from "./google-calendar-config";
+
+function googleCalendarEnvSource(): Record<string, string | undefined> {
+  return {
+    GOOGLE_SERVICE_ACCOUNT_EMAIL:
+      env.GOOGLE_SERVICE_ACCOUNT_EMAIL ??
+      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:
+      env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ??
+      process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
+    GOOGLE_CALENDAR_ID:
+      env.GOOGLE_CALENDAR_ID ?? process.env.GOOGLE_CALENDAR_ID,
   };
+}
 
+function requireGoogleCalendarConfig(): GoogleCalendarConfig {
+  const config = readGoogleCalendarConfig(googleCalendarEnvSource());
+  if (!config) {
+    throw new GoogleCalendarError(
+      "Google Calendar is not configured. Set GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY, and GOOGLE_CALENDAR_ID.",
+    );
+  }
+  return config;
+}
+
+function getCalendarClient() {
+  const config = requireGoogleCalendarConfig();
   const auth = new google.auth.GoogleAuth({
-    credentials,
+    credentials: {
+      client_email: config.clientEmail,
+      private_key: config.privateKey,
+    },
     scopes: ["https://www.googleapis.com/auth/calendar"],
   });
 
-  return google.calendar({ version: "v3", auth });
+  return {
+    calendar: google.calendar({ version: "v3", auth }),
+    calendarId: config.calendarId,
+  };
 }
 
-const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || "primary";
+function rethrowGoogleCalendarError(error: unknown): never {
+  if (error instanceof GoogleCalendarError) throw error;
+  throw new GoogleCalendarError(formatGoogleCalendarApiError(error));
+}
 
 interface CalendarEventData {
   type: "sent" | "due" | "interest_due" | "summary";
@@ -175,20 +208,10 @@ function getEventColor(
 
 export async function createCalendarEvent(
   eventData: CalendarEventData,
-): Promise<string | null> {
+): Promise<string> {
   try {
-    if (
-      !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-    ) {
-      console.warn(
-        "Google Calendar credentials not configured. Skipping calendar event creation.",
-      );
-      return null;
-    }
-
-    const calendar = getCalendarClient();
-    const { date, loan } = eventData;
+    const { calendar, calendarId } = getCalendarClient();
+    const { date } = eventData;
 
     // Create event date (all-day event)
     const eventDate = toLocalDateString(date);
@@ -217,16 +240,22 @@ export async function createCalendarEvent(
     };
 
     const response = await calendar.events.insert({
-      calendarId: CALENDAR_ID,
+      calendarId,
       requestBody: event,
       sendUpdates: "none", // Don't send email notifications (requires Domain-Wide Delegation)
     });
 
+    if (!response.data.id) {
+      throw new GoogleCalendarError(
+        "Google Calendar did not return an event id",
+      );
+    }
+
     console.log("Calendar event created:", response.data.id);
-    return response.data.id || null;
+    return response.data.id;
   } catch (error) {
     console.error("Error creating calendar event:", error);
-    return null;
+    rethrowGoogleCalendarError(error);
   }
 }
 
@@ -235,18 +264,8 @@ export async function updateCalendarEvent(
   eventData: CalendarEventData,
 ): Promise<boolean> {
   try {
-    if (
-      !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-    ) {
-      console.warn(
-        "Google Calendar credentials not configured. Skipping calendar event update.",
-      );
-      return false;
-    }
-
-    const calendar = getCalendarClient();
-    const { date, loan } = eventData;
+    const { calendar, calendarId } = getCalendarClient();
+    const { date } = eventData;
 
     // Create event date (all-day event)
     const eventDate = toLocalDateString(date);
@@ -275,7 +294,7 @@ export async function updateCalendarEvent(
     };
 
     await calendar.events.update({
-      calendarId: CALENDAR_ID,
+      calendarId,
       eventId,
       requestBody: event,
       sendUpdates: "none", // Don't send email notifications (requires Domain-Wide Delegation)
@@ -285,26 +304,16 @@ export async function updateCalendarEvent(
     return true;
   } catch (error) {
     console.error("Error updating calendar event:", error);
-    return false;
+    rethrowGoogleCalendarError(error);
   }
 }
 
 export async function deleteCalendarEvent(eventId: string): Promise<boolean> {
   try {
-    if (
-      !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-    ) {
-      console.warn(
-        "Google Calendar credentials not configured. Skipping calendar event deletion.",
-      );
-      return false;
-    }
-
-    const calendar = getCalendarClient();
+    const { calendar, calendarId } = getCalendarClient();
 
     await calendar.events.delete({
-      calendarId: CALENDAR_ID,
+      calendarId,
       eventId,
       sendUpdates: "none", // Don't send cancellation notifications (requires Domain-Wide Delegation)
     });
@@ -312,8 +321,13 @@ export async function deleteCalendarEvent(eventId: string): Promise<boolean> {
     console.log("Calendar event deleted:", eventId);
     return true;
   } catch (error) {
+    const message = formatGoogleCalendarApiError(error);
+    if (/notFound|\b404\b/i.test(message)) {
+      console.warn("Calendar event already gone:", eventId);
+      return false;
+    }
     console.error("Error deleting calendar event:", error);
-    return false;
+    rethrowGoogleCalendarError(error);
   }
 }
 
@@ -330,24 +344,14 @@ export async function deleteMultipleCalendarEvents(
 // Delete ALL events from Google Calendar (complete cleanup for fresh start)
 export async function deleteAllCalendarEvents(): Promise<number> {
   try {
-    if (
-      !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-    ) {
-      console.warn(
-        "Google Calendar credentials not configured. Skipping calendar cleanup.",
-      );
-      return 0;
-    }
-
-    const calendar = getCalendarClient();
+    const { calendar, calendarId } = getCalendarClient();
     let deletedCount = 0;
     let pageToken: string | undefined;
 
     do {
       // Get ALL events from the calendar
       const response = await calendar.events.list({
-        calendarId: CALENDAR_ID,
+        calendarId,
         maxResults: 250,
         pageToken,
         singleEvents: true,
@@ -360,7 +364,7 @@ export async function deleteAllCalendarEvents(): Promise<number> {
         if (event.id) {
           try {
             await calendar.events.delete({
-              calendarId: CALENDAR_ID,
+              calendarId,
               eventId: event.id,
               sendUpdates: "none",
             });
@@ -379,7 +383,7 @@ export async function deleteAllCalendarEvents(): Promise<number> {
     return deletedCount;
   } catch (error) {
     console.error("Error deleting all calendar events:", error);
-    throw error;
+    rethrowGoogleCalendarError(error);
   }
 }
 
@@ -389,19 +393,12 @@ async function findExistingEventByDateAndPrefix(
   titlePrefix: string,
 ): Promise<string | null> {
   try {
-    if (
-      !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-    ) {
-      return null;
-    }
-
-    const calendar = getCalendarClient();
+    const { calendar, calendarId } = getCalendarClient();
     const dateStr = toLocalDateString(date);
 
     // List events for this specific date
     const response = await calendar.events.list({
-      calendarId: CALENDAR_ID,
+      calendarId,
       timeMin: `${dateStr}T00:00:00+08:00`,
       timeMax: `${dateStr}T23:59:59+08:00`,
       singleEvents: true,
@@ -419,7 +416,7 @@ async function findExistingEventByDateAndPrefix(
     return null;
   } catch (error) {
     console.error("Error finding existing calendar event:", error);
-    return null;
+    rethrowGoogleCalendarError(error);
   }
 }
 
@@ -430,15 +427,7 @@ export async function updateDailySummaryEvents(
   allLoans: LoanWithInvestors[],
 ): Promise<void> {
   try {
-    if (
-      !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-      !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
-    ) {
-      console.warn(
-        "Google Calendar credentials not configured. Skipping summary event update.",
-      );
-      return;
-    }
+    requireGoogleCalendarConfig();
 
     // Group events by date and track amounts per loan per day
     const dailyEvents = new Map<
@@ -650,6 +639,7 @@ export async function updateDailySummaryEvents(
     }
   } catch (error) {
     console.error("Error updating daily summary events:", error);
+    rethrowGoogleCalendarError(error);
   }
 }
 
@@ -844,6 +834,7 @@ export async function generateLoanCalendarEvents(
     }
   } catch (error) {
     console.error("Error generating loan calendar events:", error);
+    rethrowGoogleCalendarError(error);
   }
 
   return eventIds;
@@ -857,6 +848,8 @@ export async function generateAllLoansCalendarEvents(
   const loanEventIds = new Map<number, string[]>();
 
   try {
+    requireGoogleCalendarConfig();
+
     // First, generate individual loan events
     for (const loan of loans) {
       const eventIds = await generateLoanCalendarEvents(loan);
@@ -1063,6 +1056,7 @@ export async function generateAllLoansCalendarEvents(
     }
   } catch (error) {
     console.error("Error generating all loans calendar events:", error);
+    rethrowGoogleCalendarError(error);
   }
 
   return loanEventIds;

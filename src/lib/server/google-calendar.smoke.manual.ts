@@ -24,11 +24,6 @@ describe("google-calendar smoke", () => {
       type: "due",
       date,
     });
-    if (!id) {
-      throw new Error(
-        "createCalendarEvent returned null. Check service account (invalid_grant / account not found) and calendar sharing.",
-      );
-    }
     const updated = await updateCalendarEvent(id, { type: "due", date });
     expect(updated).toBe(true);
     const deleted = await deleteCalendarEvent(id);

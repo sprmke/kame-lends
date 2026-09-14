@@ -35,7 +35,7 @@
 			if (response.ok) {
 				toast.success(`Calendar synced. ${data.successCount ?? 0} loans.`);
 			} else {
-				toast.error(data.error || 'Failed to sync calendar');
+				toast.error(data.details || data.error || 'Failed to sync calendar');
 			}
 		} catch {
 			toast.error('Failed to sync calendar');
@@ -53,7 +53,7 @@
 			if (response.ok) {
 				toast.success(`Cleared ${data.deletedCount ?? 0} events.`);
 			} else {
-				toast.error(data.error || 'Failed to clear calendar');
+				toast.error(data.details || data.error || 'Failed to clear calendar');
 			}
 		} catch {
 			toast.error('Failed to clear calendar');
