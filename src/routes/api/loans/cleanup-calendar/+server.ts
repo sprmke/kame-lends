@@ -4,13 +4,12 @@ import { db } from "$lib/server/db";
 import { loans } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
-import { deleteAllCalendarEvents } from "$lib/server/google-calendar";
+import { deleteCalendarEventBatch } from "$lib/server/google-calendar";
 
 export const config = {
-  maxDuration: 300,
+  maxDuration: 60,
 };
 
-// Delete ALL events from Google Calendar (complete cleanup for fresh start)
 export const POST: RequestHandler = async (event) => {
   try {
     const session = await getSession(event);
@@ -18,23 +17,19 @@ export const POST: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("Starting COMPLETE cleanup of ALL Google Calendar events...");
-
-    // Delete all events from Google Calendar
-    const deletedCount = await deleteAllCalendarEvents();
-
-    // Clear all googleCalendarEventIds from all user's loans
-    await db
-      .update(loans)
-      .set({ googleCalendarEventIds: null })
-      .where(eq(loans.userId, session.user.id));
-
-    console.log("Cleared all calendar event IDs from loans database");
+    const batch = await deleteCalendarEventBatch(20);
+    if (!batch.remaining) {
+      await db
+        .update(loans)
+        .set({ googleCalendarEventIds: null })
+        .where(eq(loans.userId, session.user.id));
+    }
 
     return json({
       success: true,
-      message: `Deleted ${deletedCount} events from Google Calendar. Calendar is now clean.`,
-      deletedCount,
+      deleted: batch.deleted,
+      remaining: batch.remaining,
+      deletedCount: batch.deleted,
     });
   } catch (error) {
     console.error("Error cleaning up calendar events:", error);

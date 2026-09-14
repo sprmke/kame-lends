@@ -1,11 +1,25 @@
 import { google } from "googleapis";
 import { env } from "$env/dynamic/private";
 import { APP_DEFAULT_URL } from "$lib/brand";
+import {
+  calendarEventKey,
+  draftLoanGoogleEvents,
+  googleAllDayRange,
+  isSummaryEventTitle,
+  loanGoogleEventTitle,
+  nextDateKey,
+  totalSummaryTitle,
+} from "$lib/calendar-events";
+import {
+  isDateInSyncScope,
+  type CalendarSyncScope,
+} from "$lib/calendar-sync-plan";
 import type { LoanWithInvestors } from "$lib/types";
 import { toLocalDateString } from "$lib/date-utils";
 import {
   GoogleCalendarError,
   formatGoogleCalendarApiError,
+  formatGoogleCalendarApiErrorWithConfig,
   readGoogleCalendarConfig,
   withGoogleCalendarRetry,
   type GoogleCalendarConfig,
@@ -54,7 +68,10 @@ function getCalendarClient() {
 
 function rethrowGoogleCalendarError(error: unknown): never {
   if (error instanceof GoogleCalendarError) throw error;
-  throw new GoogleCalendarError(formatGoogleCalendarApiError(error));
+  const config = readGoogleCalendarConfig(googleCalendarEnvSource());
+  throw new GoogleCalendarError(
+    formatGoogleCalendarApiErrorWithConfig(error, config),
+  );
 }
 
 let lastMutationAt = 0;
@@ -76,6 +93,7 @@ async function calendarMutation<T>(operation: () => Promise<T>): Promise<T> {
 interface CalendarEventData {
   type: "sent" | "due" | "interest_due" | "summary";
   date: Date;
+  dateKey?: string;
   loan?: LoanWithInvestors;
   loans?: LoanWithInvestors[];
   loanAmounts?: Map<number, { amount: number; isOut: boolean }>; // loan ID -> amount for this specific day
@@ -92,6 +110,16 @@ interface CalendarEventData {
   loanCount?: number;
 }
 
+function eventDateKey(eventData: CalendarEventData): string {
+  return eventData.dateKey ?? toLocalDateString(eventData.date);
+}
+
+function eventPrivateKey(eventData: CalendarEventData): string {
+  const dateKey = eventDateKey(eventData);
+  if (eventData.type === "summary") return calendarEventKey("summary", dateKey);
+  return calendarEventKey(eventData.type, dateKey, eventData.loan?.id);
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
@@ -104,7 +132,6 @@ function formatCurrency(amount: number): string {
 function createEventDescription(eventData: CalendarEventData): string {
   const {
     type,
-    date,
     loan,
     loans,
     loanAmounts,
@@ -113,10 +140,7 @@ function createEventDescription(eventData: CalendarEventData): string {
     totalPrincipal,
     totalInterest,
     investorName,
-    principal,
     interest,
-    direction,
-    loanCount,
   } = eventData;
 
   // Get the app URL from environment or use default
@@ -142,7 +166,7 @@ function createEventDescription(eventData: CalendarEventData): string {
     description += `<b>Total: ${sign}${formatCurrency(Math.abs(totalAmount || 0))}</b>\n`;
 
     // Add date parameter to the loans link for filtering
-    const dateStr = toLocalDateString(date);
+    const dateStr = eventDateKey(eventData);
     description += `\n<a href="${appUrl}/loans?dueDate=${dateStr}">View Loans</a>`;
   } else if (loan) {
     const loanUrl = `${appUrl}/loans/${loan.id}`;
@@ -158,12 +182,26 @@ function createEventDescription(eventData: CalendarEventData): string {
       });
       description += `\n<b>Total: -${formatCurrency(totalAmount || 0)}</b>\n`;
     } else if (type === "due") {
-      description += `Investor: ${investorName}\n`;
+      if (investors && investors.length > 0) {
+        description += `Investors:\n`;
+        investors.forEach((inv) => {
+          description += `  • ${inv.name}: +${formatCurrency(inv.amount)}\n`;
+        });
+      } else if (investorName) {
+        description += `Investor: ${investorName}\n`;
+      }
       description += `Principal: +${formatCurrency(totalPrincipal || 0)}\n`;
       description += `Interest: +${formatCurrency(totalInterest || 0)}\n`;
       description += `\n<b>Total: +${formatCurrency(totalAmount || 0)}</b>\n`;
     } else if (type === "interest_due") {
-      description += `Investor: ${investorName}\n`;
+      if (investors && investors.length > 0) {
+        description += `Investors:\n`;
+        investors.forEach((inv) => {
+          description += `  • ${inv.name}: +${formatCurrency(inv.amount)}\n`;
+        });
+      } else if (investorName) {
+        description += `Investor: ${investorName}\n`;
+      }
       description += `\n<b>Total: +${formatCurrency(interest || 0)}</b>\n`;
     }
 
@@ -178,27 +216,47 @@ function createEventDescription(eventData: CalendarEventData): string {
 }
 
 function createEventSummary(eventData: CalendarEventData): string {
-  const { type, loan, totalAmount, investorName } = eventData;
+  const { type, loan, totalAmount } = eventData;
 
   if (type === "summary") {
-    const sign = (totalAmount || 0) >= 0 ? "+" : "-";
-    return `Daily Summary ${sign}${formatCurrency(Math.abs(totalAmount || 0))}`;
-  } else if (loan) {
-    if (type === "sent") {
-      return `${loan.type}: ${loan.loanName} - Disbursement (-${formatCurrency(totalAmount || 0)})`;
-    } else if (type === "due") {
-      return `${loan.type}: ${
-        loan.loanName
-      } - Due Date (${investorName} +${formatCurrency(totalAmount || 0)})`;
-    } else if (type === "interest_due") {
-      return `${loan.type}: ${loan.loanName} - Interest Due (${investorName} +${formatCurrency(
-        eventData.interest || 0,
-      )})`;
-    }
-    return loan.loanName;
+    return totalSummaryTitle(totalAmount || 0);
+  }
+  if (loan) {
+    return loanGoogleEventTitle(
+      type,
+      loan.loanName,
+      loan.type,
+      type === "interest_due" ? eventData.interest || 0 : totalAmount || 0,
+    );
   }
 
   return "Event";
+}
+
+function googleEventRequestBody(eventData: CalendarEventData) {
+  const dateKey = eventDateKey(eventData);
+  const range = googleAllDayRange(dateKey);
+  return {
+    summary: createEventSummary(eventData),
+    description: createEventDescription(eventData),
+    start: range.start,
+    end: range.end,
+    colorId: getEventColor(eventData.type),
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: "email", minutes: 24 * 60 },
+        { method: "popup", minutes: 60 },
+      ],
+    },
+    extendedProperties: {
+      private: {
+        kameKey: eventPrivateKey(eventData),
+        kameKind: eventData.type,
+        kameDate: dateKey,
+      },
+    },
+  };
 }
 
 function getEventColor(
@@ -228,33 +286,7 @@ export async function createCalendarEvent(
 ): Promise<string> {
   try {
     const { calendar, calendarId } = getCalendarClient();
-    const { date } = eventData;
-
-    // Create event date (all-day event)
-    const eventDate = toLocalDateString(date);
-
-    // Note: Service accounts cannot add attendees without Domain-Wide Delegation
-    // Investors are listed in the event description instead
-    const event = {
-      summary: createEventSummary(eventData),
-      description: createEventDescription(eventData),
-      start: {
-        date: eventDate,
-        timeZone: "Asia/Manila",
-      },
-      end: {
-        date: eventDate,
-        timeZone: "Asia/Manila",
-      },
-      colorId: getEventColor(eventData.type),
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: "email", minutes: 24 * 60 }, // 1 day before
-          { method: "popup", minutes: 60 }, // 1 hour before
-        ],
-      },
-    };
+    const event = googleEventRequestBody(eventData);
 
     const response = await calendarMutation(() =>
       calendar.events.insert({
@@ -284,33 +316,7 @@ export async function updateCalendarEvent(
 ): Promise<boolean> {
   try {
     const { calendar, calendarId } = getCalendarClient();
-    const { date } = eventData;
-
-    // Create event date (all-day event)
-    const eventDate = toLocalDateString(date);
-
-    // Note: Service accounts cannot add attendees without Domain-Wide Delegation
-    // Investors are listed in the event description instead
-    const event = {
-      summary: createEventSummary(eventData),
-      description: createEventDescription(eventData),
-      start: {
-        date: eventDate,
-        timeZone: "Asia/Manila",
-      },
-      end: {
-        date: eventDate,
-        timeZone: "Asia/Manila",
-      },
-      colorId: getEventColor(eventData.type),
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: "email", minutes: 24 * 60 }, // 1 day before
-          { method: "popup", minutes: 60 }, // 1 hour before
-        ],
-      },
-    };
+    const event = googleEventRequestBody(eventData);
 
     await calendarMutation(() =>
       calendar.events.update({
@@ -365,77 +371,103 @@ export async function deleteMultipleCalendarEvents(
 }
 
 // Delete ALL events from Google Calendar (complete cleanup for fresh start)
-export async function deleteAllCalendarEvents(): Promise<number> {
+export async function deleteCalendarEventBatch(
+  maxDeletes = 20,
+): Promise<{ deleted: number; remaining: boolean }> {
   try {
     const { calendar, calendarId } = getCalendarClient();
-    let deletedCount = 0;
-
-    do {
-      const response = await withGoogleCalendarRetry(() =>
-        calendar.events.list({
-          calendarId,
-          maxResults: 250,
-          singleEvents: true,
-        }),
-      );
-
-      const events = response.data.items || [];
-      if (events.length === 0) break;
-
-      console.log(`Found ${events.length} events to delete...`);
-
-      for (const event of events) {
-        if (event.id) {
-          const deleted = await deleteCalendarEvent(event.id);
-          if (deleted) {
-            deletedCount++;
-            console.log(`Deleted: ${event.summary || "Untitled"}`);
-          }
-        }
-      }
-    } while (true);
-
-    console.log(`Total deleted events: ${deletedCount}`);
-    return deletedCount;
-  } catch (error) {
-    console.error("Error deleting all calendar events:", error);
-    rethrowGoogleCalendarError(error);
-  }
-}
-
-// Find existing calendar event by date and title prefix
-async function findExistingEventByDateAndPrefix(
-  date: Date,
-  titlePrefix: string,
-): Promise<string | null> {
-  try {
-    const { calendar, calendarId } = getCalendarClient();
-    const dateStr = toLocalDateString(date);
-
-    // List events for this specific date
     const response = await withGoogleCalendarRetry(() =>
       calendar.events.list({
         calendarId,
-        timeMin: `${dateStr}T00:00:00+08:00`,
-        timeMax: `${dateStr}T23:59:59+08:00`,
+        maxResults: maxDeletes,
         singleEvents: true,
       }),
     );
 
     const events = response.data.items || [];
-
-    // Find event with matching title prefix
+    let deleted = 0;
     for (const event of events) {
-      if (event.summary?.startsWith(titlePrefix) && event.id) {
-        return event.id;
-      }
+      if (!event.id) continue;
+      const ok = await deleteCalendarEvent(event.id);
+      if (ok) deleted++;
     }
 
-    return null;
+    return {
+      deleted,
+      remaining: deleted > 0 && events.length >= maxDeletes,
+    };
   } catch (error) {
-    console.error("Error finding existing calendar event:", error);
+    console.error("Error deleting calendar event batch:", error);
     rethrowGoogleCalendarError(error);
   }
+}
+
+export async function deleteAllCalendarEvents(): Promise<number> {
+  let deletedCount = 0;
+  let remaining = true;
+  while (remaining) {
+    const batch = await deleteCalendarEventBatch(20);
+    deletedCount += batch.deleted;
+    remaining = batch.remaining;
+    if (batch.deleted === 0) break;
+  }
+  return deletedCount;
+}
+
+function dateFromDateKey(dateKey: string): Date {
+  return new Date(`${dateKey}T00:00:00.000Z`);
+}
+
+async function findEventsByPrivateKey(kameKey: string): Promise<string[]> {
+  const { calendar, calendarId } = getCalendarClient();
+  const response = await withGoogleCalendarRetry(() =>
+    calendar.events.list({
+      calendarId,
+      privateExtendedProperty: [`kameKey=${kameKey}`],
+      maxResults: 50,
+      singleEvents: true,
+    }),
+  );
+  return (response.data.items ?? [])
+    .map((event) => event.id)
+    .filter((id): id is string => Boolean(id));
+}
+
+async function findSummaryEventIdsOnDate(dateKey: string): Promise<string[]> {
+  const { calendar, calendarId } = getCalendarClient();
+  const response = await withGoogleCalendarRetry(() =>
+    calendar.events.list({
+      calendarId,
+      timeMin: `${dateKey}T00:00:00Z`,
+      timeMax: `${nextDateKey(dateKey)}T00:00:00Z`,
+      singleEvents: true,
+      maxResults: 50,
+    }),
+  );
+  return (response.data.items ?? [])
+    .filter((event) => isSummaryEventTitle(event.summary))
+    .map((event) => event.id)
+    .filter((id): id is string => Boolean(id));
+}
+
+async function upsertCalendarEvent(
+  eventData: CalendarEventData,
+): Promise<string> {
+  const ids = new Set(await findEventsByPrivateKey(eventPrivateKey(eventData)));
+  if (eventData.type === "summary") {
+    for (const id of await findSummaryEventIdsOnDate(eventDateKey(eventData))) {
+      ids.add(id);
+    }
+  }
+  const [keepId, ...extras] = [...ids];
+  for (const extra of extras) {
+    await deleteCalendarEvent(extra);
+  }
+  if (keepId) {
+    await updateCalendarEvent(keepId, eventData);
+    return keepId;
+  }
+  return createCalendarEvent(eventData);
 }
 
 // Generate or update daily summary events for specific dates
@@ -601,16 +633,11 @@ export async function updateDailySummaryEvents(
 
     // Create or update summary events for affected dates
     for (const [dateKey, dayData] of dailyEvents.entries()) {
-      const date = new Date(dateKey + "T00:00:00");
-
-      // Combine IN and OUT into one summary
       const allLoansForDay = [...dayData.out.loans, ...dayData.in.loans];
-      // Remove duplicates
       const uniqueLoans = Array.from(
         new Map(allLoansForDay.map((l) => [l.id, l])).values(),
       );
 
-      // Calculate net total (IN - OUT)
       let totalAmount = 0;
       if (dayData.in.amount > 0 && dayData.out.amount > 0) {
         totalAmount = dayData.in.amount - dayData.out.amount;
@@ -620,39 +647,20 @@ export async function updateDailySummaryEvents(
         totalAmount = -dayData.out.amount;
       }
 
-      // Check if summary event already exists for this date
-      const existingEventId = await findExistingEventByDateAndPrefix(
-        date,
-        "Daily Summary",
-      );
-
       if (uniqueLoans.length > 0) {
-        const eventData: CalendarEventData = {
+        await upsertCalendarEvent({
           type: "summary",
-          date,
+          date: dateFromDateKey(dateKey),
+          dateKey,
           loans: uniqueLoans,
           loanAmounts: dayData.loanAmounts,
           totalAmount,
           loanCount: uniqueLoans.length,
-        };
-
-        if (existingEventId) {
-          // Update existing summary event
-          await updateCalendarEvent(existingEventId, eventData);
-          console.log(
-            `Updated summary event for ${dateKey}: ${existingEventId}`,
-          );
-        } else {
-          // Create new summary event
-          const eventId = await createCalendarEvent(eventData);
-          if (eventId) {
-            console.log(`Created summary event for ${dateKey}: ${eventId}`);
-          }
+        });
+      } else {
+        for (const eventId of await findSummaryEventIdsOnDate(dateKey)) {
+          await deleteCalendarEvent(eventId);
         }
-      } else if (existingEventId) {
-        // No loans on this date anymore, delete the summary event
-        await deleteCalendarEvent(existingEventId);
-        console.log(`Deleted summary event for ${dateKey}: ${existingEventId}`);
       }
     }
   } catch (error) {
@@ -712,143 +720,44 @@ export function getAffectedDatesFromLoan(loan: LoanWithInvestors): Date[] {
   return dates;
 }
 
+export type GenerateCalendarEventsOptions = {
+  scope?: CalendarSyncScope;
+  todayKey?: string;
+};
+
+function includeEventDate(
+  date: Date | string,
+  options: GenerateCalendarEventsOptions = {},
+): boolean {
+  return isDateInSyncScope(date, options.scope ?? "all", options.todayKey);
+}
+
 // Generate calendar events for a loan (individual events only, no summaries)
 export async function generateLoanCalendarEvents(
   loan: LoanWithInvestors,
+  options: GenerateCalendarEventsOptions = {},
 ): Promise<string[]> {
+  const drafts = draftLoanGoogleEvents(
+    loan,
+    options.scope ?? "all",
+    options.todayKey,
+  );
   const eventIds: string[] = [];
 
   try {
-    // Group transactions by sent date
-    const sentDateMap = new Map<
-      string,
-      Array<(typeof loan.loanInvestors)[0]>
-    >();
-
-    loan.loanInvestors.forEach((li) => {
-      const dateKey = toLocalDateString(li.sentDate);
-      const existing = sentDateMap.get(dateKey) || [];
-      existing.push(li);
-      sentDateMap.set(dateKey, existing);
-    });
-
-    // Create sent date events
-    for (const [dateKey, transactions] of sentDateMap.entries()) {
-      const investors = transactions.map((t) => ({
-        name: t.investor.name,
-        amount: parseFloat(t.amount),
-      }));
-      const totalAmount = investors.reduce((sum, inv) => sum + inv.amount, 0);
-
-      const eventId = await createCalendarEvent({
-        type: "sent",
-        date: new Date(dateKey + "T00:00:00"),
+    for (const draft of drafts) {
+      const eventId = await upsertCalendarEvent({
+        type: draft.type,
+        date: dateFromDateKey(draft.dateKey),
+        dateKey: draft.dateKey,
         loan,
-        investors,
-        totalAmount,
+        investors: draft.investors,
+        totalAmount: draft.totalAmount,
+        totalPrincipal: draft.totalPrincipal,
+        totalInterest: draft.totalInterest,
+        interest: draft.interest,
       });
-
-      if (eventId) {
-        eventIds.push(eventId);
-      }
-    }
-
-    // Check if loan has multiple interest dates
-    const hasAnyMultipleInterest = loan.loanInvestors.some(
-      (li) =>
-        li.hasMultipleInterest &&
-        li.interestPeriods &&
-        li.interestPeriods.length > 0,
-    );
-
-    if (hasAnyMultipleInterest) {
-      // Create interest due events for each investor with multiple interest periods
-      for (const li of loan.loanInvestors) {
-        if (
-          li.hasMultipleInterest &&
-          li.interestPeriods &&
-          li.interestPeriods.length > 0
-        ) {
-          // Sort periods by due date to find the last one
-          const sortedPeriods = [...li.interestPeriods].sort(
-            (a, b) =>
-              new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
-          );
-
-          for (let i = 0; i < sortedPeriods.length; i++) {
-            const period = sortedPeriods[i];
-            const isLastPeriod = i === sortedPeriods.length - 1;
-            const principal = parseFloat(li.amount);
-            let interest = 0;
-
-            if (period.interestType === "rate") {
-              const rate = parseFloat(period.interestRate) / 100;
-              interest = principal * rate;
-            } else {
-              interest = parseFloat(period.interestRate);
-            }
-
-            let eventId;
-            if (isLastPeriod) {
-              // Last period: create a "due" event with principal + interest
-              eventId = await createCalendarEvent({
-                type: "due",
-                date: new Date(period.dueDate),
-                loan,
-                investorName: li.investor.name,
-                totalPrincipal: principal,
-                totalInterest: interest,
-                totalAmount: principal + interest,
-                loanInvestorId: li.id,
-                interestPeriodId: period.id,
-              });
-            } else {
-              // Other periods: create "interest_due" event with interest only
-              eventId = await createCalendarEvent({
-                type: "interest_due",
-                date: new Date(period.dueDate),
-                loan,
-                investorName: li.investor.name,
-                interest,
-                loanInvestorId: li.id,
-                interestPeriodId: period.id,
-              });
-            }
-
-            if (eventId) {
-              eventIds.push(eventId);
-            }
-          }
-        }
-      }
-    } else {
-      // Create traditional due date event for one-time due date loans
-      // Create separate due date events for each investor
-      for (const li of loan.loanInvestors) {
-        const principal = parseFloat(li.amount);
-        let interest = 0;
-
-        if (li.interestType === "rate") {
-          const rate = parseFloat(li.interestRate) / 100;
-          interest = principal * rate;
-        } else {
-          interest = parseFloat(li.interestRate);
-        }
-
-        const eventId = await createCalendarEvent({
-          type: "due",
-          date: new Date(loan.dueDate),
-          loan,
-          investorName: li.investor.name,
-          totalPrincipal: principal,
-          totalInterest: interest,
-          totalAmount: principal + interest,
-        });
-
-        if (eventId) {
-          eventIds.push(eventId);
-        }
-      }
+      if (eventId) eventIds.push(eventId);
     }
   } catch (error) {
     console.error("Error generating loan calendar events:", error);
@@ -858,220 +767,206 @@ export async function generateLoanCalendarEvents(
   return eventIds;
 }
 
+type DailySummaryDay = {
+  out: { loans: LoanWithInvestors[]; amount: number };
+  in: { loans: LoanWithInvestors[]; amount: number };
+  loanAmounts: Map<number, { amount: number; isOut: boolean }>;
+};
+
+function collectDailySummaryDays(
+  loans: LoanWithInvestors[],
+): Map<string, DailySummaryDay> {
+  const dailyEvents = new Map<string, DailySummaryDay>();
+
+  function ensureDay(dateKey: string): DailySummaryDay {
+    if (!dailyEvents.has(dateKey)) {
+      dailyEvents.set(dateKey, {
+        out: { loans: [], amount: 0 },
+        in: { loans: [], amount: 0 },
+        loanAmounts: new Map(),
+      });
+    }
+    return dailyEvents.get(dateKey)!;
+  }
+
+  for (const loan of loans) {
+    const sentDateMap = new Map<string, number>();
+    loan.loanInvestors.forEach((li) => {
+      const dateKey = toLocalDateString(li.sentDate);
+      const amount = parseFloat(li.amount);
+      sentDateMap.set(dateKey, (sentDateMap.get(dateKey) || 0) + amount);
+    });
+
+    for (const [dateKey, amount] of sentDateMap.entries()) {
+      const dayData = ensureDay(dateKey);
+      if (!dayData.out.loans.find((l) => l.id === loan.id)) {
+        dayData.out.loans.push(loan);
+      }
+      dayData.out.amount += amount;
+      const existing = dayData.loanAmounts.get(loan.id);
+      if (existing) {
+        existing.amount -= amount;
+      } else {
+        dayData.loanAmounts.set(loan.id, { amount: -amount, isOut: true });
+      }
+    }
+
+    const hasAnyMultipleInterest = loan.loanInvestors.some(
+      (li) =>
+        li.hasMultipleInterest &&
+        li.interestPeriods &&
+        li.interestPeriods.length > 0,
+    );
+
+    if (hasAnyMultipleInterest) {
+      for (const li of loan.loanInvestors) {
+        if (
+          !li.hasMultipleInterest ||
+          !li.interestPeriods ||
+          li.interestPeriods.length === 0
+        ) {
+          continue;
+        }
+        const sortedPeriods = [...li.interestPeriods].sort(
+          (a, b) =>
+            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+        );
+
+        for (let i = 0; i < sortedPeriods.length; i++) {
+          const period = sortedPeriods[i];
+          const isLastPeriod = i === sortedPeriods.length - 1;
+          const dateKey = toLocalDateString(period.dueDate);
+          const principal = parseFloat(li.amount);
+          let interest = 0;
+          if (period.interestType === "rate") {
+            const rate = parseFloat(period.interestRate) / 100;
+            interest = principal * rate;
+          } else {
+            interest = parseFloat(period.interestRate);
+          }
+          const totalAmount = isLastPeriod ? principal + interest : interest;
+          const dayData = ensureDay(dateKey);
+          if (!dayData.in.loans.find((l) => l.id === loan.id)) {
+            dayData.in.loans.push(loan);
+          }
+          dayData.in.amount += totalAmount;
+          const existing = dayData.loanAmounts.get(loan.id);
+          if (existing) {
+            existing.amount += totalAmount;
+            existing.isOut = existing.amount < 0;
+          } else {
+            dayData.loanAmounts.set(loan.id, {
+              amount: totalAmount,
+              isOut: false,
+            });
+          }
+        }
+      }
+    } else {
+      const dateKey = toLocalDateString(loan.dueDate);
+      const totalPrincipal = loan.loanInvestors.reduce(
+        (sum, li) => sum + parseFloat(li.amount),
+        0,
+      );
+      const totalInterest = loan.loanInvestors.reduce((sum, li) => {
+        const capital = parseFloat(li.amount);
+        if (li.interestType === "rate") {
+          const rate = parseFloat(li.interestRate) / 100;
+          return sum + capital * rate;
+        }
+        return sum + parseFloat(li.interestRate);
+      }, 0);
+      const totalAmount = totalPrincipal + totalInterest;
+      const dayData = ensureDay(dateKey);
+      if (!dayData.in.loans.find((l) => l.id === loan.id)) {
+        dayData.in.loans.push(loan);
+      }
+      dayData.in.amount += totalAmount;
+      const existing = dayData.loanAmounts.get(loan.id);
+      if (existing) {
+        existing.amount += totalAmount;
+        existing.isOut = existing.amount < 0;
+      } else {
+        dayData.loanAmounts.set(loan.id, {
+          amount: totalAmount,
+          isOut: false,
+        });
+      }
+    }
+  }
+
+  return dailyEvents;
+}
+
+async function createSummaryEventsForDays(
+  dailyEvents: Map<string, DailySummaryDay>,
+  dateKeys: string[],
+): Promise<number> {
+  let created = 0;
+  for (const dateKey of dateKeys) {
+    const dayData = dailyEvents.get(dateKey);
+    if (!dayData) continue;
+    const allLoans = [...dayData.out.loans, ...dayData.in.loans];
+    const uniqueLoans = Array.from(
+      new Map(allLoans.map((l) => [l.id, l])).values(),
+    );
+
+    let totalAmount = 0;
+    if (dayData.in.amount > 0 && dayData.out.amount > 0) {
+      totalAmount = dayData.in.amount - dayData.out.amount;
+    } else if (dayData.in.amount > 0) {
+      totalAmount = dayData.in.amount;
+    } else {
+      totalAmount = -dayData.out.amount;
+    }
+
+    if (uniqueLoans.length === 0) continue;
+    const eventId = await upsertCalendarEvent({
+      type: "summary",
+      date: dateFromDateKey(dateKey),
+      dateKey,
+      loans: uniqueLoans,
+      loanAmounts: dayData.loanAmounts,
+      totalAmount,
+      loanCount: uniqueLoans.length,
+    });
+    if (eventId) created++;
+  }
+  return created;
+}
+
+export async function generateDailySummaryEvents(
+  loans: LoanWithInvestors[],
+  dateKeys: string[],
+): Promise<{ created: number; dates: string[] }> {
+  if (dateKeys.length === 0) return { created: 0, dates: [] };
+  requireGoogleCalendarConfig();
+  const dailyEvents = collectDailySummaryDays(loans);
+  const created = await createSummaryEventsForDays(dailyEvents, dateKeys);
+  return { created, dates: dateKeys };
+}
+
 // Generate calendar events for multiple loans with daily summaries
 // This is ONLY used for initial sync or bulk operations
 export async function generateAllLoansCalendarEvents(
   loans: LoanWithInvestors[],
+  options: GenerateCalendarEventsOptions = {},
 ): Promise<Map<number, string[]>> {
   const loanEventIds = new Map<number, string[]>();
 
   try {
     requireGoogleCalendarConfig();
 
-    // First, generate individual loan events
     for (const loan of loans) {
-      const eventIds = await generateLoanCalendarEvents(loan);
+      const eventIds = await generateLoanCalendarEvents(loan, options);
       loanEventIds.set(loan.id, eventIds);
     }
 
-    // Now generate daily summaries
-    // Group all events by date and track amounts per loan per day
-    const dailyEvents = new Map<
-      string,
-      {
-        out: { loans: LoanWithInvestors[]; amount: number };
-        in: { loans: LoanWithInvestors[]; amount: number };
-        loanAmounts: Map<number, { amount: number; isOut: boolean }>;
-      }
-    >();
-
-    for (const loan of loans) {
-      // Process sent dates (OUT)
-      const sentDateMap = new Map<string, number>();
-      loan.loanInvestors.forEach((li) => {
-        const dateKey = toLocalDateString(li.sentDate);
-        const amount = parseFloat(li.amount);
-        sentDateMap.set(dateKey, (sentDateMap.get(dateKey) || 0) + amount);
-      });
-
-      for (const [dateKey, amount] of sentDateMap.entries()) {
-        if (!dailyEvents.has(dateKey)) {
-          dailyEvents.set(dateKey, {
-            out: { loans: [], amount: 0 },
-            in: { loans: [], amount: 0 },
-            loanAmounts: new Map(),
-          });
-        }
-        const dayData = dailyEvents.get(dateKey)!;
-        if (!dayData.out.loans.find((l) => l.id === loan.id)) {
-          dayData.out.loans.push(loan);
-        }
-        dayData.out.amount += amount;
-
-        // Track this loan's OUT amount for this day
-        const existing = dayData.loanAmounts.get(loan.id);
-        if (existing) {
-          existing.amount -= amount; // Subtract OUT amount
-        } else {
-          dayData.loanAmounts.set(loan.id, { amount: -amount, isOut: true });
-        }
-      }
-
-      // Process due dates (IN)
-      const hasAnyMultipleInterest = loan.loanInvestors.some(
-        (li) =>
-          li.hasMultipleInterest &&
-          li.interestPeriods &&
-          li.interestPeriods.length > 0,
-      );
-
-      if (hasAnyMultipleInterest) {
-        // Process interest periods
-        for (const li of loan.loanInvestors) {
-          if (
-            li.hasMultipleInterest &&
-            li.interestPeriods &&
-            li.interestPeriods.length > 0
-          ) {
-            // Sort periods by due date to find the last one
-            const sortedPeriods = [...li.interestPeriods].sort(
-              (a, b) =>
-                new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
-            );
-
-            for (let i = 0; i < sortedPeriods.length; i++) {
-              const period = sortedPeriods[i];
-              const isLastPeriod = i === sortedPeriods.length - 1;
-              const dateKey = toLocalDateString(period.dueDate);
-              const principal = parseFloat(li.amount);
-              let interest = 0;
-              if (period.interestType === "rate") {
-                const rate = parseFloat(period.interestRate) / 100;
-                interest = principal * rate;
-              } else {
-                interest = parseFloat(period.interestRate);
-              }
-
-              // Last period: principal + interest, Other periods: interest only
-              const totalAmount = isLastPeriod
-                ? principal + interest
-                : interest;
-
-              if (!dailyEvents.has(dateKey)) {
-                dailyEvents.set(dateKey, {
-                  out: { loans: [], amount: 0 },
-                  in: { loans: [], amount: 0 },
-                  loanAmounts: new Map(),
-                });
-              }
-              const dayData = dailyEvents.get(dateKey)!;
-              if (!dayData.in.loans.find((l) => l.id === loan.id)) {
-                dayData.in.loans.push(loan);
-              }
-              dayData.in.amount += totalAmount;
-
-              // Track this loan's IN amount for this day
-              const existing = dayData.loanAmounts.get(loan.id);
-              if (existing) {
-                existing.amount += totalAmount; // Add IN amount
-                existing.isOut = existing.amount < 0;
-              } else {
-                dayData.loanAmounts.set(loan.id, {
-                  amount: totalAmount,
-                  isOut: false,
-                });
-              }
-            }
-          }
-        }
-      } else {
-        // Process single due date
-        const dateKey = toLocalDateString(loan.dueDate);
-        const totalPrincipal = loan.loanInvestors.reduce(
-          (sum, li) => sum + parseFloat(li.amount),
-          0,
-        );
-        const totalInterest = loan.loanInvestors.reduce((sum, li) => {
-          const capital = parseFloat(li.amount);
-          if (li.interestType === "rate") {
-            const rate = parseFloat(li.interestRate) / 100;
-            return sum + capital * rate;
-          } else {
-            return sum + parseFloat(li.interestRate);
-          }
-        }, 0);
-        const totalAmount = totalPrincipal + totalInterest;
-
-        if (!dailyEvents.has(dateKey)) {
-          dailyEvents.set(dateKey, {
-            out: { loans: [], amount: 0 },
-            in: { loans: [], amount: 0 },
-            loanAmounts: new Map(),
-          });
-        }
-        const dayData = dailyEvents.get(dateKey)!;
-        if (!dayData.in.loans.find((l) => l.id === loan.id)) {
-          dayData.in.loans.push(loan);
-        }
-        dayData.in.amount += totalAmount;
-
-        // Track this loan's IN amount for this day
-        const existing = dayData.loanAmounts.get(loan.id);
-        if (existing) {
-          existing.amount += totalAmount; // Add IN amount
-          existing.isOut = existing.amount < 0;
-        } else {
-          dayData.loanAmounts.set(loan.id, {
-            amount: totalAmount,
-            isOut: false,
-          });
-        }
-      }
-    }
-
-    // Create summary events for ALL days (even single events for consistency)
-    for (const [dateKey, dayData] of dailyEvents.entries()) {
-      const date = new Date(dateKey + "T00:00:00");
-
-      // Combine IN and OUT into one summary
-      const allLoans = [...dayData.out.loans, ...dayData.in.loans];
-      // Remove duplicates
-      const uniqueLoans = Array.from(
-        new Map(allLoans.map((l) => [l.id, l])).values(),
-      );
-
-      // Calculate net total (IN - OUT, or just total if only one direction)
-      let totalAmount = 0;
-      if (dayData.in.amount > 0 && dayData.out.amount > 0) {
-        // Both IN and OUT on same day - show net
-        totalAmount = dayData.in.amount - dayData.out.amount;
-      } else if (dayData.in.amount > 0) {
-        // Only IN
-        totalAmount = dayData.in.amount;
-      } else {
-        // Only OUT (disbursement) - should be negative
-        totalAmount = -dayData.out.amount;
-      }
-
-      // Always create summary (even for single event)
-      if (uniqueLoans.length > 0) {
-        const eventId = await createCalendarEvent({
-          type: "summary",
-          date,
-          loans: uniqueLoans,
-          loanAmounts: dayData.loanAmounts,
-          totalAmount,
-          loanCount: uniqueLoans.length,
-        });
-
-        if (eventId) {
-          // NOTE: We intentionally do NOT add summary event IDs to individual loans
-          // Summary events are shared across loans and should not be deleted when
-          // updating a single loan. They are only managed during full sync operations.
-          console.log(`Created summary event for ${dateKey}: ${eventId}`);
-        }
-      }
-    }
+    const dailyEvents = collectDailySummaryDays(loans);
+    const dateKeys = [...dailyEvents.keys()]
+      .filter((dateKey) => includeEventDate(dateKey, options))
+      .sort();
+    await createSummaryEventsForDays(dailyEvents, dateKeys);
   } catch (error) {
     console.error("Error generating all loans calendar events:", error);
     rethrowGoogleCalendarError(error);

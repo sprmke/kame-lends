@@ -15,9 +15,12 @@ Read at runtime via `$env/dynamic/private` (`src/lib/server/google-calendar-conf
 ## Implementation
 
 - `src/lib/server/google-calendar.ts` (`googleapis` client)
-- Events: disbursements, due dates, interest due, daily summaries with links back to filtered loans.
+- Events: disbursements, due dates, interest due, **Total Summary** (one per date that has loan cashflow). All-day events use YYYY-MM-DD start and an exclusive next-day end. Never build Google dates from `new Date(dateKey + "T00:00:00")` (that shifts a day in Asia/Manila).
+- One Google event per loan per date per kind (sent / due / interest due). Multiple investors are listed in the description, not as duplicate events.
+- Private `kameKey` on each event so re-sync updates in place and leftover **Daily Summary** titles are replaced.
 - Google API failures throw `GoogleCalendarError`. Sync/cleanup must not swallow them as empty event lists.
-- Bulk writes space ~120ms apart and retry `rateLimitExceeded` with exponential backoff. `GET /api/loans/sync-calendar` and cleanup allow 300s.
+- Bulk writes space ~120ms apart and retry `rateLimitExceeded` with exponential backoff.
+- Full sync is client-driven batches: `POST /api/loans/sync-calendar` with `prepare`, `wipe`, `loans`, `summaries`. Scope `all`, `open` (not Completed), or `upcoming` (today and later). Do not sync all loans in one serverless invocation.
 
 ## Sync model
 

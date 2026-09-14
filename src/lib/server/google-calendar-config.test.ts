@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatGoogleCalendarApiError,
+  formatGoogleCalendarApiErrorWithConfig,
   isGoogleCalendarRateLimitError,
   readGoogleCalendarConfig,
   withGoogleCalendarRetry,
@@ -72,6 +73,24 @@ describe("formatGoogleCalendarApiError", () => {
         },
       }),
     ).toMatch(/notFound/i);
+  });
+});
+
+describe("formatGoogleCalendarApiErrorWithConfig", () => {
+  it("adds share instructions for notFound", () => {
+    const message = formatGoogleCalendarApiErrorWithConfig(
+      {
+        message: "Not Found",
+        errors: [{ reason: "notFound", message: "Not Found" }],
+      },
+      {
+        clientEmail: "kame-lends-calendar@project.iam.gserviceaccount.com",
+        privateKey: "x",
+        calendarId: "test@group.calendar.google.com",
+      },
+    );
+    expect(message).toMatch(/not shared with kame-lends-calendar@project/i);
+    expect(message).toMatch(/Make changes to events/i);
   });
 });
 

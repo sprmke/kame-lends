@@ -92,6 +92,21 @@ export function formatGoogleCalendarApiError(error: unknown): string {
   return err.message || "Unknown Google Calendar error";
 }
 
+export function isGoogleCalendarNotFoundError(error: unknown): boolean {
+  return /notFound|\b404\b/i.test(formatGoogleCalendarApiError(error));
+}
+
+export function formatGoogleCalendarApiErrorWithConfig(
+  error: unknown,
+  config: GoogleCalendarConfig | null,
+): string {
+  const formatted = formatGoogleCalendarApiError(error);
+  if (config && isGoogleCalendarNotFoundError(error)) {
+    return `Calendar not found or not shared with ${config.clientEmail}. In Google Calendar, share the calendar used in GOOGLE_CALENDAR_ID with that address and grant Make changes to events. (${formatted})`;
+  }
+  return formatted;
+}
+
 const RATE_LIMIT_RE =
   /rateLimitExceeded|userRateLimitExceeded|quotaExceeded|rate limit exceeded/i;
 
