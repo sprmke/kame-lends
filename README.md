@@ -166,7 +166,7 @@ Fill in at minimum:
 | ------------------------------------ | ---------------------------------------------------- |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL`       | Service account email from Google Cloud              |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service account private key (JSON key file)          |
-| `GOOGLE_CALENDAR_ID`                 | Target calendar ID (`primary` or shared calendar ID) |
+| `GOOGLE_CALENDAR_ID`                 | Shared calendar ID (`…@group.calendar.google.com`)   |
 | `PUBLIC_APP_URL`                     | App URL for links inside calendar event descriptions |
 
 **Other optional:** backups (`RESEND_API_KEY`, `BACKUP_EMAIL`, `CRON_SECRET`). See `.env.example` for the full list.

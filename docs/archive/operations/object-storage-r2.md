@@ -67,7 +67,13 @@ bun run db:backfill:storage -- --dry-run
 bun run db:backfill:storage
 ```
 
-Uses `DATABASE_URL` (same as other `scripts/db/*` tools). Run against Singapore QA before production.
+Uses `DATABASE_URL` from the shell or `.env.local`, and `R2_*` from `.env.local`. Run against Singapore QA before production.
+
+```bash
+# Optional: target a specific Neon URL without editing .env.local
+export DATABASE_URL="postgresql://..."
+bun run db:backfill:storage -- --dry-run
+```
 
 ## Notes
 

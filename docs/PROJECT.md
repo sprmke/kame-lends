@@ -90,6 +90,8 @@ A `DATABASE_URL` **exported in the shell overrides `.env.local`** (`$env/dynamic
 
 **AI receipt scanning (optional):** `GEMINI_API_KEYS` (comma-separated, for rotating multiple free-tier accounts) or `GEMINI_API_KEY`, plus an optional `GROQ_API_KEY` fallback. Fully optional — with none set, receipt scanning reports "not configured" and every form still works via manual entry.
 
+**Google Calendar:** `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, and `GOOGLE_CALENDAR_ID` (a shared calendar id, not `primary`). Server code reads them at runtime via `$env/dynamic/private`. The service account must still exist in Google Cloud and have **Make changes to events** on that calendar. Manual sync is `GET /api/loans/sync-calendar`; a Google auth or API failure fails the request instead of returning per-loan "No calendar events created".
+
 **Object storage (optional):** Cloudflare R2 for valid IDs, e-signatures, payment receipts, and contract signing captures. When `R2_*` env vars and `PUBLIC_R2_ENABLED=true` are set, uploads go to a private bucket and Postgres stores a `storage:{objectKey}` reference in the existing `valid_id_url`, `e_signature_url`, and `receipt_image_url` columns (legacy `data:image/...` values still work). Without R2, the app keeps storing compressed data URLs in Postgres. Backfill existing rows with `bun run db:backfill:storage` (see `scripts/db/backfill-storage-to-r2.ts`).
 
 ## Pages
@@ -104,25 +106,28 @@ A `DATABASE_URL` **exported in the shell overrides `.env.local`** (`$env/dynamic
 
 - Session is resolved once per request in `hooks.server.ts` (`event.locals.session`). Page loads and API handlers read that instead of calling `auth()` repeatedly.
 - Client navigation shows a top progress bar (`NavigationProgress`) until the destination `load` finishes. Dashboard, list, detail, and form routes show layout-level skeletons (`DashboardSkeleton`, `ListPageSkeleton`, `DetailPageSkeleton`, `FormPageSkeleton`) that mirror the loaded chrome (header, metric cards, toolbar surface, table or form card). Quick-view modals (`DebtDetailModal`, `LoanDetailModal`, `BorrowerDetailModal`, `WitnessDetailModal`) and create modals use matching skeletons instead of spinners while fetching.
-- List queries use slim cache modes (`getCachedLoans(..., 'list')`, `getCachedInvestors(..., 'list')`) that omit heavy relations such as `receivedPayments` on list pages. `GET /api/loans` uses list mode. Detail `GET /api/loans/[id]` omits `loanContract` unless `?include=contract` (edit/duplicate). Shared co-investors are loaded by id (not nested `loanInvestors.loan.loanInvestors.investor…`) so Postgres aliases stay under the 63-character identifier limit.
-- JSON APIs strip leftover `data:image…` values (`stripDataImageUrls`). `storage:` refs stay. List/simple party payloads do not need inlined photos; UI previews go through `/api/storage/object`.
+- List queries use slim cache modes (`getCachedLoans(..., 'list')`, `getCachedInvestors(..., 'list')`) that omit heavy relations such as `receivedPayments` on list pages. `GET /api/loans` uses list mode. Detail `GET /api/loans/[id]` omits `loanContract` unless `?include=contract` (edit/duplicate/contract details). Shared co-investors are loaded by id (not nested `loanInvestors.loan.loanInvestors.investor…`) so Postgres aliases stay under the 63-character identifier limit.
+- JSON APIs strip leftover `data:image…` values (`stripDataImageUrls` / `jsonSafeImageRef`). `storage:` refs stay. Includes list/detail loan payloads, `GET /api/loans/[id]/contract`, and `GET` / `PUT` `/api/party-profile/me`. List/simple party payloads do not need inlined photos; UI previews go through `/api/storage/object`.
+- Desktop loan list modal opens from the list row immediately, then refreshes `GET /api/loans/[id]` in the background. Signing and contract JSON load only when Contract Details is open (`GET /api/loans/[id]/signing`, `GET /api/loans/[id]/contract`). Those three GETs share a 45s per-loan client cache (`src/lib/composables/loan-detail-client-cache.ts`).
+- After save, complete, quick-pay, or delete, the list patches that row in memory (`applyLoanListChange`) instead of `invalidate('app:loans')`. Creating a loan still reloads the list.
+- `loadLoanDetail` loads the loan graph and session email in one parallel step, then `computeLoanAccessContext` (`src/lib/loan-access-compute.ts`). No second access query. Contract GET/POST and signing GET use the same membership function on the loan they already loaded.
 - Investor/borrower/witness option lists share one client fetch (`src/lib/composables/party-options.ts`, 45s TTL) so list filters and loan forms do not request the same simple APIs twice. Creating or saving a contact clears that cache.
-- Loan list date-range changes use `replaceState` and do not re-run `+page.server.ts` (the range already filters in the browser). First visit still redirects to the current month when `from`/`to` are missing.
+- Loan list date-range changes use `replaceState` (not `goto`) and do not re-run `+page.server.ts` (the range already filters in the browser). First visit still redirects to the current month when `from`/`to` are missing.
 - `requireWorkspaceAdminPage` reuses `navCapabilities` from `+layout.server.ts` instead of running `getNavCapabilities` again.
 - Owned loan lists query `loans` by `user_id` in one step. Investor simple/list loads owned rows and linked IDs in parallel. `loan_signing_invitations.loan_id` is indexed (`0018_signing_invitations_loan_id_idx.sql`).
 - Nav data preload is `tap` (not hover) so hovering Witnessed does not fire that page’s load and API prefetch.
 - `/investors/[id]` loads only the loans tied to that investor (`inArray(loans.id, investorLoanIds)`) with nested relations, instead of filtering the user's entire loan cache; this prevents timeouts for investors associated with many loans. Overview summary cards use per-investor peak concurrent paid allocation capital (`computeInvestorPortfolioCapitalStats`). See [`guides/routes/investors-detail.md`](./guides/routes/investors-detail.md).
-- Overdue status checks run from the dashboard only, deferred 3s after mount so they do not compete with the initial load.
+- Overdue status checks run from the dashboard only, deferred 3s after mount so they do not compete with the initial load. `POST /api/loans/check-overdue` sets a loan to `Completed` when received payments cover principal + interest, and does not mark those loans Overdue. Opening a loan (`loadLoanDetail` / `GET /api/loans/[id]`) heals the same stale Overdue row.
 - List/dashboard queries use a process-local TTL cache (`src/lib/server/memory-cache.ts`, 45s). `getCached*`, `queryDashboardSummary`, and `queryDashboardCharts` read through it.
 - Mutations call `invalidateLoanData` / `invalidateInvestorData` / etc. in `src/lib/server/cache-invalidation.ts`, which drop matching cache prefixes. In-flight fetches that finish after invalidation are not stored.
 - Cache is per Node isolate (local `vite dev` is one process; Vercel instances do not share it). Tap preload is enabled on `body` and sidebar links.
-- Local `bun dev` against the Singapore Neon project (`ap-southeast-1`, linked as **Kame Lends**) is the hosted QA target. Vercel production still uses the old US East 1 **Pawn Tracker** project until an explicit cutover. For zero-network local work, use Docker Postgres (`bun run db:local:*`).
+- Local `bun dev` against the Singapore Neon project (`ap-southeast-1`, linked as **Kame Lends**) is the hosted QA target. Vercel Production `DATABASE_URL` uses the same Singapore project. Functions are pinned to `sin1` in `svelte.config.js` (`adapter({ regions: ["sin1"] })`) and `vercel.json`. Confirm with `x-vercel-id` (`sin1::sin1::…`, not `iad1`). Hobby allows one region. For zero-network local work, use Docker Postgres (`bun run db:local:*`).
 
 ## API routes
 
-SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, investors, borrowers, debts, transactions, signing, cron backup, witnesses, interest periods, payment methods). `GET /api/loans/[id]` is the list-modal payload (no `loanContract` unless `?include=contract`). `GET` / `POST /api/loans/[id]/contract` load or download the contract PDF (any party with loan view access). `PATCH` saves customization (loan admin) and syncs signing invitations. PDF render embeds JPEG/PNG valid IDs and signatures only; WebP or unreadable images are omitted so the download still succeeds.
+SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, investors, borrowers, debts, transactions, signing, cron backup, witnesses, interest periods, payment methods). `GET /api/loans/[id]` is the list-modal payload (no `loanContract` unless `?include=contract`). `GET` / `POST /api/loans/[id]/contract` load or download the contract PDF (any party with loan view access). `PATCH` saves customization (loan admin) and syncs signing invitations. Contract GET JSON strips leftover `data:image…` values so large identity payloads cannot 500 the editor; PDF `POST` still reads images server-side for render. PDF render embeds JPEG/PNG valid IDs and signatures only; WebP or unreadable images are omitted so the download still succeeds.
 
-**Party profiles (admin):** `GET` / `PUT` `/api/party-profiles/{investor|borrower|witness}/[entityId]` loads or saves unified contact data (name, email, phone, address, valid ID, e-signature) and syncs across all investor/borrower/witness CRM rows linked to the same party user. **Party self-service:** `GET` / `PUT` `/api/party-profile/me` lets a signed-in party user update valid ID and e-signature across all linked CRM rows. **Party payment methods (admin):** `/api/party-users/[userId]/payment-methods` when editing a linked contact.
+**Party profiles (admin):** `GET` / `PUT` `/api/party-profiles/{investor|borrower|witness}/[entityId]` loads or saves unified contact data (name, email, phone, address, valid ID, e-signature) and syncs across all investor/borrower/witness CRM rows linked to the same party user. **Party self-service:** `GET` / `PUT` `/api/party-profile/me` lets a signed-in party user update valid ID and e-signature across all linked CRM rows. Responses keep `storage:` refs and drop leftover `data:image…` values. **Party payment methods (admin):** `/api/party-users/[userId]/payment-methods` when editing a linked contact.
 
 **Object storage:** `POST /api/storage/upload` (authenticated) accepts the image body and writes to R2, returning a `storage:` reference. `GET /api/storage/object?ref=storage:…` checks RBAC, then redirects to a short-lived presigned download URL for UI previews. Server modules: `src/lib/server/storage/`.
 
@@ -152,7 +157,7 @@ SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, i
 - Commands: `bun run db:generate`, `db:migrate:pending`, `db:studio`
 - **Local Docker:** `bun run db:local:start` → `bun run db:local:push` → set `DATABASE_URL` to `DATABASE_URL_LOCAL`. See [`archive/operations/local-development-database.md`](./archive/operations/local-development-database.md).
 - **Hosted (Singapore):** project `Kame Lends` (`twilight-bar-00845805`, `ap-southeast-1`). `.env.local` keeps `DATABASE_URL_PROD` (pooled) and copies it into `DATABASE_URL` when you want hosted QA. Data was copied from US East 1 with `pg_dump` / `pg_restore`. Auth stays Auth.js, not Neon Auth. `neon.ts` must not declare Neon Auth, Functions, Object Storage, or AI Gateway (those extras are US-Ohio beta and unused here).
-- **Vercel production:** Neon URL in Vercel Production `DATABASE_URL` (and the matching GitHub Actions `DATABASE_URL` secret). CD migrates then deploys on every push to `main`.
+- **Vercel production:** same Singapore Neon URL in Vercel Production `DATABASE_URL` and the GitHub Actions `production` `DATABASE_URL` secret. Functions run in `sin1`. CD migrates then deploys on every push to `main`.
 
 ### Data safety (prod)
 
@@ -173,6 +178,7 @@ See **[`architecture/deployment.md`](./architecture/deployment.md)** for the ful
 - Vercel project: PawnTracker / kame-lends
 - CD: `.github/workflows/cd.yml` on `main`
 - Cron: `/api/cron/backup` at 06:00 UTC (`vercel.json`)
+- Function region: `sin1` (`svelte.config.js` adapter `regions` and `vercel.json` `"regions": ["sin1"]`)
 - Backups: `bun run backup:neon`
 
 ## Migration history

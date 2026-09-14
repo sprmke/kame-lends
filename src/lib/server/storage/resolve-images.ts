@@ -2,10 +2,16 @@ import { isStorageRef, parseStorageKey } from "$lib/storage-reference";
 import { getObjectAsDataUrl, isR2Configured } from "$lib/server/storage/r2";
 import { pdfSafeImageSrc } from "$lib/server/pdf/pdf-safe-image";
 
+function coerceImageRef(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
 async function resolveImageForPdf(
   value: string | null | undefined,
 ): Promise<string | null> {
-  const trimmed = value?.trim();
+  const trimmed = coerceImageRef(value);
   if (!trimmed) return null;
 
   if (isStorageRef(trimmed)) {
@@ -26,7 +32,7 @@ async function resolveImageForPdf(
 export async function resolveStoredImageUrl(
   value: string | null | undefined,
 ): Promise<string | null> {
-  const trimmed = value?.trim();
+  const trimmed = coerceImageRef(value);
   if (!trimmed) return null;
 
   if (isStorageRef(trimmed)) {

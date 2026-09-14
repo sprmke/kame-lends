@@ -71,6 +71,7 @@ The CD workflow’s `migrate` and `deploy` jobs use `environment: production` so
 1. Keep Production env vars (Auth, `DATABASE_URL`, calendar, Resend, etc.).
 2. **Disable Production auto-deploy from Git** for `main` so CD owns the migrate-then-deploy order. Preview deploys for PRs can stay on.
 3. Framework: SvelteKit. Install: `bun install`. Build: `bun run build` (CD uses `vercel build --prod` with project settings).
+4. Functions run in Singapore (`sin1`), pinned in `svelte.config.js` and `vercel.json`, next to the Singapore Neon `DATABASE_URL`. Hobby: one region. Confirm with `x-vercel-id` (`sin1::sin1::…`).
 
 ## Local emergency deploy
 

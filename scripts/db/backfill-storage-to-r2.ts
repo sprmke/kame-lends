@@ -7,7 +7,9 @@
  *
  * Requires R2_* env vars and DATABASE_URL (or .env.local).
  */
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+
+loadEnv({ path: ".env.local" });
 import { eq, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";

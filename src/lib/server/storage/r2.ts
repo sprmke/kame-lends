@@ -4,34 +4,12 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { env } from "$env/dynamic/private";
+import { readR2Config } from "$lib/server/storage/r2-config";
 
 const PRESIGNED_UPLOAD_TTL_SECONDS = 300;
 const PRESIGNED_DOWNLOAD_TTL_SECONDS = 300;
 
 let cachedClient: S3Client | null = null;
-
-function readR2Config() {
-  const accountId = env.R2_ACCOUNT_ID?.trim();
-  const accessKeyId = env.R2_ACCESS_KEY_ID?.trim();
-  const secretAccessKey = env.R2_SECRET_ACCESS_KEY?.trim();
-  const bucket = env.R2_BUCKET_NAME?.trim();
-  const endpoint =
-    env.R2_ENDPOINT?.trim() ||
-    (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : "");
-
-  if (!accountId || !accessKeyId || !secretAccessKey || !bucket || !endpoint) {
-    return null;
-  }
-
-  return {
-    accountId,
-    accessKeyId,
-    secretAccessKey,
-    bucket,
-    endpoint,
-  };
-}
 
 export function isR2Configured(): boolean {
   return readR2Config() !== null;
