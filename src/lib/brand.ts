@@ -3,8 +3,8 @@ export const APP_NAME_SLUG = "kame-lends";
 export const APP_NAME_UPPER = "KAME LENDS";
 export const APP_DESCRIPTION =
   "Manage loans, investors, and cashflow in one place.";
-export const APP_DEFAULT_URL = "https://kame-lends.vercel.app";
-export const APP_DOMAIN = "kame-lends.vercel.app";
+export const APP_DEFAULT_URL = "https://pawn-tracker.vercel.app";
+export const APP_DOMAIN = "pawn-tracker.vercel.app";
 
 export function backupFilename(date: Date, includeTime = true): string {
   const year = date.getFullYear();

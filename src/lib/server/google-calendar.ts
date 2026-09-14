@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { env } from "$env/dynamic/private";
-import { APP_DEFAULT_URL } from "$lib/brand";
+import { resolveAppUrl } from "$lib/server/app-url";
 import {
   calendarEventKey,
   draftLoanGoogleEvents,
@@ -143,8 +143,7 @@ function createEventDescription(eventData: CalendarEventData): string {
     interest,
   } = eventData;
 
-  // Get the app URL from environment or use default
-  const appUrl = process.env.PUBLIC_APP_URL || APP_DEFAULT_URL;
+  const appUrl = resolveAppUrl();
 
   let description = "";
 

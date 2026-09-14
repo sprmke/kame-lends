@@ -40,4 +40,4 @@ Use a **test calendar** on the QA Neon branch — never the prod calendar.
 
 ## App URL in events
 
-`PUBLIC_APP_URL` (see `.env.example`).
+`PUBLIC_APP_URL` (see `.env.example`). Server code uses `resolveAppUrl()` (`src/lib/server/app-url.ts`). Production default: `https://pawn-tracker.vercel.app`.

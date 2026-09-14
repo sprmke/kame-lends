@@ -15,6 +15,7 @@ import {
   type SigningInvitationRecord,
 } from "$lib/loan-signing";
 import { pickSigningInvitationForUser } from "$lib/server/loan-signing-server";
+import { resolveAppUrl } from "$lib/server/app-url";
 import {
   buildDefaultContractCustomizationFromLoan,
   type ContractCustomization,
@@ -96,7 +97,7 @@ export const GET: RequestHandler = async (event) => {
     const activeInvitations = invitations.filter((invitation) =>
       isSigningInvitationIncluded(invitation, loan, customization),
     );
-    const origin = process.env.PUBLIC_APP_URL;
+    const origin = resolveAppUrl();
     const summaries = sortSigningInvitations(activeInvitations).map(
       (invitation) =>
         toSigningInvitationSummary(

@@ -15,6 +15,7 @@ import { getCachedLoans } from "$lib/server/cached-data";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import { workspaceAdminForbidden } from "$lib/server/workspace-admin";
 import { receiptColumnsFromInput } from "$lib/payment-receipts";
+import { resolveAppUrl } from "$lib/server/app-url";
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -191,7 +192,7 @@ export const POST: RequestHandler = async (event) => {
         completeLoan,
         contractCustomization,
       );
-      const origin = process.env.PUBLIC_APP_URL;
+      const origin = resolveAppUrl();
       signingInvitations = invitations.map((invitation) =>
         toSigningInvitationSummary(
           {

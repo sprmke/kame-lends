@@ -41,7 +41,7 @@ Not required for normal app uploads (`POST /api/storage/upload`). If you use `up
   {
     "AllowedOrigins": [
       "http://localhost:5173",
-      "https://kame-lends.vercel.app"
+      "https://pawn-tracker.vercel.app"
     ],
     "AllowedMethods": ["GET", "PUT", "HEAD"],
     "AllowedHeaders": ["*"],

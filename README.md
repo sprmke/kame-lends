@@ -162,12 +162,12 @@ Fill in at minimum:
 
 **Google Calendar (optional)**
 
-| Variable                             | Description                                          |
-| ------------------------------------ | ---------------------------------------------------- |
-| `GOOGLE_SERVICE_ACCOUNT_EMAIL`       | Service account email from Google Cloud              |
-| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service account private key (JSON key file)          |
-| `GOOGLE_CALENDAR_ID`                 | Shared calendar ID (`…@group.calendar.google.com`)   |
-| `PUBLIC_APP_URL`                     | App URL for links inside calendar event descriptions |
+| Variable                             | Description                                                                               |
+| ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL`       | Service account email from Google Cloud                                                   |
+| `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service account private key (JSON key file)                                               |
+| `GOOGLE_CALENDAR_ID`                 | Shared calendar ID (`…@group.calendar.google.com`)                                        |
+| `PUBLIC_APP_URL`                     | Canonical app origin (calendar links, signing). Default `https://pawn-tracker.vercel.app` |
 
 **Other optional:** backups (`RESEND_API_KEY`, `BACKUP_EMAIL`, `CRON_SECRET`). See `.env.example` for the full list.
 
