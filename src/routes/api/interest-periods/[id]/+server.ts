@@ -10,7 +10,7 @@ import { eq, desc } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import { calculateInterest } from "$lib/calculations";
-import { normalizeReceiptImageUrl } from "$lib/receipt-image";
+import { receiptColumnsFromInput } from "$lib/payment-receipts";
 import { syncLoanStatusFromInterestPeriods } from "$lib/server/loan-interest-period-sync";
 
 const AMOUNT_TOLERANCE = 0.02;
@@ -29,6 +29,7 @@ export const PATCH: RequestHandler = async (event) => {
       status,
       receivedAmount,
       receivedDate,
+      receipts,
       receiptImageUrl,
       receiptExtractedData,
     } = await request.json();
@@ -166,8 +167,11 @@ export const PATCH: RequestHandler = async (event) => {
         interestPeriodId: periodId,
         amount: String(parsedAmount),
         receivedDate: receivedDateObj,
-        receiptImageUrl: normalizeReceiptImageUrl(receiptImageUrl),
-        receiptExtractedData: receiptExtractedData ?? null,
+        ...receiptColumnsFromInput({
+          receipts,
+          receiptImageUrl,
+          receiptExtractedData,
+        }),
       });
 
       responseStatus = newPeriodStatus;

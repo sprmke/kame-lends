@@ -14,7 +14,7 @@ import { toSigningInvitationSummary } from "$lib/loan-signing";
 import { getCachedLoans } from "$lib/server/cached-data";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import { workspaceAdminForbidden } from "$lib/server/workspace-admin";
-import { normalizeReceiptImageUrl } from "$lib/receipt-image";
+import { receiptColumnsFromInput } from "$lib/payment-receipts";
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -92,8 +92,7 @@ export const POST: RequestHandler = async (event) => {
       sentDate: new Date(inv.sentDate),
       isPaid: inv.isPaid ?? true, // Default to true for backward compatibility
       hasMultipleInterest: inv.hasMultipleInterest || false,
-      receiptImageUrl: normalizeReceiptImageUrl(inv.receiptImageUrl),
-      receiptExtractedData: inv.receiptExtractedData ?? null,
+      ...receiptColumnsFromInput(inv),
     }));
 
     console.log("Loan investor data:", loanInvestorData);
@@ -161,6 +160,7 @@ export const POST: RequestHandler = async (event) => {
         loanInvestorId,
         amount: String(rp.amount),
         receivedDate: new Date(rp.receivedDate),
+        ...receiptColumnsFromInput(rp),
       }));
       if (receivedPayload.length > 0) {
         await db.insert(receivedPayments).values(receivedPayload);

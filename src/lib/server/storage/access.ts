@@ -1,4 +1,5 @@
 import { and, eq, or, sql } from "drizzle-orm";
+import { receiptsContainStorageRef } from "$lib/payment-receipts";
 import { parseStorageKey, toStorageRef } from "$lib/storage-reference";
 import { db } from "$lib/server/db";
 import {
@@ -25,27 +26,55 @@ async function refOnViewableLoan(
   ref: string,
 ): Promise<boolean> {
   const investorLoan = await db
-    .select({ loanId: loanInvestors.loanId })
+    .select({
+      loanId: loanInvestors.loanId,
+      receipts: loanInvestors.receipts,
+      receiptImageUrl: loanInvestors.receiptImageUrl,
+    })
     .from(loanInvestors)
-    .where(eq(loanInvestors.receiptImageUrl, ref))
+    .where(
+      or(
+        eq(loanInvestors.receiptImageUrl, ref),
+        sql`${loanInvestors.receipts}::text LIKE ${"%" + ref + "%"}`,
+      ),
+    )
     .limit(20);
 
   for (const row of investorLoan) {
-    if (await hasLoanViewAccess(row.loanId, userId)) return true;
+    if (
+      receiptsContainStorageRef(row, ref) &&
+      (await hasLoanViewAccess(row.loanId, userId))
+    ) {
+      return true;
+    }
   }
 
   const paymentLoan = await db
-    .select({ loanId: loanInvestors.loanId })
+    .select({
+      loanId: loanInvestors.loanId,
+      receipts: receivedPayments.receipts,
+      receiptImageUrl: receivedPayments.receiptImageUrl,
+    })
     .from(receivedPayments)
     .innerJoin(
       loanInvestors,
       eq(loanInvestors.id, receivedPayments.loanInvestorId),
     )
-    .where(eq(receivedPayments.receiptImageUrl, ref))
+    .where(
+      or(
+        eq(receivedPayments.receiptImageUrl, ref),
+        sql`${receivedPayments.receipts}::text LIKE ${"%" + ref + "%"}`,
+      ),
+    )
     .limit(20);
 
   for (const row of paymentLoan) {
-    if (await hasLoanViewAccess(row.loanId, userId)) return true;
+    if (
+      receiptsContainStorageRef(row, ref) &&
+      (await hasLoanViewAccess(row.loanId, userId))
+    ) {
+      return true;
+    }
   }
 
   const borrowerLoan = await db

@@ -14,7 +14,7 @@ describe("jsonSafeImageRef", () => {
 });
 
 describe("stripDataImageUrls", () => {
-  it("nulls nested data URLs and keeps storage refs", () => {
+  it("nulls identity data URLs and keeps storage refs and payment receipts", () => {
     const dueDate = new Date("2026-09-01T00:00:00.000Z");
     const result = stripDataImageUrls({
       name: "Ada",
@@ -22,13 +22,15 @@ describe("stripDataImageUrls", () => {
       validIdUrl: JPEG,
       eSignatureUrl: REF,
       nested: [{ receiptImageUrl: JPEG, amount: "10" }],
+      receipts: [{ imageUrl: JPEG, extractedData: null }],
     });
     expect(result).toEqual({
       name: "Ada",
       dueDate,
       validIdUrl: null,
       eSignatureUrl: REF,
-      nested: [{ receiptImageUrl: null, amount: "10" }],
+      nested: [{ receiptImageUrl: JPEG, amount: "10" }],
+      receipts: [{ imageUrl: JPEG, extractedData: null }],
     });
     expect(result.dueDate).toBe(dueDate);
   });

@@ -23,6 +23,8 @@ import {
   witnesses,
 } from "../../src/lib/server/db/schema";
 import { isDataImageUrl, toStorageRef } from "../../src/lib/storage-reference";
+import { receiptColumnsFromInput } from "../../src/lib/payment-receipts";
+import type { PaymentReceipt } from "../../src/lib/payment-receipts";
 import {
   createUploadObjectKey,
   extensionForContentType,
@@ -64,6 +66,26 @@ async function migrateValue(
 
   await putObjectBytes(objectKey, parsed.bytes, parsed.contentType);
   return storageRef;
+}
+
+async function migrateReceiptRow(
+  ownerUserId: string,
+  input: {
+    receipts?: PaymentReceipt[] | null;
+    receiptImageUrl: string | null;
+    receiptExtractedData?: unknown;
+  },
+) {
+  const current = receiptColumnsFromInput(input);
+  const nextReceipts: PaymentReceipt[] = [];
+  for (const receipt of current.receipts) {
+    const imageUrl = await migrateValue(ownerUserId, receipt.imageUrl);
+    nextReceipts.push({
+      imageUrl: imageUrl ?? receipt.imageUrl,
+      extractedData: receipt.extractedData,
+    });
+  }
+  return receiptColumnsFromInput({ receipts: nextReceipts });
 }
 
 async function migrateCustomization(
@@ -152,17 +174,27 @@ async function main() {
       id: loanInvestors.id,
       userId: sql<string>`(SELECT user_id FROM loans WHERE loans.id = ${loanInvestors.loanId})`,
       receiptImageUrl: loanInvestors.receiptImageUrl,
+      receiptExtractedData: loanInvestors.receiptExtractedData,
+      receipts: loanInvestors.receipts,
     })
     .from(loanInvestors)
-    .where(sql`${loanInvestors.receiptImageUrl} LIKE 'data:image/%'`);
+    .where(
+      or(
+        sql`${loanInvestors.receiptImageUrl} LIKE 'data:image/%'`,
+        sql`${loanInvestors.receipts}::text LIKE 'data:image/%'`,
+      ),
+    );
 
   for (const row of receiptInvestorRows) {
-    const receiptImageUrl = await migrateValue(row.userId, row.receiptImageUrl);
-    if (receiptImageUrl === row.receiptImageUrl) continue;
+    const next = await migrateReceiptRow(row.userId, row);
+    const unchanged =
+      next.receiptImageUrl === row.receiptImageUrl &&
+      JSON.stringify(next.receipts) === JSON.stringify(row.receipts);
+    if (unchanged) continue;
     if (!dryRun) {
       await db
         .update(loanInvestors)
-        .set({ receiptImageUrl })
+        .set(next)
         .where(eq(loanInvestors.id, row.id));
     }
     updated += 1;
@@ -179,17 +211,27 @@ async function main() {
         WHERE loan_investors.id = ${receivedPayments.loanInvestorId}
       )`,
       receiptImageUrl: receivedPayments.receiptImageUrl,
+      receiptExtractedData: receivedPayments.receiptExtractedData,
+      receipts: receivedPayments.receipts,
     })
     .from(receivedPayments)
-    .where(sql`${receivedPayments.receiptImageUrl} LIKE 'data:image/%'`);
+    .where(
+      or(
+        sql`${receivedPayments.receiptImageUrl} LIKE 'data:image/%'`,
+        sql`${receivedPayments.receipts}::text LIKE 'data:image/%'`,
+      ),
+    );
 
   for (const row of paymentRows) {
-    const receiptImageUrl = await migrateValue(row.userId, row.receiptImageUrl);
-    if (receiptImageUrl === row.receiptImageUrl) continue;
+    const next = await migrateReceiptRow(row.userId, row);
+    const unchanged =
+      next.receiptImageUrl === row.receiptImageUrl &&
+      JSON.stringify(next.receipts) === JSON.stringify(row.receipts);
+    if (unchanged) continue;
     if (!dryRun) {
       await db
         .update(receivedPayments)
-        .set({ receiptImageUrl })
+        .set(next)
         .where(eq(receivedPayments.id, row.id));
     }
     updated += 1;

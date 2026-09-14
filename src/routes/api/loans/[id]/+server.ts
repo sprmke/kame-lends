@@ -17,7 +17,7 @@ import {
   upsertLoanContractCustomization,
 } from "$lib/server/loan-contract-persistence";
 import type { ContractCustomization } from "$lib/loan-contract-customization";
-import { normalizeReceiptImageUrl } from "$lib/receipt-image";
+import { receiptColumnsFromInput } from "$lib/payment-receipts";
 
 export const GET: RequestHandler = async (event) => {
   const { params } = event;
@@ -154,8 +154,7 @@ export const PUT: RequestHandler = async (event) => {
         sentDate: new Date(inv.sentDate),
         isPaid: inv.isPaid ?? true, // Default to true for backward compatibility
         hasMultipleInterest: inv.hasMultipleInterest || false,
-        receiptImageUrl: normalizeReceiptImageUrl(inv.receiptImageUrl),
-        receiptExtractedData: inv.receiptExtractedData ?? null,
+        ...receiptColumnsFromInput(inv),
       }));
 
       const insertedLoanInvestors = await db
@@ -268,6 +267,7 @@ export const PUT: RequestHandler = async (event) => {
           loanInvestorId,
           amount: String(rp.amount),
           receivedDate: new Date(rp.receivedDate),
+          ...receiptColumnsFromInput(rp),
         }));
         if (receivedPayload.length > 0) {
           await db.insert(receivedPayments).values(receivedPayload);

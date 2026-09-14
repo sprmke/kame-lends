@@ -6,7 +6,7 @@ import { db } from "$lib/server/db";
 import { loanInvestors, loans } from "$lib/server/db/schema";
 import { hasLoanAdminAccess } from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
-import { normalizeReceiptImageUrl } from "$lib/receipt-image";
+import { receiptColumnsFromInput } from "$lib/payment-receipts";
 
 export const POST: RequestHandler = async (event) => {
   const { params, request } = event;
@@ -65,20 +65,6 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
-    const sentDay = sentDate.toISOString().slice(0, 10);
-    const duplicateDate = existingPayments.some(
-      (payment) => payment.sentDate.toISOString().slice(0, 10) === sentDay,
-    );
-    if (duplicateDate) {
-      return json(
-        {
-          error:
-            "This lender already has a principal payment on the selected date.",
-        },
-        { status: 400 },
-      );
-    }
-
     const scheduleSource = existingPayments.find(
       (payment) =>
         payment.hasMultipleInterest && payment.interestPeriods.length > 0,
@@ -93,8 +79,7 @@ export const POST: RequestHandler = async (event) => {
       sentDate,
       isPaid,
       hasMultipleInterest: Boolean(scheduleSource),
-      receiptImageUrl: normalizeReceiptImageUrl(body.receiptImageUrl),
-      receiptExtractedData: body.receiptExtractedData ?? null,
+      ...receiptColumnsFromInput(body),
     });
 
     const allPayments = await db.query.loanInvestors.findMany({
