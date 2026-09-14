@@ -90,6 +90,14 @@ html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-wide {
   max-width: min(56rem, calc(100% - 2rem)) !important;
 }
 
+/* Frost scrims without backdrop-filter: blurring the full loans table under modals is costly while scrolling. */
+html.dashboard-shell [data-slot="dialog-overlay"],
+html.dashboard-shell [data-slot="alert-dialog-overlay"] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: oklch(0 0 0 / 0.38);
+}
+
 @media (width >= 1024px) {
   html.dashboard-shell [data-slot="card"] {
     --card-spacing: 1.5rem;

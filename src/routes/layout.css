@@ -397,17 +397,9 @@
     @apply flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/40 px-4 py-10 text-center;
   }
 
-  /* Dialog / Sheet scrim: frost first, light tint when blur is supported */
+  /* Sheet scrim: solid tint (no blur — large list pages behind sheets are expensive to repaint). */
   .modal-scrim {
-    background: oklch(0 0 0 / 0.4);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  @supports (backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0)) {
-    .modal-scrim {
-      background: oklch(0 0 0 / 0.25);
-    }
+    background: oklch(0 0 0 / 0.38);
   }
 
   .hover-lift {

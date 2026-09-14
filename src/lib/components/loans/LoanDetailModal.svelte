@@ -3,8 +3,8 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import DetailModalHeader from '$lib/components/common/DetailModalHeader.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
-	import LoanDetailContent from './LoanDetailContent.svelte';
 	import LoanContractDetailsModal from './LoanContractDetailsModal.svelte';
+	import type LoanDetailContent from './LoanDetailContent.svelte';
 	import type { Component } from 'svelte';
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
 	import { createOverlayContentReady } from '$lib/composables/use-overlay-content-ready.svelte';
@@ -64,7 +64,10 @@
 	let isSubmitting = $state(false);
 	let LoanFormComponent = $state<Component | null>(null);
 	let loadingLoanFormModule = $state(false);
+	let LoanDetailContentComponent = $state<typeof LoanDetailContent | null>(null);
+	let loadingDetailContentModule = $state(false);
 	const editOverlayContent = createOverlayContentReady();
+	const viewOverlayContent = createOverlayContentReady();
 
 	$effect.pre(() => {
 		if (initialLoan) loan = initialLoan;
@@ -82,16 +85,42 @@
 
 	$effect(() => {
 		if (!open || !initialLoan?.id) {
-			if (!open) isLoadingLoan = false;
+			if (!open) {
+				isLoadingLoan = false;
+				LoanDetailContentComponent = null;
+				loadingDetailContentModule = false;
+			}
 			return;
 		}
-		const hasRow = Boolean(loan);
-		isLoadingLoan = !hasRow;
-		void fetchLoanData(
-			initialLoan.id,
-			Boolean(startInEditMode && !initialLoan.loanContract)
-		);
+		const loanId = initialLoan.id;
+		const includeContract = Boolean(startInEditMode && !initialLoan.loanContract);
+		isLoadingLoan = false;
+		void fetchLoanData(loanId, includeContract);
 	});
+
+	$effect(() => {
+		viewOverlayContent.armWhenOpen(open && !isEditing);
+	});
+
+	$effect(() => {
+		if (!open || isEditing || !viewOverlayContent.ready) {
+			if (!open || isEditing) {
+				LoanDetailContentComponent = null;
+				loadingDetailContentModule = false;
+			}
+			return;
+		}
+		if (LoanDetailContentComponent) return;
+		loadingDetailContentModule = true;
+		void import('./LoanDetailContent.svelte').then((mod) => {
+			LoanDetailContentComponent = mod.default;
+			loadingDetailContentModule = false;
+		});
+	});
+
+	const showViewDetailSkeleton = $derived(
+		loadingDetailContentModule || !viewOverlayContent.ready || !LoanDetailContentComponent
+	);
 
 	const isOverdue = $derived(loan?.status === 'Overdue');
 	const isPartiallyFunded = $derived(loan?.status === 'Partially Funded');
@@ -106,7 +135,6 @@
 			loan = rest;
 			paymentMethods = Array.isArray(nextMethods) ? nextMethods : [];
 			access = nextAccess ?? null;
-			loanFetchKey += 1;
 			return rest;
 		} catch (error) {
 			console.error('Error fetching loan:', error);
@@ -121,6 +149,7 @@
 		clearLoanClientCaches(loan.id);
 		const next = await fetchLoanData(loan.id);
 		if (next) {
+			if (isEditing) loanFetchKey += 1;
 			await onUpdate?.({ kind: 'replace', loan: next });
 			return;
 		}
@@ -323,9 +352,11 @@
 						/>
 					{/key}
 				{/if}
+			{:else if showViewDetailSkeleton}
+				<LoanDetailSkeleton investorSections={1} />
 			{:else}
 				<div class="dashboard-stack">
-					<LoanDetailContent
+					<LoanDetailContentComponent
 						loan={modalLoan}
 						showHeader={false}
 						onRefresh={refreshLoan}
