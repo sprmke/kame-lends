@@ -8,7 +8,12 @@ import {
   generateLoanCalendarEvents,
   generateAllLoansCalendarEvents,
   deleteMultipleCalendarEvents,
+  deleteAllCalendarEvents,
 } from "$lib/server/google-calendar";
+
+export const config = {
+  maxDuration: 300,
+};
 
 export const POST: RequestHandler = async (event) => {
   const request = event.request;
@@ -142,13 +147,7 @@ export const GET: RequestHandler = async (event) => {
     let successCount = 0;
     let errorCount = 0;
 
-    // Delete all existing calendar events first
-    for (const loan of userLoans) {
-      const existingEventIds = loan.googleCalendarEventIds as string[] | null;
-      if (existingEventIds && existingEventIds.length > 0) {
-        await deleteMultipleCalendarEvents(existingEventIds);
-      }
-    }
+    await deleteAllCalendarEvents();
 
     // Generate new calendar events for all loans with daily summaries
     const loanEventIdsMap = await generateAllLoansCalendarEvents(userLoans);

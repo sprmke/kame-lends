@@ -6,6 +6,10 @@ import { eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { deleteAllCalendarEvents } from "$lib/server/google-calendar";
 
+export const config = {
+  maxDuration: 300,
+};
+
 // Delete ALL events from Google Calendar (complete cleanup for fresh start)
 export const POST: RequestHandler = async (event) => {
   try {

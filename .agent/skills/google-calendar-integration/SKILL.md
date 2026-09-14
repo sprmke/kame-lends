@@ -17,6 +17,7 @@ Read at runtime via `$env/dynamic/private` (`src/lib/server/google-calendar-conf
 - `src/lib/server/google-calendar.ts` (`googleapis` client)
 - Events: disbursements, due dates, interest due, daily summaries with links back to filtered loans.
 - Google API failures throw `GoogleCalendarError`. Sync/cleanup must not swallow them as empty event lists.
+- Bulk writes space ~120ms apart and retry `rateLimitExceeded` with exponential backoff. `GET /api/loans/sync-calendar` and cleanup allow 300s.
 
 ## Sync model
 

@@ -17,7 +17,7 @@ Party users (linked investor, borrower, or witness contact rows) also get:
 
 Admin workspace owners also get:
 
-- **Data & maintenance** — sync/calendar/backup tools (full-width stacked actions on phone). Calendar sync/clear opens a bottom sheet under `lg` (dropdown at `lg+`). Google Calendar API failures show in the toast (`details` from `GET /api/loans/sync-calendar` or `POST /api/loans/cleanup-calendar`).
+- **Data & maintenance** — sync/calendar/backup tools (full-width stacked actions on phone). Calendar sync/clear opens a bottom sheet under `lg` (dropdown at `lg+`). Full Google Calendar sync can take a few minutes. Google Calendar API failures show in the toast (`details` from `GET /api/loans/sync-calendar` or `POST /api/loans/cleanup-calendar`).
 
 ## Load
 

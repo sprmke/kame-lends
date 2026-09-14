@@ -91,3 +91,66 @@ export function formatGoogleCalendarApiError(error: unknown): string {
 
   return err.message || "Unknown Google Calendar error";
 }
+
+const RATE_LIMIT_RE =
+  /rateLimitExceeded|userRateLimitExceeded|quotaExceeded|rate limit exceeded/i;
+
+export function isGoogleCalendarRateLimitError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return typeof error === "string" && RATE_LIMIT_RE.test(error);
+  }
+
+  const err = error as {
+    code?: number | string;
+    status?: number;
+    errors?: Array<{ reason?: string }>;
+    response?: { status?: number; data?: { error?: GoogleErrorBody | string } };
+  };
+  const reason =
+    err.errors?.[0]?.reason ||
+    (typeof err.response?.data?.error === "object"
+      ? err.response.data.error.errors?.[0]?.reason
+      : undefined);
+  if (
+    reason === "rateLimitExceeded" ||
+    reason === "userRateLimitExceeded" ||
+    reason === "quotaExceeded"
+  ) {
+    return true;
+  }
+  if (err.code === 429 || err.status === 429 || err.response?.status === 429) {
+    return true;
+  }
+  return RATE_LIMIT_RE.test(formatGoogleCalendarApiError(error));
+}
+
+export type GoogleCalendarRetryOptions = {
+  retries?: number;
+  baseDelayMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+};
+
+export async function withGoogleCalendarRetry<T>(
+  operation: () => Promise<T>,
+  options: GoogleCalendarRetryOptions = {},
+): Promise<T> {
+  const retries = options.retries ?? 6;
+  const baseDelayMs = options.baseDelayMs ?? 1000;
+  const sleep =
+    options.sleep ??
+    ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (!isGoogleCalendarRateLimitError(error) || attempt === retries) {
+        throw error;
+      }
+      await sleep(Math.min(30_000, baseDelayMs * 2 ** attempt));
+    }
+  }
+  throw lastError;
+}

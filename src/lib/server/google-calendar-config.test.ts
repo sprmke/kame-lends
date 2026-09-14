@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   formatGoogleCalendarApiError,
+  isGoogleCalendarRateLimitError,
   readGoogleCalendarConfig,
+  withGoogleCalendarRetry,
 } from "./google-calendar-config";
 
 describe("readGoogleCalendarConfig", () => {
@@ -70,5 +72,70 @@ describe("formatGoogleCalendarApiError", () => {
         },
       }),
     ).toMatch(/notFound/i);
+  });
+});
+
+describe("isGoogleCalendarRateLimitError", () => {
+  it("detects the formatted rateLimitExceeded payload from sync", () => {
+    expect(
+      isGoogleCalendarRateLimitError(
+        new Error(
+          "Rate Limit Exceeded (rateLimitExceeded: Rate Limit Exceeded)",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not treat invalid_grant as a rate limit", () => {
+    expect(
+      isGoogleCalendarRateLimitError(
+        new Error("invalid_grant: Invalid grant: account not found"),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("withGoogleCalendarRetry", () => {
+  it("retries rate limits then succeeds", async () => {
+    let calls = 0;
+    const delays: number[] = [];
+    const result = await withGoogleCalendarRetry(
+      async () => {
+        calls += 1;
+        if (calls < 3) {
+          throw {
+            message: "Rate Limit Exceeded",
+            errors: [
+              { reason: "rateLimitExceeded", message: "Rate Limit Exceeded" },
+            ],
+          };
+        }
+        return "ok";
+      },
+      {
+        baseDelayMs: 10,
+        sleep: async (ms) => {
+          delays.push(ms);
+        },
+      },
+    );
+
+    expect(result).toBe("ok");
+    expect(calls).toBe(3);
+    expect(delays).toEqual([10, 20]);
+  });
+
+  it("does not retry account not found", async () => {
+    let calls = 0;
+    await expect(
+      withGoogleCalendarRetry(
+        async () => {
+          calls += 1;
+          throw new Error("invalid_grant: Invalid grant: account not found");
+        },
+        { sleep: async () => {} },
+      ),
+    ).rejects.toThrow(/account not found/);
+    expect(calls).toBe(1);
   });
 });

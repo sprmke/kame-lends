@@ -7,6 +7,7 @@ import {
   GoogleCalendarError,
   formatGoogleCalendarApiError,
   readGoogleCalendarConfig,
+  withGoogleCalendarRetry,
   type GoogleCalendarConfig,
 } from "./google-calendar-config";
 
@@ -54,6 +55,22 @@ function getCalendarClient() {
 function rethrowGoogleCalendarError(error: unknown): never {
   if (error instanceof GoogleCalendarError) throw error;
   throw new GoogleCalendarError(formatGoogleCalendarApiError(error));
+}
+
+let lastMutationAt = 0;
+const MUTATION_GAP_MS = 120;
+
+async function spaceCalendarMutations(): Promise<void> {
+  const wait = lastMutationAt + MUTATION_GAP_MS - Date.now();
+  if (wait > 0) {
+    await new Promise((resolve) => setTimeout(resolve, wait));
+  }
+  lastMutationAt = Date.now();
+}
+
+async function calendarMutation<T>(operation: () => Promise<T>): Promise<T> {
+  await spaceCalendarMutations();
+  return withGoogleCalendarRetry(operation);
 }
 
 interface CalendarEventData {
@@ -239,11 +256,13 @@ export async function createCalendarEvent(
       },
     };
 
-    const response = await calendar.events.insert({
-      calendarId,
-      requestBody: event,
-      sendUpdates: "none", // Don't send email notifications (requires Domain-Wide Delegation)
-    });
+    const response = await calendarMutation(() =>
+      calendar.events.insert({
+        calendarId,
+        requestBody: event,
+        sendUpdates: "none", // Don't send email notifications (requires Domain-Wide Delegation)
+      }),
+    );
 
     if (!response.data.id) {
       throw new GoogleCalendarError(
@@ -293,12 +312,14 @@ export async function updateCalendarEvent(
       },
     };
 
-    await calendar.events.update({
-      calendarId,
-      eventId,
-      requestBody: event,
-      sendUpdates: "none", // Don't send email notifications (requires Domain-Wide Delegation)
-    });
+    await calendarMutation(() =>
+      calendar.events.update({
+        calendarId,
+        eventId,
+        requestBody: event,
+        sendUpdates: "none", // Don't send email notifications (requires Domain-Wide Delegation)
+      }),
+    );
 
     console.log("Calendar event updated:", eventId);
     return true;
@@ -312,11 +333,13 @@ export async function deleteCalendarEvent(eventId: string): Promise<boolean> {
   try {
     const { calendar, calendarId } = getCalendarClient();
 
-    await calendar.events.delete({
-      calendarId,
-      eventId,
-      sendUpdates: "none", // Don't send cancellation notifications (requires Domain-Wide Delegation)
-    });
+    await calendarMutation(() =>
+      calendar.events.delete({
+        calendarId,
+        eventId,
+        sendUpdates: "none", // Don't send cancellation notifications (requires Domain-Wide Delegation)
+      }),
+    );
 
     console.log("Calendar event deleted:", eventId);
     return true;
@@ -346,38 +369,31 @@ export async function deleteAllCalendarEvents(): Promise<number> {
   try {
     const { calendar, calendarId } = getCalendarClient();
     let deletedCount = 0;
-    let pageToken: string | undefined;
 
     do {
-      // Get ALL events from the calendar
-      const response = await calendar.events.list({
-        calendarId,
-        maxResults: 250,
-        pageToken,
-        singleEvents: true,
-      });
+      const response = await withGoogleCalendarRetry(() =>
+        calendar.events.list({
+          calendarId,
+          maxResults: 250,
+          singleEvents: true,
+        }),
+      );
 
       const events = response.data.items || [];
+      if (events.length === 0) break;
+
       console.log(`Found ${events.length} events to delete...`);
 
       for (const event of events) {
         if (event.id) {
-          try {
-            await calendar.events.delete({
-              calendarId,
-              eventId: event.id,
-              sendUpdates: "none",
-            });
+          const deleted = await deleteCalendarEvent(event.id);
+          if (deleted) {
             deletedCount++;
             console.log(`Deleted: ${event.summary || "Untitled"}`);
-          } catch (error) {
-            console.error(`Failed to delete event ${event.id}:`, error);
           }
         }
       }
-
-      pageToken = response.data.nextPageToken || undefined;
-    } while (pageToken);
+    } while (true);
 
     console.log(`Total deleted events: ${deletedCount}`);
     return deletedCount;
@@ -397,12 +413,14 @@ async function findExistingEventByDateAndPrefix(
     const dateStr = toLocalDateString(date);
 
     // List events for this specific date
-    const response = await calendar.events.list({
-      calendarId,
-      timeMin: `${dateStr}T00:00:00+08:00`,
-      timeMax: `${dateStr}T23:59:59+08:00`,
-      singleEvents: true,
-    });
+    const response = await withGoogleCalendarRetry(() =>
+      calendar.events.list({
+        calendarId,
+        timeMin: `${dateStr}T00:00:00+08:00`,
+        timeMax: `${dateStr}T23:59:59+08:00`,
+        singleEvents: true,
+      }),
+    );
 
     const events = response.data.items || [];
 
