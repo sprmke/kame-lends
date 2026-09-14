@@ -2,6 +2,7 @@ import { toLocalDateString } from "$lib/date-utils";
 import type { SelectedInvestorAllocation } from "$lib/components/loans/loan-form-types";
 import type { DuplicateLoanData } from "$lib/loan-duplicate";
 import type { Investor, LoanWithInvestors } from "$lib/types";
+import { normalizePaymentReceipts } from "$lib/payment-receipts";
 
 export function buildAllocationsFromExistingLoan(
   loan: LoanWithInvestors,
@@ -25,8 +26,7 @@ export function buildAllocationsFromExistingLoan(
       sentDate: toLocalDateString(li.sentDate),
       isPaid: li.isPaid,
       dateTouched: true,
-      receiptImageUrl: li.receiptImageUrl ?? null,
-      receiptExtractedData: li.receiptExtractedData ?? null,
+      receipts: normalizePaymentReceipts(li),
     });
     investorMap.set(li.investor.id, transactions);
   }
@@ -57,6 +57,7 @@ export function buildAllocationsFromExistingLoan(
           id: String(rp.id),
           amount: rp.amount,
           receivedDate: toLocalDateString(rp.receivedDate),
+          receipts: normalizePaymentReceipts(rp),
         })),
       );
 
@@ -113,8 +114,7 @@ export function buildAllocationsFromDuplicateData(
       interestAmount: row.interestType === "fixed" ? row.interestRate : "",
       isPaid: row.isPaid,
       dateTouched: true,
-      receiptImageUrl: null,
-      receiptExtractedData: null,
+      receipts: [],
     });
   }
 

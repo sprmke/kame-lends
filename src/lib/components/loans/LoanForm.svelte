@@ -49,6 +49,7 @@
 	import { ChevronDown, Copy, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-svelte';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
+	import type { PaymentReceipt } from '$lib/payment-receipts';
 
 	interface Props {
 		investors?: Investor[];
@@ -94,7 +95,8 @@
 		return {
 			id: `rp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
 			amount: '',
-			receivedDate: toLocalDateString(new Date())
+			receivedDate: toLocalDateString(new Date()),
+			receipts: []
 		};
 	}
 
@@ -108,8 +110,7 @@
 			interestAmount: '',
 			isPaid: true,
 			dateTouched: false,
-			receiptImageUrl: null,
-			receiptExtractedData: null
+			receipts: []
 		};
 	}
 
@@ -443,28 +444,23 @@
 	function handleTransactionReceiptExtracted(
 		investorId: number,
 		transactionId: string,
-		dataUrl: string,
 		extracted: ReceiptExtractedData | null
 	) {
 		const si = selectedInvestors.find((row) => row.investor.id === investorId);
 		const transaction = si?.transactions.find((t) => t.id === transactionId);
-		if (!transaction) return;
+		if (!transaction || !extracted) return;
 
-		const changes: Partial<LoanFormTransaction> = {
-			receiptImageUrl: dataUrl,
-			receiptExtractedData: extracted
-		};
-
-		if (extracted) {
-			if (!transaction.amount && extracted.amount) {
-				changes.amount = String(extracted.amount);
-			}
-			if (!transaction.dateTouched && extracted.transactionDate) {
-				changes.sentDate = extracted.transactionDate;
-			}
+		const changes: Partial<LoanFormTransaction> = {};
+		if (!transaction.amount && extracted.amount) {
+			changes.amount = String(extracted.amount);
+		}
+		if (!transaction.dateTouched && extracted.transactionDate) {
+			changes.sentDate = extracted.transactionDate;
 		}
 
-		updateTransactionFields(investorId, transactionId, changes);
+		if (Object.keys(changes).length > 0) {
+			updateTransactionFields(investorId, transactionId, changes);
+		}
 	}
 
 	function addReceivedPayment(investorId: number) {
@@ -488,7 +484,7 @@
 	function updateReceivedPayment(
 		investorId: number,
 		paymentId: string,
-		field: keyof LoanFormReceivedPayment,
+		field: 'amount' | 'receivedDate',
 		value: string
 	) {
 		selectedInvestors = selectedInvestors.map((si) => {
@@ -497,6 +493,22 @@
 				...si,
 				receivedPayments: si.receivedPayments.map((rp) =>
 					rp.id === paymentId ? { ...rp, [field]: value } : rp
+				)
+			};
+		});
+	}
+
+	function updateReceivedPaymentFields(
+		investorId: number,
+		paymentId: string,
+		changes: Partial<LoanFormReceivedPayment>
+	) {
+		selectedInvestors = selectedInvestors.map((si) => {
+			if (si.investor.id !== investorId) return si;
+			return {
+				...si,
+				receivedPayments: si.receivedPayments.map((rp) =>
+					rp.id === paymentId ? { ...rp, ...changes } : rp
 				)
 			};
 		});
@@ -566,8 +578,7 @@
 			sentDate: string;
 			isPaid: boolean;
 			hasMultipleInterest: boolean;
-			receiptImageUrl: string | null;
-			receiptExtractedData: ReceiptExtractedData | null;
+			receipts: PaymentReceipt[];
 			interestPeriods?: Array<{
 				dueDate: string;
 				interestRate: string;
@@ -625,8 +636,7 @@
 					sentDate: transaction.sentDate,
 					isPaid: transaction.isPaid,
 					hasMultipleInterest: si.hasMultipleInterest,
-					receiptImageUrl: transaction.receiptImageUrl,
-					receiptExtractedData: transaction.receiptExtractedData,
+					receipts: transaction.receipts,
 					interestPeriods
 				});
 			}
@@ -662,7 +672,8 @@
 						investorId: si.investor.id,
 						receivedPayments: si.receivedPayments.map((rp) => ({
 							amount: rp.amount,
-							receivedDate: rp.receivedDate
+							receivedDate: rp.receivedDate,
+							receipts: rp.receipts
 						}))
 					})),
 					contractCustomization: contractCustomization ?? null
@@ -1026,21 +1037,16 @@
 
 									<ReceiptUploadField
 										idPrefix="tx-{transaction.id}"
-										value={transaction.receiptImageUrl}
-										extracted={transaction.receiptExtractedData}
+										receipts={transaction.receipts}
 										disabled={isSubmitting}
-										onExtracted={(dataUrl, extracted) =>
+										onChange={(receipts) =>
+											updateTransactionFields(si.investor.id, transaction.id, { receipts })}
+										onExtracted={(extracted) =>
 											handleTransactionReceiptExtracted(
 												si.investor.id,
 												transaction.id,
-												dataUrl,
 												extracted
 											)}
-										onRemove={() =>
-											updateTransactionFields(si.investor.id, transaction.id, {
-												receiptImageUrl: null,
-												receiptExtractedData: null
-											})}
 									/>
 
 									<div class="grid gap-3 sm:grid-cols-3">
@@ -1245,6 +1251,13 @@
 												/>
 											</div>
 										</div>
+										<ReceiptUploadField
+											idPrefix="rp-{rp.id}"
+											receipts={rp.receipts}
+											disabled={isSubmitting}
+											onChange={(receipts) =>
+												updateReceivedPaymentFields(si.investor.id, rp.id, { receipts })}
+										/>
 									</div>
 								{/each}
 

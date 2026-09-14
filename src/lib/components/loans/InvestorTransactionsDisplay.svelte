@@ -31,6 +31,7 @@
 		formatReceivedDatesCommaSeparated,
 		formatCount
 	} from './investor-transactions-helpers';
+	import ReceiptThumbnails from '$lib/components/common/ReceiptThumbnails.svelte';
 
 	interface Props {
 		investorsWithTransactions: InvestorWithTransactions[];
@@ -402,6 +403,7 @@
 												{payingTransactions.has(transaction.id!) ? 'Paying…' : 'Mark as Paid'}
 											</Button>
 										{/if}
+										<ReceiptThumbnails receipts={transaction.receipts ?? []} />
 									</div>
 								{/each}
 							</div>
@@ -567,36 +569,39 @@
 																Payments recorded
 															</p>
 															{#each linkedRowsForPeriod as rp, i (typeof rp.id === 'number' ? `rp-${rp.id}` : `rp-${pid}-${i}`)}
-																<div
-																	class="flex items-center gap-2 rounded-md border border-emerald-200/70 bg-background px-2 py-1.5 text-xs dark:border-emerald-900/45"
-																>
-																	<div class="flex min-w-0 flex-1 justify-between gap-2">
-																		<span class="truncate text-muted-foreground">
-																			{formatDate(rp.receivedDate)}
-																		</span>
-																		<span
-																			class="shrink-0 font-semibold text-emerald-700 tabular-nums dark:text-emerald-400"
-																		>
-																			{formatCurrency(parseFloat(rp.amount) || 0)}
-																		</span>
+																<div class="space-y-1.5">
+																	<div
+																		class="flex items-center gap-2 rounded-md border border-emerald-200/70 bg-background px-2 py-1.5 text-xs dark:border-emerald-900/45"
+																	>
+																		<div class="flex min-w-0 flex-1 justify-between gap-2">
+																			<span class="truncate text-muted-foreground">
+																				{formatDate(rp.receivedDate)}
+																			</span>
+																			<span
+																				class="shrink-0 font-semibold text-emerald-700 tabular-nums dark:text-emerald-400"
+																			>
+																				{formatCurrency(parseFloat(rp.amount) || 0)}
+																			</span>
+																		</div>
+																		{#if canMutate && typeof rp.id === 'number' && loanId}
+																			<Button
+																				type="button"
+																				variant="ghost"
+																				size="icon"
+																				class="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+																				aria-label="Remove payment"
+																				disabled={deletingPaymentIds.has(rp.id)}
+																				onclick={() => handleDeleteReceivedPayment(rp.id!)}
+																			>
+																				{#if deletingPaymentIds.has(rp.id)}
+																					<Loader2 class="h-3.5 w-3.5 animate-spin" />
+																				{:else}
+																					<Trash2 class="h-3.5 w-3.5" />
+																				{/if}
+																			</Button>
+																		{/if}
 																	</div>
-																	{#if canMutate && typeof rp.id === 'number' && loanId}
-																		<Button
-																			type="button"
-																			variant="ghost"
-																			size="icon"
-																			class="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-																			aria-label="Remove payment"
-																			disabled={deletingPaymentIds.has(rp.id)}
-																			onclick={() => handleDeleteReceivedPayment(rp.id!)}
-																		>
-																			{#if deletingPaymentIds.has(rp.id)}
-																				<Loader2 class="h-3.5 w-3.5 animate-spin" />
-																			{:else}
-																				<Trash2 class="h-3.5 w-3.5" />
-																			{/if}
-																		</Button>
-																	{/if}
+																	<ReceiptThumbnails receipts={rp.receipts ?? []} />
 																</div>
 															{/each}
 														</div>
@@ -737,17 +742,20 @@
 													Payments received
 												</p>
 												{#each metrics.receivedPayments as rp, idx (`single-rp-${idx}`)}
-													<div
-														class="flex justify-between gap-2 rounded-md border border-emerald-200/60 bg-background px-2 py-1.5 text-xs dark:border-emerald-900/40"
-													>
-														<span class="text-muted-foreground">
-															{formatDate(rp.receivedDate)}
-														</span>
-														<span
-															class="shrink-0 font-semibold text-emerald-700 tabular-nums dark:text-emerald-400"
+													<div class="space-y-1.5">
+														<div
+															class="flex justify-between gap-2 rounded-md border border-emerald-200/60 bg-background px-2 py-1.5 text-xs dark:border-emerald-900/40"
 														>
-															{formatCurrency(parseFloat(rp.amount) || 0)}
-														</span>
+															<span class="text-muted-foreground">
+																{formatDate(rp.receivedDate)}
+															</span>
+															<span
+																class="shrink-0 font-semibold text-emerald-700 tabular-nums dark:text-emerald-400"
+															>
+																{formatCurrency(parseFloat(rp.amount) || 0)}
+															</span>
+														</div>
+														<ReceiptThumbnails receipts={rp.receipts ?? []} />
 													</div>
 												{/each}
 											</div>

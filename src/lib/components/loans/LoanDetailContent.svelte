@@ -20,6 +20,7 @@
 	} from '$lib/calculations';
 	import type { LoanWithInvestors, PaymentMethod } from '$lib/types';
 	import type { LoanAccessContext } from '$lib/loan-access';
+	import { normalizePaymentReceipts } from '$lib/payment-receipts';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -99,6 +100,7 @@
 					id: rp.id,
 					amount: rp.amount,
 					interestPeriodId: rp.interestPeriodId ?? null,
+					receipts: normalizePaymentReceipts(rp),
 					receivedDate:
 						typeof rp.receivedDate === 'string'
 							? rp.receivedDate
@@ -110,7 +112,10 @@
 
 			return {
 				investor: transactions[0].investor,
-				transactions,
+				transactions: transactions.map((transaction) => ({
+					...transaction,
+					receipts: normalizePaymentReceipts(transaction)
+				})),
 				receivedPayments: receivedPayments.length > 0 ? receivedPayments : undefined,
 				hasMultipleInterest: transactions[0].hasMultipleInterest || false,
 				interestPeriods: transactionWithPeriods?.interestPeriods || []

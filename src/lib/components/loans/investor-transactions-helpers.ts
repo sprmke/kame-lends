@@ -6,6 +6,7 @@ import {
   formatCount,
 } from "$lib/format";
 import type { InterestPeriodStatus } from "$lib/types";
+import type { PaymentReceipt } from "$lib/payment-receipts";
 import { toLocalDateString } from "$lib/date-utils";
 
 export interface InterestPeriodDisplay {
@@ -24,6 +25,7 @@ export interface InvestorTransactionDisplay {
   interestType?: string;
   sentDate: Date | string;
   isPaid: boolean;
+  receipts?: PaymentReceipt[];
 }
 
 export interface ReceivedPaymentDisplay {
@@ -31,6 +33,7 @@ export interface ReceivedPaymentDisplay {
   amount: string;
   receivedDate: string;
   interestPeriodId?: number | null;
+  receipts?: PaymentReceipt[];
 }
 
 export interface InvestorWithTransactions {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowDownToLine, ArrowUpFromLine, CalendarDays, Plus, Trash2 } from 'lucide-svelte';
+	import { CalendarDays, Plus, Trash2 } from 'lucide-svelte';
 	import * as Alert from '$lib/components/ui/alert';
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
@@ -15,7 +15,7 @@
 	import type { LoanWithInvestors } from '$lib/types';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
-	import { normalizeReceiptImageUrl } from '$lib/receipt-image';
+	import type { PaymentReceipt } from '$lib/payment-receipts';
 
 	export type LoanQuickPaymentKind = 'payment' | 'received';
 
@@ -29,8 +29,7 @@
 		interestValue: string;
 		isPaid: boolean;
 		interestPeriodId: string;
-		receiptImageUrl: string | null;
-		receiptExtractedData: ReceiptExtractedData | null;
+		receipts: PaymentReceipt[];
 	}
 
 	interface Props {
@@ -65,8 +64,7 @@
 			interestValue: '10',
 			isPaid: true,
 			interestPeriodId: 'general',
-			receiptImageUrl: null,
-			receiptExtractedData: null
+			receipts: []
 		};
 	}
 
@@ -85,35 +83,28 @@
 		return matches.length === 1 ? matches[0] : null;
 	}
 
-	function handleReceiptExtracted(
-		entryId: string,
-		dataUrl: string,
-		extracted: ReceiptExtractedData | null
-	) {
+	function handleReceiptExtracted(entryId: string, extracted: ReceiptExtractedData | null) {
 		const entry = entries.find((item) => item.id === entryId);
-		if (!entry) return;
+		if (!entry || !extracted) return;
 
-		const changes: Partial<PaymentEntry> = {
-			receiptImageUrl: dataUrl,
-			receiptExtractedData: extracted
-		};
+		const changes: Partial<PaymentEntry> = {};
 
-		if (extracted) {
-			if (!entry.amount && extracted.amount) {
-				changes.amount = String(extracted.amount);
-			}
-			if (!entry.dateTouched && extracted.transactionDate) {
-				changes.date = extracted.transactionDate;
-			}
-			if (!isReceived && !entry.investorId) {
-				const match = findMatchingLender(extracted.senderName, lenders);
-				if (match) {
-					changes.investorId = String(match.id);
-				}
+		if (!entry.amount && extracted.amount) {
+			changes.amount = String(extracted.amount);
+		}
+		if (!entry.dateTouched && extracted.transactionDate) {
+			changes.date = extracted.transactionDate;
+		}
+		if (!isReceived && !entry.investorId) {
+			const match = findMatchingLender(extracted.senderName, lenders);
+			if (match) {
+				changes.investorId = String(match.id);
 			}
 		}
 
-		updateEntry(entryId, changes);
+		if (Object.keys(changes).length > 0) {
+			updateEntry(entryId, changes);
+		}
 	}
 
 	const lenders = $derived.by(() => {
@@ -189,11 +180,6 @@
 			})
 	);
 
-	const hasDuplicatePrincipalDates = $derived(
-		!isReceived &&
-			new Set(entries.map((entry) => `${entry.investorId}:${entry.date}`)).size !== entries.length
-	);
-
 	const unusedLenders = $derived.by(() => {
 		const selectedLenderIds = new Set(entries.map((entry) => entry.investorId).filter(Boolean));
 		return lenders.filter((lender) => !selectedLenderIds.has(String(lender.id)));
@@ -209,10 +195,7 @@
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
-		if (!loan || !kind || !canSubmit || hasDuplicatePrincipalDates) {
-			if (hasDuplicatePrincipalDates) {
-				toast.error('The same lender cannot have two principal payments on the same date.');
-			}
+		if (!loan || !kind || !canSubmit) {
 			return;
 		}
 
@@ -228,8 +211,7 @@
 						? `/api/loans/${loan.id}/received-payments`
 						: `/api/loans/${loan.id}/payments`;
 				const receiptFields = {
-					receiptImageUrl: normalizeReceiptImageUrl(entry.receiptImageUrl),
-					receiptExtractedData: entry.receiptExtractedData
+					receipts: entry.receipts
 				};
 				const payload = isPeriodPayment
 					? {
@@ -310,7 +292,7 @@
 			</Button>
 			<Button
 				type="button"
-				disabled={!canSubmit || hasDuplicatePrincipalDates || isSubmitting}
+				disabled={!canSubmit || isSubmitting}
 				onclick={() => formEl?.requestSubmit()}
 			>
 				{isSubmitting
@@ -347,13 +329,10 @@
 
 							<ReceiptUploadField
 								idPrefix="{kind}-{entry.id}"
-								value={entry.receiptImageUrl}
-								extracted={entry.receiptExtractedData}
+								receipts={entry.receipts}
 								disabled={isSubmitting}
-								onExtracted={(dataUrl, extracted) =>
-									handleReceiptExtracted(entry.id, dataUrl, extracted)}
-								onRemove={() =>
-									updateEntry(entry.id, { receiptImageUrl: null, receiptExtractedData: null })}
+								onChange={(receipts) => updateEntry(entry.id, { receipts })}
+								onExtracted={(extracted) => handleReceiptExtracted(entry.id, extracted)}
 							/>
 
 							<div class="space-y-2">
