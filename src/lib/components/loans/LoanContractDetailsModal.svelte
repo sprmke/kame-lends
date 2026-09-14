@@ -1,7 +1,6 @@
 <script lang="ts">
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import LoanSigningSection from './LoanSigningSection.svelte';
-	import LoanContractSavedEditor from './LoanContractSavedEditor.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Download } from 'lucide-svelte';
@@ -89,15 +88,23 @@
 				onStatsChange={handleStatsChange}
 			/>
 
-			<LoanContractSavedEditor
-				{loan}
-				{canEdit}
-				{borrowers}
-				{investors}
-				onDirtyChange={(dirty) => (contractDirty = dirty)}
-				onRegisterSave={(save) => (saveContract = save)}
-				onSaved={handleContractSaved}
-			/>
+			{#await import('./LoanContractSavedEditor.svelte')}
+				<div class="space-y-3 py-2" aria-hidden="true">
+					<div class="h-4 w-2/3 rounded-md bg-muted"></div>
+					<div class="h-24 rounded-xl bg-muted/60"></div>
+					<div class="h-4 w-1/2 rounded-md bg-muted"></div>
+				</div>
+			{:then { default: LoanContractSavedEditor }}
+				<LoanContractSavedEditor
+					{loan}
+					{canEdit}
+					{borrowers}
+					{investors}
+					onDirtyChange={(dirty) => (contractDirty = dirty)}
+					onRegisterSave={(save) => (saveContract = save)}
+					onSaved={handleContractSaved}
+				/>
+			{/await}
 		{/key}
 	{/if}
 

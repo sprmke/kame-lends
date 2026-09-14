@@ -15,6 +15,7 @@
 	import NavigationProgress from '$lib/components/common/NavigationProgress.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { navigating, page } from '$app/state';
+	import { overlayStackIsOpen } from '$lib/composables/overlay-stack.svelte';
 	import {
 		THEME_COLOR_DARK,
 		THEME_COLOR_DASHBOARD,
@@ -32,6 +33,11 @@
 			root.classList.remove('dashboard-shell');
 		}
 		return () => root.classList.remove('dashboard-shell');
+	});
+
+	$effect(() => {
+		const root = document.documentElement;
+		root.classList.toggle('overlay-open', overlayStackIsOpen());
 	});
 
 	const listRoutes = new Set([

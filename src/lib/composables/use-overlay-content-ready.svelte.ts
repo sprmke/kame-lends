@@ -1,5 +1,11 @@
 import { tick } from "svelte";
 
+function afterPaint(callback: () => void) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(callback);
+  });
+}
+
 /**
  * Defers mounting heavy overlay body content until after the shell has painted.
  * Keeps sheet/dialog open animations responsive on mobile and desktop.
@@ -23,7 +29,9 @@ export function createOverlayContentReady() {
     ready = false;
 
     void tick().then(() => {
-      if (token === openToken) ready = true;
+      afterPaint(() => {
+        if (token === openToken) ready = true;
+      });
     });
   }
 

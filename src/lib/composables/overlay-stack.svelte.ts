@@ -5,6 +5,7 @@ const BASE_Z = 50;
 const STEP = 10;
 
 const stack = $state<symbol[]>([]);
+let stackGeneration = $state(0);
 
 function zIndexFor(id: symbol): number {
   const index = stack.indexOf(id);
@@ -12,12 +13,16 @@ function zIndexFor(id: symbol): number {
 }
 
 function pushLayer(id: symbol) {
-  if (!stack.includes(id)) stack.push(id);
+  if (stack.includes(id)) return;
+  stack.push(id);
+  stackGeneration += 1;
 }
 
 function removeLayer(id: symbol) {
   const index = stack.indexOf(id);
-  if (index !== -1) stack.splice(index, 1);
+  if (index === -1) return;
+  stack.splice(index, 1);
+  stackGeneration += 1;
 }
 
 export function createOverlayLayer(getOpen: () => boolean) {
@@ -35,6 +40,11 @@ export function createOverlayLayer(getOpen: () => boolean) {
       return zIndexFor(id);
     },
   };
+}
+
+export function overlayStackIsOpen(): boolean {
+  void stackGeneration;
+  return stack.length > 0;
 }
 
 export function provideOverlayLayer(getOpen: () => boolean) {

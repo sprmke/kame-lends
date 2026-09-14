@@ -43,6 +43,7 @@
 	}: Props = $props();
 
 	const documentCustomization = $derived(previewCustomization ?? value);
+	let setupTab = $state('participants');
 </script>
 
 <div class="overflow-hidden rounded-xl border border-border bg-muted/20">
@@ -54,7 +55,7 @@
 		</Button>
 	</div>
 
-	<Tabs.Root value="participants" class="p-4">
+	<Tabs.Root bind:value={setupTab} class="p-4">
 		<Tabs.List class="grid h-auto w-full grid-cols-3 gap-1">
 			<Tabs.Trigger value="participants" class="gap-1.5 px-2 py-2 text-xs sm:gap-2 sm:text-sm">
 				<UsersRound class="h-4 w-4 shrink-0" />
@@ -141,11 +142,13 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="preview" class="mt-4">
-			<div class="overflow-hidden rounded-xl border border-border bg-background shadow-sm">
-				<div class="max-h-[min(720px,70vh)] overflow-y-auto">
-					<LoanContractDocumentBody data={contractData} customization={documentCustomization} />
+			{#if setupTab === 'preview'}
+				<div class="overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+					<div class="max-h-[min(720px,70vh)] overflow-y-auto">
+						<LoanContractDocumentBody data={contractData} customization={documentCustomization} />
+					</div>
 				</div>
-			</div>
+			{/if}
 		</Tabs.Content>
 	</Tabs.Root>
 </div>

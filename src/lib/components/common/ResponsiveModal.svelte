@@ -3,6 +3,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { createIsMobileOverlay } from '$lib/composables/use-media-query.svelte';
+	import { createOverlayContentReady } from '$lib/composables/use-overlay-content-ready.svelte';
 	import { cn } from '$lib/utils';
 
 	interface Props {
@@ -47,7 +48,13 @@
 	);
 	let lockedOpen = $state(false);
 
+	const overlayContent = createOverlayContentReady();
+
 	$effect(() => mobile.init());
+
+	$effect(() => {
+		overlayContent.armWhenOpen(open);
+	});
 
 	$effect(() => {
 		if (open) {
@@ -85,7 +92,15 @@
 				</Sheet.Header>
 			{/if}
 			<div class={cn('min-h-0 overflow-y-auto px-5 py-4', bodyClass)}>
-				{@render children()}
+				{#if overlayContent.ready}
+					{@render children()}
+				{:else}
+					<div class="space-y-3 py-2" aria-hidden="true">
+						<div class="h-4 w-2/3 rounded-md bg-muted"></div>
+						<div class="h-24 rounded-xl bg-muted/60"></div>
+						<div class="h-4 w-1/2 rounded-md bg-muted"></div>
+					</div>
+				{/if}
 			</div>
 			{#if footer}
 				<div
@@ -128,7 +143,15 @@
 				</Dialog.Header>
 			{/if}
 			<div class={cn('min-h-0 flex-1 overflow-y-auto px-5 py-4 md:px-6 md:py-5', bodyClass)}>
-				{@render children()}
+				{#if overlayContent.ready}
+					{@render children()}
+				{:else}
+					<div class="space-y-3 py-2" aria-hidden="true">
+						<div class="h-4 w-2/3 rounded-md bg-muted"></div>
+						<div class="h-24 rounded-xl bg-muted/60"></div>
+						<div class="h-4 w-1/2 rounded-md bg-muted"></div>
+					</div>
+				{/if}
 			</div>
 			{#if footer}
 				<div

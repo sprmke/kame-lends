@@ -92,10 +92,31 @@ html.dashboard-shell [data-slot="dialog-content"].dashboard-dialog-wide {
 
 /* Frost scrims without backdrop-filter: blurring the full loans table under modals is costly while scrolling. */
 html.dashboard-shell [data-slot="dialog-overlay"],
-html.dashboard-shell [data-slot="alert-dialog-overlay"] {
+html.dashboard-shell [data-slot="alert-dialog-overlay"],
+html.dashboard-shell [data-slot="sheet-overlay"] {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   background: oklch(0 0 0 / 0.38);
+}
+
+html.dashboard-shell [data-slot="dialog-content"],
+html.dashboard-shell [data-slot="alert-dialog-content"] {
+  background-color: var(--background);
+}
+
+html.dashboard-shell [data-slot="sheet-content"] {
+  background-color: var(--popover);
+}
+
+/* Skip painting the list while an overlay is open so the table cannot show through a janky fade. */
+html.dashboard-shell.overlay-open .app-shell {
+  content-visibility: hidden;
+}
+
+html.dashboard-shell.overlay-open aside,
+html.dashboard-shell.overlay-open .mobile-floating-dock {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 @media (width >= 1024px) {
