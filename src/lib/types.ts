@@ -1,4 +1,5 @@
 import type { ReceiptExtractedData } from "$lib/receipt-extraction-types";
+import type { PaymentReceipt } from "$lib/payment-receipts";
 
 export type LoanType = "Lot Title" | "OR/CR" | "Agent";
 export type LoanStatus =
@@ -133,6 +134,7 @@ export interface ReceivedPayment {
   receivedDate: Date;
   receiptImageUrl?: string | null;
   receiptExtractedData?: ReceiptExtractedData | null;
+  receipts?: PaymentReceipt[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -184,6 +186,7 @@ export interface LoanInvestor {
   hasMultipleInterest: boolean;
   receiptImageUrl?: string | null;
   receiptExtractedData?: ReceiptExtractedData | null;
+  receipts?: PaymentReceipt[];
   createdAt: Date;
   updatedAt: Date;
   interestPeriods?: InterestPeriod[];

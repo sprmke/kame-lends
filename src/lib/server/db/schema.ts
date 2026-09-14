@@ -12,9 +12,10 @@ import {
   index,
   unique,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import type { AdapterAccount } from "@auth/core/adapters";
 import type { ReceiptExtractedData } from "$lib/receipt-extraction-types";
+import type { PaymentReceipt } from "$lib/payment-receipts";
 
 // Enums
 export const userRoleEnum = pgEnum("user_role", [
@@ -258,6 +259,11 @@ export const loanInvestors = pgTable(
     receiptExtractedData: jsonb(
       "receipt_extracted_data",
     ).$type<ReceiptExtractedData | null>(),
+    /** All fund-transfer receipts for this disbursement. First item mirrors the legacy columns. */
+    receipts: jsonb("receipts")
+      .$type<PaymentReceipt[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -411,6 +417,11 @@ export const receivedPayments = pgTable(
     receiptExtractedData: jsonb(
       "receipt_extracted_data",
     ).$type<ReceiptExtractedData | null>(),
+    /** All repayment receipts for this payment. First item mirrors the legacy columns. */
+    receipts: jsonb("receipts")
+      .$type<PaymentReceipt[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
