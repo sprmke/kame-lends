@@ -29,9 +29,12 @@
 		onDuplicate?: (loan: LoanWithInvestors) => void;
 		onContractDetails?: (loan: LoanWithInvestors) => void;
 		onDelete?: (loan: LoanWithInvestors) => void;
+		onRemoveFromGroup?: (loan: LoanWithInvestors) => void;
 		emptyMessage?: string;
 		/** When set, Principal shows this investor's allocation on each loan (not full loan principal). */
 		investorId?: number;
+		/** Same as investorId, matching the linked auth user across CRM rows. */
+		investorUserId?: string | null;
 	}
 
 	let {
@@ -47,10 +50,19 @@
 		onDuplicate,
 		onContractDetails,
 		onDelete,
-		investorId
+		onRemoveFromGroup,
+		investorId,
+		investorUserId
 	}: Props = $props();
 
 	function investorEntriesForLoan(loan: LoanWithInvestors) {
+		if (investorUserId) {
+			return (loan.loanInvestors ?? []).filter(
+				(li) =>
+					(li.investor as { investorUserId?: string | null } | undefined)?.investorUserId ===
+					investorUserId
+			);
+		}
 		if (investorId == null) return null;
 		return (loan.loanInvestors ?? []).filter(
 			(li) => (li.investor?.id ?? li.investorId) === investorId
@@ -127,6 +139,9 @@
 							<p class="truncate text-xs text-muted-foreground md:hidden">
 								{formatText(loan.status)}
 							</p>
+							{#if (loan as LoanWithInvestors & { groupSource?: string }).groupSource === 'rule'}
+								<Badge variant="secondary" class="mt-1 text-[10px]">Added by rule</Badge>
+							{/if}
 						</div>
 					</Table.Cell>
 					<Table.Cell class="hidden md:table-cell">
@@ -171,7 +186,10 @@
 								onContractDetails: onContractDetails
 									? () => onContractDetails(loan)
 									: undefined,
-								onDelete: onDelete ? () => onDelete(loan) : undefined
+								onDelete: onDelete ? () => onDelete(loan) : undefined,
+								onRemoveFromGroup: onRemoveFromGroup
+									? () => onRemoveFromGroup(loan)
+									: undefined
 							})}
 						/>
 					</Table.Cell>

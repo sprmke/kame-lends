@@ -18,13 +18,15 @@
 		| 'borrowers'
 		| 'witnesses'
 		| 'debts'
-		| 'transactions';
+		| 'transactions'
+		| 'groups';
 
 	interface Props {
 		variant?: ListPageSkeletonVariant;
+		embedded?: boolean;
 	}
 
-	let { variant = 'loans' }: Props = $props();
+	let { variant = 'loans', embedded = false }: Props = $props();
 
 	const config = $derived.by(() => {
 		switch (variant) {
@@ -76,12 +78,27 @@
 					columns: TRANSACTIONS_TABLE_COLUMNS,
 					tallRows: false
 				};
+			case 'groups':
+				return {
+					actionCount: 2,
+					showMoreFilters: false,
+					showSummary: true,
+					columns: LOANS_TABLE_COLUMNS,
+					tallRows: false
+				};
 		}
 	});
 </script>
 
-<div aria-busy="true" aria-label="Loading page" class="dashboard-page" role="status">
-	<ListPageHeaderSkeleton actionCount={config.actionCount} />
+<div
+	aria-busy="true"
+	aria-label="Loading page"
+	class={embedded ? 'space-y-4' : 'dashboard-page'}
+	role="status"
+>
+	{#if !embedded}
+		<ListPageHeaderSkeleton actionCount={config.actionCount} />
+	{/if}
 	{#if config.showSummary}
 		<SkeletonMetricGrid count={4} />
 	{/if}

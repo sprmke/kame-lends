@@ -8,6 +8,7 @@
 		ExternalLink,
 		Eye,
 		FileText,
+		FolderMinus,
 		Trash2,
 		Wallet
 	} from 'lucide-svelte';
@@ -39,4 +40,6 @@
 	<ExternalLink class={className} />
 {:else if icon === 'delete'}
 	<Trash2 class={className} />
+{:else if icon === 'remove'}
+	<FolderMinus class={className} />
 {/if}

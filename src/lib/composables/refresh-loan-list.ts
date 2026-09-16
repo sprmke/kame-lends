@@ -13,18 +13,22 @@ export type LoanListChange =
   | { kind: "remove"; loanId: number };
 
 /** Re-run loan list loads and return fresh rows. Use `page.data` after invalidate — destructured `data` from `$props()` can be stale in async handlers. */
-export async function refreshLoanList(): Promise<LoanWithInvestors[]> {
+export async function refreshLoanList(
+  depends = "app:loans",
+): Promise<LoanWithInvestors[]> {
   clearLoanClientCaches();
-  await invalidate("app:loans");
+  await invalidate(depends);
   return (await page.data.loans) as LoanWithInvestors[];
 }
 
 export async function applyLoanListChange(
   current: LoanWithInvestors[],
   change: LoanListChange,
+  options?: { depends?: string },
 ): Promise<LoanWithInvestors[]> {
+  const depends = options?.depends ?? "app:loans";
   if (change.kind === "reload") {
-    return refreshLoanList();
+    return refreshLoanList(depends);
   }
   if (change.kind === "remove") {
     clearLoanClientCaches(change.loanId);
@@ -37,7 +41,7 @@ export async function applyLoanListChange(
 
   clearLoanClientCaches(change.loanId);
   const payload = await fetchLoanDetailClient(change.loanId);
-  if (!payload) return refreshLoanList();
+  if (!payload) return refreshLoanList(depends);
   const { paymentMethods: _methods, access: _access, ...rest } = payload;
   return patchLoanRow(current, rest as LoanWithInvestors);
 }

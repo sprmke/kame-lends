@@ -28,7 +28,8 @@ export type LoanActionIcon =
   | "contract"
   | "complete"
   | "view"
-  | "delete";
+  | "delete"
+  | "remove";
 
 export interface RowActionItem {
   label: string;
@@ -63,6 +64,7 @@ export interface CreateLoanActionItemsOptions {
   onViewLoan?: () => void;
   canDelete?: boolean;
   onDelete?: () => void;
+  onRemoveFromGroup?: () => void;
 }
 
 /** Canonical loan ⋯ menu: Edit/Duplicate | Fund/Received/Pay/Contract/Complete/View | Delete */
@@ -133,6 +135,16 @@ export function createLoanActionItems(
   }
   appendGroup(items, transactionGroup);
 
+  if (options.onRemoveFromGroup) {
+    items.push({
+      label: "Remove from group",
+      onClick: options.onRemoveFromGroup,
+      icon: "remove",
+      destructive: true,
+      separatorBefore: items.length > 0,
+    });
+  }
+
   if (options.onDelete && options.canDelete !== false) {
     items.push({
       label: "Delete",
@@ -146,7 +158,8 @@ export function createLoanActionItems(
   return items;
 }
 
-export type LoanListScope = "loans" | "investments" | "borrowed" | "witnessed";
+export type LoanListScope =
+  "loans" | "investments" | "borrowed" | "witnessed" | "group";
 
 /** Row/card ⋯ handlers for loan list pages — scope gates edit/delete vs payments. */
 export function loanListRowActionHandlers<T extends { id: number }>(options: {
@@ -158,6 +171,7 @@ export function loanListRowActionHandlers<T extends { id: number }>(options: {
   onAddReceivedPayment?: (loan: T) => void;
   onContractDetails: (loan: T) => void;
   onDelete?: (loan: T) => void;
+  onRemoveFromGroup?: (loan: T) => void;
 }) {
   return {
     onEdit: options.canManage ? options.onEdit : undefined,
@@ -168,6 +182,9 @@ export function loanListRowActionHandlers<T extends { id: number }>(options: {
       : undefined,
     onContractDetails: options.onContractDetails,
     onDelete: options.canManage ? options.onDelete : undefined,
+    onRemoveFromGroup: options.canManage
+      ? options.onRemoveFromGroup
+      : undefined,
   };
 }
 

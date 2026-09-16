@@ -10,12 +10,22 @@ import {
 } from "$lib/date/navigation";
 import type { Page } from "@sveltejs/kit";
 
-export function createLoanListDateRange(getPage: () => Page) {
+type Options = {
+  enabled?: boolean;
+  defaultPreset?: DatePreset;
+};
+
+export function createLoanListDateRange(
+  getPage: () => Page,
+  options: Options = {},
+) {
+  const enabled = options.enabled !== false;
+  const defaultPreset = options.defaultPreset ?? "month";
   const urlFrom = $derived(getPage().url.searchParams.get("from"));
   const urlTo = $derived(getPage().url.searchParams.get("to"));
   const isAllTime = $derived(isAllTimeDateRange(getPage().url));
   const dateNav = createDateNavigation({
-    initialPreset: isAllTime ? "all-time" : "month",
+    initialPreset: isAllTime ? "all-time" : defaultPreset,
     initialRange: (() => {
       if (isAllTime) return null;
       const from = fromIsoDate(urlFrom);
@@ -77,22 +87,25 @@ export function createLoanListDateRange(getPage: () => Page) {
   }
 
   function clearDateFilter() {
-    dateNav.setDatePreset("month");
+    dateNav.setDatePreset(defaultPreset);
     applyDateRangeToUrl();
   }
 
   // Client-side fallback when navigating without a full load (e.g. in-app link).
   $effect(() => {
+    if (!enabled) return;
     if (isAllTime) return;
     if (urlFrom && urlTo) return;
+    if (defaultPreset === "all-time") return;
     untrack(() => {
-      dateNav.setDatePreset("month");
+      dateNav.setDatePreset(defaultPreset);
       applyDateRangeToUrl();
     });
   });
 
   // Keep picker aligned when URL changes (back/forward, deep links).
   $effect(() => {
+    if (!enabled) return;
     const allTime = isAllTime;
     const fromParam = urlFrom;
     const toParam = urlTo;
@@ -129,11 +142,15 @@ export function createLoanListDateRange(getPage: () => Page) {
       return Boolean(urlFrom || urlTo || isAllTime);
     },
     get filterFrom() {
+      if (!enabled) return null;
       if (isAllTime) return null;
+      if (!urlFrom && !urlTo && defaultPreset === "all-time") return null;
       return urlFrom ?? dateNav.getIsoRange().from;
     },
     get filterTo() {
+      if (!enabled) return null;
       if (isAllTime) return null;
+      if (!urlFrom && !urlTo && defaultPreset === "all-time") return null;
       return urlTo ?? dateNav.getIsoRange().to;
     },
     clearDateFilter,

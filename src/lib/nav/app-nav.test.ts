@@ -32,6 +32,7 @@ describe("buildSidebarGroups", () => {
       hasInvestments: true,
       hasBorrowed: true,
       hasWitnessed: true,
+      hasGroups: false,
     });
     expect(groups.map((group) => group.id)).toEqual([
       "overview",
@@ -39,6 +40,7 @@ describe("buildSidebarGroups", () => {
       "workspace",
       "settings",
     ]);
+    expect(groups[0]?.items.map((item) => item.id)).toEqual(["dashboard"]);
     expect(groups[1]?.label).toBe("Your roles");
     expect(groups[1]?.items.map((item) => item.id)).toEqual([
       "investments",
@@ -54,6 +56,20 @@ describe("buildSidebarGroups", () => {
       "witnesses",
     ]);
   });
+
+  it("shows Groups in overview when hasGroups is true", () => {
+    const groups = buildSidebarGroups({
+      isAdminWorkspace: true,
+      hasInvestments: false,
+      hasBorrowed: false,
+      hasWitnessed: false,
+      hasGroups: true,
+    });
+    expect(groups[0]?.items.map((item) => item.id)).toEqual([
+      "dashboard",
+      "groups",
+    ]);
+  });
 });
 
 describe("buildDestinationItems", () => {
@@ -64,12 +80,35 @@ describe("buildDestinationItems", () => {
     expect(ids).toEqual(["dashboard", "investments", "borrowed", "witnessed"]);
   });
 
+  it("adds Groups for party users with hasGroups", () => {
+    const ids = buildDestinationItems({
+      ...DEFAULT_NAV_CAPABILITIES,
+      hasGroups: true,
+    }).map((item) => item.id);
+    expect(ids).toEqual([
+      "dashboard",
+      "groups",
+      "investments",
+      "borrowed",
+      "witnessed",
+    ]);
+  });
+
+  it("keeps Groups off when hasGroups is false (feature flag off)", () => {
+    const ids = buildDestinationItems({
+      ...DEFAULT_NAV_CAPABILITIES,
+      hasGroups: false,
+    }).map((item) => item.id);
+    expect(ids).not.toContain("groups");
+  });
+
   it("adds workspace-admin CRM destinations for an admin workspace", () => {
     const ids = buildDestinationItems({
       isAdminWorkspace: true,
       hasInvestments: true,
       hasBorrowed: true,
       hasWitnessed: true,
+      hasGroups: false,
     }).map((item) => item.id);
     expect(ids).toEqual([
       "dashboard",
@@ -111,6 +150,7 @@ describe("buildAppNav", () => {
       hasInvestments: true,
       hasBorrowed: true,
       hasWitnessed: true,
+      hasGroups: false,
     });
     expect(nav.primaryTabs.map((item) => item.id)).toEqual([
       "dashboard",

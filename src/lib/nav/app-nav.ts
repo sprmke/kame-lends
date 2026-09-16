@@ -11,13 +11,15 @@ import {
   UserCheck,
   Folders,
 } from "lucide-svelte";
-import { SHOW_TRANSACTIONS_UI, SHOW_GROUPS_UI } from "$lib/feature-flags";
+import { SHOW_TRANSACTIONS_UI } from "$lib/feature-flags";
 
 export interface NavCapabilities {
   isAdminWorkspace: boolean;
   hasInvestments: boolean;
   hasBorrowed: boolean;
   hasWitnessed: boolean;
+  /** True when Groups is in the nav (layout sets this for any signed-in user when SHOW_GROUPS_UI is on). */
+  hasGroups: boolean;
 }
 
 /** Lucide Svelte 5 icon constructors share one shape; `typeof Home` is the practical alias. */
@@ -43,6 +45,7 @@ export const DEFAULT_NAV_CAPABILITIES: NavCapabilities = {
   hasInvestments: false,
   hasBorrowed: false,
   hasWitnessed: false,
+  hasGroups: false,
 };
 
 const DASHBOARD_ITEM: AppNavItem = {
@@ -154,7 +157,7 @@ export function buildSidebarGroups(
     ];
   }
 
-  const overviewItems = SHOW_GROUPS_UI
+  const overviewItems = caps.hasGroups
     ? [DASHBOARD_ITEM, GROUPS_ITEM]
     : [DASHBOARD_ITEM];
   const workspaceItems = destinations.filter(
@@ -181,7 +184,7 @@ export function buildDestinationItems(
 ): AppNavItem[] {
   const items: AppNavItem[] = [DASHBOARD_ITEM];
 
-  if (SHOW_GROUPS_UI) {
+  if (caps.hasGroups) {
     items.push(GROUPS_ITEM);
   }
 
