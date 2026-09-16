@@ -36,6 +36,7 @@
     "db:backfill:witnesses": "bash scripts/db/backfill-witnesses.sh",
     "db:backfill:storage": "bun scripts/db/backfill-storage-to-r2.ts",
     "db:backfill:group-members": "bun scripts/db/backfill-group-members.ts",
+    "dev:wipe-workspace-calendar": "bun scripts/dev/wipe-workspace-calendar.ts",
     "telegram:set-webhook": "bun scripts/telegram/set-webhook.ts",
     "db:apply:migration": "bash scripts/db/apply-migration.sh",
     "db:apply:migration:prod": "bash scripts/db/apply-migration.sh --prod",
