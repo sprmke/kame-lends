@@ -4,7 +4,6 @@ import { db } from "$lib/server/db";
 import { paymentMethods } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 import { isPartyUserLinkedToWorkspace } from "$lib/server/party-profile";
 import {
   parsePaymentMethodId,
@@ -17,10 +16,10 @@ async function assertCanManagePartyUserPayments(
   adminUserId: string,
   partyUserId: string,
 ) {
-  if (!(await isWorkspaceAdmin(adminUserId))) {
-    return json({ error: "Forbidden" }, { status: 403 });
-  }
-  if (!(await isPartyUserLinkedToWorkspace(adminUserId, partyUserId))) {
+  if (
+    adminUserId !== partyUserId &&
+    !(await isPartyUserLinkedToWorkspace(adminUserId, partyUserId))
+  ) {
     return json({ error: "Not found" }, { status: 404 });
   }
   return null;

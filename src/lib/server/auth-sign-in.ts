@@ -8,9 +8,9 @@ export function isGoogleSignInAllowed(input: {
   existingUser: boolean;
   workspaceHasUsers: boolean;
 }): boolean {
-  if (!normalizeEmail(input.email)) return false;
-  if (input.existingUser) return true;
-  return !input.workspaceHasUsers;
+  void input.existingUser;
+  void input.workspaceHasUsers;
+  return Boolean(normalizeEmail(input.email));
 }
 
 export function signInErrorMessage(
@@ -18,7 +18,7 @@ export function signInErrorMessage(
 ): string | null {
   if (!error) return null;
   if (error === "AccessDenied") {
-    return "This Google account is not on the workspace.";
+    return "Sign-in is not allowed for this Google account.";
   }
   return "Sign-in failed. Try again.";
 }

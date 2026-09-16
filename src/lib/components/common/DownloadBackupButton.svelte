@@ -9,13 +9,17 @@
 		size?: 'default' | 'sm' | 'lg' | 'icon';
 		class?: string;
 		showLabel?: boolean;
+		downloadLabel?: string;
+		backupUrl?: string;
 	}
 
 	let {
 		variant = 'outline',
 		size = 'default',
 		class: className,
-		showLabel = true
+		showLabel = true,
+		downloadLabel = 'Download my data',
+		backupUrl = '/api/backup?download=true'
 	}: Props = $props();
 
 	let isDownloading = $state(false);
@@ -26,7 +30,7 @@
 		justDownloaded = false;
 
 		try {
-			const response = await fetch('/api/backup?download=true');
+			const response = await fetch(backupUrl);
 			if (!response.ok) {
 				const error = await response.json();
 				throw new Error(error.error || 'Failed to create backup');
@@ -76,7 +80,7 @@
 	{/if}
 	{#if showLabel}
 		<span class="ml-2">
-			{isDownloading ? 'Downloading...' : justDownloaded ? 'Downloaded!' : 'Download Backup'}
+			{isDownloading ? 'Downloading...' : justDownloaded ? 'Downloaded!' : downloadLabel}
 		</span>
 	{/if}
 </Button>

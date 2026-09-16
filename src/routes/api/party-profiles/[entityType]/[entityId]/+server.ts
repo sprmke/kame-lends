@@ -6,7 +6,6 @@ import {
   loadPartyProfileForEntity,
   savePartyProfileForEntity,
 } from "$lib/server/party-profile";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 
 function parseEntityId(raw: string | undefined): number | null {
   const id = Number.parseInt(raw ?? "", 10);
@@ -24,10 +23,6 @@ export const GET: RequestHandler = async (event) => {
     const entityId = parseEntityId(event.params.entityId);
     if (!entityType || entityId == null) {
       return json({ error: "Invalid request" }, { status: 400 });
-    }
-
-    if (!(await isWorkspaceAdmin(session.user.id))) {
-      return json({ error: "Forbidden" }, { status: 403 });
     }
 
     const profile = await loadPartyProfileForEntity(
@@ -57,10 +52,6 @@ export const PUT: RequestHandler = async (event) => {
     const entityId = parseEntityId(event.params.entityId);
     if (!entityType || entityId == null) {
       return json({ error: "Invalid request" }, { status: 400 });
-    }
-
-    if (!(await isWorkspaceAdmin(session.user.id))) {
-      return json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await event.request.json().catch(() => null);

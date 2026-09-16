@@ -3,7 +3,6 @@ import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import { paymentMethods } from "$lib/server/db/schema";
 import { getSession } from "$lib/server/session";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 import { isPartyUserLinkedToWorkspace } from "$lib/server/party-profile";
 import {
   MAX_PAYMENT_METHODS_PER_USER,
@@ -18,10 +17,10 @@ async function assertCanManagePartyUserPayments(
   adminUserId: string,
   partyUserId: string,
 ) {
-  if (!(await isWorkspaceAdmin(adminUserId))) {
-    return json({ error: "Forbidden" }, { status: 403 });
-  }
-  if (!(await isPartyUserLinkedToWorkspace(adminUserId, partyUserId))) {
+  if (
+    adminUserId !== partyUserId &&
+    !(await isPartyUserLinkedToWorkspace(adminUserId, partyUserId))
+  ) {
     return json({ error: "Not found" }, { status: 404 });
   }
   return null;

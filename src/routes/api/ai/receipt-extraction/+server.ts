@@ -1,7 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { getSession } from "$lib/server/session";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 import { isStorageRef } from "$lib/storage-reference";
 import { normalizeValidIdUrl } from "$lib/valid-id-document";
 import { extractReceiptInfo } from "$lib/server/ai/receipt-extraction";
@@ -18,10 +17,6 @@ export const POST: RequestHandler = async (event) => {
     if (!session?.user?.id) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!(await isWorkspaceAdmin(session.user.id))) {
-      return json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const body = await request.json();
     let imageDataUrl = normalizeValidIdUrl(body?.imageDataUrl);
 

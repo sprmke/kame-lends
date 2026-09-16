@@ -1,7 +1,7 @@
 import type { NavCapabilities } from "$lib/nav/app-nav";
 
 export const ACCOUNT_ROLE_LABELS = [
-  "Admin",
+  "Owner",
   "Investor",
   "Borrower",
   "Witness",
@@ -10,13 +10,13 @@ export const ACCOUNT_ROLE_LABELS = [
 export type AccountRoleLabel = (typeof ACCOUNT_ROLE_LABELS)[number];
 
 const STORED_ROLE_LABELS: Record<string, AccountRoleLabel> = {
-  admin: "Admin",
+  admin: "Owner",
   investor: "Investor",
   borrower: "Borrower",
   witness: "Witness",
 };
 
-/** Labels for Settings. Admin from workspace ownership; party roles from loans and transactions. */
+/** Labels for Settings. Owner from owned lending data; party roles from loans and transactions. */
 export function accountRolesFromCapabilities(
   caps: Pick<
     NavCapabilities,
@@ -25,7 +25,7 @@ export function accountRolesFromCapabilities(
   storedRole?: string | null,
 ): AccountRoleLabel[] {
   const roles: AccountRoleLabel[] = [];
-  if (caps.isAdminWorkspace) roles.push("Admin");
+  if (caps.isAdminWorkspace) roles.push("Owner");
   if (caps.hasInvestments) roles.push("Investor");
   if (caps.hasBorrowed) roles.push("Borrower");
   if (caps.hasWitnessed) roles.push("Witness");

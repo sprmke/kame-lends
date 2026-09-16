@@ -14,7 +14,6 @@ import {
   witnesses,
 } from "$lib/server/db/schema";
 import { hasLoanViewAccess } from "$lib/server/access-control";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 
 function uploadOwnerUserId(objectKey: string): string | null {
   const match = /^uploads\/([^/]+)\//.exec(objectKey);
@@ -184,8 +183,6 @@ export async function canReadStorageRef(
 
   const ownerId = uploadOwnerUserId(objectKey);
   if (ownerId && ownerId === userId) return true;
-
-  if (await isWorkspaceAdmin(userId)) return true;
 
   if (await refOnLinkedPartyProfile(userId, ref)) return true;
 

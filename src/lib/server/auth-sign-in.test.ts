@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isGoogleSignInAllowed, signInErrorMessage } from "./auth-sign-in";
 
 describe("isGoogleSignInAllowed", () => {
-  it("allows an existing workspace email", () => {
+  it("allows any normalized Google email", () => {
     expect(
       isGoogleSignInAllowed({
         email: "investor@example.com",
@@ -10,24 +10,11 @@ describe("isGoogleSignInAllowed", () => {
         workspaceHasUsers: true,
       }),
     ).toBe(true);
-  });
-
-  it("rejects an unknown email when users already exist", () => {
     expect(
       isGoogleSignInAllowed({
         email: "stranger@example.com",
         existingUser: false,
         workspaceHasUsers: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("allows the first Google user on an empty workspace", () => {
-    expect(
-      isGoogleSignInAllowed({
-        email: "owner@example.com",
-        existingUser: false,
-        workspaceHasUsers: false,
       }),
     ).toBe(true);
   });
@@ -46,7 +33,7 @@ describe("isGoogleSignInAllowed", () => {
 describe("signInErrorMessage", () => {
   it("explains AccessDenied", () => {
     expect(signInErrorMessage("AccessDenied")).toBe(
-      "This Google account is not on the workspace.",
+      "Sign-in is not allowed for this Google account.",
     );
   });
 

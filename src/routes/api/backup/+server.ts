@@ -4,17 +4,15 @@ import { getSession } from "$lib/server/session";
 import { backupFilename } from "$lib/brand";
 import {
   fetchBackupDataForUser,
+  fetchBackupDataForAllUsers,
   type BackupData,
 } from "$lib/server/backup-data";
+import { backupScopeAllAllowed } from "$lib/server/backup-access";
 
 /**
  * GET /api/backup
- * Exports all business data for the signed-in user (same scope as dashboard).
- * Optional ?download=true returns a JSON file attachment.
- *
- * Note: This is an application-level export (investors, loans, loan_investors,
- * interest_periods, received_payments, transactions). It does not include
- * Auth.js tables (OAuth tokens, sessions). For a full Postgres snapshot use Neon backups / PITR.
+ * Exports business data for the signed-in user, or all data owners when
+ * scope=all and the caller is the platform owner email.
  */
 export const GET: RequestHandler = async (event) => {
   const request = event.request;
@@ -24,17 +22,31 @@ export const GET: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const backupData: BackupData = await fetchBackupDataForUser({
-      userId: session.user.id,
-      exportedByLabel:
-        session.user.email || session.user.name || session.user.id,
-    });
-
     const { searchParams } = new URL(request.url);
     const download = searchParams.get("download") === "true";
+    const scopeAll = searchParams.get("scope") === "all";
+
+    if (!backupScopeAllAllowed(scopeAll, session.user.email)) {
+      return json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const backupData:
+      BackupData | Awaited<ReturnType<typeof fetchBackupDataForAllUsers>> =
+      scopeAll
+        ? await fetchBackupDataForAllUsers({
+            exportedByLabel:
+              session.user.email || session.user.name || session.user.id,
+          })
+        : await fetchBackupDataForUser({
+            userId: session.user.id,
+            exportedByLabel:
+              session.user.email || session.user.name || session.user.id,
+          });
 
     if (download) {
-      const filename = backupFilename(new Date());
+      const filename = scopeAll
+        ? backupFilename(new Date()).replace(".json", "-all-users.json")
+        : backupFilename(new Date());
 
       return new Response(JSON.stringify(backupData, null, 2), {
         status: 200,

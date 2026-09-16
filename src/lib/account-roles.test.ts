@@ -12,7 +12,7 @@ const none = {
 };
 
 describe("accountRolesFromCapabilities", () => {
-  it("lists every assigned role in Admin, Investor, Borrower, Witness order", () => {
+  it("lists every assigned role in Owner, Investor, Borrower, Witness order", () => {
     expect(
       accountRolesFromCapabilities({
         isAdminWorkspace: true,
@@ -20,7 +20,7 @@ describe("accountRolesFromCapabilities", () => {
         hasBorrowed: true,
         hasWitnessed: true,
       }),
-    ).toEqual(["Admin", "Investor", "Borrower", "Witness"]);
+    ).toEqual(["Owner", "Investor", "Borrower", "Witness"]);
   });
 
   it("omits roles the user is not assigned", () => {

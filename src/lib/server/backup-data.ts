@@ -12,7 +12,13 @@ import {
   investors,
   transactions,
   loanInvestors,
+  borrowers,
+  witnesses,
+  debts,
+  loanGroups,
+  paymentMethods,
 } from "$lib/server/db/schema";
+import { loadWorkspaceDataOwnerUsers } from "$lib/server/workspace-owner";
 import { eq } from "drizzle-orm";
 
 export interface BackupData {
@@ -32,13 +38,22 @@ export interface BackupData {
   excludedFromExport: string[];
   data: {
     investors: unknown[];
+    borrowers: unknown[];
+    witnesses: unknown[];
+    debts: unknown[];
     loans: unknown[];
     transactions: unknown[];
+    groups: unknown[];
+    paymentMethods: unknown[];
   };
   summary: {
     totalInvestors: number;
+    totalBorrowers: number;
+    totalWitnesses: number;
+    totalDebts: number;
     totalLoans: number;
     totalTransactions: number;
+    totalGroups: number;
     totalLoanInvestors: number;
     totalInterestPeriods: number;
     totalReceivedPayments: number;
@@ -62,7 +77,16 @@ export async function fetchBackupDataForUser(options: {
 }): Promise<BackupData> {
   const { userId, exportedByLabel } = options;
 
-  const [ownedLoans, investorRecord, ownedInvestors] = await Promise.all([
+  const [
+    ownedLoans,
+    investorRecord,
+    ownedInvestors,
+    ownedBorrowers,
+    ownedWitnesses,
+    ownedDebts,
+    ownedGroups,
+    ownedPaymentMethods,
+  ] = await Promise.all([
     db.query.loans.findMany({
       where: eq(loans.userId, userId),
       with: {
@@ -89,6 +113,28 @@ export async function fetchBackupDataForUser(options: {
           orderBy: (t, { desc }) => [desc(t.date)],
         },
       },
+    }),
+    db.query.borrowers.findMany({ where: eq(borrowers.userId, userId) }),
+    db.query.witnesses.findMany({ where: eq(witnesses.userId, userId) }),
+    db.query.debts.findMany({
+      where: eq(debts.userId, userId),
+      with: {
+        investor: true,
+        interestPeriods: { with: { receivedPayments: true } },
+      },
+    }),
+    db.query.loanGroups.findMany({
+      where: eq(loanGroups.creatorUserId, userId),
+      with: {
+        groupLoans: true,
+        members: true,
+        rules: true,
+        calendar: true,
+        telegram: true,
+      },
+    }),
+    db.query.paymentMethods.findMany({
+      where: eq(paymentMethods.userId, userId),
     }),
   ]);
 
@@ -203,7 +249,7 @@ export async function fetchBackupDataForUser(options: {
   }
 
   return {
-    version: "1.0",
+    version: "2.0",
     exportedAt: new Date().toISOString(),
     exportedBy: exportedByLabel,
     includes: {
@@ -219,19 +265,61 @@ export async function fetchBackupDataForUser(options: {
       "account (OAuth tokens)",
       "session",
       "verificationToken",
+      "integration_jobs",
+      "telegram_link_tokens",
+      "group_notification_log",
     ],
     data: {
       investors: allInvestors,
+      borrowers: ownedBorrowers,
+      witnesses: ownedWitnesses,
+      debts: ownedDebts,
       loans: allLoans,
       transactions: allTransactions,
+      groups: ownedGroups,
+      paymentMethods: ownedPaymentMethods,
     },
     summary: {
       totalInvestors: allInvestors.length,
+      totalBorrowers: ownedBorrowers.length,
+      totalWitnesses: ownedWitnesses.length,
+      totalDebts: ownedDebts.length,
       totalLoans: allLoans.length,
       totalTransactions: allTransactions.length,
+      totalGroups: ownedGroups.length,
       totalLoanInvestors,
       totalInterestPeriods,
       totalReceivedPayments,
     },
+  };
+}
+
+export type PlatformBackupData = {
+  version: string;
+  exportedAt: string;
+  exportedBy: string;
+  dataOwners: number;
+  exports: BackupData[];
+};
+
+export async function fetchBackupDataForAllUsers(options: {
+  exportedByLabel: string;
+}): Promise<PlatformBackupData> {
+  const owners = await loadWorkspaceDataOwnerUsers();
+  const exports: BackupData[] = [];
+  for (const owner of owners) {
+    exports.push(
+      await fetchBackupDataForUser({
+        userId: owner.id,
+        exportedByLabel: owner.email ?? owner.id,
+      }),
+    );
+  }
+  return {
+    version: "2.0",
+    exportedAt: new Date().toISOString(),
+    exportedBy: options.exportedByLabel,
+    dataOwners: exports.length,
+    exports,
   };
 }
