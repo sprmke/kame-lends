@@ -10,6 +10,7 @@
 	import CreateGroupWizard from '$lib/components/groups/CreateGroupWizard.svelte';
 	import type { GroupListCardData, WizardContactOption } from '$lib/components/groups/types';
 	import type { GroupListCardWithMeta } from '$lib/groups/group-list-map';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 	import { Button } from '$lib/components/ui/button';
 	import { Folders, PlusCircle, UsersRound, X } from 'lucide-svelte';
 
@@ -150,7 +151,7 @@
 <svelte:head><title>Groups</title></svelte:head>
 
 <DashboardPage>
-	<PageHeader title="Groups">
+	<PageHeader title="Groups" description={PAGE_DESCRIPTIONS.groups}>
 		{#if data.canCreate}
 			<Button
 				size="sm"
@@ -266,6 +267,8 @@
 		{contactOptions}
 		contactsReady={wizardData !== null}
 		createCalendarAvailable={data.createCalendarAvailable}
+		telegramStartGroupAvailable={data.telegramStartGroupAvailable}
+		telegramBotConfigured={data.telegramBotConfigured}
 		onCreated={async (groupId) => {
 			await refreshGroups();
 			await goto(`/groups/${groupId}?tab=overview`);

@@ -2,7 +2,9 @@
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
-	import AccessPreview from '$lib/components/groups/AccessPreview.svelte';
+	import CreateGroupReviewStep, {
+		type WizardTelegramDraft
+	} from '$lib/components/groups/CreateGroupReviewStep.svelte';
 	import GroupBadgeList from '$lib/components/groups/GroupBadgeList.svelte';
 	import GroupColorSwatches from '$lib/components/groups/GroupColorSwatches.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -11,7 +13,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
-	import { nextGroupColor, type GroupColorKey } from '$lib/groups/group-colors';
+	import { nextGroupColor, resolveGroupColor, type GroupColorKey } from '$lib/groups/group-colors';
 	import { resolveWizardContactLoanIds } from '$lib/groups/group-list-map';
 	import type {
 		AccessPreviewData,
@@ -36,6 +38,8 @@
 		contactOptions?: WizardContactOption[];
 		contactsReady?: boolean;
 		createCalendarAvailable?: boolean;
+		telegramStartGroupAvailable?: boolean;
+		telegramBotConfigured?: boolean;
 		onCreated?: (groupId: number) => void | Promise<void>;
 	}
 
@@ -50,8 +54,24 @@
 		contactOptions = [],
 		contactsReady = true,
 		createCalendarAvailable = true,
+		telegramStartGroupAvailable = false,
+		telegramBotConfigured = false,
 		onCreated
 	}: Props = $props();
+
+	const defaultTelegramDraft = (): WizardTelegramDraft => ({
+		chatId: '',
+		botToken: '',
+		enabled: true,
+		notifyUpcoming: true,
+		reminderDays: [3, 1],
+		notifyDueToday: true,
+		notifyOverdue: true,
+		notifyDailyDigest: false,
+		notifyActivity: true,
+		includeAmounts: true,
+		connectViaLinkAfterCreate: false
+	});
 
 	type StartMode = 'blank' | 'investor' | 'borrower';
 
@@ -91,6 +111,7 @@
 	let showCompleted = $state(false);
 	let loanQuery = $state('');
 	let createCalendar = $state(true);
+	let telegramDraft = $state<WizardTelegramDraft>(defaultTelegramDraft());
 	let preview = $state<AccessPreviewData | null>(null);
 	let previewLoading = $state(false);
 	let previewError = $state<string | null>(null);
@@ -132,6 +153,9 @@
 			}
 			if (typeof draft.addFutureRule === 'boolean') addFutureRule = draft.addFutureRule;
 			if (typeof draft.createCalendar === 'boolean') createCalendar = draft.createCalendar;
+			if (draft.telegram && typeof draft.telegram === 'object') {
+				telegramDraft = { ...defaultTelegramDraft(), ...(draft.telegram as WizardTelegramDraft) };
+			}
 		} catch {
 			// ignore corrupt draft
 		}
@@ -152,7 +176,8 @@
 					selectedContactKeys,
 					selectedLoanIds,
 					addFutureRule,
-					createCalendar
+					createCalendar,
+					telegram: telegramDraft
 				})
 			);
 		} catch {
@@ -381,8 +406,12 @@
 				throw new Error(data.error || 'Create failed');
 			}
 			const data = (await response.json()) as { id: number };
+			const telegramError = await applyTelegramAfterCreate(data.id);
 			clearDraft();
 			toast.success('Group created');
+			if (telegramError) {
+				toast.error(telegramError);
+			}
 			onOpenChange(false);
 			if (onCreated) {
 				await onCreated(data.id);
@@ -400,6 +429,70 @@
 		step === 1 ? 'New group' : step === 2 ? 'Choose loans' : 'Review access'
 	);
 	const stepLabel = $derived(`Step ${step} of 3`);
+	const groupColorDot = $derived(resolveGroupColor(color).dot);
+	const reviewLoans = $derived.by(() => {
+		const idSet = new Set(selectedLoanIds);
+		return ownedLoans
+			.filter((loan) => idSet.has(loan.id))
+			.sort((a, b) => a.loanName.localeCompare(b.loanName));
+	});
+
+	function patchTelegramDraft(patch: Partial<WizardTelegramDraft>) {
+		telegramDraft = { ...telegramDraft, ...patch };
+	}
+
+	async function applyTelegramAfterCreate(groupId: number): Promise<string | null> {
+		const draft = telegramDraft;
+		const wantsConnect =
+			draft.chatId.trim().length > 0 || draft.connectViaLinkAfterCreate;
+		if (!wantsConnect) return null;
+
+		if (draft.connectViaLinkAfterCreate) {
+			const linkRes = await fetch(`/api/groups/${groupId}/telegram/link`, { method: 'POST' });
+			if (!linkRes.ok) {
+				const body = await linkRes.json().catch(() => ({}));
+				return (body as { error?: string }).error ?? 'Telegram link failed';
+			}
+			const linkBody = (await linkRes.json()) as { url: string };
+			window.open(linkBody.url, '_blank', 'noopener,noreferrer');
+		} else {
+			const payload: { chatId: string; botToken?: string } = {
+				chatId: draft.chatId.trim()
+			};
+			const token = draft.botToken.trim();
+			if (token) payload.botToken = token;
+			const connectRes = await fetch(`/api/groups/${groupId}/telegram/connect`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			if (!connectRes.ok) {
+				const body = await connectRes.json().catch(() => ({}));
+				return (body as { error?: string }).error ?? 'Telegram connect failed';
+			}
+		}
+
+		const prefs = {
+			enabled: draft.enabled,
+			notifyUpcoming: draft.notifyUpcoming,
+			reminderDays: draft.reminderDays,
+			notifyDueToday: draft.notifyDueToday,
+			notifyOverdue: draft.notifyOverdue,
+			notifyDailyDigest: draft.notifyDailyDigest,
+			notifyActivity: draft.notifyActivity,
+			includeAmounts: draft.includeAmounts
+		};
+		const patchRes = await fetch(`/api/groups/${groupId}/telegram`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(prefs)
+		});
+		if (!patchRes.ok) {
+			const body = await patchRes.json().catch(() => ({}));
+			return (body as { error?: string }).error ?? 'Telegram settings save failed';
+		}
+		return null;
+	}
 </script>
 
 <ResponsiveModal
@@ -407,8 +500,8 @@
 	{onOpenChange}
 	title={stepTitle}
 	description={stepLabel}
-	contentClass="sm:max-w-xl"
-	bodyClass="pb-2"
+	contentClass={step === 3 ? 'sm:max-w-lg' : 'sm:max-w-xl'}
+	bodyClass={cn('pb-2', step === 3 && 'max-h-[min(72dvh,640px)] overflow-y-auto')}
 >
 	<div class="mb-4 flex gap-1.5" aria-hidden="true">
 		{#each [1, 2, 3] as n (n)}
@@ -603,20 +696,22 @@
 			</ul>
 		</div>
 	{:else}
-		<div class="space-y-4">
-			<AccessPreview
+		<div class="space-y-3">
+			<CreateGroupReviewStep
+				groupName={name.trim() || 'New group'}
+				groupColorClass={groupColorDot}
+				loans={reviewLoans}
 				{preview}
-				loading={previewLoading}
-				error={previewError}
-				loanCount={selectedLoanIds.length}
+				previewLoading={previewLoading}
+				previewError={previewError}
+				{createCalendarAvailable}
+				{createCalendar}
+				onCreateCalendarChange={(value) => (createCalendar = value)}
+				{telegramStartGroupAvailable}
+				{telegramBotConfigured}
+				telegram={telegramDraft}
+				onTelegramChange={patchTelegramDraft}
 			/>
-			{#if createCalendarAvailable}
-				<label class="flex min-h-11 items-center gap-2 text-sm">
-					<Checkbox bind:checked={createCalendar} />
-					Create a shared Google Calendar
-				</label>
-			{/if}
-			<p class="text-xs text-muted-foreground">Connect Telegram after you create the group.</p>
 			{#if submitError}
 				<p class="text-sm text-destructive">{submitError}</p>
 			{/if}

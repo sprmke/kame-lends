@@ -11,18 +11,16 @@ import {
   mapOwnedLoanToWizardRow,
 } from "$lib/groups/group-list-map";
 import { requireUserSession } from "$lib/server/request-auth";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 import { readGoogleServiceAccountCredentials } from "$lib/server/google-calendar-config";
+import { isTelegramConfigured } from "$lib/server/telegram/config";
 
 export const load: PageServerLoad = async (event) => {
   const session = requireUserSession(event);
   event.depends("app:groups");
 
   const userId = session.user.id;
-  const isAdmin = await isWorkspaceAdmin(userId);
 
-  // Workspace admin sees every group; everyone else sees groups they created or are shared into.
-  const items = getCachedGroupsForUser(userId, isAdmin).then((groups) =>
+  const items = getCachedGroupsForUser(userId).then((groups) =>
     groups.map((group) => mapGroupToListCard(group, userId)),
   );
 
@@ -31,11 +29,13 @@ export const load: PageServerLoad = async (event) => {
     currentUserId: userId,
     canCreate: true,
     createCalendarAvailable: readGoogleServiceAccountCredentials(env) !== null,
-    wizard: loadWizardData(userId, isAdmin),
+    telegramStartGroupAvailable: isTelegramConfigured(),
+    telegramBotConfigured: isTelegramConfigured(),
+    wizard: loadWizardData(userId),
   };
 };
 
-async function loadWizardData(userId: string, isAdmin: boolean) {
+async function loadWizardData(userId: string) {
   const [ownedLoans, groups] = await Promise.all([
     db.query.loans.findMany({
       where: eq(loans.userId, userId),
@@ -49,7 +49,7 @@ async function loadWizardData(userId: string, isAdmin: boolean) {
       },
       orderBy: (table, { desc }) => [desc(table.createdAt)],
     }),
-    getCachedGroupsForUser(userId, isAdmin),
+    getCachedGroupsForUser(userId),
   ]);
 
   const groupMeta = new Map(

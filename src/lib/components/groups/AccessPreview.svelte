@@ -11,6 +11,8 @@
 		loading?: boolean;
 		error?: string | null;
 		loanCount?: number;
+		showSummary?: boolean;
+		showGainedList?: boolean;
 		class?: string;
 	}
 
@@ -19,6 +21,8 @@
 		loading = false,
 		error = null,
 		loanCount,
+		showSummary = true,
+		showGainedList = true,
 		class: className
 	}: Props = $props();
 
@@ -47,7 +51,7 @@
 	{:else if error}
 		<p class="text-sm text-destructive">{error}</p>
 	{:else if preview}
-		{#if resolvedLoanCount > 0 && peopleWillSee > 0}
+		{#if showSummary && resolvedLoanCount > 0 && peopleWillSee > 0}
 			<p class="text-sm text-muted-foreground">
 				{formatCount(peopleWillSee)} {peopleWillSee === 1 ? 'person' : 'people'} will see all
 				{formatCount(resolvedLoanCount)} {resolvedLoanCount === 1 ? 'loan' : 'loans'}.
@@ -67,7 +71,7 @@
 			</div>
 		{/if}
 
-		{#if preview.gained.length > 0}
+		{#if showGainedList && preview.gained.length > 0}
 			<div class="space-y-2">
 				<h3 class="text-sm font-medium">Will get access</h3>
 				<ul class="space-y-1.5">

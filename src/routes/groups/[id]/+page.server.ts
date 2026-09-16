@@ -172,7 +172,7 @@ export const load: PageServerLoad = async (event) => {
         },
         orderBy: (table, { desc }) => [desc(table.createdAt)],
       }),
-      getCachedGroupsForUser(session.user.id, true),
+      getCachedGroupsForUser(session.user.id),
     ]);
     const stripped = stripDataImageUrls(ownedLoans);
     const groupMeta = new Map(
