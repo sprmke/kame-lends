@@ -1,10 +1,16 @@
-import { Eye, FileText, HandCoins, PiggyBank } from "lucide-svelte";
+import {
+  BadgePercent,
+  Eye,
+  FileText,
+  HandCoins,
+  PiggyBank,
+} from "lucide-svelte";
 import type { IconComponent } from "$lib/types/icon";
 import type { DatePreset } from "$lib/date/navigation";
 import { PAGE_DESCRIPTIONS } from "$lib/page-descriptions";
 
 export type LoanListPageScope =
-  "loans" | "investments" | "borrowed" | "witnessed" | "group";
+  "loans" | "investments" | "borrowed" | "commissioned" | "witnessed" | "group";
 
 export type LoanListPageVariant = {
   documentTitle: string;
@@ -15,6 +21,7 @@ export type LoanListPageVariant = {
   showDateRange: boolean;
   showLoanListSummary: boolean;
   showProfitSummary: boolean;
+  showCommissionSummary: boolean;
   showBulkActions: boolean;
   showGroupScopedInfo: boolean;
   groupScopeNoun: string;
@@ -40,6 +47,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showDateRange: true,
     showLoanListSummary: true,
     showProfitSummary: false,
+    showCommissionSummary: false,
     showBulkActions: true,
     showGroupScopedInfo: false,
     groupScopeNoun: "loans",
@@ -59,6 +67,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showDateRange: true,
     showLoanListSummary: true,
     showProfitSummary: false,
+    showCommissionSummary: false,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "investments",
@@ -76,11 +85,32 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     defaultEmptyMessage: "No borrowed loans yet",
     emptyIcon: HandCoins,
     showDateRange: true,
-    showLoanListSummary: false,
-    showProfitSummary: true,
+    showLoanListSummary: true,
+    showProfitSummary: false,
+    showCommissionSummary: false,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "borrowed loans",
+    groupShowManageLink: false,
+    embedded: false,
+    defaultDatePreset: "month",
+    listInvalidate: "app:loans",
+    hideGroupBadges: false,
+    showAddToGroup: false,
+  },
+  commissioned: {
+    documentTitle: "Loans",
+    defaultPageTitle: "Commissioned",
+    description: PAGE_DESCRIPTIONS.loans.commissioned,
+    defaultEmptyMessage: "No commissioned loans yet",
+    emptyIcon: BadgePercent,
+    showDateRange: true,
+    showLoanListSummary: false,
+    showProfitSummary: false,
+    showCommissionSummary: true,
+    showBulkActions: false,
+    showGroupScopedInfo: true,
+    groupScopeNoun: "commissioned loans",
     groupShowManageLink: false,
     embedded: false,
     defaultDatePreset: "month",
@@ -95,8 +125,9 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     defaultEmptyMessage: "No witnessed loans yet",
     emptyIcon: Eye,
     showDateRange: true,
-    showLoanListSummary: false,
-    showProfitSummary: true,
+    showLoanListSummary: true,
+    showProfitSummary: false,
+    showCommissionSummary: false,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "witnessed loans",
@@ -116,6 +147,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showDateRange: true,
     showLoanListSummary: true,
     showProfitSummary: false,
+    showCommissionSummary: false,
     showBulkActions: true,
     showGroupScopedInfo: false,
     groupScopeNoun: "loans",

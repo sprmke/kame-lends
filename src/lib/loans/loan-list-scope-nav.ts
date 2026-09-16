@@ -2,7 +2,8 @@ import type { LoanListPageScope } from "$lib/components/loans/loan-list-page-con
 import type { LoanListScope } from "$lib/server/cached-data";
 
 /** URL `?scope=` on `/loans` (and legacy redirects). */
-export type LoanScopeParam = "mine" | "investing" | "borrowed" | "witnessed";
+export type LoanScopeParam =
+  "mine" | "investing" | "borrowed" | "commissioned" | "witnessed";
 
 export type LoanScopeTab = {
   param: LoanScopeParam;
@@ -36,6 +37,12 @@ export const LOAN_SCOPE_TABS: LoanScopeTab[] = [
     listScope: "witnessed",
     pageScope: "witnessed",
   },
+  {
+    param: "commissioned",
+    label: "Commissioned",
+    listScope: "commissioned",
+    pageScope: "commissioned",
+  },
 ];
 
 const BY_PARAM = new Map(LOAN_SCOPE_TABS.map((t) => [t.param, t]));
@@ -44,6 +51,7 @@ const BY_PARAM = new Map(LOAN_SCOPE_TABS.map((t) => [t.param, t]));
 const LEGACY_PATH_SCOPE: Record<string, LoanScopeParam> = {
   investments: "investing",
   borrowed: "borrowed",
+  commissioned: "commissioned",
   witnessed: "witnessed",
 };
 

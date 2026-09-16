@@ -12,4 +12,10 @@ describe("resolveLoanScopeTab", () => {
     expect(tab.listScope).toBe("investments");
     expect(tab.pageScope).toBe("investments");
   });
+
+  it("maps commissioned param to commissioned scope", () => {
+    const tab = resolveLoanScopeTab("commissioned");
+    expect(tab.listScope).toBe("commissioned");
+    expect(tab.pageScope).toBe("commissioned");
+  });
 });

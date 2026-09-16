@@ -240,6 +240,7 @@ export function resolveMobilePageTitle(pathname: string): string {
   if (pathname.startsWith("/transactions")) return "Transactions";
   if (pathname.startsWith("/investments")) return "Loans";
   if (pathname.startsWith("/borrowed")) return "Loans";
+  if (pathname.startsWith("/commissioned")) return "Loans";
   if (pathname.startsWith("/witnessed")) return "Loans";
   if (pathname.startsWith("/settings")) return "Settings";
   if (pathname.startsWith("/dashboard")) return "Dashboard";

@@ -11,7 +11,9 @@
 		emptyMessage: data.emptyMessage,
 		canCreate: data.canCreate,
 		canManage: data.canManage,
-		profitStats: data.profitStats
+		userId: data.userId,
+		myInvestorIds: data.myInvestorIds,
+		myWitnessIds: data.myWitnessIds
 	});
 </script>
 

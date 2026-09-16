@@ -23,12 +23,27 @@ import {
 export type LoanCacheMode = "full" | "list";
 export type InvestorCacheMode = "simple" | "list" | "full";
 export type LoanListScope =
-  "owned" | "investments" | "borrowed" | "witnessed" | "all";
+  "owned" | "investments" | "borrowed" | "commissioned" | "witnessed" | "all";
 
 const listRelations = {
+  borrower: { columns: { borrowerUserId: true, email: true } },
   loanInvestors: {
+    columns: {
+      id: true,
+      investorId: true,
+      amount: true,
+      interestRate: true,
+      interestType: true,
+      sentDate: true,
+      isPaid: true,
+      hasMultipleInterest: true,
+      profitType: true,
+      profitValue: true,
+    },
     with: {
-      investor: { columns: { id: true, name: true } },
+      investor: {
+        columns: { id: true, name: true, investorUserId: true, email: true },
+      },
       interestPeriods: {
         columns: { interestRate: true, interestType: true, dueDate: true },
       },
@@ -36,17 +51,23 @@ const listRelations = {
   },
   signingInvitations: {
     columns: {
+      id: true,
       witnessId: true,
+      investorId: true,
       partyRole: true,
+      partyEmail: true,
       signedAt: true,
       expiresAt: true,
     },
     with: {
-      witness: { columns: { id: true, name: true } },
+      witness: { columns: { id: true, name: true, witnessUserId: true } },
     },
   },
   loanWitnesses: {
     columns: { id: true, witnessId: true, profitType: true, profitValue: true },
+    with: {
+      witness: { columns: { id: true, witnessUserId: true } },
+    },
   },
   groupLoans: { columns: { groupId: true, source: true } },
 } as const;
@@ -146,6 +167,15 @@ async function loadBorrowedLoanIds(userId: string) {
   return rows.map((r) => r.id);
 }
 
+async function loadCommissionedLoanIds(userId: string) {
+  const [invested, borrowed, witnessed] = await Promise.all([
+    loadInvestmentLoanIds(userId),
+    loadBorrowedLoanIds(userId),
+    loadWitnessedLoanIds(userId),
+  ]);
+  return [...new Set([...invested, ...borrowed, ...witnessed])];
+}
+
 async function loadWitnessedLoanIds(userId: string) {
   const witnessRecords = await db.query.witnesses.findMany({
     where: eq(witnesses.witnessUserId, userId),
@@ -194,6 +224,8 @@ async function loadLoans(
     ids = await loadInvestmentLoanIds(userId);
   } else if (scope === "borrowed") {
     ids = await loadBorrowedLoanIds(userId);
+  } else if (scope === "commissioned") {
+    ids = await loadCommissionedLoanIds(userId);
   } else if (scope === "witnessed") {
     ids = await loadWitnessedLoanIds(userId);
   } else {

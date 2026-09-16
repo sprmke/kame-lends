@@ -3,6 +3,8 @@ import {
   computeBorrowerProfitStats,
   computeInvestorPortfolioCapitalStats,
   computeLoanListSummaryStats,
+  computePartyCommissionStats,
+  loanHasPartyCommission,
   computePeakConcurrentInvestorPrincipal,
   computePeakConcurrentPrincipal,
   computePortfolioCapitalStats,
@@ -37,6 +39,8 @@ function loanFixture(input: {
         investorId: 1,
         investor: { id: 1 },
         isPaid: true,
+        profitType: "rate",
+        profitValue: "0",
       },
     ],
   } as unknown as LoanWithInvestors;
@@ -295,6 +299,76 @@ describe("computeLoanListSummaryStats", () => {
     expect(stats.interestEarned).toBe(20000);
     expect(stats.completedCount).toBe(2);
     expect(stats.totalLoanCount).toBe(2);
+  });
+});
+
+describe("computePartyCommissionStats", () => {
+  it("sums borrower, witness, and investor commission for the signed-in user", () => {
+    const loan = loanFixture({
+      status: "Fully Funded",
+      amount: "100000",
+      sentDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      profitType: "rate",
+      profitValue: "10",
+    });
+    loan.borrower = { borrowerUserId: "user-borrower" };
+    loan.loanWitnesses = [
+      {
+        id: 1,
+        witnessId: 7,
+        profitType: "fixed",
+        profitValue: "500",
+      },
+    ];
+    loan.loanInvestors[0]!.profitType = "rate";
+    loan.loanInvestors[0]!.profitValue = "5";
+
+    const stats = computePartyCommissionStats([loan], {
+      userId: "user-borrower",
+      investorIds: [1],
+      witnessIds: [7],
+    });
+
+    expect(stats.profitEstimate).toBe(10000 + 500 + 5000);
+    expect(stats.totalLoanCount).toBe(1);
+  });
+
+  it("excludes loans without commission from counts", () => {
+    const withCommission = loanFixture({
+      status: "Fully Funded",
+      amount: "100000",
+      sentDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      profitType: "rate",
+      profitValue: "10",
+    });
+    withCommission.borrower = { borrowerUserId: "user-borrower" };
+
+    const withoutCommission = loanFixture({
+      status: "Completed",
+      amount: "50000",
+      profitType: "rate",
+      profitValue: "0",
+    });
+    withoutCommission.borrower = { borrowerUserId: "user-borrower" };
+
+    const ctx = {
+      userId: "user-borrower",
+      investorIds: [] as number[],
+      witnessIds: [] as number[],
+    };
+
+    expect(loanHasPartyCommission(withCommission, ctx)).toBe(true);
+    expect(loanHasPartyCommission(withoutCommission, ctx)).toBe(false);
+
+    const stats = computePartyCommissionStats(
+      [withCommission, withoutCommission],
+      ctx,
+    );
+    expect(stats.totalLoanCount).toBe(1);
+    expect(stats.completedCount).toBe(0);
+    expect(stats.profitEstimate).toBe(10000);
   });
 });
 

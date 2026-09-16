@@ -252,8 +252,93 @@ export interface ProfitStats {
  * Profit stats for a borrower across their loans.
  * Estimate = open loans, Earned = completed loans — same split as investor interest.
  */
+export type PartyCommissionContext = {
+  userId: string;
+  investorIds: number[];
+  witnessIds: number[];
+};
+
+export function partyCommissionAmountForLoan(
+  loan: LoanWithInvestors,
+  ctx: PartyCommissionContext,
+): number {
+  const principal = calculateTotalPrincipal(loan.loanInvestors);
+  let total = 0;
+
+  if (loan.borrower?.borrowerUserId === ctx.userId) {
+    total += calculateInterest(principal, loan.profitValue, loan.profitType);
+  }
+
+  for (const row of loan.loanWitnesses ?? []) {
+    if (ctx.witnessIds.includes(row.witnessId)) {
+      total += calculateInterest(principal, row.profitValue, row.profitType);
+    }
+  }
+
+  for (const allocation of loan.loanInvestors) {
+    if (ctx.investorIds.includes(allocation.investorId)) {
+      total += calculateInterest(
+        principal,
+        allocation.profitValue ?? "0",
+        allocation.profitType ?? "rate",
+      );
+    }
+  }
+
+  return total;
+}
+
+export function loanHasPartyCommission(
+  loan: LoanWithInvestors,
+  ctx: PartyCommissionContext,
+): boolean {
+  return partyCommissionAmountForLoan(loan, ctx) > 0;
+}
+
+/**
+ * Commission stats for the signed-in user across loans (borrower, witness, and investor slots).
+ */
+export function computePartyCommissionStats(
+  loans: LoanWithInvestors[],
+  ctx: PartyCommissionContext,
+  from: string | null = null,
+  to: string | null = null,
+): ProfitStats {
+  const loansWithCommission = loans.filter((loan) =>
+    loanHasPartyCommission(loan, ctx),
+  );
+  const openLoans = loansWithCommission.filter(isOpenLoan);
+  const completedLoans = loansWithCommission.filter(
+    (loan) => !isOpenLoan(loan),
+  );
+
+  const profitEstimate = openLoans.reduce(
+    (sum, loan) => sum + partyCommissionAmountForLoan(loan, ctx),
+    0,
+  );
+  const profitEarned = completedLoans.reduce(
+    (sum, loan) => sum + partyCommissionAmountForLoan(loan, ctx),
+    0,
+  );
+
+  return {
+    totalPrincipal: computePeakConcurrentPrincipal(
+      loansWithCommission,
+      from,
+      to,
+    ),
+    profitEstimate,
+    profitEarned,
+    totalProfitScheduled: profitEstimate + profitEarned,
+    completedCount: completedLoans.length,
+    totalLoanCount: loansWithCommission.length,
+  };
+}
+
 export function computeBorrowerProfitStats(
   loans: LoanWithInvestors[],
+  from: string | null = null,
+  to: string | null = null,
 ): ProfitStats {
   const openLoans = loans.filter(isOpenLoan);
   const completedLoans = loans.filter((loan) => !isOpenLoan(loan));
@@ -275,9 +360,7 @@ export function computeBorrowerProfitStats(
   );
 
   return {
-    totalPrincipal: calculateTotalPrincipal(
-      loans.flatMap((loan) => loan.loanInvestors),
-    ),
+    totalPrincipal: computePeakConcurrentPrincipal(loans, from, to),
     profitEstimate,
     profitEarned,
     totalProfitScheduled: profitEstimate + profitEarned,
@@ -294,6 +377,8 @@ export type WitnessLoanAllocation = LoanWitness & { loan: LoanWithInvestors };
  */
 export function computeWitnessProfitStats(
   allocations: WitnessLoanAllocation[],
+  from: string | null = null,
+  to: string | null = null,
 ): ProfitStats {
   const openAllocations = allocations.filter((allocation) =>
     isOpenLoan(allocation.loan),
@@ -318,10 +403,14 @@ export function computeWitnessProfitStats(
     0,
   );
 
+  const uniqueLoans = [
+    ...new Map(
+      allocations.map((allocation) => [allocation.loanId, allocation.loan]),
+    ).values(),
+  ];
+
   return {
-    totalPrincipal: calculateTotalPrincipal(
-      allocations.flatMap((allocation) => allocation.loan.loanInvestors),
-    ),
+    totalPrincipal: computePeakConcurrentPrincipal(uniqueLoans, from, to),
     profitEstimate,
     profitEarned,
     totalProfitScheduled: profitEstimate + profitEarned,

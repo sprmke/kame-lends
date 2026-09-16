@@ -12,7 +12,7 @@
 	import ListEmptyState from '$lib/components/common/ListEmptyState.svelte';
 	import ConfirmDeleteDialog from '$lib/components/common/ConfirmDeleteDialog.svelte';
 	import LoanCard from '$lib/components/loans/LoanCard.svelte';
-	import LoanProfitSummaryCards from '$lib/components/loans/LoanProfitSummaryCards.svelte';
+	import LoanCommissionSummaryCards from '$lib/components/loans/LoanCommissionSummaryCards.svelte';
 	import LoansTable from '$lib/components/loans/LoansTable.svelte';
 	import LoanCalendarView from '$lib/components/loans/LoanCalendarView.svelte';
 	import LoanDetailModal from '$lib/components/loans/LoanDetailModal.svelte';
@@ -37,8 +37,9 @@
 	} from '$lib/loan-list-page-filters';
 	import {
 		computeLoanListSummaryStats,
-		passesLoanDueDateRangeFilter,
-		type ProfitStats
+		computePartyCommissionStats,
+		loanHasPartyCommission,
+		passesLoanDueDateRangeFilter
 	} from '$lib/loan-list-summary';
 	import DateRangeFilter from '$lib/components/common/DateRangeFilter.svelte';
 	import LoanListSummaryCards from '$lib/components/loans/LoanListSummaryCards.svelte';
@@ -82,7 +83,9 @@
 			emptyMessage?: string;
 			canCreate?: boolean;
 			canManage?: boolean;
-			profitStats?: Promise<ProfitStats> | ProfitStats;
+			userId?: string;
+			myInvestorIds?: number[];
+			myWitnessIds?: number[];
 			[key: string]: unknown;
 		};
 		scope: LoanListPageScope;
@@ -100,7 +103,6 @@
 	let loans = $state<LoanWithInvestors[] | null>(
 		Array.isArray(data.loans) ? (data.loans as LoanWithInvestors[]) : null
 	);
-	let profitStats = $state<ProfitStats | null>(null);
 	let loanPendingRemoval = $state<LoanWithInvestors | null>(null);
 	let removePreview = $state<AccessPreviewData | null>(null);
 	let removePreviewLoading = $state(false);
@@ -117,22 +119,6 @@
 		let active = true;
 		source.then((value) => {
 			if (active) loans = value as LoanWithInvestors[];
-		});
-		return () => {
-			active = false;
-		};
-	});
-
-	$effect(() => {
-		if (!variant.showProfitSummary || !data.profitStats) return;
-		const source = data.profitStats;
-		if (!(source instanceof Promise)) {
-			profitStats = source;
-			return;
-		}
-		let active = true;
-		source.then((value) => {
-			if (active) profitStats = value;
 		});
 		return () => {
 			active = false;
@@ -167,6 +153,7 @@
 	let createModalDuplicateData = $state<DuplicateLoanData | null>(null);
 	let duplicateSourceLoanId = $state<number | null>(null);
 	let detailStartInEdit = $state(false);
+	let detailStartCommissionEdit = $state(false);
 	const loanFormOptions = createLoanFormOptions();
 
 	const groupScope = createLoanListGroupScope({
@@ -209,6 +196,7 @@
 			return;
 		}
 		detailStartInEdit = false;
+		detailStartCommissionEdit = false;
 		selectedLoan = loan;
 		isModalOpen = true;
 	}
@@ -216,6 +204,18 @@
 	function handleRowEdit(loan: LoanWithInvestors) {
 		selectedLoan = loan;
 		detailStartInEdit = true;
+		detailStartCommissionEdit = false;
+		isModalOpen = true;
+	}
+
+	function handleRowAddCommission(loan: LoanWithInvestors) {
+		if (isMobileShellViewport()) {
+			goto(`/loans/${loan.id}?commission=1`);
+			return;
+		}
+		detailStartInEdit = false;
+		detailStartCommissionEdit = true;
+		selectedLoan = loan;
 		isModalOpen = true;
 	}
 
@@ -345,11 +345,13 @@
 		loanListRowActionHandlers({
 			scope,
 			canManage,
+			showAddCommission: variant.showCommissionSummary,
 			onEdit: handleRowEdit,
 			onDuplicate: handleRowDuplicate,
 			onAddPayment: (loan) => handleQuickPayment(loan, 'payment'),
 			onAddReceivedPayment: (loan) => handleQuickPayment(loan, 'received'),
 			onContractDetails: handleRowContractDetails,
+			onAddCommission: handleRowAddCommission,
 			onDelete: (loan) => {
 				loanPendingDeletion = loan;
 			},
@@ -376,10 +378,26 @@
 		if (typeParams.length) typeFilter = typeParams;
 	});
 
+	const partyCommissionContext = $derived(
+		data.userId
+			? {
+					userId: data.userId,
+					investorIds: data.myInvestorIds ?? [],
+					witnessIds: data.myWitnessIds ?? []
+				}
+			: null
+	);
+
+	const scopeBaseLoans = $derived.by(() => {
+		const list = loans ?? [];
+		if (scope !== 'commissioned' || !partyCommissionContext) return list;
+		return list.filter((loan) => loanHasPartyCommission(loan, partyCommissionContext));
+	});
+
 	const preGroupLoans = $derived(
 		variant.showDateRange
-			? (loans ?? []).filter((loan) => passesLoanDueDateRangeFilter(loan, filterFrom, filterTo))
-			: (loans ?? [])
+			? scopeBaseLoans.filter((loan) => passesLoanDueDateRangeFilter(loan, filterFrom, filterTo))
+			: scopeBaseLoans
 	);
 
 	const scopedLoans = $derived(
@@ -393,6 +411,17 @@
 	const summaryStats = $derived(
 		variant.showLoanListSummary
 			? computeLoanListSummaryStats(scopedLoans, filterFrom, filterTo)
+			: null
+	);
+
+	const commissionStats = $derived(
+		variant.showCommissionSummary && scopedLoans.length > 0 && partyCommissionContext
+			? computePartyCommissionStats(
+					scopedLoans,
+					partyCommissionContext,
+					filterFrom,
+					filterTo
+				)
 			: null
 	);
 
@@ -579,12 +608,12 @@
 			/>
 		{/if}
 
-		{#if variant.showLoanListSummary && listLoans.length > 0 && summaryStats}
+		{#if variant.showLoanListSummary && scopedLoans.length > 0 && summaryStats}
 			<LoanListSummaryCards stats={summaryStats} />
 		{/if}
 
-		{#if variant.showProfitSummary && profitStats && listLoans.length > 0}
-			<LoanProfitSummaryCards stats={profitStats} />
+		{#if variant.showCommissionSummary && commissionStats}
+			<LoanCommissionSummaryCards stats={commissionStats} />
 		{/if}
 
 		{#if variant.showGroupScopedInfo && groupScope.selectedGroupInfo}
@@ -729,6 +758,7 @@
 								onAddReceivedPayment={rowActions.onAddReceivedPayment}
 								onDuplicate={rowActions.onDuplicate}
 								onContractDetails={rowActions.onContractDetails}
+								onAddCommission={rowActions.onAddCommission}
 								onDelete={rowActions.onDelete}
 								onRemoveFromGroup={rowActions.onRemoveFromGroup}
 								onGroupFilter={(groupId) => groupScope.setGroupSelection(groupId)}
@@ -767,11 +797,13 @@
 			loan={selectedLoan}
 			open={isModalOpen}
 			startInEditMode={detailStartInEdit}
+			startCommissionEdit={detailStartCommissionEdit}
 			onOpenChange={(open) => {
 				isModalOpen = open;
 				if (!open) {
 					selectedLoan = null;
 					detailStartInEdit = false;
+					detailStartCommissionEdit = false;
 				}
 			}}
 			onUpdate={refreshLoans}
@@ -901,6 +933,7 @@
 		onAddReceivedPayment={rowActions.onAddReceivedPayment}
 		onDuplicate={rowActions.onDuplicate}
 		onContractDetails={rowActions.onContractDetails}
+		onAddCommission={rowActions.onAddCommission}
 		onDelete={rowActions.onDelete}
 		onRemoveFromGroup={rowActions.onRemoveFromGroup}
 	/>

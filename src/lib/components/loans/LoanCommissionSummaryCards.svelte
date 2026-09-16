@@ -14,19 +14,16 @@
 	metrics={[
 		{
 			label: 'Principal',
-			amount: stats.totalPrincipal,
-			subValue: 'Peak concurrent principal in the selected due-date range'
+			amount: stats.totalPrincipal
 		},
 		{
-			label: 'Profit Estimate',
-			amount: stats.profitEstimate,
-			subValue: 'Open loans (% of principal or fixed amount)'
+			label: 'Commission Estimate',
+			amount: stats.profitEstimate
 		},
 		{
-			label: 'Profit Earned',
+			label: 'Commission Earned',
 			amount: stats.profitEarned,
-			valueClassName: 'text-chart-2',
-			subValue: 'Completed loans only'
+			valueClassName: 'text-chart-2'
 		},
 		{
 			label: 'Completed',

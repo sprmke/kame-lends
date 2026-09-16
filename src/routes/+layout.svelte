@@ -52,6 +52,7 @@
 		'/loans',
 		'/investments',
 		'/borrowed',
+		'/commissioned',
 		'/witnessed',
 		'/investors',
 		'/borrowers',
