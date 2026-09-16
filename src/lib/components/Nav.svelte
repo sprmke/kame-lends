@@ -100,7 +100,7 @@
 
 	<aside
 		class={cn(
-			'fixed top-4 left-4 z-40 hidden h-[calc(100vh-2rem)] flex-col rounded-[1.75rem] border border-border/50 bg-card/95 shadow-[var(--shadow-elevated-lg)] backdrop-blur-xl transition-all duration-300 lg:flex',
+			'fixed top-4 left-4 z-40 hidden h-[calc(100vh-2rem)] flex-col rounded-[1.75rem] border border-border/50 bg-card/95 shadow-[var(--shadow-elevated-lg)] backdrop-blur-xl transition-[width] duration-300 lg:flex',
 			isCollapsed ? 'w-[5.5rem]' : 'w-[17rem]'
 		)}
 	>

@@ -10,10 +10,18 @@
 	import CashflowTrendChart from '$lib/components/charts/CashflowTrendChart.svelte';
 	import CurrencyBarChart from '$lib/components/charts/CurrencyBarChart.svelte';
 	import LoanTypePieChart from '$lib/components/charts/LoanTypePieChart.svelte';
-	import { SHOW_TRANSACTIONS_UI } from '$lib/feature-flags';
+	import { SHOW_GROUPS_UI, SHOW_TRANSACTIONS_UI } from '$lib/feature-flags';
+	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
+	import { page } from '$app/state';
 	import { cn } from '$lib/utils';
 
 	let { data } = $props();
+
+	const groupsIndex = $derived(
+		((page.data as { groupsIndex?: GroupsIndexItem[] }).groupsIndex ?? []) as GroupsIndexItem[]
+	);
+	const showGroupsCard = $derived(SHOW_GROUPS_UI && groupsIndex.length > 0);
+	const dashboardGroups = $derived(groupsIndex.slice(0, 3));
 </script>
 
 <svelte:head><title>Dashboard</title></svelte:head>
@@ -61,7 +69,7 @@
 			]}
 		/>
 
-		<section class={cn('dashboard-section', !hasAnyActivity && 'hidden 2xl:block')}>
+		<section class={cn('dashboard-section', !hasAnyActivity && !showGroupsCard && 'hidden 2xl:block')}>
 			<div class="dashboard-section-header">
 				<div>
 					<p class="section-eyebrow">Activity</p>
@@ -73,6 +81,8 @@
 				overdueLoans={summary.overdueLoansData}
 				pendingDisbursements={summary.upcomingPaymentsToSend}
 				upcomingPaymentsDue={summary.upcomingPaymentsDue}
+				groupsPreview={showGroupsCard ? dashboardGroups : []}
+				groupsTotalCount={groupsIndex.length}
 			/>
 		</section>
 

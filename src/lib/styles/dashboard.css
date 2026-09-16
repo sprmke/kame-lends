@@ -117,6 +117,9 @@ html.dashboard-shell.overlay-open aside,
 html.dashboard-shell.overlay-open .mobile-floating-dock {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
+  /* Never transition backdrop-filter on/off. transition-all on the sidebar
+     made every overlay open hitch while blur interpolated. */
+  transition: none !important;
 }
 
 @media (width >= 1024px) {
