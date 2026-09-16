@@ -5,13 +5,12 @@
 	import DownloadBackupButton from '$lib/components/common/DownloadBackupButton.svelte';
 	import FixReceivedPaymentsButton from '$lib/components/common/FixReceivedPaymentsButton.svelte';
 	import SyncLoanDueDatesButton from '$lib/components/common/SyncLoanDueDatesButton.svelte';
-	import SyncCalendarButton from '$lib/components/common/SyncCalendarButton.svelte';
 	import PaymentMethodsManager from '$lib/components/settings/PaymentMethodsManager.svelte';
 	import PartyIdentityDocumentsManager from '$lib/components/settings/PartyIdentityDocumentsManager.svelte';
 	import { formatAccountRoles } from '$lib/account-roles';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 
 	let { data } = $props();
-	const isAdminWorkspace = $derived(Boolean(data.isAdminWorkspace));
 	const hasPartyLinks = $derived(Boolean(data.hasPartyLinks));
 	const rolesLabel = $derived(formatAccountRoles(data.accountRoles ?? []));
 </script>
@@ -21,9 +20,7 @@
 <DashboardPage>
 	<PageHeader
 		title="Settings"
-		description={isAdminWorkspace
-			? 'Maintenance tools and data exports for your workspace.'
-			: undefined}
+		description={PAGE_DESCRIPTIONS.settings}
 		showPriceToggle={false}
 	/>
 
@@ -49,21 +46,20 @@
 
 	<PaymentMethodsManager initialMethods={data.paymentMethods ?? []} />
 
-	{#if isAdminWorkspace}
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>Data & maintenance</Card.Title>
-				<Card.Description class="max-w-3xl">
-					Fix Payments repairs missing received-payment rows for completed interest periods and
-					removes legacy orphan rows for multi-interest loans.
-				</Card.Description>
-			</Card.Header>
-			<Card.Content class="flex flex-wrap gap-2 max-lg:flex-col max-lg:*:w-full">
-				<SyncLoanDueDatesButton />
-				<FixReceivedPaymentsButton />
-				<DownloadBackupButton />
-				<SyncCalendarButton />
-			</Card.Content>
-		</Card.Root>
-	{/if}
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Data & maintenance</Card.Title>
+		</Card.Header>
+		<Card.Content class="flex flex-wrap gap-2 max-lg:flex-col max-lg:*:w-full">
+			<SyncLoanDueDatesButton />
+			<FixReceivedPaymentsButton />
+			<DownloadBackupButton downloadLabel="Download my data" />
+			{#if data.isPlatformOwner}
+				<DownloadBackupButton
+					downloadLabel="Download all data"
+					backupUrl="/api/backup?download=true&scope=all"
+				/>
+			{/if}
+		</Card.Content>
+	</Card.Root>
 </DashboardPage>

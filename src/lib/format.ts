@@ -7,8 +7,6 @@ import {
   isSensitiveDataHidden,
   HIDDEN_CURRENCY_DISPLAY,
   HIDDEN_PERCENTAGE_DISPLAY,
-  HIDDEN_DATE_DISPLAY,
-  HIDDEN_SHORT_DATE_DISPLAY,
   formatSensitiveText,
   formatSensitiveCount,
   formatSensitiveSqm,
@@ -75,8 +73,6 @@ export function formatChartAxis(amount: string | number): string {
  * Format a date as a localized string (e.g., "January 1, 2024")
  */
 export function formatDate(date: Date | string): string {
-  if (isSensitiveDataHidden()) return HIDDEN_DATE_DISPLAY;
-
   const dateObj = typeof date === "string" ? new Date(date) : date;
   return dateObj.toLocaleDateString("en-PH", {
     year: "numeric",
@@ -89,8 +85,6 @@ export function formatDate(date: Date | string): string {
  * Format a date as a short localized string (e.g., "Jan 1, 2024")
  */
 export function formatDateShort(date: Date | string): string {
-  if (isSensitiveDataHidden()) return HIDDEN_SHORT_DATE_DISPLAY;
-
   const dateObj = typeof date === "string" ? new Date(date) : date;
   return dateObj.toLocaleDateString("en-PH", {
     year: "numeric",
@@ -103,8 +97,6 @@ export function formatDateShort(date: Date | string): string {
  * Format a date as a very short string (e.g., "Jan 1")
  */
 export function formatDateVeryShort(date: Date | string): string {
-  if (isSensitiveDataHidden()) return HIDDEN_SHORT_DATE_DISPLAY;
-
   const dateObj = typeof date === "string" ? new Date(date) : date;
   return dateObj.toLocaleDateString("en-US", {
     month: "short",

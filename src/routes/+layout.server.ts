@@ -24,7 +24,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
   const groupsIndex =
     SHOW_GROUPS_UI && session?.user?.id
-      ? await getGroupsIndexForUser(session.user.id, gatedCaps.isAdminWorkspace)
+      ? await getGroupsIndexForUser(session.user.id)
       : [];
 
   return {

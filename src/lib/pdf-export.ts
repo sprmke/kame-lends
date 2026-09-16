@@ -5,9 +5,6 @@
 import {
   isSensitiveDataHidden,
   HIDDEN_CURRENCY_DISPLAY,
-  HIDDEN_TEXT_DISPLAY,
-  HIDDEN_DATE_DISPLAY,
-  HIDDEN_COUNT_DISPLAY,
   HIDDEN_PERCENTAGE_DISPLAY,
 } from "./price-visibility";
 
@@ -29,7 +26,6 @@ export interface PDFSection<T = unknown> {
 export function formatDateForPDF(
   date: Date | string | null | undefined,
 ): string {
-  if (isSensitiveDataHidden()) return HIDDEN_DATE_DISPLAY;
   if (!date) return "—";
   const d = new Date(date);
   if (isNaN(d.getTime())) return "—";
@@ -42,7 +38,6 @@ export function formatDateForPDF(
 export function formatTextForPDF(
   value: string | number | null | undefined,
 ): string {
-  if (isSensitiveDataHidden()) return HIDDEN_TEXT_DISPLAY;
   if (value === null || value === undefined) return "—";
   return String(value);
 }
@@ -55,7 +50,6 @@ export function formatRateForPDF(value: number | string): string {
 }
 
 export function formatCountForPDF(value: number | string): string {
-  if (isSensitiveDataHidden()) return HIDDEN_COUNT_DISPLAY;
   return String(value);
 }
 

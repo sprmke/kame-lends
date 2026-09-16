@@ -19,10 +19,8 @@
 	size="icon"
 	class={cn('h-9 w-9 shrink-0', className)}
 	onclick={() => priceVisibility.togglePricesHidden()}
-	title={pricesHidden
-		? 'Show sensitive data (names, amounts, dates, rates)'
-		: 'Hide sensitive data (names, amounts, dates, rates)'}
-	aria-label={pricesHidden ? 'Show sensitive data' : 'Hide sensitive data'}
+	title={pricesHidden ? 'Show amounts and rates' : 'Hide amounts and rates'}
+	aria-label={pricesHidden ? 'Show amounts and rates' : 'Hide amounts and rates'}
 	aria-pressed={pricesHidden}
 >
 	{#if pricesHidden}

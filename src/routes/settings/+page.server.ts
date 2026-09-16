@@ -8,6 +8,7 @@ import {
   loadPartyUserIdentityDocuments,
 } from "$lib/server/party-profile";
 import { accountRolesFromCapabilities } from "$lib/account-roles";
+import { isWorkspaceOwnerEmail } from "$lib/server/workspace-owner";
 
 export const load: PageServerLoad = async (event) => {
   const session = requireUserSession(event);
@@ -34,6 +35,7 @@ export const load: PageServerLoad = async (event) => {
       session.user.role,
     ),
     isAdminWorkspace: navCapabilities.isAdminWorkspace,
+    isPlatformOwner: isWorkspaceOwnerEmail(session.user.email),
     paymentMethods,
     hasPartyLinks,
     identityDocuments,
