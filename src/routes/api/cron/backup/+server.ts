@@ -1,15 +1,16 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { loadWorkspaceDataOwnerUsers } from "$lib/server/workspace-owner";
-import { format } from "date-fns";
-import { Resend } from "resend";
-import { APP_NAME, backupFilename } from "$lib/brand";
+import { backupFilename } from "$lib/brand";
 import { fetchBackupDataForUser } from "$lib/server/backup-data";
-
-// Initialize Resend if API key is available
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+import {
+  buildBackupEmailHtml,
+  buildBackupEmailSubject,
+} from "$lib/server/email/backup-email";
+import {
+  isTransactionalEmailConfigured,
+  sendTransactionalEmail,
+} from "$lib/server/email/send-email";
 
 interface BackupSummary {
   totalInvestors: number;
@@ -92,79 +93,18 @@ export const GET: RequestHandler = async (event) => {
 
       // Send email if Resend is configured
       const backupEmail = process.env.BACKUP_EMAIL || user.email;
+      const resendConfigured = isTransactionalEmailConfigured();
 
-      if (resend && backupEmail) {
+      if (resendConfigured && backupEmail) {
         try {
           const filename = backupFilename(new Date(), false);
           const jsonContent = JSON.stringify(backupData, null, 2);
           const base64Content = Buffer.from(jsonContent).toString("base64");
 
-          await resend.emails.send({
-            from:
-              process.env.RESEND_FROM_EMAIL ||
-              `${APP_NAME} <onboarding@resend.dev>`,
+          await sendTransactionalEmail({
             to: backupEmail,
-            subject: `📦 ${APP_NAME} Daily Backup - ${format(new Date(), "MMM dd, yyyy")}`,
-            html: `
-              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #1a1a1a;">Daily Backup Summary</h2>
-                <p style="color: #666;">Your automated daily backup has been created.</p>
-                
-                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <h3 style="margin-top: 0; color: #333;">Backup Summary</h3>
-                  <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                      <td style="padding: 8px 0; color: #666;">Investors</td>
-                      <td style="padding: 8px 0; text-align: right; font-weight: bold;">${summary.totalInvestors}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; color: #666;">Total Loans</td>
-                      <td style="padding: 8px 0; text-align: right; font-weight: bold;">${summary.totalLoans}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; color: #666;">Active Loans</td>
-                      <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #22c55e;">${summary.activeLoans}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; color: #666;">Completed Loans</td>
-                      <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #3b82f6;">${summary.completedLoans}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; color: #666;">Overdue Loans</td>
-                      <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #ef4444;">${summary.overdueLoans}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; color: #666;">Transactions</td>
-                      <td style="padding: 8px 0; text-align: right; font-weight: bold;">${summary.totalTransactions}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; color: #666;">Loan–investor rows</td>
-                      <td style="padding: 8px 0; text-align: right; font-weight: bold;">${summary.totalLoanInvestors}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; color: #666;">Interest periods</td>
-                      <td style="padding: 8px 0; text-align: right; font-weight: bold;">${summary.totalInterestPeriods}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; color: #666;">Received payments</td>
-                      <td style="padding: 8px 0; text-align: right; font-weight: bold;">${summary.totalReceivedPayments}</td>
-                    </tr>
-                  </table>
-                </div>
-                
-                <p style="color: #666; font-size: 14px;">
-                  The full backup file is attached to this email as a JSON file. 
-                  Keep this file safe - it contains all your data and can be used for restoration.
-                </p>
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                
-                <p style="color: #999; font-size: 12px;">
-                  This is an automated backup from ${APP_NAME}.<br>
-                  Generated on ${format(new Date(), "MMMM dd, yyyy 'at' h:mm a")}
-                </p>
-              </div>
-            `,
+            subject: buildBackupEmailSubject(),
+            html: buildBackupEmailHtml(summary),
             attachments: [
               {
                 filename,
@@ -197,7 +137,9 @@ export const GET: RequestHandler = async (event) => {
           userId: user.id,
           email: user.email,
           status: "skipped",
-          reason: !resend ? "Resend not configured" : "No backup email",
+          reason: !resendConfigured
+            ? "Resend not configured"
+            : "No backup email",
           summary,
         });
       }

@@ -22,7 +22,7 @@ function getClient(): S3Client {
   }
 
   if (!cachedClient) {
-    cachedClient = new S3Client({
+    const client = new S3Client({
       region: "auto",
       endpoint: config.endpoint,
       credentials: {
@@ -34,6 +34,22 @@ function getClient(): S3Client {
       requestChecksumCalculation: "WHEN_REQUIRED",
       responseChecksumValidation: "WHEN_REQUIRED",
     });
+
+    // R2 does not implement S3 flexible checksum headers on GetObject; strip them.
+    client.middlewareStack.add(
+      (next) => async (args) => {
+        const headers = (args.request as { headers?: Record<string, string> })
+          .headers;
+        if (headers) {
+          delete headers["x-amz-checksum-mode"];
+          delete headers["X-Amz-Checksum-Mode"];
+        }
+        return next(args);
+      },
+      { step: "build", name: "r2StripChecksumMode" },
+    );
+
+    cachedClient = client;
   }
 
   return cachedClient;

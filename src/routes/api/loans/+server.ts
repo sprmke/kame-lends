@@ -242,6 +242,29 @@ export const POST: RequestHandler = async (event) => {
           groupErr,
         );
       }
+
+      try {
+        const { sendLoanCreatedSigningEmails } =
+          await import("$lib/server/email/loan-created-email");
+        const emailResult = await sendLoanCreatedSigningEmails({
+          loanId: completeLoan.id,
+          loanName: completeLoan.loanName,
+          dueDate: completeLoan.dueDate,
+          recipients: signingInvitations.map((invitation) => ({
+            partyRole: invitation.partyRole,
+            partyName: invitation.partyName,
+            partyEmail: invitation.partyEmail,
+          })),
+        });
+        if (emailResult.sent > 0 || emailResult.skipped > 0) {
+          console.info("[email] loan-created signing emails", {
+            loanId: completeLoan.id,
+            ...emailResult,
+          });
+        }
+      } catch (emailErr) {
+        console.error("[email] loan-created signing emails failed", emailErr);
+      }
     }
 
     return json({ ...completeLoan, signingInvitations }, { status: 201 });
