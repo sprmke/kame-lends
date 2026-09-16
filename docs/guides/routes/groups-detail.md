@@ -1,50 +1,41 @@
-# Group detail (`/groups/[id]`)
+# Group hub (`/groups/[id]`)
 
-**Status:** Documented
-**Updated:** 2026-09-11
+**Status:** Documented (Loan Groups v2)
+**Updated:** 2026-09-16
 
 ## Behavior
 
-Shows one group's loans and members. Loans can be added via a searchable picker (loans the viewer already has access to); each loan link goes to `/loans/[id]`. Members list shows active members only, with the creator badged "Owner".
+Hub for one group. Tabs via `?tab=`: **Overview · Loans · People · Settings** (Settings is owner-only).
 
-**Access does not widen inside a group.** The loan list shown to a viewer is always filtered through `hasLoanViewAccess(loanId, viewerId)` per loan — a group member who isn't independently a party on one of the group's loans will not see that loan, even though they're a member of the group that contains it.
+- **Header:** back link, title, meta; owner actions (**Add loans**, Settings/Delete menu) top-right on desktop; mobile uses hero CTA + overflow menu (`GroupHubHeader.svelte`)
+- **Overview:** loan summary cards, needs-attention (overdue), then **Group** (description/notes), **Channels** (calendar + Telegram status: Not connected / Setting up / Connected / Needs attention; no helper line), **Upcoming** (next open loans by due date)
+- **Loans:** same list chrome as `/loans` (`LoanListPage` `scope="group"`): summary cards, date range (defaults to all-time), search, status/type/more filters, table/cards/calendar, export, and pagination. Owner can **Add loans** (picker + access preview), **Remove from group** (row ⋯ and bulk), and still edit/delete owned loans. Members are view-only.
+- **People:** role-grouped roster (`GroupPeopleTab.svelte`); no access banner. Each role is one list with a count. Closed rows are one vertically centered line: name, extra roles (not the section's own), principal or capital, interest, and loan count. Phone hides the amount labels and truncates the name. Expanding a row reuses investor detail (`InvestorDetailContent`, no header or Borrowings tab) scoped to that person's loans in this group: investors see their allocations, owner/borrower/witness rows use full loan principal. Emails stay stripped from SSR and `GET /api/groups/[id]` for non-managers.
+- **Settings:** name/color/description, smart rules (add/remove), **Google Calendar** card (batched sync via `POST /api/groups/[id]/calendar/sync`, subscribe link), **Telegram** card (per-group bot token + chat ID connect, optional env `startgroup` link, notification toggles, HTML templates, test/disconnect), delete. After a successful general save, client calls `invalidate('app:groups')`; load uses `depends('app:groups')` in `+page.server.ts`
+- Owner can **Add loans** from the hub header or Loans tab (picker + access preview)
 
-## Load
+Membership is recomputed on loan/party writes (`recomputeGroupMembers`), not on page load. Access preview on a group requires manage access. Creating a Telegram link invalidates prior unused tokens for that group.
 
-`src/routes/groups/[id]/+page.server.ts`:
+## Access
 
-1. `requireUserSession`, then `hasGroupViewAccess(groupId, userId)` — redirects to `/groups` on failure (creator, active member, or workspace admin).
-2. `syncGroupMembers(groupId)` (`src/lib/server/group-access.ts`) — re-syncs membership for every loan currently in the group. Additive-only: inserts an active row for any loan party with no existing membership row; never touches an existing row, so a member who left or was removed is never silently re-added.
-3. Loads the group, its loans, and its members; filters loans through `hasLoanViewAccess` per viewer.
-4. Computes `canEdit` (`hasGroupEditAccess` — creator or workspace admin), `canLeave` (`canLeaveGroup` — active, non-creator member), and `isCreator`.
+`hasGroupViewAccess` / `hasGroupManageAccess` in `src/lib/server/group-access.ts`. Group loan detail uses `hasLoanGroupViewAccess` + `projectLoanForGroupViewer` (PII redacted). Payment/contract/storage endpoints still require party `hasLoanViewAccess`.
 
-## Membership sync
+## Integrations
 
-`resolveLoanPartyUserIds(loanId)` (`src/lib/server/group-access.ts`) resolves every user id linked to a loan as owner, investor (`investors.investorUserId`), borrower (`borrowers.borrowerUserId`), or witness (`witnesses.witnessUserId`). Email-only signing invitations not yet linked to a `users` row are skipped and picked up on a later sync once that contact is linked (`findOrCreatePartyUser`, `src/lib/server/party-user.ts`).
-
-Sync runs when a loan is added to the group (`POST /api/groups/[id]/loans`) and again on every group-detail page load (covers parties added to an already-in-group loan after the fact, without hooking every loan/investor/witness mutation endpoint).
-
-## Edit / Actions
-
-- **Creator or workspace admin:** rename/delete the group (`PUT`/`DELETE /api/groups/[id]`), add/remove loans (`POST`/`DELETE /api/groups/[id]/loans[/…]`), remove a member (`DELETE /api/groups/[id]/members/[userId]`, sets status `removed`; the creator cannot be removed).
-- **Any other active member:** leave the group (`POST /api/groups/[id]/leave`, sets status `left`). Cannot edit or delete.
-- Leaving/removal is sticky — a later sync will not re-add that member unless they're added back by editing (out of scope; no explicit re-add UI).
-
-## Permissions
-
-`hasGroupViewAccess` / `hasGroupEditAccess` / `canLeaveGroup` in `src/lib/server/group-access.ts`. The workspace admin (`isWorkspaceAdmin`, `src/lib/server/workspace-admin.ts`) can view and manage every group regardless of creator, as an oversight override.
+- Google Calendar: provisioned per group via jobs (`group.calendar.*`); subscribe URL for members
+- Telegram: `POST /api/groups/[id]/telegram/connect` (verify `getMe` + `getChat`, store chat; optional per-group `bot_token`), `GET/PUT/DELETE /api/groups/[id]/telegram` (toggles + merged `templates`; never returns raw token, only `botTokenConfigured`), optional env `startgroup` link (`POST …/telegram/link` when `TELEGRAM_BOT_*` + webhook secret set); webhook `POST /api/webhooks/telegram`; daily reminders on `/api/cron/groups`
 
 ## Implementation map
 
-| Piece        | Path                                                                 |
-| ------------ | -------------------------------------------------------------------- |
-| Page         | `src/routes/groups/[id]/+page.svelte`                                |
-| Load         | `src/routes/groups/[id]/+page.server.ts`                             |
-| Members list | `src/lib/components/groups/GroupMembersList.svelte`                  |
-| Loan picker  | `src/lib/components/groups/GroupLoanPicker.svelte`                   |
-| Edit modal   | `src/lib/components/groups/GroupFormModal.svelte`                    |
-| Group API    | `src/routes/api/groups/[id]/+server.ts`                              |
-| Loan sub-API | `src/routes/api/groups/[id]/loans/+server.ts`, `[loanId]/+server.ts` |
-| Leave API    | `src/routes/api/groups/[id]/leave/+server.ts`                        |
-| Member API   | `src/routes/api/groups/[id]/members/[userId]/+server.ts`             |
-| Access/sync  | `src/lib/server/group-access.ts`                                     |
+| Piece              | Path                                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Page               | `src/routes/groups/[id]/+page.svelte`                                                                              |
+| Load               | `src/routes/groups/[id]/+page.server.ts`                                                                           |
+| Loans tab          | `src/lib/components/loans/LoanListPage.svelte` (`scope="group"`)                                                   |
+| Header             | `src/lib/components/groups/GroupHubHeader.svelte`                                                                  |
+| People             | `src/lib/components/groups/GroupPeopleTab.svelte`, `GroupPersonPanel.svelte`                                       |
+| Settings           | `src/lib/components/groups/GroupSettingsTab.svelte`                                                                |
+| Calendar           | `src/lib/server/group-calendar.ts`                                                                                 |
+| Telegram           | `src/lib/server/telegram/*`                                                                                        |
+| Sync now           | `POST /api/groups/[id]/sync` (members + ACL + provision)                                                           |
+| Full calendar sync | `POST /api/groups/[id]/calendar/sync` (`prepare` / `wipe` / `loans` / `summaries`) via shared `SyncCalendarButton` |

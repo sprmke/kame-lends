@@ -1,13 +1,13 @@
 # Investor detail (`/investors/[id]`)
 
 **Status:** Documented  
-**Updated:** 2026-09-11
+**Updated:** 2026-09-15
 
 ## Behavior
 
 CRM-style investor profile: contact header, tabs (Overview, Loans, Borrowings), and summary metrics on Overview.
 
-Overview type/status filters apply to loan capital and interest cards, plus Total Lot. Borrowing cards use all borrowings for this investor (not filtered by loan type/status).
+Borrowing summary cards use all borrowings for this investor.
 
 ### Summary cards (all-time)
 
@@ -23,13 +23,15 @@ Overview type/status filters apply to loan capital and interest cards, plus Tota
 | **Interest Earned**     | Scheduled interest on completed loan allocations                                                                                       |
 | **Total Loan Interest** | Upcoming earnings plus interest earned (sub: `Upcoming - Earned`)                                                                      |
 | **Net Earnings**        | Total loan interest minus borrowing cost paid (sub: `Loan interest - Borrowing cost`, or `Loan interest scheduled` when no borrowings) |
-| **Total Lot**           | Lot sqm from filtered Lot Title loans                                                                                                  |
+| **Total Lot**           | Lot sqm from Lot Title loans for this investor                                                                                         |
 
 Borrowing cards hide when the investor has no borrowings.
 
 ### Loans tab
 
 The loans table shows this investor's **capital per loan** in the Principal column (sum of their `loan_investors` rows on that loan), with their average interest rate below. It does not show full loan principal when other investors are on the same loan. Loan filters (Total Principal, Avg. Rate, etc.) use the same investor-scoped totals.
+
+`InvestorDetailContent` also embeds on the group People tab (`embedded`, no Borrowings tab) with loans limited to that group. Investor rows stay allocation-scoped; owner/borrower/witness rows use full loan principal.
 
 ## Load
 

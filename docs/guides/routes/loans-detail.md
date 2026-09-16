@@ -5,7 +5,10 @@
 
 ## Behavior
 
-Full loan detail for any party with membership (owner, investor, borrower, witness). On phone the back chevron and title live in `DetailHeader` content below the brand bar. DetailHeader actions render in MobileTopBar as frosted icon wells. Phone headers use `PageBackHeader`: chevron + Back label above a smaller title (`text-lg`), subtitle, and optional full-width Sign CTA.
+Full loan detail for any party with membership (owner, investor, borrower, witness), or a **group viewer** (party on another loan in a shared group) in read-only projected mode. On phone the back chevron and title live in `DetailHeader` content below the brand bar. DetailHeader actions render in MobileTopBar as frosted icon wells. Phone headers use `PageBackHeader`: chevron + Back label above a smaller title (`text-lg`), subtitle, and optional full-width Sign CTA.
+
+- **Group viewer:** banner "Shared with you through a group · Read-only" with hub link. Contact/ID/receipt fields are redacted via `projectLoanForGroupViewer`. Payment, contract, and storage endpoints still require party `hasLoanViewAccess`.
+- **Groups row (owner, when `SHOW_GROUPS_UI`):** badges link to `/groups/[id]`; Manage groups opens picker (`PUT /api/loans/[id]/groups`) with inline create. Create/edit loan form can multi-select groups when `groupsIndex` is present (always shows New group).
 
 - Owner: edit, delete, **Contract Details** (⋯ menu → `max-w-5xl` modal: signing status + copy links, full contract setup tabs from edit form, **Save contract** + **Download contract**), payment tools.
 - Investor / borrower / witness: read-only contract modal and **Download contract** (same PDF route as owner; `GET`/`POST /api/loans/[id]/contract require loan view access). Signing still allowed for their slot. In Contract Details, their own pending signing row shows **Open** (`/loans/[id]/sign`) plus **Copy link**; other parties stay copy-only. Borrower sees owner **payment methods** (bank, account number, QR) when configured. The contract document mounts after the overlay shell paints (same `ResponsiveModal` defer as list overlays).

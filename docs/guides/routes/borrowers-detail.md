@@ -6,6 +6,7 @@
 ## Behavior
 
 - Shows contact info, summary stat cards (when the borrower has loans), notes, and linked loans (type/status/due + Open).
+- When `SHOW_GROUPS_UI` is on and the viewer can manage, **Group these loans** opens the create wizard with this borrower and loan IDs prefilled.
 - Summary cards: **Active Balance** (open-loan principal), **Interest** (open-loan interest), **Total Due** (principal + interest on open loans), **Overdue** (past-due amount + count), **Completed** (closed loan count), **Total Lot** (when lot sqm exists).
 - Edit via header or `?edit=1` (workspace admin only). Uses shared `PartyUserEditForm`: contact details, valid ID, e-signature (upload or draw), payment methods. Hover (or tap on phone) a valid ID or QR preview to Replace or Remove; on a saved signature, Replace, Draw, or Remove. With no signature yet, use Upload or Draw tabs. Saves sync across all CRM rows for the same linked party user. On phone that opens `EditFormSheet` over the detail.
 - Delete requires zero linked loans.

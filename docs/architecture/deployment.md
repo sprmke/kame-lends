@@ -94,5 +94,7 @@ bun run deploy:prod
 ## Related
 
 - Cron backup: `/api/cron/backup` at 06:00 UTC (`vercel.json`)
+- Groups cron: `/api/cron/groups` at 00:00 UTC (membership, ACL, Telegram, job drain). Requires `CRON_SECRET`.
+- Telegram webhook: after deploy, `bun run telegram:set-webhook` (needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `PUBLIC_APP_URL`)
 - Manual Neon backup: `bun run backup:neon` (uses `DATABASE_URL_PROD` when `DATABASE_URL` is local Docker)
 - Agent rule: `.cursor/rules/deployment.mdc`
