@@ -9,6 +9,7 @@
 import { config } from "dotenv";
 import { google } from "googleapis";
 import { eq, isNotNull } from "drizzle-orm";
+import { envForScript } from "./env-local.ts";
 
 config({ path: ".env.local" });
 
@@ -24,7 +25,7 @@ async function main() {
 
   const { readGoogleCalendarConfig } =
     await import("../../src/lib/server/google-calendar-config.ts");
-  const calendarConfig = readGoogleCalendarConfig(process.env);
+  const calendarConfig = readGoogleCalendarConfig(envForScript());
   if (!calendarConfig) {
     console.error(
       "Set GOOGLE_SERVICE_ACCOUNT_* and GOOGLE_CALENDAR_ID in .env.local",

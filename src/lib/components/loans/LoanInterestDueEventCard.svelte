@@ -4,6 +4,7 @@
 	import { formatText } from '$lib/format';
 	import { cn } from '$lib/utils';
 	import type { LoanWithInvestors } from '$lib/types';
+	import LoanPendingSignBadge from '$lib/components/loans/LoanPendingSignBadge.svelte';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -75,6 +76,7 @@
 					>
 						{formatText(loan.status)}
 					</Badge>
+					<LoanPendingSignBadge {loan} class="mt-0 text-[8px]" />
 				</div>
 				<div class="truncate font-bold text-foreground {classes.title}">
 					{formatText(loan.loanName)}

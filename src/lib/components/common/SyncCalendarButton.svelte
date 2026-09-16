@@ -8,6 +8,7 @@
 	import { formatToMMDDYYYY } from '$lib/date-utils';
 	import type { CalendarSyncScope, PlannedLoanSync } from '$lib/calendar-sync-plan';
 	import { Calendar, Loader2, RefreshCw, Trash2, ChevronDown } from 'lucide-svelte';
+	import { cn } from '$lib/utils';
 
 	interface Props {
 		variant?: 'default' | 'outline' | 'ghost' | 'secondary';
@@ -18,6 +19,7 @@
 		cleanupEndpoint?: string | null;
 		showClear?: boolean;
 		label?: string;
+		triggerClass?: string;
 	}
 
 	let {
@@ -26,8 +28,11 @@
 		syncEndpoint,
 		cleanupEndpoint = null,
 		showClear = true,
-		label = 'Calendar'
+		label = 'Calendar',
+		triggerClass
 	}: Props = $props();
+
+	const triggerButtonClass = $derived(cn('touch-target', triggerClass));
 
 	type ModalMode = 'idle' | 'choose' | 'sync' | 'clear';
 	type SyncPhase = 'clearing' | 'loans' | 'summaries' | 'done';
@@ -244,8 +249,8 @@
 		{variant}
 		{size}
 		disabled={running}
-		class="touch-target"
-		adaptToMobileHero
+		class={triggerButtonClass}
+		adaptToMobileHero={!triggerClass}
 		aria-label={label}
 		onclick={() => (sheetOpen = true)}
 	>
@@ -253,6 +258,9 @@
 			<Loader2 class="h-4 w-4 animate-spin" />
 		{:else}
 			<Calendar class="h-4 w-4" />
+		{/if}
+		{#if triggerClass}
+			<span>{label}</span>
 		{/if}
 	</Button>
 
@@ -295,8 +303,8 @@
 					{variant}
 					{size}
 					disabled={running}
-					class="touch-target"
-					adaptToMobileHero
+					class={triggerButtonClass}
+					adaptToMobileHero={!triggerClass}
 					aria-label={label}
 				>
 					{#if running}
@@ -304,8 +312,12 @@
 					{:else}
 						<Calendar class="h-4 w-4" />
 					{/if}
-					<span class="hidden xl:inline">{label}</span>
-					<ChevronDown class="hidden h-3.5 w-3.5 opacity-60 xl:inline" />
+					{#if triggerClass}
+						<span>{label}</span>
+					{:else}
+						<span class="hidden xl:inline">{label}</span>
+						<ChevronDown class="hidden h-3.5 w-3.5 opacity-60 xl:inline" />
+					{/if}
 				</Button>
 			{/snippet}
 		</DropdownMenu.Trigger>

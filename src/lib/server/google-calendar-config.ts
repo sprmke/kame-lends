@@ -15,6 +15,31 @@ function readValue(source: EnvSource, name: string): string | undefined {
   return trimmed || undefined;
 }
 
+export function normalizeGoogleServiceAccountPrivateKey(
+  rawKey: string,
+): string {
+  let key = rawKey.trim();
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1).trim();
+  }
+  // Standalone dotenv/Bun may split on `\n` and leave stray `\` at line ends.
+  key = key.replace(/\\(\r?\n)/g, "\n");
+  key = key.replace(/\\n/g, "\n");
+  key = key
+    .split("\n")
+    .map((line) => line.replace(/\\+$/, ""))
+    .join("\n");
+  if (!/^-----BEGIN (?:RSA )?PRIVATE KEY-----/m.test(key)) {
+    throw new GoogleCalendarError(
+      "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY must be a PEM private key. In .env.local use quoted \\n escapes or a quoted multi-line value.",
+    );
+  }
+  return key;
+}
+
 /** Service account only — enough to create/manage calendars. */
 export function readGoogleServiceAccountCredentials(
   source: EnvSource,
@@ -24,7 +49,7 @@ export function readGoogleServiceAccountCredentials(
   if (!clientEmail || !rawKey) return null;
   return {
     clientEmail,
-    privateKey: rawKey.replace(/\\n/g, "\n"),
+    privateKey: normalizeGoogleServiceAccountPrivateKey(rawKey),
   };
 }
 

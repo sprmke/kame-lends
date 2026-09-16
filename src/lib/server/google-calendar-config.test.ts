@@ -3,9 +3,21 @@ import {
   formatGoogleCalendarApiError,
   formatGoogleCalendarApiErrorWithConfig,
   isGoogleCalendarRateLimitError,
+  normalizeGoogleServiceAccountPrivateKey,
   readGoogleCalendarConfig,
   withGoogleCalendarRetry,
 } from "./google-calendar-config";
+
+describe("normalizeGoogleServiceAccountPrivateKey", () => {
+  it("fixes stray backslashes when dotenv splits on \\n", () => {
+    const key = normalizeGoogleServiceAccountPrivateKey(
+      "-----BEGIN PRIVATE KEY-----\\\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD\\\n-----END PRIVATE KEY-----\\\n",
+    );
+    expect(key).not.toContain("\\");
+    expect(key.startsWith("-----BEGIN PRIVATE KEY-----\nMII")).toBe(true);
+    expect(key.endsWith("-----END PRIVATE KEY-----")).toBe(true);
+  });
+});
 
 describe("readGoogleCalendarConfig", () => {
   const privateKey =

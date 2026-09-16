@@ -26,6 +26,10 @@ import {
 } from "$lib/calendar-summaries";
 import type { LoanWithInvestors } from "$lib/types";
 import { resolveAppUrl } from "$lib/server/app-url";
+import {
+  googleCalendarColorIdForKind,
+  type GoogleCalendarLoanEventKind,
+} from "$lib/calendar-event-colors";
 
 function creds() {
   return readGoogleServiceAccountCredentials({
@@ -352,10 +356,14 @@ async function syncLoanEventsToCalendar(
       description,
       start: range.start,
       end: range.end,
+      colorId: googleCalendarColorIdForKind(
+        draft.type as GoogleCalendarLoanEventKind,
+      ),
       extendedProperties: {
         private: {
           kameKey: key,
           kameLoanId: String(loan.id),
+          kameKind: draft.type,
         },
       },
     };
@@ -519,8 +527,9 @@ export async function syncGroupSummaries(
       description,
       start: range.start,
       end: range.end,
+      colorId: googleCalendarColorIdForKind("summary"),
       extendedProperties: {
-        private: { kameKey: key },
+        private: { kameKey: key, kameKind: "summary" },
       },
     };
 
