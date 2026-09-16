@@ -15,7 +15,9 @@
 	import NavigationProgress from '$lib/components/common/NavigationProgress.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { navigating, page } from '$app/state';
+	import { releaseStaleBodyScrollLock } from '$lib/composables/body-scroll-lock-release';
 	import { overlayStackIsOpen } from '$lib/composables/overlay-stack.svelte';
+	import { tick } from 'svelte';
 	import {
 		THEME_COLOR_DARK,
 		THEME_COLOR_DASHBOARD,
@@ -37,7 +39,13 @@
 
 	$effect(() => {
 		const root = document.documentElement;
-		root.classList.toggle('overlay-open', overlayStackIsOpen());
+		const overlaysOpen = overlayStackIsOpen();
+		root.classList.toggle('overlay-open', overlaysOpen);
+		if (overlaysOpen) return;
+		// After bits-ui close animation + scroll-lock cleanup (24ms), fix orphaned body locks.
+		void tick().then(() => {
+			window.setTimeout(() => releaseStaleBodyScrollLock(), 32);
+		});
 	});
 
 	const listRoutes = new Set([

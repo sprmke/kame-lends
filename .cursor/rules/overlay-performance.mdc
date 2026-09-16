@@ -16,12 +16,13 @@ Opening a dialog/sheet must stay cheap. This class of lag has shipped more than 
 | Defer **every** `ResponsiveModal` body | `deferBody` only for heavy trees (loan form/detail) |
 | `$effect(() => armWhenOpen(open))` that resets `ready` on every run | Rising-edge / `armed` guard in `createOverlayContentReady` |
 | `$effect` on open that re-runs from `prop ?? []` | `$derived` for fallbacks; `untrack()` for one-shot init |
+| `{#await import()}` in an overlay body | `$effect` + `$state` component (LoanCreateModal). A new Promise every parent render remounts the child and can loop with child→parent writes, leaving the 3-bar skeleton up forever |
 | `isolate` on full-viewport overlay wrappers | `z-index` already creates a stacking context |
 
 Light dialogs (New group, pickers, confirms) mount the real form on open. The 3-bar skeleton in `ResponsiveModal` means `deferBody` is on; do not leave it on for a name field.
 
 ## Heavy overlay pattern
 
-Lazy-load the heavy child **inside** the modal (`import()`, `createOverlayContentReady`). Do not hide a small form behind the shared shell skeleton.
+Lazy-load the heavy child **inside** the modal (`import()` from `$effect` into `$state`, plus `createOverlayContentReady`). Do not hide a small form behind the shared shell skeleton. Do not `{#await import()}` in the snippet.
 
 See `.agent/skills/overlay-performance/SKILL.md`.

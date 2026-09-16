@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import LoanSigningSection from './LoanSigningSection.svelte';
+	import LoanContractSavedEditor from './LoanContractSavedEditor.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Download } from 'lucide-svelte';
@@ -12,6 +13,7 @@
 		loan: LoanWithInvestors;
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
+		onOpenChangeComplete?: (open: boolean) => void;
 		canEdit?: boolean;
 		borrowers?: Borrower[];
 		investors?: Investor[];
@@ -22,6 +24,7 @@
 		loan,
 		open,
 		onOpenChange,
+		onOpenChangeComplete,
 		canEdit = false,
 		borrowers = [],
 		investors = [],
@@ -54,8 +57,19 @@
 	}
 
 	function handleStatsChange(signed: number, total: number) {
+		if (signedCount === signed && totalCount === total) return;
 		signedCount = signed;
 		totalCount = total;
+	}
+
+	function handleDirtyChange(dirty: boolean) {
+		if (contractDirty === dirty) return;
+		contractDirty = dirty;
+	}
+
+	function handleRegisterSave(save: () => Promise<void>) {
+		if (saveContract === save) return;
+		saveContract = save;
 	}
 
 	async function handleContractSaved(_customization: ContractCustomization) {
@@ -67,6 +81,7 @@
 <ResponsiveModal
 	{open}
 	{onOpenChange}
+	{onOpenChangeComplete}
 	contentClass="dashboard-dialog-wide !max-w-5xl"
 	bodyClass="space-y-6"
 >
@@ -88,23 +103,15 @@
 				onStatsChange={handleStatsChange}
 			/>
 
-			{#await import('./LoanContractSavedEditor.svelte')}
-				<div class="space-y-3 py-2" aria-hidden="true">
-					<div class="h-4 w-2/3 rounded-md bg-muted"></div>
-					<div class="h-24 rounded-xl bg-muted/60"></div>
-					<div class="h-4 w-1/2 rounded-md bg-muted"></div>
-				</div>
-			{:then { default: LoanContractSavedEditor }}
-				<LoanContractSavedEditor
-					{loan}
-					{canEdit}
-					{borrowers}
-					{investors}
-					onDirtyChange={(dirty) => (contractDirty = dirty)}
-					onRegisterSave={(save) => (saveContract = save)}
-					onSaved={handleContractSaved}
-				/>
-			{/await}
+			<LoanContractSavedEditor
+				{loan}
+				{canEdit}
+				{borrowers}
+				{investors}
+				onDirtyChange={handleDirtyChange}
+				onRegisterSave={handleRegisterSave}
+				onSaved={handleContractSaved}
+			/>
 		{/key}
 	{/if}
 

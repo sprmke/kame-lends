@@ -244,6 +244,14 @@
 		);
 	}
 
+	function handleContractDetailsOpenChange(open: boolean) {
+		showContractDetailsModal = open;
+	}
+
+	function handleContractDetailsOpenChangeComplete(open: boolean) {
+		if (!open) contractDetailsLoan = null;
+	}
+
 	function handleRowContractDetails(loan: LoanWithInvestors) {
 		contractDetailsLoan = loan;
 		showContractDetailsModal = true;
@@ -799,10 +807,8 @@
 			<LoanContractDetailsModal
 				loan={contractDetailsLoan}
 				open={showContractDetailsModal}
-				onOpenChange={(open) => {
-					showContractDetailsModal = open;
-					if (!open) contractDetailsLoan = null;
-				}}
+				onOpenChange={handleContractDetailsOpenChange}
+				onOpenChangeComplete={handleContractDetailsOpenChangeComplete}
 				canEdit={canManage}
 				onSaved={handleContractDetailsSaved}
 			/>

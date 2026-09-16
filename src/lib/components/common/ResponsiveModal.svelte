@@ -9,6 +9,7 @@
 	interface Props {
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
+		onOpenChangeComplete?: (open: boolean) => void;
 		title?: string;
 		description?: string;
 		srOnlyHeader?: boolean;
@@ -29,6 +30,7 @@
 	let {
 		open,
 		onOpenChange,
+		onOpenChangeComplete,
 		title,
 		description,
 		srOnlyHeader = false,
@@ -79,7 +81,7 @@
 </script>
 
 {#if presentation === 'sheet'}
-	<Sheet.Root {open} {onOpenChange}>
+	<Sheet.Root {open} {onOpenChange} {onOpenChangeComplete}>
 		<Sheet.Content
 			side={sheetSide}
 			{showCloseButton}
@@ -122,7 +124,7 @@
 		</Sheet.Content>
 	</Sheet.Root>
 {:else}
-	<Dialog.Root {open} {onOpenChange}>
+	<Dialog.Root {open} {onOpenChange} {onOpenChangeComplete}>
 		<Dialog.Content
 			{showCloseButton}
 			class={cn(
