@@ -1,11 +1,19 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { loanGroupLoans } from "$lib/server/db/schema";
+import { loanGroupLoans, groupCalendars } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
-import { invalidateGroupData } from "$lib/server/cache-invalidation";
-import { hasGroupEditAccess } from "$lib/server/group-access";
+import {
+  invalidateGroupData,
+  invalidateLoanData,
+} from "$lib/server/cache-invalidation";
+import {
+  hasGroupManageAccess,
+  recomputeGroupMembers,
+} from "$lib/server/group-access";
+import { enqueueJob } from "$lib/server/jobs/queue";
+import { scheduleDrain } from "$lib/server/jobs/after-response";
 
 export const DELETE: RequestHandler = async (event) => {
   const { params } = event;
@@ -17,9 +25,14 @@ export const DELETE: RequestHandler = async (event) => {
 
     const groupId = parseInt(params.id);
     const loanId = parseInt(params.loanId);
-    if (!(await hasGroupEditAccess(groupId, session.user.id))) {
+    if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }
+
+    const calendar = await db.query.groupCalendars.findFirst({
+      where: eq(groupCalendars.groupId, groupId),
+      columns: { googleCalendarId: true },
+    });
 
     await db
       .delete(loanGroupLoans)
@@ -30,7 +43,22 @@ export const DELETE: RequestHandler = async (event) => {
         ),
       );
 
+    await recomputeGroupMembers(groupId);
+
+    if (calendar?.googleCalendarId) {
+      await enqueueJob({
+        kind: "group.calendar.removeLoan",
+        groupId,
+        payload: {
+          loanId,
+          calendarId: calendar.googleCalendarId,
+        },
+      });
+      scheduleDrain(event);
+    }
+
     invalidateGroupData();
+    invalidateLoanData();
     return json({ success: true });
   } catch (error) {
     console.error("Error removing loan from group:", error);
