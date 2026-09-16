@@ -31,7 +31,7 @@ Public. After sign-in, route protection in `src/hooks.server.ts` applies.
 
 - `AccessDenied`: sign-in blocked (invalid or disallowed email).
 - `Configuration` / adapter failures: short "Sign-in failed" line. The common local cause is an unusable `DATABASE_URL` (a placeholder exported in the shell, or a stale Neon socket), which makes every `account` / `session` query throw. Check the dev server log for `[auth] session lookup failed:` and `[db] Ignoring placeholder DATABASE_URL`.
-- `redirect_uri_mismatch` is Google Cloud Console, not this page. Register the exact callback (`{origin}/auth/callback/google`) on the OAuth client.
+- `redirect_uri_mismatch` is Google Cloud Console, not this page. Register the exact callback (`{origin}/auth/callback/google`) on the OAuth client. Local dev uses `http://localhost:3200` (see `scripts/dev/local-dev-port.mjs`).
 
 ## Implementation map
 

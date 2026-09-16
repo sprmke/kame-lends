@@ -15,7 +15,7 @@ bun install
 bun run setup:ai-tooling      # once after clone
 bun run check:ai-tooling-sync
 
-bun run dev
+bun run dev                 # http://localhost:3200 (strictPort; dev:free-ports if busy)
 bun run check
 bun run test
 bun run build

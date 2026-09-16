@@ -7,6 +7,8 @@
 
 Authenticated e-signature for a loan party. Google session email must match the invitation `partyEmail`. The server picks the matching slot (`borrower`, `lender`, `witness_1`, `witness_2`) from memberships. When the loan owner changes the borrower or lender on a saved loan, `syncSigningInvitationsForLoan` updates the matching invitation name and email (and clears an unsigned signature if the email changed).
 
+After loan create (`POST /api/loans`), parties with emails receive a branded Resend email with a **Sign contract** button pointing at this page (`buildAuthenticatedSigningUrl`). Sign-in uses Google with the same address as the invitation.
+
 A drawn signature on this page is stored on the contract invitation and takes priority over any saved CRM e-signature. Saved profile signatures appear on the contract PDF only when the loan owner checked **Use saved signature** for that party in Contract Details.
 
 Legacy `/sign/[token]` requires login and redirects to `/loans/[id]/sign`.

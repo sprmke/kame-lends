@@ -17,6 +17,8 @@ Load is split into two streamed promises:
 
 While summary loads, `DashboardSummarySkeleton` renders the page chrome: `PageHeader`-shaped title row, 4 summary metric cards, and 4 activity panels (each with grouped loan rows). Charts show `DashboardChartsSkeleton` (section heading + chart cards) until the second promise resolves. Skeletons use the same card and toolbar surfaces as the loaded page. No orphan bars.
 
+**Analytics layout:** When the user has at least one group (`SHOW_GROUPS_UI` and non-empty `groupsIndex`), **Your groups** (`DashboardGroupsCard`, copy from `PAGE_DESCRIPTIONS.dashboardGroups`) sits in a two-column row beside **Top investors** (`CurrencyBarChart`). Cashflow (when transactions UI is on) stays full width above that row. Groups no longer appear under **Needs attention**.
+
 **New menu:** `PageHeader` **New** dropdown matches for every signed-in user: Loan, Bank loan, Lender, Borrower, Witness, and Transaction when enabled. Sidebar is the same for party-only and workspace-owner accounts: Dashboard, Groups, **Loans**, **People**, **Tools** (Bank Loans), Settings. Investing / borrowed / witnessed lists live on **Loans** scope tabs (`/loans?scope=investing`, etc.).
 
 On client navigation to `/dashboard`, the layout swaps in `DashboardSkeleton` (summary + charts) until navigation completes. `NavigationProgress` runs on every client-side route change.

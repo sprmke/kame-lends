@@ -15,7 +15,7 @@ Behind `SHOW_GROUPS_UI` in `src/lib/feature-flags.ts` (currently on for local QA
 
 ## Load
 
-`src/routes/groups/+page.server.ts` streams aggregated cards via `getCachedGroupsForUser`, plus wizard loan options for create (loans the viewer owns).
+`src/routes/groups/+page.server.ts` streams aggregated cards via `getCachedGroupsForUser` (`depends('app:groups')`). Create-wizard loan/contact options load on demand from `GET /api/groups/wizard-data` (cached owned loan list + group metadata) when **New group** opens, not on every list visit.
 
 ## Create
 

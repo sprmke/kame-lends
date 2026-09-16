@@ -187,25 +187,26 @@ If you upgrade an older database and see missing column errors, run `db/migratio
 bun run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Sign in with Google to access the dashboard.
+Open [http://localhost:3200](http://localhost:3200). Sign in with Google to access the dashboard. If the port is busy, run `bun run dev:free-ports` first (`strictPort` is on).
 
 ---
 
 ## Scripts
 
-| Command                      | Description                              |
-| ---------------------------- | ---------------------------------------- |
-| `bun run dev`                | Vite / SvelteKit development server      |
-| `bun run build`              | Production build                         |
-| `bun run preview`            | Preview the production build             |
-| `bun run check`              | svelte-check                             |
-| `bun run test`               | Vitest unit tests                        |
-| `bun run db:local:start`     | Start Docker Postgres                    |
-| `bun run db:local:push`      | Push schema to local Postgres only       |
-| `bun run db:generate`        | Generate Drizzle migrations              |
-| `bun run db:migrate:pending` | Apply pending `db/migrations/*.sql`      |
-| `bun run deploy:prod`        | Manual Vercel prod (prefer CD on `main`) |
-| `bun run db:studio`          | Open Drizzle Studio                      |
+| Command                      | Description                               |
+| ---------------------------- | ----------------------------------------- |
+| `bun run dev`                | Vite / SvelteKit dev server (`:3200`)     |
+| `bun run dev:free-ports`     | Stop stale listeners on `:3200` / `:4174` |
+| `bun run build`              | Production build                          |
+| `bun run preview`            | Preview the production build              |
+| `bun run check`              | svelte-check                              |
+| `bun run test`               | Vitest unit tests                         |
+| `bun run db:local:start`     | Start Docker Postgres                     |
+| `bun run db:local:push`      | Push schema to local Postgres only        |
+| `bun run db:generate`        | Generate Drizzle migrations               |
+| `bun run db:migrate:pending` | Apply pending `db/migrations/*.sql`       |
+| `bun run deploy:prod`        | Manual Vercel prod (prefer CD on `main`)  |
+| `bun run db:studio`          | Open Drizzle Studio                       |
 
 ---
 

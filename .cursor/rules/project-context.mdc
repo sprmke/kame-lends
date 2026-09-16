@@ -25,6 +25,10 @@ alwaysApply: true
 
 Stale if a skill mentions Supabase, tRPC, Next.js App Router, or React Router for current work.
 
+## Local dev
+
+- Web: **http://localhost:3200** (`strictPort`; ports in `scripts/dev/local-dev-port.mjs`). E2E webServer: **:4174**. `bun run dev:free-ports` clears stale listeners.
+
 ## Layout
 
 - Branch: **`feat/sveltekit-migration`**

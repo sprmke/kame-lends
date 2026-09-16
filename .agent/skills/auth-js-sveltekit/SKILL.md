@@ -32,6 +32,10 @@ Attach `user.id` and `role` to session — investor portal and admin gates depen
 - `AUTH_SECRET` — `openssl rand -base64 32`
 - `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`
 
+## Local Google OAuth
+
+Dev server is **http://localhost:3200** (`scripts/dev/local-dev-port.mjs`). In Google Cloud Console, add **Authorized JavaScript origins** `http://localhost:3200` and redirect URI `http://localhost:3200/auth/callback/google`.
+
 ## Validation checkpoint
 
 Sign in on the **dev Neon branch** as existing admin and investor users; confirm `user.id`, role, and data access.
