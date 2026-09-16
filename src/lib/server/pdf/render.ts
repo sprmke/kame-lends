@@ -66,8 +66,8 @@ export async function renderLoanContractPdfBuffer(
   contractDataOverride?: LoanContractData,
 ): Promise<Uint8Array> {
   const contractData = contractDataOverride ?? buildLoanContractData(loan);
-  let resolvedData = contractData;
-  let resolvedCustomization = customization;
+  let resolvedData: LoanContractData;
+  let resolvedCustomization: ContractCustomization | undefined;
 
   try {
     resolvedData = await resolveLoanContractDataImages(contractData);

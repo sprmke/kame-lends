@@ -50,6 +50,10 @@
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
 	import type { PaymentReceipt } from '$lib/payment-receipts';
+	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
+	import GroupBadge from '$lib/components/groups/GroupBadge.svelte';
+	import { page } from '$app/state';
+	import { loanGroupIds, type GroupsIndexItem } from '$lib/groups/loan-group-filter';
 
 	interface Props {
 		investors?: Investor[];
@@ -82,6 +86,13 @@
 
 	const isEditMode = $derived(Boolean(existingLoan));
 	const isModalMode = $derived(Boolean(onSuccess));
+	const groupsIndex = $derived(
+		((page.data as { groupsIndex?: GroupsIndexItem[] }).groupsIndex ?? []) as GroupsIndexItem[]
+	);
+	const showGroupsField = $derived(SHOW_GROUPS_UI);
+	let selectedGroupIds = $state<number[]>(
+		existingLoan ? loanGroupIds(existingLoan) : []
+	);
 
 	let borrowerList = $state<Borrower[]>([...initialBorrowers]);
 	let investorList = $state<Investor[]>([...investors]);
@@ -687,6 +698,29 @@
 
 			const savedLoan = await response.json();
 
+			if (SHOW_GROUPS_UI && selectedGroupIds.length > 0) {
+				const loanId = (savedLoan as { id: number }).id;
+				const groupsRes = await fetch(`/api/loans/${loanId}/groups`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ groupIds: selectedGroupIds })
+				});
+				if (!groupsRes.ok) {
+					const errorData = await groupsRes.json().catch(() => ({}));
+					toast.error(
+						(errorData as { error?: string }).error ||
+							'Loan saved, but groups could not be updated'
+					);
+				}
+			} else if (SHOW_GROUPS_UI && isEditMode) {
+				const loanId = (savedLoan as { id: number }).id;
+				await fetch(`/api/loans/${loanId}/groups`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ groupIds: selectedGroupIds })
+				});
+			}
+
 			if (!isEditMode) {
 				try {
 					await downloadLoanContractPdf(savedLoan.id);
@@ -924,6 +958,55 @@
 					rows={3}
 				/>
 			</div>
+
+			{#if showGroupsField}
+				<div class="space-y-2 border-t border-border/60 pt-4">
+					<Label>Groups</Label>
+					{#if groupsIndex.length === 0}
+						<p class="text-sm text-muted-foreground">No groups yet.</p>
+						<a
+							href="/groups?create=1"
+							data-sveltekit-preload-data="tap"
+							class="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+						>
+							New group
+						</a>
+					{:else}
+						<ul class="max-h-48 space-y-1 overflow-y-auto">
+							{#each groupsIndex as group (group.id)}
+								<li>
+									<label
+										class={cn(
+											'flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/50',
+											selectedGroupIds.includes(group.id) && 'bg-primary/5'
+										)}
+									>
+										<Checkbox
+											checked={selectedGroupIds.includes(group.id)}
+											onCheckedChange={(checked) => {
+												if (checked) {
+													selectedGroupIds = [...selectedGroupIds, group.id];
+												} else {
+													selectedGroupIds = selectedGroupIds.filter((id) => id !== group.id);
+												}
+											}}
+											disabled={isSubmitting}
+										/>
+										<GroupBadge name={group.name} color={group.color} size="md" class="min-w-0 flex-1" />
+									</label>
+								</li>
+							{/each}
+						</ul>
+						<a
+							href="/groups?create=1"
+							data-sveltekit-preload-data="tap"
+							class="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+						>
+							New group
+						</a>
+					{/if}
+				</div>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 

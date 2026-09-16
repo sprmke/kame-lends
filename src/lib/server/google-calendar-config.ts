@@ -1,6 +1,9 @@
-export type GoogleCalendarConfig = {
+export type GoogleServiceAccountCredentials = {
   clientEmail: string;
   privateKey: string;
+};
+
+export type GoogleCalendarConfig = GoogleServiceAccountCredentials & {
   calendarId: string;
 };
 
@@ -12,22 +15,26 @@ function readValue(source: EnvSource, name: string): string | undefined {
   return trimmed || undefined;
 }
 
-export function readGoogleCalendarConfig(
+/** Service account only — enough to create/manage calendars. */
+export function readGoogleServiceAccountCredentials(
   source: EnvSource,
-): GoogleCalendarConfig | null {
+): GoogleServiceAccountCredentials | null {
   const clientEmail = readValue(source, "GOOGLE_SERVICE_ACCOUNT_EMAIL");
   const rawKey = readValue(source, "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY");
-  const calendarId = readValue(source, "GOOGLE_CALENDAR_ID");
-
-  if (!clientEmail || !rawKey || !calendarId) {
-    return null;
-  }
-
+  if (!clientEmail || !rawKey) return null;
   return {
     clientEmail,
     privateKey: rawKey.replace(/\\n/g, "\n"),
-    calendarId,
   };
+}
+
+export function readGoogleCalendarConfig(
+  source: EnvSource,
+): GoogleCalendarConfig | null {
+  const credentials = readGoogleServiceAccountCredentials(source);
+  const calendarId = readValue(source, "GOOGLE_CALENDAR_ID");
+  if (!credentials || !calendarId) return null;
+  return { ...credentials, calendarId };
 }
 
 export class GoogleCalendarError extends Error {

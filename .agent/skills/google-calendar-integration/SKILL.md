@@ -8,36 +8,30 @@ Service account (not user OAuth):
 
 - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
 - `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
-- `GOOGLE_CALENDAR_ID` (shared calendar id, never `primary`)
+- `GOOGLE_CALENDAR_ID` (optional: legacy **workspace-wide** calendar id, never `primary`)
 
-Read at runtime via `$env/dynamic/private` (`src/lib/server/google-calendar-config.ts`). Use a **kame-lends / pawn-tracker** Google Cloud service account, never kame-homes. The account must exist and have **Make changes to events** on `GOOGLE_CALENDAR_ID`. `invalid_grant: account not found` means that SA was deleted; create a new key in this project's GCP account and re-share the calendar.
+Credentials alone (`readGoogleServiceAccountCredentials`) are enough to **create and manage per-group calendars**. The workspace calendar still needs `GOOGLE_CALENDAR_ID`.
 
-## Implementation
+Read at runtime via `$env/dynamic/private` (`src/lib/server/google-calendar-config.ts`). Use a **kame-lends / pawn-tracker** Google Cloud service account, never kame-homes.
 
-- `src/lib/server/google-calendar.ts` (`googleapis` client)
-- Events: disbursements, due dates, interest due, **Total Summary** (one per date that has loan cashflow). All-day events use YYYY-MM-DD start and an exclusive next-day end. Never build Google dates from `new Date(dateKey + "T00:00:00")` (that shifts a day in Asia/Manila).
-- One Google event per loan per date per kind (sent / due / interest due). Multiple investors are listed in the description, not as duplicate events.
-- Private `kameKey` on each event so re-sync updates in place and leftover **Daily Summary** titles are replaced.
-- Google API failures throw `GoogleCalendarError`. Sync/cleanup must not swallow them as empty event lists.
-- Bulk writes space ~120ms apart and retry `rateLimitExceeded` with exponential backoff.
-- Full sync is client-driven batches: `POST /api/loans/sync-calendar` with `prepare`, `wipe`, `loans`, `summaries`. Scope `all`, `open` (not Completed), or `upcoming` (today and later). Do not sync all loans in one serverless invocation.
+## Two calendar surfaces
 
-## Sync model
+| Surface            | Module                              | Sync                                                                                                                                                                                                                                                             |
+| ------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace (legacy) | `src/lib/server/google-calendar.ts` | Manual batches from settings (`POST /api/loans/sync-calendar`)                                                                                                                                                                                                   |
+| Per group          | `src/lib/server/group-calendar.ts`  | Automatic via `integration_jobs` (`waitUntil` + daily `/api/cron/groups`). ACL readers = group member emails. Owner full resync: `POST /api/groups/[id]/calendar/sync` (`prepare` / `wipe` / `loans` / `summaries`) via `SyncCalendarButton` `syncEndpoint` prop |
 
-- **Manual sync** from settings / loans (admin workspace owner only).
-- Not triggered on every loan save.
-- Shared service-account calendar (`GOOGLE_CALENDAR_ID`); no per-user Google OAuth attendees.
-- Loan parties see events in the **in-app** loan calendar on `/loans`, `/investments`, `/borrowed`, `/witnessed`.
+## Implementation notes
 
-## SvelteKit wiring
-
-- Settings page actions call server functions.
-- API routes: `src/routes/api/loans/sync-calendar/+server.ts`, `cleanup-calendar`, etc.
+- Events: disbursements, due dates, interest due, **Total Summary**. All-day events use YYYY-MM-DD start and exclusive next-day end. Never `new Date(dateKey + "T00:00:00")`.
+- Private `kameKey` / `kameLoanId` on group events for idempotent upserts.
+- Group calendar subscribe URL: `https://calendar.google.com/calendar/r?cid=<id>`
+- Dates: `manilaTodayKey`, `googleAllDayRange`
 
 ## Testing
 
-Use a **test calendar** on the QA Neon branch — never the prod calendar.
+Use a **test calendar** / throwaway secondary calendars on the QA Neon branch — never the prod calendar.
 
 ## App URL in events
 
-`PUBLIC_APP_URL` (see `.env.example`). Server code uses `resolveAppUrl()` (`src/lib/server/app-url.ts`). Production default: `https://pawn-tracker.vercel.app`.
+`PUBLIC_APP_URL` via `resolveAppUrl()` (`src/lib/server/app-url.ts`).

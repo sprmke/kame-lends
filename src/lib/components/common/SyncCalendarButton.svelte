@@ -12,9 +12,22 @@
 	interface Props {
 		variant?: 'default' | 'outline' | 'ghost' | 'secondary';
 		size?: 'default' | 'sm' | 'lg' | 'icon';
+		/** Batched sync endpoint (`prepare` / `wipe` / `loans` / `summaries`). */
+		syncEndpoint?: string;
+		/** Optional clear-only endpoint. When omitted, Clear uses wipe on syncEndpoint. */
+		cleanupEndpoint?: string | null;
+		showClear?: boolean;
+		label?: string;
 	}
 
-	let { variant = 'outline', size = 'default' }: Props = $props();
+	let {
+		variant = 'outline',
+		size = 'default',
+		syncEndpoint = '/api/loans/sync-calendar',
+		cleanupEndpoint = '/api/loans/cleanup-calendar',
+		showClear = true,
+		label = 'Calendar'
+	}: Props = $props();
 
 	type ModalMode = 'idle' | 'choose' | 'sync' | 'clear';
 	type SyncPhase = 'clearing' | 'loans' | 'summaries' | 'done';
@@ -97,11 +110,13 @@
 		statusLine = 'Clearing calendar';
 		currentDates = [];
 		currentLoanName = '';
+		let offset = 0;
 		while (!cancelled) {
-			const data = await postJson('/api/loans/sync-calendar', { action: 'wipe' });
+			const data = await postJson(syncEndpoint, { action: 'wipe', offset });
 			clearedCount += Number(data.deleted ?? 0);
 			statusLine = `Cleared ${clearedCount} events`;
 			percent = Math.min(12, 4 + Math.floor(clearedCount / 8));
+			offset = Number(data.nextOffset ?? offset);
 			if (!data.remaining) break;
 		}
 	}
@@ -112,7 +127,7 @@
 		resetProgress();
 		modalMode = 'sync';
 		try {
-			const plan = await postJson('/api/loans/sync-calendar', { action: 'prepare', scope });
+			const plan = await postJson(syncEndpoint, { action: 'prepare', scope });
 			const loanPlans = (plan.loans ?? []) as PlannedLoanSync[];
 			loansTotal = Number(plan.loanCount ?? loanPlans.length);
 			summariesTotal = Number(plan.summaryCount ?? 0);
@@ -126,7 +141,7 @@
 			percent = 12;
 			let offset = 0;
 			while (!cancelled) {
-				const data = await postJson('/api/loans/sync-calendar', {
+				const data = await postJson(syncEndpoint, {
 					action: 'loans',
 					scope,
 					offset
@@ -156,7 +171,7 @@
 			currentLoanName = '';
 			offset = 0;
 			while (!cancelled) {
-				const data = await postJson('/api/loans/sync-calendar', {
+				const data = await postJson(syncEndpoint, {
 					action: 'summaries',
 					scope,
 					offset
@@ -192,12 +207,16 @@
 		modalMode = 'clear';
 		statusLine = 'Clearing calendar';
 		try {
-			while (!cancelled) {
-				const data = await postJson('/api/loans/cleanup-calendar');
-				clearedCount += Number(data.deleted ?? data.deletedCount ?? 0);
-				statusLine = `Cleared ${clearedCount} events`;
-				percent = data.remaining ? Math.min(90, 8 + Math.floor(clearedCount / 5)) : 100;
-				if (!data.remaining) break;
+			if (cleanupEndpoint) {
+				while (!cancelled) {
+					const data = await postJson(cleanupEndpoint);
+					clearedCount += Number(data.deleted ?? data.deletedCount ?? 0);
+					statusLine = `Cleared ${clearedCount} events`;
+					percent = data.remaining ? Math.min(90, 8 + Math.floor(clearedCount / 5)) : 100;
+					if (!data.remaining) break;
+				}
+			} else {
+				await wipeLoop();
 			}
 			if (cancelled) return;
 			phase = 'done';
@@ -227,7 +246,7 @@
 		disabled={running}
 		class="touch-target"
 		adaptToMobileHero
-		aria-label="Calendar"
+		aria-label={label}
 		onclick={() => (sheetOpen = true)}
 	>
 		{#if running}
@@ -240,7 +259,7 @@
 	<Sheet.Root open={sheetOpen} onOpenChange={(open) => (sheetOpen = open)}>
 		<Sheet.Content side="bottom" class="h-auto gap-0 p-0">
 			<Sheet.Header class="border-b border-border/60 px-4 py-3">
-				<Sheet.Title class="text-sm font-semibold">Calendar</Sheet.Title>
+				<Sheet.Title class="text-sm font-semibold">{label}</Sheet.Title>
 			</Sheet.Header>
 
 			<div class="flex flex-col gap-0.5 px-2 py-2 pb-[max(0.5rem,var(--safe-area-bottom))]">
@@ -253,15 +272,17 @@
 					<RefreshCw class="size-4 shrink-0" strokeWidth={1.75} />
 					Sync calendar
 				</button>
-				<button
-					type="button"
-					class="native-press flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/5"
-					disabled={running}
-					onclick={openClear}
-				>
-					<Trash2 class="size-4 shrink-0" strokeWidth={1.75} />
-					Clear events
-				</button>
+				{#if showClear}
+					<button
+						type="button"
+						class="native-press flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/5"
+						disabled={running}
+						onclick={openClear}
+					>
+						<Trash2 class="size-4 shrink-0" strokeWidth={1.75} />
+						Clear events
+					</button>
+				{/if}
 			</div>
 		</Sheet.Content>
 	</Sheet.Root>
@@ -276,14 +297,14 @@
 					disabled={running}
 					class="touch-target"
 					adaptToMobileHero
-					aria-label="Calendar"
+					aria-label={label}
 				>
 					{#if running}
 						<Loader2 class="h-4 w-4 animate-spin" />
 					{:else}
 						<Calendar class="h-4 w-4" />
 					{/if}
-					<span class="hidden xl:inline">Calendar</span>
+					<span class="hidden xl:inline">{label}</span>
 					<ChevronDown class="hidden h-3.5 w-3.5 opacity-60 xl:inline" />
 				</Button>
 			{/snippet}
@@ -293,10 +314,12 @@
 				<RefreshCw class="h-4 w-4" />
 				Sync calendar
 			</DropdownMenu.Item>
-			<DropdownMenu.Item onclick={openClear} class="text-destructive">
-				<Trash2 class="h-4 w-4" />
-				Clear events
-			</DropdownMenu.Item>
+			{#if showClear}
+				<DropdownMenu.Item onclick={openClear} class="text-destructive">
+					<Trash2 class="h-4 w-4" />
+					Clear events
+				</DropdownMenu.Item>
+			{/if}
 		</DropdownMenu.Content>
 	</DropdownMenu.Root>
 {/if}

@@ -82,7 +82,7 @@
 			showPriceToggle={false}
 		/>
 
-		<BorrowerDetailContent {borrower} showHeader={false} />
+		<BorrowerDetailContent {borrower} showHeader={false} {canManage} />
 	</div>
 {/if}
 

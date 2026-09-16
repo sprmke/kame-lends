@@ -10,23 +10,46 @@
 	import { buildTotalLotMetric } from '$lib/lot-utils';
 	import { BORROWER_DETAIL_SUMMARY_GRID } from '$lib/summary-grid';
 	import { cn } from '$lib/utils';
+	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
+	import { Folders } from 'lucide-svelte';
 	import type { BorrowerWithLoans } from '$lib/types';
 
 	interface Props {
 		borrower: BorrowerWithLoans;
 		showHeader?: boolean;
+		canManage?: boolean;
 	}
 
-	let { borrower, showHeader = true }: Props = $props();
+	let { borrower, showHeader = true, canManage = true }: Props = $props();
 
 	const loans = $derived(borrower.loans ?? []);
 	const stats = $derived(calculateBorrowerStats(borrower));
+
+	function groupTheseLoansHref(): string {
+		const ids = [...new Set(loans.map((loan) => loan.id))].join(',');
+		const params = new URLSearchParams({
+			create: '1',
+			borrowerId: String(borrower.id),
+			name: borrower.name,
+			loanIds: ids
+		});
+		return `/groups?${params.toString()}`;
+	}
 </script>
 
 <div class="dashboard-stack">
 	{#if showHeader}
 		<div class="space-y-1">
 			<h2 class="text-base font-medium tracking-tight">{formatText(borrower.name)}</h2>
+		</div>
+	{/if}
+
+	{#if SHOW_GROUPS_UI && canManage && loans.length > 0}
+		<div class="flex flex-wrap gap-2">
+			<Button variant="outline" size="sm" href={groupTheseLoansHref()}>
+				<Folders class="mr-2 h-4 w-4" />
+				Group these loans
+			</Button>
 		</div>
 	{/if}
 

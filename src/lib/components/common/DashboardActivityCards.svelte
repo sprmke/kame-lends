@@ -5,24 +5,40 @@
 	import MaturingLoansCard from './MaturingLoansCard.svelte';
 	import PendingDisbursementsCard from './PendingDisbursementsCard.svelte';
 	import CompletedLoansCard from './CompletedLoansCard.svelte';
+	import DashboardGroupsCard from '$lib/components/dashboard/DashboardGroupsCard.svelte';
 	import type { LoanWithInvestors } from '$lib/types';
 	import type { PendingDisbursement } from '$lib/server/dashboard-data';
+	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
 
 	interface Props {
 		completedLoans: LoanWithInvestors[];
 		overdueLoans: LoanWithInvestors[];
 		pendingDisbursements: PendingDisbursement[];
 		upcomingPaymentsDue: LoanWithInvestors[];
+		groupsPreview?: GroupsIndexItem[];
+		groupsTotalCount?: number;
 	}
 
-	let { completedLoans, overdueLoans, pendingDisbursements, upcomingPaymentsDue }: Props = $props();
+	let {
+		completedLoans,
+		overdueLoans,
+		pendingDisbursements,
+		upcomingPaymentsDue,
+		groupsPreview = [],
+		groupsTotalCount = 0
+	}: Props = $props();
 
 	const hasUpcomingPayouts = $derived(upcomingPaymentsDue.length > 0);
 	const hasOverdueLoans = $derived(overdueLoans.length > 0);
 	const hasPendingDisbursements = $derived(pendingDisbursements.length > 0);
 	const hasCompletedLoans = $derived(completedLoans.length > 0);
+	const hasGroupsCard = $derived(groupsPreview.length > 0);
 	const hasAnyActivity = $derived(
-		hasUpcomingPayouts || hasOverdueLoans || hasPendingDisbursements || hasCompletedLoans
+		hasUpcomingPayouts ||
+			hasOverdueLoans ||
+			hasPendingDisbursements ||
+			hasCompletedLoans ||
+			hasGroupsCard
 	);
 </script>
 
@@ -41,4 +57,9 @@
 	<ActivityCardSlot visibleBelowLarge={hasCompletedLoans}>
 		<CompletedLoansCard loans={completedLoans} />
 	</ActivityCardSlot>
+	{#if hasGroupsCard}
+		<ActivityCardSlot visibleBelowLarge={true}>
+			<DashboardGroupsCard groups={groupsPreview} totalCount={groupsTotalCount} />
+		</ActivityCardSlot>
+	{/if}
 </div>

@@ -766,13 +766,14 @@ export async function generateLoanCalendarEvents(
   return eventIds;
 }
 
-type DailySummaryDay = {
+export type DailySummaryDay = {
   out: { loans: LoanWithInvestors[]; amount: number };
   in: { loans: LoanWithInvestors[]; amount: number };
   loanAmounts: Map<number, { amount: number; isOut: boolean }>;
 };
 
-function collectDailySummaryDays(
+/** Pure daily cash-flow rollup used by workspace and per-group calendars. */
+export function collectDailySummaryDays(
   loans: LoanWithInvestors[],
 ): Map<string, DailySummaryDay> {
   const dailyEvents = new Map<string, DailySummaryDay>();
@@ -836,13 +837,10 @@ function collectDailySummaryDays(
           const isLastPeriod = i === sortedPeriods.length - 1;
           const dateKey = toLocalDateString(period.dueDate);
           const principal = parseFloat(li.amount);
-          let interest = 0;
-          if (period.interestType === "rate") {
-            const rate = parseFloat(period.interestRate) / 100;
-            interest = principal * rate;
-          } else {
-            interest = parseFloat(period.interestRate);
-          }
+          const interest =
+            period.interestType === "rate"
+              ? principal * (parseFloat(period.interestRate) / 100)
+              : parseFloat(period.interestRate);
           const totalAmount = isLastPeriod ? principal + interest : interest;
           const dayData = ensureDay(dateKey);
           if (!dayData.in.loans.find((l) => l.id === loan.id)) {
@@ -910,14 +908,12 @@ async function createSummaryEventsForDays(
       new Map(allLoans.map((l) => [l.id, l])).values(),
     );
 
-    let totalAmount = 0;
-    if (dayData.in.amount > 0 && dayData.out.amount > 0) {
-      totalAmount = dayData.in.amount - dayData.out.amount;
-    } else if (dayData.in.amount > 0) {
-      totalAmount = dayData.in.amount;
-    } else {
-      totalAmount = -dayData.out.amount;
-    }
+    const totalAmount =
+      dayData.in.amount > 0 && dayData.out.amount > 0
+        ? dayData.in.amount - dayData.out.amount
+        : dayData.in.amount > 0
+          ? dayData.in.amount
+          : -dayData.out.amount;
 
     if (uniqueLoans.length === 0) continue;
     const eventId = await upsertCalendarEvent({

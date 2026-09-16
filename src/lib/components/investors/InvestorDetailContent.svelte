@@ -38,6 +38,7 @@
 	import { createLoanFormOptions } from '$lib/composables/use-loan-form-options.svelte';
 	import { Plus, X, Filter } from 'lucide-svelte';
 	import { toast } from '$lib/toast';
+	import { cn } from '$lib/utils';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import type { PendingDisbursement } from '$lib/server/dashboard-data';
 	import type {
@@ -52,9 +53,29 @@
 		loans: LoanWithInvestors[];
 		onEdit?: () => void;
 		canManage?: boolean;
+		/** Hide back/edit/delete chrome (group people, nested views). */
+		embedded?: boolean;
+		/** Borrowings tab and debt metrics. Off for group-scoped loan views. */
+		showBorrowings?: boolean;
+		/**
+		 * When true, capital/filters/table use this investor's allocations.
+		 * When false, they use every allocation on `loans` (owner/borrower/witness).
+		 */
+		scopeToInvestor?: boolean;
+		/** When set with scopeToInvestor, match allocations by linked user. */
+		investorUserId?: string | null;
 	}
 
-	let { investor, loans, onEdit, canManage = true }: Props = $props();
+	let {
+		investor,
+		loans,
+		onEdit,
+		canManage = true,
+		embedded = false,
+		showBorrowings = true,
+		scopeToInvestor = true,
+		investorUserId = null
+	}: Props = $props();
 
 	const LOAN_TYPE_OPTIONS = [
 		{ value: 'Lot Title', label: 'Lot Title' },
@@ -70,8 +91,6 @@
 	];
 
 	let pageTab = $state<'overview' | 'loans' | 'debts'>('overview');
-	let overviewTypeFilter = $state<string[]>([]);
-	let overviewStatusFilter = $state<string[]>([]);
 	let loanSearchQuery = $state('');
 	let loanTypeFilter = $state<string[]>([]);
 	let loanStatusFilter = $state<string[]>([]);
@@ -100,15 +119,29 @@
 	const loanFormOptions = createLoanFormOptions();
 
 	$effect(() => {
-		loanFormOptions.prefetch();
+		if (canManage) loanFormOptions.prefetch();
 	});
+
+	function allocationMatchesInvestor(allocation: {
+		investor?: { id?: number; investorUserId?: string | null } | null;
+	}): boolean {
+		if (!scopeToInvestor) return true;
+		if (investorUserId) {
+			return allocation.investor?.investorUserId === investorUserId;
+		}
+		return allocation.investor?.id === investor.id;
+	}
+
+	function investorEntriesForLoan(loan: LoanWithInvestors) {
+		const entries = loan.loanInvestors ?? [];
+		if (!scopeToInvestor) return entries;
+		return entries.filter((entry) => allocationMatchesInvestor(entry));
+	}
 
 	/** Use `loans` graph (includes interestPeriods), not `investor.loanInvestors` from entity load. */
 	const investorLoanInvestors = $derived(
 		loans.flatMap((loan) =>
-			(loan.loanInvestors ?? [])
-				.filter((li) => li.investor?.id === investor.id)
-				.map((li) => ({ ...li, loan }))
+			investorEntriesForLoan(loan).map((li) => ({ ...li, loan }))
 		)
 	);
 	const uniqueLoanCount = $derived(loans.length);
@@ -131,16 +164,8 @@
 	const uniqueInvestorLoans = $derived(loans);
 
 	const overviewStats = $derived.by(() => {
-		const filteredLoanInvestors = investorLoanInvestors.filter((li) => {
-			if (overviewTypeFilter.length && !overviewTypeFilter.includes(li.loan.type)) return false;
-			if (overviewStatusFilter.length && !overviewStatusFilter.includes(li.loan.status)) {
-				return false;
-			}
-			return true;
-		});
-
-		const capital = computeInvestorPortfolioCapitalStats(filteredLoanInvestors);
-		const filteredLoanIds = new Set(filteredLoanInvestors.map((li) => li.loan.id));
+		const capital = computeInvestorPortfolioCapitalStats(investorLoanInvestors);
+		const filteredLoanIds = new Set(investorLoanInvestors.map((li) => li.loan.id));
 		const filteredUniqueLoans = uniqueInvestorLoans.filter((loan) => filteredLoanIds.has(loan.id));
 		const { totalLot, totalLotWithDepacto } = computeTotalLot(filteredUniqueLoans);
 		const totalLoanInterest = capital.interestEstimate + capital.interestEarned;
@@ -201,9 +226,7 @@
 			if (freeLotFilter === 'with' && !loan.freeLotSqm) return false;
 			if (freeLotFilter === 'without' && loan.freeLotSqm) return false;
 
-			const investorEntries = (loan.loanInvestors ?? []).filter(
-				(li) => li.investor?.id === investor.id
-			);
+			const investorEntries = investorEntriesForLoan(loan);
 			const totalPrincipal = investorEntries.reduce((sum, li) => sum + parseFloat(li.amount), 0);
 			const totalInterest = calculateTotalInterest(investorEntries);
 			const avgRate = calculateAverageRate(investorEntries);
@@ -242,9 +265,7 @@
 	const pendingDisbursements = $derived.by(() => {
 		const items: PendingDisbursement[] = [];
 		for (const loan of loans) {
-			for (const li of (loan.loanInvestors ?? []).filter(
-				(entry) => !entry.isPaid && entry.investor?.id === investor.id
-			)) {
+			for (const li of investorEntriesForLoan(loan).filter((entry) => !entry.isPaid)) {
 				items.push({
 					id: li.id,
 					loanId: loan.id,
@@ -285,11 +306,6 @@
 		void loanFormOptions.load();
 	}
 
-	function clearOverviewFilters() {
-		overviewTypeFilter = [];
-		overviewStatusFilter = [];
-	}
-
 	function clearLoanFilters() {
 		loanSearchQuery = '';
 		loanTypeFilter = [];
@@ -313,9 +329,6 @@
 		maxDebtAmount = '';
 	}
 
-	const hasActiveOverviewFilters = $derived(
-		overviewTypeFilter.length > 0 || overviewStatusFilter.length > 0
-	);
 	const hasActiveLoanFilters = $derived(
 		loanSearchQuery !== '' ||
 			loanTypeFilter.length > 0 ||
@@ -339,54 +352,35 @@
 	);
 </script>
 
-<div class="dashboard-stack">
-	<DetailHeader
-		title={investor.name}
-		description="Investor portfolio and activity"
-		backLabel="Back to Investors"
-		onBack={() => goto('/investors')}
-		onEdit={canManage ? onEdit : undefined}
-		canEdit={canManage}
-		onDelete={handleDelete}
-		deleteTitle="Delete Investor"
-		deleteDescription={`Are you sure you want to delete ${investor.name}? This action cannot be undone.`}
-		{canDelete}
-		deleteWarning={`Cannot delete this investor because they have ${investorLoanInvestors.length} active loan(s) and ${investorDebts.length} borrowing(s). Remove those first.`}
-	/>
+<div class={embedded ? 'space-y-4' : 'dashboard-stack'}>
+	{#if !embedded}
+		<DetailHeader
+			title={investor.name}
+			description="Investor portfolio and activity"
+			backLabel="Back to Investors"
+			onBack={() => goto('/investors')}
+			onEdit={canManage ? onEdit : undefined}
+			canEdit={canManage}
+			onDelete={handleDelete}
+			deleteTitle="Delete Investor"
+			deleteDescription={`Are you sure you want to delete ${investor.name}? This action cannot be undone.`}
+			{canDelete}
+			deleteWarning={`Cannot delete this investor because they have ${investorLoanInvestors.length} active loan(s) and ${investorDebts.length} borrowing(s). Remove those first.`}
+		/>
+	{/if}
 
 	<Tabs.Root bind:value={pageTab} class="w-full">
-		<Tabs.List class="grid w-full max-w-lg grid-cols-3">
+		<Tabs.List
+			class={cn('grid w-full max-w-lg', showBorrowings ? 'grid-cols-3' : 'grid-cols-2')}
+		>
 			<Tabs.Trigger value="overview">Overview</Tabs.Trigger>
 			<Tabs.Trigger value="loans">Loans ({uniqueLoanCount})</Tabs.Trigger>
-			<Tabs.Trigger value="debts">Borrowings ({investorDebts.length})</Tabs.Trigger>
+			{#if showBorrowings}
+				<Tabs.Trigger value="debts">Borrowings ({investorDebts.length})</Tabs.Trigger>
+			{/if}
 		</Tabs.List>
 
 		<Tabs.Content value="overview" class="mt-6 space-y-6">
-			<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-				<MultiSelectFilter
-					options={LOAN_TYPE_OPTIONS}
-					selected={overviewTypeFilter}
-					onChange={(v) => (overviewTypeFilter = v)}
-					placeholder="Type"
-					allLabel="All Types"
-					triggerClassName="w-full sm:w-[180px]"
-				/>
-				<MultiSelectFilter
-					options={LOAN_STATUS_OPTIONS}
-					selected={overviewStatusFilter}
-					onChange={(v) => (overviewStatusFilter = v)}
-					placeholder="Status"
-					allLabel="All Status"
-					triggerClassName="w-full sm:w-[180px]"
-				/>
-				{#if hasActiveOverviewFilters}
-					<Button variant="outline" size="sm" onclick={clearOverviewFilters}>
-						<X class="h-4 w-4 sm:mr-2" />
-						<span class="hidden sm:inline">Clear Filters</span>
-					</Button>
-				{/if}
-			</div>
-
 			<SummaryCard
 				class={INVESTOR_DETAIL_SUMMARY_GRID}
 				metrics={[
@@ -402,19 +396,23 @@
 						subCount: overviewStats.activeLoansCount,
 						subCountSuffix: ' loans'
 					},
-					{
-						label: 'Active Borrowings',
-						amount: debtStats.activePrincipal,
-						subCount: debtStats.activeCount,
-						subCountSuffix: ' borrowings',
-						empty: debtStats.totalCount === 0
-					},
-					{
-						label: 'Borrowing Cost Paid',
-						amount: debtStats.interestPaid,
-						subValue: 'Interest and fees paid',
-						empty: debtStats.totalCount === 0
-					},
+					...(showBorrowings
+						? [
+								{
+									label: 'Active Borrowings',
+									amount: debtStats.activePrincipal,
+									subCount: debtStats.activeCount,
+									subCountSuffix: ' borrowings',
+									empty: debtStats.totalCount === 0
+								},
+								{
+									label: 'Borrowing Cost Paid',
+									amount: debtStats.interestPaid,
+									subValue: 'Interest and fees paid',
+									empty: debtStats.totalCount === 0
+								}
+							]
+						: []),
 					{
 						label: 'Upcoming Earnings',
 						amount: overviewStats.interestEstimate,
@@ -496,7 +494,8 @@
 						data={loans}
 						filteredData={filteredLoans}
 						sections={loanPDFSections}
-						onGeneratePDF={(data, keys) => downloadLoansPdf(data, keys, investor.id)}
+						onGeneratePDF={(data, keys) =>
+							downloadLoansPdf(data, keys, scopeToInvestor ? investor.id : undefined)}
 					/>
 					{#if canManage}
 						<Button size="sm" class="shrink-0" onclick={() => openLoanCreate()}>
@@ -552,7 +551,8 @@
 
 			<LoansTable
 				loans={filteredLoans}
-				investorId={investor.id}
+				investorId={scopeToInvestor && !investorUserId ? investor.id : undefined}
+				investorUserId={scopeToInvestor ? investorUserId : undefined}
 				emptyMessage={uniqueLoanCount === 0
 					? 'No loans yet.'
 					: 'No loans match your filters.'}
@@ -575,6 +575,7 @@
 			{/if}
 		</Tabs.Content>
 
+		{#if showBorrowings}
 		<Tabs.Content value="debts" class="mt-6 space-y-4">
 			<div class="mobile-list-toolbar">
 				<SearchFilter
@@ -693,15 +694,19 @@
 				</CardPagination>
 			{/if}
 		</Tabs.Content>
+		{/if}
 	</Tabs.Root>
 
+	{#if showBorrowings && canManage}
 	<DebtCreateModal
 		open={showDebtModal}
 		onOpenChange={(open) => (showDebtModal = open)}
 		preselectedInvestorId={investor.id}
 		onSuccess={refresh}
 	/>
+	{/if}
 
+	{#if canManage}
 	<LoanCreateModal
 		open={showLoanCreateModal}
 		onOpenChange={(open) => {
@@ -715,6 +720,7 @@
 		loadingFormData={loanFormOptions.loading}
 		onSuccess={refresh}
 	/>
+	{/if}
 
 	<LoanDetailModal
 		loan={selectedLoan}
@@ -724,8 +730,8 @@
 			if (!open) selectedLoan = null;
 		}}
 		onUpdate={refresh}
-		onDuplicate={(duplicateData) => {
+		onDuplicate={canManage ? (duplicateData) => {
 			openLoanCreate(duplicateData);
-		}}
+		} : undefined}
 	/>
 </div>
