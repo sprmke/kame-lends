@@ -9,7 +9,7 @@ Google OAuth sign-in for workspace users. Signed-in visitors redirect to `callba
 
 Auth.js owns `/auth/*` (callback, session, csrf). This page is only the custom button.
 
-Google must match an existing `users` email (admin or invited party). First login for an invited contact links the Google account to that row. An unknown Google account is rejected. An empty database still accepts the first Google user.
+Any normalized Google email may sign in. Auth.js creates a `users` row on first login. Invited party contacts with a pre-created row link on first Google login (`allowDangerousEmailAccountLinking`).
 
 ## Load / actions
 
@@ -29,7 +29,7 @@ Public. After sign-in, route protection in `src/hooks.server.ts` applies.
 
 ## Edge cases
 
-- `AccessDenied`: Google email is not on the workspace.
+- `AccessDenied`: sign-in blocked (invalid or disallowed email).
 - `Configuration` / adapter failures: short "Sign-in failed" line. The common local cause is an unusable `DATABASE_URL` (a placeholder exported in the shell, or a stale Neon socket), which makes every `account` / `session` query throw. Check the dev server log for `[auth] session lookup failed:` and `[db] Ignoring placeholder DATABASE_URL`.
 - `redirect_uri_mismatch` is Google Cloud Console, not this page. Register the exact callback (`{origin}/auth/callback/google`) on the OAuth client.
 

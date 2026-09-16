@@ -1,15 +1,17 @@
 # Groups (`/groups`)
 
 **Status:** Documented (Loan Groups v2)
-**Updated:** 2026-09-16
+**Updated:** 2026-09-16 (review step)
 
 ## Behavior
 
-List splits into **Your groups** (you created) and **Shared with you** (derived membership). Each section has its own empty state. Workspace admins also see every other workspace group under Shared. Card grids support search (after 6 groups) and sort (needs attention / name / updated). Cards show **Owner** for groups you created, or your party role(s) when shared. Calendar and Telegram icons use the same status words as the hub Channels card (`Calendar: Setting up`, `Telegram: Not connected`). **New group** is available to any signed-in user and opens `CreateGroupWizard` (`?create=1`; `/groups/new` redirects there). The wizard body mounts immediately (no deferred shell skeleton). Footer actions are two columns (Cancel/Back | Next/Review/Create). **Add loans from** (None, plus Investor and/or Borrower) can select multiple people of each type. On step 2, loans for the chosen investors and borrowers are unioned within each type; when both types have picks, only loans tied to at least one selected investor **and** at least one selected borrower are preselected and shown (until **All loans**). Investor-only or borrower-only picks union that side’s loans as before. None starts with nothing selected. Step 2 has one search (loan name or borrower), a count above the list, **Select all** (visible rows), and **Unselect all**. The lists include only contacts who already appear on **loans you own**. Empty is normal when you own no such loans; use None and pick loans on step 2. Contact pages can prefill with `?create=1&investorId=` or `borrowerId=` plus optional `loanIds=` and `name=`.
+**Page header:** `PageHeader` title **Groups** plus subtitle from `PAGE_DESCRIPTIONS.groups` (`src/lib/page-descriptions.ts`).
+
+List splits into **Your groups** (you created) and **Shared with you** (derived membership). Each section has its own empty state. Shared with you lists groups where you are a derived member but not the creator. Card grids support search (after 6 groups) and sort (needs attention / name / updated). Cards show **Owner** for groups you created, or your party role(s) when shared. Calendar and Telegram icons use the same status words as the hub Channels card (`Calendar: Setting up`, `Telegram: Not connected`). **New group** is available to any signed-in user and opens `CreateGroupWizard` (`?create=1`; `/groups/new` redirects there). The wizard body mounts immediately (no deferred shell skeleton). Footer actions are two columns (Cancel/Back | Next/Review/Create). **Add loans from** (None, plus Investor and/or Borrower) can select multiple people of each type. On step 2, loans for the chosen investors and borrowers are unioned within each type; when both types have picks, only loans tied to at least one selected investor **and** at least one selected borrower are preselected and shown (until **All loans**). Investor-only or borrower-only picks union that side’s loans as before. None starts with nothing selected. Step 2 has one search (loan name or borrower), a count above the list, **Select all** (visible rows), and **Unselect all**. The lists include only contacts who already appear on **loans you own**. Empty is normal when you own no such loans; use None and pick loans on step 2. Contact pages can prefill with `?create=1&investorId=` or `borrowerId=` plus optional `loanIds=` and `name=`. Step 3 (**Review access**) lists selected loans in a scrollable panel, highlights investors in a dedicated block, and groups **Channels** settings: optional shared Google Calendar and Telegram (chat ID, optional bot token, notification toggles, or connect via shared bot after create). Telegram connect runs after the group is created; failures surface as toasts while navigation still completes.
 
 Behind `SHOW_GROUPS_UI` in `src/lib/feature-flags.ts` (currently on for local QA). While false: nav and `groupsIndex` are empty; routes stay reachable.
 
-**Access model (v2):** People on any loan in a group can view the group and **all of its loans, read-only**. Membership is fully derived from loan parties (no leave/remove). Any signed-in user can create a group; only the creator (or workspace admin) manages it. Adding loans still requires ownership of those loans.
+**Access model (v2):** People on any loan in a group can view the group and **all of its loans, read-only**. Membership is fully derived from loan parties (owner, investor, borrower, and **loan witnesses** on `loan_witnesses`). Witness CRM rows with an email get `witness_user_id` linked (find-or-create party user) when membership is computed or access is previewed, so witnesses appear in the wizard review and receive Google Calendar reader shares when a shared calendar is created (`sendNotifications` on ACL insert). Any signed-in user can create a group; only the creator manages it. Adding loans still requires ownership of those loans.
 
 ## Load
 
@@ -22,9 +24,9 @@ Any authenticated user. `POST /api/groups` accepts `{name, color, description?, 
 ## Permissions
 
 - Nav: any signed-in user when `SHOW_GROUPS_UI` is on
-- View: creator, derived member, or workspace admin
+- View: creator or derived member
 - Create: any signed-in user
-- Manage: creator or workspace admin
+- Manage: creator only
 
 ## Implementation map
 

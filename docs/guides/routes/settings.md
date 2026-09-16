@@ -5,47 +5,39 @@
 
 ## Behavior
 
-Account summary card (title **Account**, name / email / **Roles** in a compact grid). **Roles** lists every assignment from workspace ownership plus loans and transactions (Admin, Investor, Borrower, Witness), not the single `users.role` column. Page title is Settings. On phone the title lives in `PageHeader` below the brand bar; the subtitle hides under `lg`. Settings is in the phone More sheet (not on the floating dock). Light/Dark theme is in the desktop sidebar and phone More sheet only (not on this page). The More sheet height follows its content.
+**Page header:** `PageHeader` title **Settings** plus subtitle from `PAGE_DESCRIPTIONS.settings` (`src/lib/page-descriptions.ts`).
+
+Account summary card (title **Account**, name / email / **Roles** in a compact grid). **Roles** lists **Owner** (owned lending data) plus party assignments (Investor, Borrower, Witness), not the single `users.role` column. Page title is Settings. Settings is in the phone More sheet (not on the floating dock).
 
 All signed-in users get:
 
-- **Payment methods** — grouped bank/e-wallet select (same PH provider list as Kame Homes: GCash, Maya, MariBank, BDO, etc.), account number with provider-specific validation, optional QR image (up to 10). Defaults to GCash on add. Hover (or tap on phone) a QR preview to Replace or Remove. Each user manages their own rows. Borrowers on a loan see the **loan owner's** methods on loan detail only.
+- **Payment methods** — each user manages their own bank/QR rows.
+- **Data & maintenance** — sync loan due dates, fix received payments, **Download my data** (`GET /api/backup?download=true`).
 
-Party users (linked investor, borrower, or witness contact rows) also get:
+Platform owner email only:
 
-- **Identity documents** — valid ID and e-signature. With no signature yet, use Upload or Draw tabs. Hover (or tap on phone) a valid ID preview to Replace or Remove; on a saved signature, Replace, Draw, or Remove. Saves sync across all CRM rows linked to the signed-in user. Used for contract signing and admin contact records.
+- **Download all data** (`GET /api/backup?download=true&scope=all`).
 
-Admin workspace owners also get:
+Party users with linked CRM rows also get **Identity documents** (valid ID and e-signature via `/api/party-profile/me`).
 
-- **Data & maintenance** — sync/calendar/backup tools (full-width stacked actions on phone). Calendar sync/clear opens a bottom sheet under `lg` (dropdown at `lg+`). Sync asks **All dates**, **Open loans**, or **Today and later**, then shows a live progress dialog (phase, loan name, dates, counts). The client loops small `POST /api/loans/sync-calendar` batches (`prepare` / `wipe` / `loans` / `summaries`) and `POST /api/loans/cleanup-calendar` until done. Failures show in the toast. After a wipe, Google events are one loan event per date (investors in the description) plus **Total Summary** on dates that actually have cashflow.
+Google Calendar sync is per group on the group hub only (no workspace calendar on Settings).
 
 ## Load
 
 [`src/routes/settings/+page.server.ts`](../../../src/routes/settings/+page.server.ts)
 
 - Requires session.
-- Loads `isAdminWorkspace` via `getNavCapabilities`.
-- Loads `accountRoles` from workspace ownership plus loan allocations, investor transactions, borrower loans, and witness signing invitations (`loadPartyActivityRoles`). Falls back to `users.role` only when none of those apply.
-- Loads the signed-in user’s payment methods. If `payment_methods` is missing on the connected database, Settings still renders with an empty list.
-- When the user has linked party CRM rows: loads valid ID and e-signature via `loadPartyUserIdentityDocuments`.
-
-## Mutations
-
-CRUD via `/api/payment-methods` and `/api/payment-methods/[id]` (session user owns rows only).
-
-Valid ID and e-signature via `GET` / `PUT` `/api/party-profile/me` (updates all investor/borrower/witness rows linked to the session user). JSON keeps `storage:` refs and drops leftover `data:image…` values.
+- `isPlatformOwner` from `isWorkspaceOwnerEmail`.
+- Payment methods and optional party identity documents.
 
 ## Permissions
 
-Any signed-in user can open Settings and manage their own payment methods. Party users with linked CRM rows can also manage valid ID and e-signature. Data & maintenance tools are admin-workspace only.
+Any signed-in user. All-users backup is platform owner only.
 
 ## Implementation map
 
-| Piece                | Path                                                                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Page                 | `src/routes/settings/+page.svelte`                                                                                                   |
-| Account roles        | `src/lib/account-roles.ts`, `src/lib/server/account-roles.ts`                                                                        |
-| Payment methods UI   | `src/lib/components/settings/PaymentMethodsManager.svelte`                                                                           |
-| Identity documents   | `src/lib/components/settings/PartyIdentityDocumentsManager.svelte`                                                                   |
-| Image upload preview | `src/lib/components/common/ImageUploadPreview.svelte`                                                                                |
-| Calendar sync        | `src/lib/components/common/SyncCalendarButton.svelte`, `src/routes/api/loans/sync-calendar/+server.ts`, `src/lib/calendar-events.ts` |
+| Piece           | Path                                                                |
+| --------------- | ------------------------------------------------------------------- |
+| Page            | `src/routes/settings/+page.svelte`                                  |
+| Backup API      | `src/routes/api/backup/+server.ts`, `src/lib/server/backup-data.ts` |
+| Due dates / fix | `SyncLoanDueDatesButton`, `FixReceivedPaymentsButton`               |

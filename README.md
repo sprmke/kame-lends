@@ -52,7 +52,7 @@ Built with **SvelteKit 2** and **Svelte 5** for day-to-day operations: recording
 - Transaction ledger (collections, disbursements, returns)
 - Dashboard with summary metrics, cashflow charts, and activity cards
 - Past due, maturing, pending disbursement, and completed loan panels
-- **Privacy toggle** to hide sensitive data (names, amounts, dates, rates, counts) across the app
+- **Privacy toggle** to hide amounts and interest rates across the app (names, dates, and counts stay visible)
 
 ### Google sign-in (OAuth)
 
@@ -63,16 +63,14 @@ Built with **SvelteKit 2** and **Svelte 5** for day-to-day operations: recording
 
 ### Google Calendar integration
 
-Optional sync powered by a **Google Cloud service account** and the Calendar API (`googleapis`):
+Optional **per-group** Google Calendar sync via a **Google Cloud service account** (`googleapis`):
 
-- **Disbursement events** on principal sent dates, with investor breakdown
-- **Due date events** with principal and interest totals
-- **Interest due events** for loans with multiple interest periods
-- **Daily summary events** aggregating in/out flows per day, with links back to filtered loans in the app
-- **Manual sync** from the app (bulk sync / cleanup). Calendar updates are not forced on every loan save
-- Investor emails can be added as attendees on events (when configured)
+- Each loan group gets its own Google calendar (created by the service account)
+- Loan create/update/delete and Settings **Sync loan due dates** enqueue group calendar jobs
+- **Manual full resync** on the group hub (`SyncCalendarButton` → `POST /api/groups/[id]/calendar/sync`)
+- Disbursement, due date, interest period, and daily summary events (Asia/Manila all-day semantics)
 
-Requires `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, and `GOOGLE_CALENDAR_ID` in `.env.example`.
+Requires `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` in `.env.example`. Legacy workspace-wide calendar env (`GOOGLE_CALENDAR_ID`) is only for the one-off wipe script before decommissioning.
 
 ### Operations & data
 
@@ -111,19 +109,19 @@ Screenshots from the live app. Several views show the **privacy toggle** (eye ic
 
 ## Tech Stack
 
-| Layer              | Technology                                                                                                                                                                                              |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework          | [SvelteKit 2](https://svelte.dev/docs/kit) + [Svelte 5](https://svelte.dev/)                                                                                                                            |
-| UI                 | [Tailwind CSS 4](https://tailwindcss.com/), [shadcn-svelte](https://www.shadcn-svelte.com/)                                                                                                             |
-| **Authentication** | [Auth.js](https://authjs.dev/) (`@auth/sveltekit`) + **Google OAuth** ([`src/lib/server/auth.ts`](./src/lib/server/auth.ts))                                                                            |
-| **Calendar**       | [Google Calendar API](https://developers.google.com/calendar) via [`googleapis`](https://www.npmjs.com/package/googleapis) ([`src/lib/server/google-calendar.ts`](./src/lib/server/google-calendar.ts)) |
-| **Database**       | [Neon](https://neon.tech/) PostgreSQL + [`@neondatabase/serverless`](https://www.npmjs.com/package/@neondatabase/serverless)                                                                            |
-| **Hosting**        | [Vercel](https://vercel.com/) (`@sveltejs/adapter-vercel`)                                                                                                                                              |
-| ORM                | [Drizzle ORM](https://orm.drizzle.team/)                                                                                                                                                                |
-| Forms              | sveltekit-superforms + Zod                                                                                                                                                                              |
-| Charts             | SVG donuts and CSS ranking tracks; ApexCharts only for cashflow.                                                                                                                                        |
-| PDF export         | `@react-pdf/renderer` (server-only)                                                                                                                                                                     |
-| Email (optional)   | Resend                                                                                                                                                                                                  |
+| Layer              | Technology                                                                                                                                                                                            |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework          | [SvelteKit 2](https://svelte.dev/docs/kit) + [Svelte 5](https://svelte.dev/)                                                                                                                          |
+| UI                 | [Tailwind CSS 4](https://tailwindcss.com/), [shadcn-svelte](https://www.shadcn-svelte.com/)                                                                                                           |
+| **Authentication** | [Auth.js](https://authjs.dev/) (`@auth/sveltekit`) + **Google OAuth** ([`src/lib/server/auth.ts`](./src/lib/server/auth.ts))                                                                          |
+| **Calendar**       | [Google Calendar API](https://developers.google.com/calendar) via [`googleapis`](https://www.npmjs.com/package/googleapis) ([`src/lib/server/group-calendar.ts`](./src/lib/server/group-calendar.ts)) |
+| **Database**       | [Neon](https://neon.tech/) PostgreSQL + [`@neondatabase/serverless`](https://www.npmjs.com/package/@neondatabase/serverless)                                                                          |
+| **Hosting**        | [Vercel](https://vercel.com/) (`@sveltejs/adapter-vercel`)                                                                                                                                            |
+| ORM                | [Drizzle ORM](https://orm.drizzle.team/)                                                                                                                                                              |
+| Forms              | sveltekit-superforms + Zod                                                                                                                                                                            |
+| Charts             | SVG donuts and CSS ranking tracks; ApexCharts only for cashflow.                                                                                                                                      |
+| PDF export         | `@react-pdf/renderer` (server-only)                                                                                                                                                                   |
+| Email (optional)   | Resend                                                                                                                                                                                                |
 
 ---
 
@@ -166,7 +164,6 @@ Fill in at minimum:
 | ------------------------------------ | ----------------------------------------------------------------------------------------- |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL`       | Service account email from Google Cloud                                                   |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Service account private key (JSON key file)                                               |
-| `GOOGLE_CALENDAR_ID`                 | Shared calendar ID (`…@group.calendar.google.com`)                                        |
 | `PUBLIC_APP_URL`                     | Canonical app origin (calendar links, signing). Default `https://pawn-tracker.vercel.app` |
 
 **Other optional:** backups (`RESEND_API_KEY`, `BACKUP_EMAIL`, `CRON_SECRET`). See `.env.example` for the full list.
