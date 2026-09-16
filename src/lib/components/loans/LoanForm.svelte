@@ -1372,6 +1372,7 @@
 		totalReceived={loanSummary.totalReceived}
 		totalBalance={loanSummary.totalBalance}
 		uniqueInvestors={loanSummary.uniqueInvestors}
+		borrowerCount={borrowerId ? 1 : 0}
 		balance={loanSummary.balance}
 	/>
 

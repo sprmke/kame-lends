@@ -1,4 +1,5 @@
 import type { ContractCustomization } from "./loan-contract-customization";
+import { jsonSafeImageRef } from "./json-safe-images";
 import {
   buildDefaultContractCustomizationFromLoan,
   type ContractCustomization as ContractCustomizationType,
@@ -8,6 +9,8 @@ import {
   type LoanContractData,
   type LoanContractDraftInput,
 } from "./loan-contract-data";
+import type { LoanAccessGraph } from "./loan-access-compute";
+import { computeLoanAccessContext } from "./loan-access-compute";
 import type { LoanWithInvestors } from "./types";
 import { normalizeSignatureImageUrl } from "./valid-id-document";
 
@@ -59,6 +62,11 @@ export function buildAuthenticatedSigningUrl(
 /** Loan detail with Contract Details modal open (`LoanDetailClient`). */
 export function loanContractPagePath(loanId: number): string {
   return `/loans/${loanId}?signing=1`;
+}
+
+/** In-app signing page for the viewer's slot (list/calendar Pending sign pill). */
+export function loanSigningPagePath(loanId: number): string {
+  return `/loans/${loanId}/sign`;
 }
 
 /** @deprecated Prefer buildAuthenticatedSigningUrl(loanId). Kept for legacy token redirects. */
@@ -124,6 +132,73 @@ export function resolvePartySignature(
     if (saved) return saved;
   }
   return null;
+}
+
+/** Admin opted in to use the party CRM signature on the contract. */
+export function isSavedSignatureIncludedForParty(
+  customization: ContractCustomization,
+  partyRole: SigningPartyRole,
+  partyEmail: string | null | undefined,
+): boolean {
+  switch (partyRole) {
+    case "borrower":
+      return customization.includeBorrowerSignature === true;
+    case "lender":
+      return (
+        !!partyEmail &&
+        customization.lenderSignaturesIncluded?.[partyEmail] === true
+      );
+    case "witness_1":
+      return customization.witness1SignatureIncluded === true;
+    case "witness_2":
+      return customization.witness2SignatureIncluded === true;
+    default:
+      return false;
+  }
+}
+
+/** Profile e-signature for the invitation slot (borrower, lender, or witness). */
+export function resolveSignerProfileSignatureFromLoan(
+  loan: LoanWithInvestors,
+  invitation: Pick<
+    SigningInvitationRecord,
+    "partyRole" | "partyEmail" | "investorId"
+  >,
+  witnessSignatureUrl?: string | null,
+): string | null {
+  const witnessSaved = jsonSafeImageRef(witnessSignatureUrl);
+
+  switch (invitation.partyRole) {
+    case "borrower":
+      return jsonSafeImageRef(loan.borrower?.eSignatureUrl);
+    case "lender": {
+      if (invitation.investorId != null) {
+        const match = (loan.loanInvestors ?? []).find(
+          (entry) => entry.investorId === invitation.investorId,
+        );
+        const fromInvestor = jsonSafeImageRef(match?.investor?.eSignatureUrl);
+        if (fromInvestor) return fromInvestor;
+      }
+      const email = invitation.partyEmail;
+      if (!email) return null;
+      for (const entry of loan.loanInvestors ?? []) {
+        const investorEmail = entry.investor?.email;
+        if (
+          investorEmail &&
+          emailsMatch(email, investorEmail) &&
+          entry.investor?.eSignatureUrl
+        ) {
+          return jsonSafeImageRef(entry.investor.eSignatureUrl);
+        }
+      }
+      return null;
+    }
+    case "witness_1":
+    case "witness_2":
+      return witnessSaved;
+    default:
+      return null;
+  }
 }
 
 export function buildSavedPartySignaturesFromLoan(
@@ -547,6 +622,13 @@ export type SigningInvitationPendingFields = Pick<
   "signedAt" | "expiresAt"
 >;
 
+export type SigningInvitationViewerFields = SigningInvitationPendingFields & {
+  id?: number;
+  partyRole?: SigningPartyRole | string;
+  investorId?: number | null;
+  partyEmail?: string | null;
+};
+
 /** Unsigned invitation that is still valid (not past expiresAt). */
 export function isSigningInvitationPending(
   invitation: SigningInvitationPendingFields,
@@ -569,22 +651,75 @@ export function loanHasPendingSigning(loan: {
 
 export type LoanSigningDisplayStatus = "none" | "pending" | "signed";
 
-export function loanSigningDisplayStatus(loan: {
-  signingInvitations?: SigningInvitationPendingFields[] | null;
-}): LoanSigningDisplayStatus {
-  const invitations = loan.signingInvitations ?? [];
-  if (invitations.length === 0) return "none";
-  if (loanHasPendingSigning(loan)) return "pending";
-  if (invitations.every((invitation) => invitation.signedAt != null)) {
-    return "signed";
+/** Match the viewer's own signing slot on a loan (list/detail graphs). */
+export function pickViewerSigningInvitation<
+  T extends SigningInvitationViewerFields,
+>(
+  invitations: T[],
+  signingPartyRoles: SigningPartyRole[],
+  sessionEmail: string | null | undefined,
+  linkedInvestorId?: number | null,
+  preferredRole?: SigningPartyRole | null,
+): T | null {
+  const allowed = invitations.filter((invitation) => {
+    const role = invitation.partyRole as SigningPartyRole;
+    if (!role || !signingPartyRoles.includes(role)) return false;
+
+    if (
+      role === "lender" &&
+      linkedInvestorId != null &&
+      invitation.investorId != null
+    ) {
+      return invitation.investorId === linkedInvestorId;
+    }
+
+    if (!invitation.partyEmail) return false;
+    return !!sessionEmail && emailsMatch(sessionEmail, invitation.partyEmail);
+  });
+
+  if (allowed.length === 0) return null;
+  if (preferredRole) {
+    const preferred = allowed.find((item) => item.partyRole === preferredRole);
+    if (preferred) return preferred;
   }
+  return allowed[0] ?? null;
+}
+
+/** List/calendar badge: pending or signed for the signed-in party only. */
+export function loanSigningDisplayStatus(
+  loan: LoanAccessGraph & {
+    signingInvitations?: SigningInvitationViewerFields[] | null;
+  },
+  userId: string | null | undefined,
+  sessionEmail: string | null | undefined,
+): LoanSigningDisplayStatus {
+  const invitations = loan.signingInvitations ?? [];
+  if (!userId || invitations.length === 0) return "none";
+
+  const access = computeLoanAccessContext(loan, userId, sessionEmail ?? null);
+  if (access.signingPartyRoles.length === 0) return "none";
+
+  const viewerInvitation = pickViewerSigningInvitation(
+    invitations,
+    access.signingPartyRoles,
+    sessionEmail,
+    access.linkedInvestorId,
+  );
+  if (!viewerInvitation) return "none";
+
+  if (viewerInvitation.signedAt != null) return "signed";
+  if (isSigningInvitationPending(viewerInvitation)) return "pending";
   return "none";
 }
 
-export function loanIsFullySigned(loan: {
-  signingInvitations?: SigningInvitationPendingFields[] | null;
-}): boolean {
-  return loanSigningDisplayStatus(loan) === "signed";
+export function loanIsFullySigned(
+  loan: LoanAccessGraph & {
+    signingInvitations?: SigningInvitationViewerFields[] | null;
+  },
+  userId: string | null | undefined,
+  sessionEmail: string | null | undefined,
+): boolean {
+  return loanSigningDisplayStatus(loan, userId, sessionEmail) === "signed";
 }
 
 export function countPendingSigningInvitations(loan: {
@@ -593,6 +728,26 @@ export function countPendingSigningInvitations(loan: {
   return (loan.signingInvitations ?? []).filter((invitation) =>
     isSigningInvitationPending(invitation),
   ).length;
+}
+
+export type LoanSigningProgress = { signed: number; total: number };
+
+/** Admin summary: how many contract parties signed out of active invitations. */
+export function loanSigningProgressFromInvitations(
+  invitations: Array<{ signedAt?: Date | string | null }> | null | undefined,
+): LoanSigningProgress | null {
+  const rows = invitations ?? [];
+  if (rows.length === 0) return null;
+  const signed = rows.filter(
+    (invitation) => invitation.signedAt != null,
+  ).length;
+  return { signed, total: rows.length };
+}
+
+export function loanSigningProgressFromLoan(loan: {
+  signingInvitations?: Array<{ signedAt?: Date | string | null }> | null;
+}): LoanSigningProgress | null {
+  return loanSigningProgressFromInvitations(loan.signingInvitations);
 }
 
 export function toSigningInvitationSummary(

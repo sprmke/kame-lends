@@ -1,7 +1,11 @@
 import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "$lib/server/db";
-import { loanSigningInvitations, loans } from "$lib/server/db/schema";
+import {
+  loanSigningInvitations,
+  loans,
+  witnesses,
+} from "$lib/server/db/schema";
 import type { ContractCustomization } from "$lib/loan-contract-customization";
 import { applyContractCustomization } from "$lib/loan-contract-customization";
 import { buildLoanContractData } from "$lib/loan-contract-data";
@@ -9,8 +13,10 @@ import {
   applySigningSignatures,
   buildSavedPartySignaturesFromLoan,
   buildInvestorEmailMap,
-  emailsMatch,
+  pickViewerSigningInvitation,
+  isSavedSignatureIncludedForParty,
   resolveContractCustomization,
+  resolveSignerProfileSignatureFromLoan,
   resolveSigningPartyDisplayName,
   type SigningInvitationRecord,
   type SigningPartyRole,
@@ -75,20 +81,22 @@ export function pickSigningInvitationForUser(input: {
   signingPartyRoles: SigningPartyRole[];
   sessionEmail: string | null | undefined;
   preferredRole?: SigningPartyRole | null;
+  linkedInvestorId?: number | null;
 }): SigningInvitationRecord | null {
-  const { invitations, signingPartyRoles, sessionEmail, preferredRole } = input;
-  const allowed = invitations.filter((invitation) => {
-    if (!signingPartyRoles.includes(invitation.partyRole)) return false;
-    if (!invitation.partyEmail) return false;
-    return !!sessionEmail && emailsMatch(sessionEmail, invitation.partyEmail);
-  });
-
-  if (allowed.length === 0) return null;
-  if (preferredRole) {
-    const preferred = allowed.find((item) => item.partyRole === preferredRole);
-    if (preferred) return preferred;
-  }
-  return allowed[0] ?? null;
+  const {
+    invitations,
+    signingPartyRoles,
+    sessionEmail,
+    preferredRole,
+    linkedInvestorId,
+  } = input;
+  return pickViewerSigningInvitation(
+    invitations,
+    signingPartyRoles,
+    sessionEmail,
+    linkedInvestorId,
+    preferredRole,
+  );
 }
 
 export async function buildSigningPagePayload(
@@ -120,6 +128,26 @@ export async function buildSigningPagePayload(
     ? new Date(invitation.expiresAt).getTime() < Date.now()
     : false;
 
+  let witnessSignatureUrl: string | null = null;
+  if (invitation.witnessId != null) {
+    const witness = await db.query.witnesses.findFirst({
+      where: eq(witnesses.id, invitation.witnessId),
+      columns: { eSignatureUrl: true },
+    });
+    witnessSignatureUrl = witness?.eSignatureUrl ?? null;
+  }
+
+  const savedSignatureUrl = resolveSignerProfileSignatureFromLoan(
+    loan,
+    invitation as SigningInvitationRecord,
+    witnessSignatureUrl,
+  );
+  const savedSignatureEnabled = isSavedSignatureIncludedForParty(
+    customization,
+    invitation.partyRole,
+    invitation.partyEmail,
+  );
+
   return {
     loanId: loan.id,
     partyRole: invitation.partyRole,
@@ -133,6 +161,8 @@ export async function buildSigningPagePayload(
       ? new Date(invitation.signedAt).toISOString()
       : null,
     signatureDataUrl: invitation.signatureDataUrl,
+    savedSignatureUrl,
+    savedSignatureEnabled,
     contractData: merged.data,
     customization: merged.customization,
     expired,
@@ -156,6 +186,7 @@ export async function resolveAuthenticatedSigningPayload(input: {
     signingPartyRoles: access.signingPartyRoles,
     sessionEmail: input.sessionEmail,
     preferredRole: input.preferredRole,
+    linkedInvestorId: access.linkedInvestorId,
   });
 
   if (!invitation) {

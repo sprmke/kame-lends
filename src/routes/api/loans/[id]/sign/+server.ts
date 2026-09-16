@@ -9,6 +9,7 @@ import {
   type SigningPartyRole,
 } from "$lib/loan-signing";
 import { resolveAuthenticatedSigningPayload } from "$lib/server/loan-signing-server";
+import { invalidateLoanData } from "$lib/server/cache-invalidation";
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -111,7 +112,7 @@ export const POST: RequestHandler = async (event) => {
     const signatureDataUrl = String(body.signatureDataUrl ?? "");
     if (!isValidSignatureDataUrl(signatureDataUrl)) {
       return json(
-        { error: "A valid drawn signature is required." },
+        { error: "A valid signature image is required." },
         { status: 400 },
       );
     }
@@ -126,6 +127,8 @@ export const POST: RequestHandler = async (event) => {
         updatedAt: now,
       })
       .where(eq(loanSigningInvitations.id, invitation.id));
+
+    invalidateLoanData();
 
     const refreshed = await resolveAuthenticatedSigningPayload({
       loanId,

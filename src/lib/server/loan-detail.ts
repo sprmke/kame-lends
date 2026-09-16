@@ -60,10 +60,13 @@ export async function loadLoanDetail(
         },
         signingInvitations: {
           columns: {
+            id: true,
             partyRole: true,
             partyEmail: true,
             investorId: true,
             witnessId: true,
+            signedAt: true,
+            expiresAt: true,
           },
           with: {
             witness: {

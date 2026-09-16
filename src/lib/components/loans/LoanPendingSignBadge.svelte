@@ -1,13 +1,19 @@
 <script lang="ts">
-	import LoanSigningStatusBadge from '$lib/components/loans/LoanSigningStatusBadge.svelte';
+	import LoanSigningProgressBadge from '$lib/components/loans/LoanSigningProgressBadge.svelte';
 	import type { LoanWithInvestors } from '$lib/types';
 
 	interface Props {
 		loan: LoanWithInvestors;
 		class?: string;
+		onOpenContractDetails?: () => void;
 	}
 
-	let { loan, class: className }: Props = $props();
+	let { loan, class: className, onOpenContractDetails }: Props = $props();
 </script>
 
-<LoanSigningStatusBadge {loan} class={className} />
+<LoanSigningProgressBadge
+	{loan}
+	class={className}
+	linkWhenViewerPending
+	{onOpenContractDetails}
+/>

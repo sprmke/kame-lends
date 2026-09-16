@@ -53,9 +53,16 @@
 	const classes = $derived(sizeClasses[size]);
 </script>
 
-<button
-	type="button"
+<div
+	role="button"
+	tabindex="0"
 	{onclick}
+	onkeydown={(event) => {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			onclick();
+		}
+	}}
 	class="w-full min-w-0 cursor-pointer rounded-md border border-border/60 bg-muted/30 text-left transition-colors hover:border-primary/25 hover:bg-background {classes.container}"
 >
 	<div class="flex min-w-0 flex-col space-y-2">
@@ -97,4 +104,4 @@
 			+{formatCurrency(totalAmount)}
 		</div>
 	</div>
-</button>
+</div>

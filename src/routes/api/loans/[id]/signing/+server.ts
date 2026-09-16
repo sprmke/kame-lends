@@ -127,6 +127,7 @@ export const GET: RequestHandler = async (event) => {
       invitations: activeInvitations as SigningInvitationRecord[],
       signingPartyRoles: access.signingPartyRoles,
       sessionEmail: session.user.email,
+      linkedInvestorId: access.linkedInvestorId,
     });
 
     return json({

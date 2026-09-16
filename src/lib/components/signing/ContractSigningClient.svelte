@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { invalidate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
@@ -21,7 +22,9 @@
 	import { normalizeLoanContractData } from '$lib/loan-contract-data';
 	import type { LoanContractData } from '$lib/loan-contract-data';
 	import type { ContractCustomization } from '$lib/loan-contract-customization';
+	import { clearLoanClientCaches } from '$lib/composables/loan-detail-client-cache';
 	import { persistImageDataUrl } from '$lib/storage-upload-client';
+	import { imagePreviewSrc } from '$lib/storage-reference';
 	import { CheckCircle2, Loader2 } from 'lucide-svelte';
 
 	export interface ContractSigningPayload {
@@ -30,6 +33,8 @@
 		partyEmail: string | null;
 		signedAt: string | null;
 		signatureDataUrl: string | null;
+		savedSignatureUrl?: string | null;
+		savedSignatureEnabled?: boolean;
 		contractData: LoanContractData;
 		customization: ContractCustomization;
 		expired: boolean;
@@ -51,11 +56,13 @@
 	const signApiBase = $derived(token ? `/api/sign/${token}` : `/api/loans/${loanId}/sign`);
 
 	let data = $state(normalizePayload(initialData));
+	let signatureMode = $state<'draw' | 'saved'>('draw');
 	let signatureDataUrl = $state<string | null>(null);
 	let isDrawingSignature = $state(false);
 	let consentChecked = $state(false);
 	let isSubmitting = $state(false);
 	let consentDetailsOpen = $state(false);
+	let savedModeInitialized = $state(false);
 
 	function normalizePayload(payload: ContractSigningPayload): ContractSigningPayload {
 		return { ...payload, contractData: normalizeLoanContractData(payload.contractData) };
@@ -66,8 +73,30 @@
 	);
 	const consent = $derived(getElectronicSignatureConsentText(data.partyRole, displayName));
 	const roleLabel = $derived(getSigningPartyRoleLabel(data.partyRole));
+	const canUseSavedSignature = $derived(
+		data.savedSignatureEnabled === true && Boolean(data.savedSignatureUrl)
+	);
+	const savedSignaturePreview = $derived(imagePreviewSrc(data.savedSignatureUrl));
 	const hasSignature = $derived(Boolean(signatureDataUrl));
 	const canSubmit = $derived(hasSignature && consentChecked && !isSubmitting);
+
+	$effect(() => {
+		if (savedModeInitialized || data.signedAt || data.expired) return;
+		if (canUseSavedSignature && data.savedSignatureUrl) {
+			signatureMode = 'saved';
+			signatureDataUrl = data.savedSignatureUrl;
+			savedModeInitialized = true;
+		}
+	});
+
+	function setSignatureMode(mode: 'draw' | 'saved') {
+		signatureMode = mode;
+		if (mode === 'saved' && data.savedSignatureUrl) {
+			signatureDataUrl = data.savedSignatureUrl;
+			return;
+		}
+		signatureDataUrl = null;
+	}
 
 	const previewContract = $derived(
 		applyLiveSignaturePreview(
@@ -97,7 +126,11 @@
 
 	async function handleSubmit() {
 		if (!signatureDataUrl) {
-			toast.error('Please draw your signature before submitting.');
+			toast.error(
+				signatureMode === 'saved'
+					? 'Saved e-signature is not available.'
+					: 'Draw your signature before submitting.'
+			);
 			return;
 		}
 		if (!consentChecked) {
@@ -107,7 +140,10 @@
 
 		isSubmitting = true;
 		try {
-			const persistedSignature = await persistImageDataUrl(signatureDataUrl);
+			const persistedSignature =
+				signatureMode === 'saved' || signatureDataUrl.startsWith('storage:')
+					? signatureDataUrl
+					: await persistImageDataUrl(signatureDataUrl);
 			const response = await fetch(`${signApiBase}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -120,6 +156,8 @@
 			const result = await response.json();
 			if (!response.ok) throw new Error(result.error ?? 'Failed to submit signature');
 			data = normalizePayload(result);
+			clearLoanClientCaches(loanId);
+			await invalidate('app:loans');
 			toast.success('Your electronic signature has been recorded.');
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Failed to submit signature');
@@ -202,11 +240,46 @@
 							{displayName} ({roleLabel}) - Signature
 						</Card.Title>
 					</Card.Header>
-					<Card.Content class="p-5 pt-0 sm:p-6 sm:pt-0 md:p-7 md:pt-0">
-						<SignaturePad
-							onChange={(url) => (signatureDataUrl = url)}
-							onDrawingChange={(drawing) => (isDrawingSignature = drawing)}
-						/>
+					<Card.Content class="space-y-4 p-5 pt-0 sm:p-6 sm:pt-0 md:p-7 md:pt-0">
+						{#if canUseSavedSignature}
+							<div class="flex gap-2">
+								<Button
+									type="button"
+									variant={signatureMode === 'draw' ? 'default' : 'outline'}
+									size="sm"
+									class="flex-1"
+									onclick={() => setSignatureMode('draw')}
+								>
+									Draw
+								</Button>
+								<Button
+									type="button"
+									variant={signatureMode === 'saved' ? 'default' : 'outline'}
+									size="sm"
+									class="flex-1"
+									onclick={() => setSignatureMode('saved')}
+								>
+									Saved
+								</Button>
+							</div>
+						{/if}
+
+						{#if signatureMode === 'saved' && savedSignaturePreview}
+							<div
+								class="flex min-h-40 items-center justify-center rounded-2xl border border-dashed border-primary/35 bg-white p-4"
+							>
+								<img
+									src={savedSignaturePreview}
+									alt="Saved e-signature"
+									class="max-h-32 max-w-full object-contain"
+								/>
+							</div>
+						{:else}
+							<SignaturePad
+								onChange={(url) => (signatureDataUrl = url)}
+								onDrawingChange={(drawing) => (isDrawingSignature = drawing)}
+							/>
+						{/if}
 					</Card.Content>
 				</Card.Root>
 
@@ -260,9 +333,13 @@
 							{#if !canSubmit && !isSubmitting}
 								<p class="text-sm text-muted-foreground">
 									{!hasSignature && !consentChecked
-										? 'Draw your signature and accept consent to submit.'
+										? canUseSavedSignature
+											? 'Add your signature and accept consent to submit.'
+											: 'Draw your signature and accept consent to submit.'
 										: !hasSignature
-											? 'Draw your signature above.'
+											? canUseSavedSignature
+												? 'Choose Draw or Saved above.'
+												: 'Draw your signature above.'
 											: 'Accept electronic consent to submit.'}
 								</p>
 							{/if}

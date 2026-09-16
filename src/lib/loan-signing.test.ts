@@ -3,10 +3,13 @@ import { buildDefaultContractCustomizationFromLoan } from "./loan-contract-custo
 import { buildLoanContractData } from "./loan-contract-data";
 import {
   applySigningSignatures,
+  isSavedSignatureIncludedForParty,
   isSigningInvitationPending,
   loanHasPendingSigning,
   loanSigningDisplayStatus,
+  loanSigningProgressFromInvitations,
   resolvePartySignature,
+  resolveSignerProfileSignatureFromLoan,
   type SigningInvitationRecord,
 } from "./loan-signing";
 import type { LoanWithInvestors } from "./types";
@@ -199,6 +202,85 @@ describe("applySigningSignatures", () => {
   });
 });
 
+describe("resolveSignerProfileSignatureFromLoan", () => {
+  it("returns profile signatures for borrower and lender slots", () => {
+    const loan = buildFixtureLoan();
+    loan.borrower!.eSignatureUrl = "storage:uploads/borrower/sig.png";
+    loan.loanInvestors[0]!.investor!.eSignatureUrl =
+      "storage:uploads/lender/sig.png";
+
+    expect(
+      resolveSignerProfileSignatureFromLoan(loan, {
+        partyRole: "borrower",
+        partyEmail: "borrower@example.com",
+        investorId: null,
+      }),
+    ).toBe("storage:uploads/borrower/sig.png");
+    expect(
+      resolveSignerProfileSignatureFromLoan(loan, {
+        partyRole: "lender",
+        partyEmail: "lender@example.com",
+        investorId: 1,
+      }),
+    ).toBe("storage:uploads/lender/sig.png");
+  });
+
+  it("returns witness profile signature when provided", () => {
+    const loan = buildFixtureLoan();
+    expect(
+      resolveSignerProfileSignatureFromLoan(
+        loan,
+        {
+          partyRole: "witness_1",
+          partyEmail: "w@example.com",
+          investorId: null,
+        },
+        "storage:uploads/witness/sig.png",
+      ),
+    ).toBe("storage:uploads/witness/sig.png");
+  });
+});
+
+describe("isSavedSignatureIncludedForParty", () => {
+  it("reads include flags from contract customization", () => {
+    const customization = buildDefaultContractCustomizationFromLoan(
+      buildLoanContractData(buildFixtureLoan()),
+    );
+    customization.includeBorrowerSignature = true;
+    customization.lenderSignaturesIncluded = { "lender@example.com": true };
+    customization.witness1SignatureIncluded = true;
+
+    expect(
+      isSavedSignatureIncludedForParty(
+        customization,
+        "borrower",
+        "borrower@example.com",
+      ),
+    ).toBe(true);
+    expect(
+      isSavedSignatureIncludedForParty(
+        customization,
+        "lender",
+        "lender@example.com",
+      ),
+    ).toBe(true);
+    expect(
+      isSavedSignatureIncludedForParty(
+        customization,
+        "witness_1",
+        "w@example.com",
+      ),
+    ).toBe(true);
+    expect(
+      isSavedSignatureIncludedForParty(
+        customization,
+        "lender",
+        "other@example.com",
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("loanHasPendingSigning", () => {
   it("is true when any invitation is unsigned and not expired", () => {
     expect(
@@ -226,14 +308,56 @@ describe("loanHasPendingSigning", () => {
     ).toBe(false);
   });
 
-  it("returns signed when every invitation is signed", () => {
+  it("returns signed only when the viewer's slot is signed", () => {
+    const loan = {
+      userId: "owner-1",
+      borrower: { borrowerUserId: "borrower-1", email: "borrower@example.com" },
+      loanInvestors: [
+        {
+          investorId: 9,
+          investor: { investorUserId: "lender-1", email: "lender@example.com" },
+        },
+      ],
+      signingInvitations: [
+        {
+          id: 1,
+          partyRole: "borrower",
+          partyEmail: "borrower@example.com",
+          signedAt: null,
+          expiresAt: null,
+        },
+        {
+          id: 2,
+          partyRole: "lender",
+          partyEmail: "lender@example.com",
+          signedAt: new Date(),
+          expiresAt: null,
+          investorId: 9,
+        },
+      ],
+    };
+
     expect(
-      loanSigningDisplayStatus({
-        signingInvitations: [
-          { signedAt: new Date(), expiresAt: null },
-          { signedAt: new Date(), expiresAt: null },
-        ],
-      }),
+      loanSigningDisplayStatus(loan, "borrower-1", "borrower@example.com"),
+    ).toBe("pending");
+    expect(
+      loanSigningDisplayStatus(loan, "lender-1", "lender@example.com"),
     ).toBe("signed");
+    expect(loanSigningDisplayStatus(loan, "owner-1", "owner@example.com")).toBe(
+      "none",
+    );
+  });
+});
+
+describe("loanSigningProgressFromInvitations", () => {
+  it("counts signed invitations for loan detail summary", () => {
+    expect(
+      loanSigningProgressFromInvitations([
+        { signedAt: new Date() },
+        { signedAt: null },
+        { signedAt: null },
+      ]),
+    ).toEqual({ signed: 1, total: 3 });
+    expect(loanSigningProgressFromInvitations([])).toBeNull();
   });
 });

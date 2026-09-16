@@ -2,11 +2,10 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Copy, Check, CheckCircle2, Clock, Link2 } from 'lucide-svelte';
+	import { CheckCircle2, Clock, Link2 } from 'lucide-svelte';
 	import { getSigningPartyRoleLabel } from '$lib/loan-signing-consent';
 	import type { SigningInvitationSummary } from '$lib/loan-signing';
 	import { formatDate } from '$lib/format';
-	import { toast } from '$lib/toast';
 
 	interface Props {
 		invitations: SigningInvitationSummary[];
@@ -17,24 +16,6 @@
 
 	let { invitations, loanId, viewerInvitationId = null, variant = 'card' }: Props = $props();
 
-	let copiedId = $state<number | null>(null);
-
-	async function copyLink(invitation: SigningInvitationSummary) {
-		const path = invitation.signingUrl || `/loans/${loanId}/sign`;
-		const url = path.startsWith('http') ? path : `${window.location.origin}${path}`;
-
-		try {
-			await navigator.clipboard.writeText(url);
-			copiedId = invitation.id;
-			toast.success(`Signing link copied for ${invitation.partyName}.`);
-			setTimeout(() => {
-				copiedId = null;
-			}, 2000);
-		} catch {
-			toast.error('Could not copy link. Please try again.');
-		}
-	}
-
 	const signedCount = $derived(invitations.filter((item) => item.signedAt).length);
 </script>
 
@@ -42,7 +23,6 @@
 	<ul class={listClass}>
 		{#each invitations as invitation (invitation.id)}
 			{@const isSigned = Boolean(invitation.signedAt)}
-			{@const isCopied = copiedId === invitation.id}
 			{@const isViewerSlot = viewerInvitationId === invitation.id}
 			{@const roleLabel = getSigningPartyRoleLabel(invitation.partyRole)}
 			{@const showRoleSubtitle = roleLabel !== invitation.partyName}
@@ -76,20 +56,6 @@
 								Open
 							</Button>
 						{/if}
-						<Button
-							type="button"
-							variant={isCopied ? 'secondary' : 'outline'}
-							size="sm"
-							onclick={() => copyLink(invitation)}
-						>
-							{#if isCopied}
-								<Check class="mr-1.5 h-3.5 w-3.5" />
-								Copied
-							{:else}
-								<Copy class="mr-1.5 h-3.5 w-3.5" />
-								Copy link
-							{/if}
-						</Button>
 					{/if}
 				</div>
 			</li>
