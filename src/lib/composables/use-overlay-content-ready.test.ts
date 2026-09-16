@@ -4,9 +4,9 @@ import { createOverlayContentReady } from "./use-overlay-content-ready.svelte";
 
 function installRafPolyfill() {
   globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) =>
-    setTimeout(() => cb(0), 0)) as typeof requestAnimationFrame;
+    setTimeout(() => cb(0), 0)) as unknown as typeof requestAnimationFrame;
   globalThis.cancelAnimationFrame = ((id: number) =>
-    clearTimeout(id)) as typeof cancelAnimationFrame;
+    clearTimeout(id)) as unknown as typeof cancelAnimationFrame;
 }
 
 async function flushPaint() {

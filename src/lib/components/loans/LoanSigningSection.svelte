@@ -27,42 +27,41 @@
 	let loadError = $state<string | null>(null);
 	let loadSeq = 0;
 
-	async function loadSigningLinks() {
+	$effect(() => {
+		const id = loanId;
+		void refreshKey;
 		const seq = ++loadSeq;
-		if (invitations.length === 0) isLoading = true;
+		invitations = [];
+		viewerInvitationId = null;
+		isLoading = true;
 		loadError = null;
-		try {
-			const data = await fetchSigningClient(loanId);
-			if (seq !== loadSeq) return;
-			if (!data) {
+
+		void fetchSigningClient(id)
+			.then((data) => {
+				if (seq !== loadSeq) return;
+				if (!data) {
+					loadError = 'Could not load contract signing status.';
+					invitations = [];
+					viewerInvitationId = null;
+					onStatsChange?.(0, 0);
+					return;
+				}
+				invitations = data.invitations ?? [];
+				viewerInvitationId = data.viewerInvitationId ?? null;
+				const signed = invitations.filter((item) => item.signedAt).length;
+				onStatsChange?.(signed, invitations.length);
+			})
+			.catch((error) => {
+				if (seq !== loadSeq) return;
+				console.error('Error loading signing links:', error);
 				loadError = 'Could not load contract signing status.';
 				invitations = [];
 				viewerInvitationId = null;
 				onStatsChange?.(0, 0);
-				return;
-			}
-			invitations = data.invitations ?? [];
-			viewerInvitationId = data.viewerInvitationId ?? null;
-			const signed = invitations.filter((item) => item.signedAt).length;
-			onStatsChange?.(signed, invitations.length);
-		} catch (error) {
-			if (seq !== loadSeq) return;
-			console.error('Error loading signing links:', error);
-			loadError = 'Could not load contract signing status.';
-			invitations = [];
-			viewerInvitationId = null;
-			onStatsChange?.(0, 0);
-		} finally {
-			if (seq === loadSeq) {
-				isLoading = false;
-			}
-		}
-	}
-
-	$effect(() => {
-		void loanId;
-		void refreshKey;
-		void loadSigningLinks();
+			})
+			.finally(() => {
+				if (seq === loadSeq) isLoading = false;
+			});
 	});
 
 	onMount(() => {

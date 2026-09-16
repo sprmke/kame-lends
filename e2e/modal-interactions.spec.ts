@@ -8,7 +8,7 @@ import {
 
 test.describe.configure({ mode: "serial", timeout: 90_000, retries: 1 });
 
-test.beforeEach((_fixtures, testInfo) => {
+test.beforeEach(({ page: _page }, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 
@@ -103,4 +103,109 @@ test("loan fund payment dialog opens from quick-view", async ({ page }) => {
   const paymentDialog = page.getByRole("dialog").last();
   await expect(paymentDialog.getByRole("heading")).toBeVisible();
   await page.keyboard.press("Escape");
+});
+
+test("contract details modal paints editor instead of a stuck skeleton", async ({
+  page,
+}) => {
+  const response = await gotoApp(page, "/loans");
+  expect(response?.status()).toBe(200);
+
+  await expect(
+    page.getByRole("heading", { name: "Loans", exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
+  const moreActions = page
+    .getByRole("button", { name: "More actions" })
+    .first();
+  await expect(moreActions).toBeVisible({ timeout: 20_000 });
+  await moreActions.click();
+  await page.getByRole("menuitem", { name: "Contract Details" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  await expect(
+    dialog.getByRole("heading", { name: "Contract details" }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: /download contract/i }),
+  ).toBeVisible();
+  await expect(dialog.getByText("Contract setup")).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(dialog.getByText("Parties & signatures")).toBeVisible();
+});
+
+test("contract details from loan quick-view stacks without freezing", async ({
+  page,
+}) => {
+  const response = await gotoApp(page, "/loans");
+  expect(response?.status()).toBe(200);
+
+  const firstRow = page.locator("table tbody tr").first();
+  await expect(firstRow).toBeVisible({ timeout: 20_000 });
+  await firstRow.click();
+
+  const loanDialog = page.getByRole("dialog").first();
+  await expect(loanDialog).toBeVisible({ timeout: 15_000 });
+  await loanDialog.getByRole("button", { name: "Actions" }).click();
+  await page.getByRole("menuitem", { name: "Contract Details" }).click();
+
+  const contractDialog = page.getByRole("dialog").last();
+  await expect(
+    contractDialog.getByRole("heading", { name: "Contract details" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(contractDialog.getByText("Contract setup")).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
+test("contract details opens for a second loan after closing the first", async ({
+  page,
+}) => {
+  const response = await gotoApp(page, "/loans");
+  expect(response?.status()).toBe(200);
+
+  const rows = page.locator("table tbody tr");
+  await expect(rows.first()).toBeVisible({ timeout: 20_000 });
+  const rowCount = await rows.count();
+  test.skip(rowCount < 2, "Need at least two loans in the table");
+
+  async function openContractDetailsForRow(index: number) {
+    const row = rows.nth(index);
+    await row.getByRole("button", { name: "More actions" }).click();
+    await page.getByRole("menuitem", { name: "Contract Details" }).click();
+  }
+
+  await openContractDetailsForRow(0);
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByRole("heading", { name: "Contract details" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(dialog.getByText("Contract setup")).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+  await expect
+    .poll(async () => {
+      return await page.evaluate(() => {
+        const body = document.body;
+        return (
+          body.style.overflow !== "hidden" &&
+          body.style.pointerEvents !== "none"
+        );
+      });
+    })
+    .toBe(true);
+
+  await openContractDetailsForRow(1);
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { name: "Contract details" }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByRole("dialog").getByText("Contract setup"),
+  ).toBeVisible({
+    timeout: 15_000,
+  });
 });

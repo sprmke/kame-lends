@@ -3,6 +3,7 @@
 	import {
 		formatContractCurrency,
 		formatContractDate,
+		contractLenderListKey,
 		getContractDetailRows,
 		type LoanContractData
 	} from '$lib/loan-contract-data';
@@ -174,7 +175,7 @@
 				Lender Allocation
 			</p>
 			<div class="space-y-2">
-				{#each displayData.lenders as lender (lender.email)}
+				{#each displayData.lenders as lender, lenderIndex (contractLenderListKey(lender, lenderIndex))}
 					<div
 						class={cn(
 							'rounded-md border border-border bg-muted/40',
@@ -232,7 +233,7 @@
 			{getWitnessAttestationText(customization)}
 		</p>
 		<div class="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-6">
-			{#each signatureParties as party (party.role + party.printedName)}
+			{#each signatureParties as party, partyIndex (`sig-${partyIndex}-${party.role}-${party.printedName}`)}
 				{@const isSigned = Boolean(party.eSignatureUrl)}
 				{@const knownAddress = party.address?.trim()}
 				<div

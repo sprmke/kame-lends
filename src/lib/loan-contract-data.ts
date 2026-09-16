@@ -28,6 +28,16 @@ export interface ContractLender {
   interestDescription: string;
 }
 
+/** Stable, unique `{#each}` key when lender email is missing or duplicated. */
+export function contractLenderListKey(
+  lender: ContractLender,
+  index: number,
+): string {
+  const email = lender.email?.trim();
+  const name = lender.name?.trim() || "lender";
+  return email ? `lender:${index}:${email}` : `lender:${index}:${name}`;
+}
+
 export interface LoanContractDraftInvestor {
   investor: Investor;
   transactions: Array<{

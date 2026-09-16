@@ -96,7 +96,7 @@
 		}))
 	]);
 
-	const filteredContacts = $derived(() => {
+	const filteredContacts = $derived.by(() => {
 		const query = contactPickerQuery.trim().toLowerCase();
 		if (!query) return contacts;
 		return contacts.filter((contact) =>
@@ -241,8 +241,8 @@
 						</div>
 					</div>
 					<div class="max-h-64 overflow-y-auto p-1">
-						{#if filteredContacts().length}
-							{#each filteredContacts() as contact (contact.key)}
+						{#if filteredContacts.length}
+							{#each filteredContacts as contact (contact.key)}
 								<button
 									type="button"
 									class="flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left hover:bg-muted"
@@ -397,7 +397,7 @@
 				</div>
 			</div>
 
-			{#each lenders as lender, index (lender.email)}
+			{#each lenders as lender, index (`lender-participant-${index}-${lender.email?.trim() || lender.name}`)}
 				{@const included = value.lenderSignaturesIncluded?.[lender.email] === true}
 				{@const savedSignature = investors.find((investor) => investor.email === lender.email)?.eSignatureUrl}
 				<div

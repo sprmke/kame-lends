@@ -51,6 +51,7 @@
 	let isLoadingContacts = $state(false);
 	let isSaving = $state(false);
 	let signingInvitations = $state<SigningInvitationRecord[]>([]);
+	let invitationLoadSeq = 0;
 
 	const baseContractData = $derived(buildLoanContractData(loan));
 	const defaults = $derived(buildDefaultContractCustomizationFromLoan(baseContractData));
@@ -79,7 +80,8 @@
 	const isDirty = $derived(!areContractCustomizationsEqual(customization, savedSnapshot));
 
 	$effect(() => {
-		onDirtyChange?.(isDirty);
+		const dirty = isDirty;
+		untrack(() => onDirtyChange?.(dirty));
 	});
 
 	$effect(() => {
@@ -105,34 +107,39 @@
 	});
 
 	$effect(() => {
-		onRegisterSave?.(handleSave);
+		untrack(() => onRegisterSave?.(handleSave));
 	});
 
 	$effect(() => {
-		void loadSigningInvitations(loan.id);
-	});
-
-	async function loadSigningInvitations(loanId: number) {
-		try {
-			const payload = await fetchContractClient(loanId);
-			if (Array.isArray(payload?.signingInvitations)) {
-				signingInvitations = payload.signingInvitations;
-			}
-			if (payload?.customization) {
-				const next = parseStoredContractCustomization(
-					payload.customization as ContractCustomization,
-					defaults
-				);
-				if (areContractCustomizationsEqual(customization, savedSnapshot)) {
-					customization = next;
-					savedSnapshot = next;
-					dirtyFields = createEmptyDirtyFields();
+		const loanId = loan.id;
+		const seq = ++invitationLoadSeq;
+		void fetchContractClient(loanId)
+			.then((payload) => {
+				if (seq !== invitationLoadSeq) return;
+				if (Array.isArray(payload?.signingInvitations)) {
+					signingInvitations = payload.signingInvitations;
 				}
-			}
-		} catch (error) {
-			console.error('Failed to load contract signing invitations', error);
-		}
-	}
+				if (payload?.customization) {
+					const nextDefaults = buildDefaultContractCustomizationFromLoan(
+						buildLoanContractData(loan)
+					);
+					const next = parseStoredContractCustomization(
+						payload.customization as ContractCustomization,
+						nextDefaults
+					);
+					untrack(() => {
+						if (!areContractCustomizationsEqual(customization, savedSnapshot)) return;
+						customization = next;
+						savedSnapshot = next;
+						dirtyFields = createEmptyDirtyFields();
+					});
+				}
+			})
+			.catch((error) => {
+				if (seq !== invitationLoadSeq) return;
+				console.error('Failed to load contract signing invitations', error);
+			});
+	});
 
 	async function loadContacts() {
 		isLoadingContacts = true;
