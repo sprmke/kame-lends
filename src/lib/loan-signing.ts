@@ -56,6 +56,11 @@ export function buildAuthenticatedSigningUrl(
   return path;
 }
 
+/** Loan detail with Contract Details modal open (`LoanDetailClient`). */
+export function loanContractPagePath(loanId: number): string {
+  return `/loans/${loanId}?signing=1`;
+}
+
 /** @deprecated Prefer buildAuthenticatedSigningUrl(loanId). Kept for legacy token redirects. */
 export function buildSigningUrl(token: string, origin?: string): string {
   const base = origin ?? publicAppUrl();
@@ -535,6 +540,59 @@ export function sortSigningInvitations<
     if (roleDiff !== 0) return roleDiff;
     return a.id - b.id;
   });
+}
+
+export type SigningInvitationPendingFields = Pick<
+  SigningInvitationRecord,
+  "signedAt" | "expiresAt"
+>;
+
+/** Unsigned invitation that is still valid (not past expiresAt). */
+export function isSigningInvitationPending(
+  invitation: SigningInvitationPendingFields,
+): boolean {
+  if (invitation.signedAt != null) return false;
+  if (invitation.expiresAt != null) {
+    return new Date(invitation.expiresAt).getTime() >= Date.now();
+  }
+  return true;
+}
+
+export function loanHasPendingSigning(loan: {
+  signingInvitations?: SigningInvitationPendingFields[] | null;
+}): boolean {
+  const invitations = loan.signingInvitations ?? [];
+  return invitations.some((invitation) =>
+    isSigningInvitationPending(invitation),
+  );
+}
+
+export type LoanSigningDisplayStatus = "none" | "pending" | "signed";
+
+export function loanSigningDisplayStatus(loan: {
+  signingInvitations?: SigningInvitationPendingFields[] | null;
+}): LoanSigningDisplayStatus {
+  const invitations = loan.signingInvitations ?? [];
+  if (invitations.length === 0) return "none";
+  if (loanHasPendingSigning(loan)) return "pending";
+  if (invitations.every((invitation) => invitation.signedAt != null)) {
+    return "signed";
+  }
+  return "none";
+}
+
+export function loanIsFullySigned(loan: {
+  signingInvitations?: SigningInvitationPendingFields[] | null;
+}): boolean {
+  return loanSigningDisplayStatus(loan) === "signed";
+}
+
+export function countPendingSigningInvitations(loan: {
+  signingInvitations?: SigningInvitationPendingFields[] | null;
+}): number {
+  return (loan.signingInvitations ?? []).filter((invitation) =>
+    isSigningInvitationPending(invitation),
+  ).length;
 }
 
 export function toSigningInvitationSummary(

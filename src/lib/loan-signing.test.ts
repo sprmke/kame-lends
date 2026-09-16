@@ -3,6 +3,9 @@ import { buildDefaultContractCustomizationFromLoan } from "./loan-contract-custo
 import { buildLoanContractData } from "./loan-contract-data";
 import {
   applySigningSignatures,
+  isSigningInvitationPending,
+  loanHasPendingSigning,
+  loanSigningDisplayStatus,
   resolvePartySignature,
   type SigningInvitationRecord,
 } from "./loan-signing";
@@ -193,5 +196,44 @@ describe("applySigningSignatures", () => {
 
     expect(merged.data.borrowerESignatureUrl).toBe(savedBorrowerSig);
     expect(merged.data.lenders[0]?.eSignatureUrl).toBe(savedLenderSig);
+  });
+});
+
+describe("loanHasPendingSigning", () => {
+  it("is true when any invitation is unsigned and not expired", () => {
+    expect(
+      loanHasPendingSigning({
+        signingInvitations: [
+          { signedAt: new Date(), expiresAt: null },
+          { signedAt: null, expiresAt: null },
+        ],
+      }),
+    ).toBe(true);
+  });
+
+  it("is false when all invitations are signed or expired", () => {
+    const past = new Date(Date.now() - 86_400_000);
+    expect(
+      loanHasPendingSigning({
+        signingInvitations: [
+          { signedAt: new Date(), expiresAt: null },
+          { signedAt: null, expiresAt: past },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      isSigningInvitationPending({ signedAt: null, expiresAt: past }),
+    ).toBe(false);
+  });
+
+  it("returns signed when every invitation is signed", () => {
+    expect(
+      loanSigningDisplayStatus({
+        signingInvitations: [
+          { signedAt: new Date(), expiresAt: null },
+          { signedAt: new Date(), expiresAt: null },
+        ],
+      }),
+    ).toBe("signed");
   });
 });
