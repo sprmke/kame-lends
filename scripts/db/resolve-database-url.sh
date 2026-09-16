@@ -65,8 +65,9 @@ resolve_database_url() {
       if [[ -f "$env_file" ]]; then
         url="$(load_env_var DATABASE_URL_VERCEL "$env_file" || true)"
       fi
-      if [[ -z "$url" && -n "${DATABASE_URL:-}" ]]; then
-        url="$DATABASE_URL"
+      if [[ -z "$url" ]]; then
+        echo "Set DATABASE_URL_VERCEL in .env.local to the same Neon URL as Vercel Production (and GitHub CD DATABASE_URL)." >&2
+        return 1
       fi
       ;;
     app)

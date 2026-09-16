@@ -1,4 +1,5 @@
 {
+  "ignoreCommand": "bash scripts/deploy/vercel-ignore-git-production-build.sh",
   "regions": ["sin1"],
   "crons": [
     {

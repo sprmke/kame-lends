@@ -9,9 +9,8 @@ name: CD
 #   VERCEL_ORG_ID      — from `vercel link` / project settings
 #   VERCEL_PROJECT_ID  — from `vercel link` / project settings
 #
-# Turn off Vercel Git "Production" auto-deploy for main so this workflow owns
-# production releases (Project → Settings → Git → Ignored Build Step, or disable
-# production branch auto-deploy). Preview deploys for PRs can stay enabled.
+# Turn off competing Git Production deploys: vercel.json ignoreCommand skips main
+# production builds; this workflow is the only Production release path.
 
 on:
   push:

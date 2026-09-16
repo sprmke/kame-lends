@@ -69,9 +69,10 @@ The CD workflow’s `migrate` and `deploy` jobs use `environment: production` so
 ## Vercel project settings
 
 1. Keep Production env vars (Auth, `DATABASE_URL`, calendar, Resend, etc.).
-2. **Disable Production auto-deploy from Git** for `main` so CD owns the migrate-then-deploy order. Preview deploys for PRs can stay on.
-3. Framework: SvelteKit. Install: `bun install`. Build: `bun run build` (CD uses `vercel build --prod` with project settings).
-4. Functions run in Singapore (`sin1`), pinned in `svelte.config.js` and `vercel.json`, next to the Singapore Neon `DATABASE_URL`. Hobby: one region. Confirm with `x-vercel-id` (`sin1::sin1::…`).
+2. **Git must not deploy Production before migrations.** Repo ships `vercel.json` → `ignoreCommand`: `scripts/deploy/vercel-ignore-git-production-build.sh` skips Git builds when `VERCEL_ENV=production` and branch is `main`. Only [`.github/workflows/cd.yml`](../../.github/workflows/cd.yml) should promote Production (`migrate` → `vercel deploy --prebuilt --prod`). Preview deploys for PRs still build.
+3. After merging CD fixes, run **Actions → CD → Run workflow** on `main` once (or push) so pending SQL (`0020`, `0021`, …) applies before the next app deploy.
+4. Framework: SvelteKit. Install: `bun install`. Build: `bun run build` (CD uses `vercel build --prod` with project settings).
+5. Functions run in Singapore (`sin1`), pinned in `svelte.config.js` and `vercel.json`, next to the Singapore Neon `DATABASE_URL`. Hobby: one region. Confirm with `x-vercel-id` (`sin1::sin1::…`).
 
 ## Local emergency deploy
 
