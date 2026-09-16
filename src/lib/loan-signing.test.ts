@@ -102,6 +102,19 @@ describe("resolvePartySignature", () => {
   });
 });
 
+describe("buildDefaultContractCustomizationFromLoan", () => {
+  it("does not include witnesses until the owner opts in", () => {
+    const loan = buildFixtureLoan();
+    const customization = buildDefaultContractCustomizationFromLoan(
+      buildLoanContractData(loan),
+    );
+
+    expect(customization.includeWitnesses).toBe(false);
+    expect(customization.witness1Name).toBe("");
+    expect(customization.witness1Id).toBeNull();
+  });
+});
+
 describe("applySigningSignatures", () => {
   it("does not show saved signatures unless admin opted in", () => {
     const loan = buildFixtureLoan();

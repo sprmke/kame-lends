@@ -125,7 +125,7 @@ export function buildDefaultContractCustomization(
     witness2ValidIdUrl: "",
     witness2ESignatureUrl: "",
     witness2SignatureIncluded: false,
-    includeWitnesses: true,
+    includeWitnesses: false,
     includeBorrowerSignature: false,
     lenderSignaturesIncluded: buildDefaultLenderSignaturesIncluded(
       data.lenders.map((lender) => lender.email),
@@ -163,7 +163,7 @@ export function buildDefaultContractCustomizationFromLoan(
     witness2ValidIdUrl: "",
     witness2ESignatureUrl: "",
     witness2SignatureIncluded: false,
-    includeWitnesses: true,
+    includeWitnesses: false,
     includeBorrowerSignature: false,
     lenderSignaturesIncluded: buildDefaultLenderSignaturesIncluded(
       data.lenders.map((lender) => lender.email),
