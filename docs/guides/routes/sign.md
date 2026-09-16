@@ -11,9 +11,9 @@ After loan create (`POST /api/loans`), parties with emails receive a branded Res
 
 A signature submitted on this page is stored on the contract invitation and takes priority over any saved CRM e-signature on the PDF.
 
-When the loan owner checked **Use saved signature** for the party in Contract Details **and** the signer has a profile e-signature (`/settings` or party profile), the sign page shows **Draw** and **Saved**. **Saved** submits the profile image; **Draw** uses the pad. Without both conditions, only the draw pad is shown.
+When the signer has a profile e-signature (`/settings` or party profile), the sign page shows **Draw** and **E-signature**. **E-signature** submits the profile image; **Draw** uses the pad. Without a profile e-signature, only the draw pad is shown (with a short note pointing to Settings).
 
-Saved profile signatures also appear on the contract PDF without signing when the owner enabled **Use saved signature** and the party has not signed on this page yet.
+Saved profile signatures also appear on the contract PDF without signing when the owner enabled **Use saved signature** in Contract Details and the party has not signed on this page yet.
 
 Legacy `/sign/[token]` requires login and redirects to `/loans/[id]/sign`.
 
@@ -26,7 +26,7 @@ Access failures render `+error.svelte`, not a bare 404: no signature slot for th
 - Uses `DashboardPage` shell padding like other authenticated routes.
 - Shared `PageBackHeader`: Back link above the page title when the tab has browser history (`history.length > 1`, e.g. navigated from `/loans` or `/loans/[id]`). Hidden on a fresh landing (bookmark or direct URL). Back uses `history.back()`. Title uses `text-lg` on phone, `text-xl` on desktop. Role badge sits inline with the title.
 - Phone (`<lg`): contract preview stacks above signature and consent. Contract body uses page scroll (no inner `max-height` on the preview). Submit stays in the consent card (scrolls with content; no fixed bottom bar). Tab dock clearance comes from `pb-mobile-tab` on the app shell.
-- Desktop (`xl+`): two-column layout (contract left, signature + consent sticky right). Contract preview expands naturally (no inner scroll region). When **Saved** is available, **Draw** / **Saved** toggle above the pad or preview. Signature hint text wraps; **Clear Signature** sits below the hint in draw mode. Consent checkbox label uses `text-sm` (same as body copy). Full-width submit in the consent card.
+- Desktop (`xl+`): two-column layout (contract left, signature + consent sticky right). Contract preview expands naturally (no inner scroll region). When a profile e-signature exists, **Draw** / **E-signature** toggle above the pad or preview. Signature hint text wraps; **Clear Signature** sits below the hint in draw mode. Consent checkbox label uses `text-sm` (same as body copy). Full-width submit in the consent card.
 
 ## APIs
 

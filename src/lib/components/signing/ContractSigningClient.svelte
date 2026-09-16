@@ -73,16 +73,14 @@
 	);
 	const consent = $derived(getElectronicSignatureConsentText(data.partyRole, displayName));
 	const roleLabel = $derived(getSigningPartyRoleLabel(data.partyRole));
-	const canUseSavedSignature = $derived(
-		data.savedSignatureEnabled === true && Boolean(data.savedSignatureUrl)
-	);
+	const savedSignatureAvailable = $derived(Boolean(data.savedSignatureUrl));
 	const savedSignaturePreview = $derived(imagePreviewSrc(data.savedSignatureUrl));
 	const hasSignature = $derived(Boolean(signatureDataUrl));
 	const canSubmit = $derived(hasSignature && consentChecked && !isSubmitting);
 
 	$effect(() => {
 		if (savedModeInitialized || data.signedAt || data.expired) return;
-		if (canUseSavedSignature && data.savedSignatureUrl) {
+		if (savedSignatureAvailable && data.savedSignatureUrl) {
 			signatureMode = 'saved';
 			signatureDataUrl = data.savedSignatureUrl;
 			savedModeInitialized = true;
@@ -241,7 +239,7 @@
 						</Card.Title>
 					</Card.Header>
 					<Card.Content class="space-y-4 p-5 pt-0 sm:p-6 sm:pt-0 md:p-7 md:pt-0">
-						{#if canUseSavedSignature}
+						{#if savedSignatureAvailable}
 							<div class="flex gap-2">
 								<Button
 									type="button"
@@ -259,7 +257,7 @@
 									class="flex-1"
 									onclick={() => setSignatureMode('saved')}
 								>
-									Saved
+									E-signature
 								</Button>
 							</div>
 						{/if}
@@ -279,6 +277,11 @@
 								onChange={(url) => (signatureDataUrl = url)}
 								onDrawingChange={(drawing) => (isDrawingSignature = drawing)}
 							/>
+							{#if !savedSignatureAvailable}
+								<p class="text-sm text-muted-foreground">
+									Add an e-signature in Settings to reuse it here.
+								</p>
+							{/if}
 						{/if}
 					</Card.Content>
 				</Card.Root>
@@ -333,12 +336,12 @@
 							{#if !canSubmit && !isSubmitting}
 								<p class="text-sm text-muted-foreground">
 									{!hasSignature && !consentChecked
-										? canUseSavedSignature
+										? savedSignatureAvailable
 											? 'Add your signature and accept consent to submit.'
 											: 'Draw your signature and accept consent to submit.'
 										: !hasSignature
-											? canUseSavedSignature
-												? 'Choose Draw or Saved above.'
+											? savedSignatureAvailable
+												? 'Choose Draw or E-signature above.'
 												: 'Draw your signature above.'
 											: 'Accept electronic consent to submit.'}
 								</p>
