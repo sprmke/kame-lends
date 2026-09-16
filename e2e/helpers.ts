@@ -91,5 +91,36 @@ export async function switchE2ESession(
       `E2E session email mismatch: wanted ${email}, got ${body.email}`,
     );
   }
+  // Isolated `request` fixtures do not share cookies with the page; copy them.
+  // Also re-apply from Set-Cookie so browser navigation matches API session.
+  if (browserContext) {
+    if (typeof request.storageState === "function") {
+      const state = await request.storageState();
+      if (state.cookies.length > 0) {
+        await browserContext.addCookies(state.cookies);
+      }
+    }
+    const setCookieHeaders = response
+      .headersArray()
+      .filter((h) => h.name.toLowerCase() === "set-cookie")
+      .map((h) => h.value);
+    for (const header of setCookieHeaders) {
+      const [pair] = header.split(";");
+      const eq = pair.indexOf("=");
+      if (eq <= 0) continue;
+      const name = pair.slice(0, eq).trim();
+      const value = pair.slice(eq + 1).trim();
+      await browserContext.addCookies([
+        {
+          name,
+          value,
+          domain: "localhost",
+          path: "/",
+          httpOnly: true,
+          sameSite: "Lax",
+        },
+      ]);
+    }
+  }
   return body;
 }

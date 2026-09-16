@@ -65,6 +65,15 @@ export default defineConfig({
         storageState: "e2e/.auth/admin.json",
       },
     },
+    {
+      name: "loan-groups-v2",
+      testMatch: /loan-groups-v2\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+      },
+    },
   ],
   webServer: {
     command: `bun run dev --port ${previewPort}`,
