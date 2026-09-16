@@ -9,6 +9,9 @@ name: CD
 #   VERCEL_ORG_ID      — from `vercel link` / project settings
 #   VERCEL_PROJECT_ID  — from `vercel link` / project settings
 #
+# Optional:
+#   PRODUCTION_URL     — defaults to https://pawn-tracker.vercel.app (post-deploy smoke test)
+#
 # Turn off competing Git Production deploys: vercel.json ignoreCommand skips main
 # production builds; this workflow is the only Production release path.
 
@@ -56,6 +59,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: bash scripts/db/migrate-pending.sh --yes
+      - name: Verify migrations applied
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: bash scripts/db/check-migrations-pending.sh
 
   deploy:
     name: Deploy
@@ -76,3 +83,79 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: bash scripts/deploy/vercel-prod.sh
+      - name: Smoke test production health
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: |
+          BASE="${PRODUCTION_URL:-https://pawn-tracker.vercel.app}"
+          echo "GET ${BASE}/api/health"
+          for attempt in 1 2 3 4 5; do
+            body="$(curl -fsS "${BASE}/api/health" || true)"
+            if echo "$body" | grep -q '"ok":true'; then
+              echo "$body"
+              exit 0
+            fi
+            echo "Attempt ${attempt}/5 not ready yet: ${body:-curl failed}"
+            sleep 15
+          done
+          echo "::error title=Production smoke test failed::${BASE}/api/health did not return ok:true. DB migrations may be missing or deploy is unhealthy."
+          exit 1
+
+  notify-failure:
+    name: Notify on failure
+    needs: [quality, migrate, deploy]
+    if: failure() && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update CD alert issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const results = {
+              quality: '${{ needs.quality.result }}',
+              migrate: '${{ needs.migrate.result }}',
+              deploy: '${{ needs.deploy.result }}'
+            };
+            const failed = Object.entries(results)
+              .filter(([, result]) => result === 'failure')
+              .map(([name]) => name);
+            const title = 'Production CD failed';
+            const body = [
+              `Workflow [${context.runId}](${runUrl}) failed on \`${context.sha.substring(0, 7)}\`.`,
+              '',
+              '**Failed jobs:** ' + (failed.length ? failed.join(', ') : 'see run'),
+              '',
+              'Production may be on stale code, missing migrations, or an unhealthy deploy.',
+              'Check Actions → CD, then run `bun run db:migrate:pending:vercel --yes` if SQL is behind.',
+              '',
+              `_Auto-opened by CD notify-failure._`
+            ].join('\n');
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'cd-failure',
+              per_page: 1
+            });
+            if (issues.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues[0].number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['cd-failure']
+              });
+            }
+      - name: Annotate workflow summary
+        run: |
+          echo "::error title=Production CD failed::See https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} — quality, migrate, or deploy did not finish."

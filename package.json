@@ -46,6 +46,9 @@
     "db:migrate:pending": "bash scripts/db/migrate-pending.sh",
     "db:migrate:pending:prod": "bash scripts/db/migrate-pending.sh --prod",
     "db:migrate:pending:vercel": "bash scripts/db/migrate-pending.sh --vercel",
+    "db:migrate:check": "bash scripts/db/check-migrations-pending.sh",
+    "db:migrate:check:prod": "bash scripts/db/check-migrations-pending.sh --prod",
+    "db:migrate:check:vercel": "bash scripts/db/check-migrations-pending.sh --vercel",
     "deploy:prod": "bash scripts/deploy/vercel-prod.sh"
   },
   "devDependencies": {

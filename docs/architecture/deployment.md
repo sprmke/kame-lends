@@ -31,6 +31,22 @@ Locally: `bun run ci:quality`.
 
 Concurrency group `cd-main` with `cancel-in-progress: false` so a mid-migration run is never cancelled by a newer push.
 
+### When CD fails
+
+| Signal                            | Where                                           |
+| --------------------------------- | ----------------------------------------------- |
+| Red **CD** badge in README        | Links to the latest workflow run                |
+| GitHub issue labeled `cd-failure` | Opened or commented by the `notify-failure` job |
+| Workflow annotation               | `Production CD failed` on the run summary       |
+
+Enable email: GitHub → **Watch** → **Custom** → **Actions** (repo or org).
+
+If CD is red, **do not** hand-deploy app code until quality passes and migrations apply. Schema drift (code shipped without SQL) surfaces as `Internal Error` on `/loans` and `GET /api/health` returns **503** with `pendingFiles` / `missingColumns`.
+
+### Post-deploy smoke test
+
+After Vercel promote, CD polls `GET /api/health` on production (default `https://pawn-tracker.vercel.app`, override with GitHub secret `PRODUCTION_URL`). The endpoint is public and returns **200** only when the DB is reachable and migrations/columns match the running build.
+
 ## Migrations
 
 Hand-maintained SQL lives in `db/migrations/`. The runner:
@@ -47,11 +63,12 @@ Never edit a shipped migration file. Add a new numbered SQL file instead.
 
 Local / QA:
 
-| Command                             | Target                                           |
-| ----------------------------------- | ------------------------------------------------ |
-| `bun run db:migrate:pending`        | `DATABASE_URL` (usually local Docker)            |
-| `bun run db:migrate:pending:prod`   | `DATABASE_URL_PROD` (Singapore Neon QA)          |
-| `bun run db:migrate:pending:vercel` | `DATABASE_URL_VERCEL` (live Vercel prod, manual) |
+| Command                                          | Target                                                     |
+| ------------------------------------------------ | ---------------------------------------------------------- |
+| `bun run db:migrate:pending`                     | `DATABASE_URL` (usually local Docker)                      |
+| `bun run db:migrate:pending:prod`                | `DATABASE_URL_PROD` (Singapore Neon QA)                    |
+| `bun run db:migrate:pending:vercel`              | `DATABASE_URL_VERCEL` (live Vercel prod, manual)           |
+| `bun run db:migrate:check` / `:prod` / `:vercel` | Read-only: fail if pending SQL or required columns missing |
 
 ## GitHub secrets
 

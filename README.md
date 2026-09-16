@@ -18,6 +18,9 @@ Built with **SvelteKit 2** and **Svelte 5** for day-to-day operations: recording
 </p>
 
 <p align="center">
+  <a href="https://github.com/sprmke/pawn-tracker/actions/workflows/cd.yml">
+    <img src="https://github.com/sprmke/pawn-tracker/actions/workflows/cd.yml/badge.svg" alt="CD status" />
+  </a>
   <img src="https://img.shields.io/badge/SvelteKit-2-ff3e00?style=flat-square&logo=svelte" alt="SvelteKit" />
   <img src="https://img.shields.io/badge/Svelte-5-ff3e00?style=flat-square&logo=svelte" alt="Svelte" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript" alt="TypeScript" />
