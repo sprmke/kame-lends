@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildGroupFilterOptions,
   filterLoansByGroup,
   parseGroupSelection,
   groupSelectionToParam,
@@ -34,5 +35,19 @@ describe("loan-group-filter", () => {
       2,
     ]);
     expect(filterLoansByGroup(loans, 10).map((l) => l.id)).toEqual([1, 3]);
+  });
+
+  it("builds group filter dropdown options", () => {
+    expect(
+      buildGroupFilterOptions({
+        groups: [{ id: 10, name: "Alpha", loanCountOnPage: 2 }],
+        showUngrouped: true,
+        ungroupedCount: 1,
+      }),
+    ).toEqual([
+      { value: "all", label: "All Groups" },
+      { value: "10", label: "Alpha (2)" },
+      { value: "ungrouped", label: "Ungrouped (1)" },
+    ]);
   });
 });

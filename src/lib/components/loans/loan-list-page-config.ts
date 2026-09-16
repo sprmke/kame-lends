@@ -1,6 +1,7 @@
 import { Eye, FileText, HandCoins, PiggyBank } from "lucide-svelte";
 import type { IconComponent } from "$lib/types/icon";
 import type { DatePreset } from "$lib/date/navigation";
+import { PAGE_DESCRIPTIONS } from "$lib/page-descriptions";
 
 export type LoanListPageScope =
   "loans" | "investments" | "borrowed" | "witnessed" | "group";
@@ -14,7 +15,6 @@ export type LoanListPageVariant = {
   showDateRange: boolean;
   showLoanListSummary: boolean;
   showProfitSummary: boolean;
-  showSyncCalendar: boolean;
   showBulkActions: boolean;
   showGroupScopedInfo: boolean;
   groupScopeNoun: string;
@@ -34,13 +34,12 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
   loans: {
     documentTitle: "Loans",
     defaultPageTitle: "Loans",
-    description: "Manage all your loans",
+    description: PAGE_DESCRIPTIONS.loans.loans,
     defaultEmptyMessage: "No loans yet",
     emptyIcon: FileText,
     showDateRange: true,
     showLoanListSummary: true,
     showProfitSummary: false,
-    showSyncCalendar: false,
     showBulkActions: true,
     showGroupScopedInfo: false,
     groupScopeNoun: "loans",
@@ -54,13 +53,12 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
   investments: {
     documentTitle: "Investments",
     defaultPageTitle: "Investments",
-    description: "Loans where you are an investor",
+    description: PAGE_DESCRIPTIONS.loans.investments,
     defaultEmptyMessage: "No investments yet",
     emptyIcon: PiggyBank,
     showDateRange: true,
     showLoanListSummary: true,
     showProfitSummary: false,
-    showSyncCalendar: true,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "investments",
@@ -74,13 +72,12 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
   borrowed: {
     documentTitle: "Loans",
     defaultPageTitle: "Borrowed",
-    description: "Loans where you are the borrower",
+    description: PAGE_DESCRIPTIONS.loans.borrowed,
     defaultEmptyMessage: "No borrowed loans yet",
     emptyIcon: HandCoins,
-    showDateRange: false,
+    showDateRange: true,
     showLoanListSummary: false,
     showProfitSummary: true,
-    showSyncCalendar: true,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "borrowed loans",
@@ -94,13 +91,12 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
   witnessed: {
     documentTitle: "Loans",
     defaultPageTitle: "Witnessed",
-    description: "Loans where you are a witness",
+    description: PAGE_DESCRIPTIONS.loans.witnessed,
     defaultEmptyMessage: "No witnessed loans yet",
     emptyIcon: Eye,
-    showDateRange: false,
+    showDateRange: true,
     showLoanListSummary: false,
     showProfitSummary: true,
-    showSyncCalendar: true,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "witnessed loans",
@@ -114,13 +110,12 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
   group: {
     documentTitle: "Loans",
     defaultPageTitle: "Loans",
-    description: "",
+    description: PAGE_DESCRIPTIONS.loans.group,
     defaultEmptyMessage: "No loans in this group yet",
     emptyIcon: FileText,
     showDateRange: true,
     showLoanListSummary: true,
     showProfitSummary: false,
-    showSyncCalendar: false,
     showBulkActions: true,
     showGroupScopedInfo: false,
     groupScopeNoun: "loans",

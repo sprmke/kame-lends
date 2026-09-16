@@ -1,6 +1,7 @@
 import { replaceState } from "$app/navigation";
 import { untrack } from "svelte";
 import { createDateNavigation } from "$lib/composables/use-date-navigation.svelte";
+import { shouldSkipUrlToDateNavSync } from "$lib/loan-list-date-range-sync";
 import {
   ALL_TIME_RANGE_PARAM,
   fromIsoDate,
@@ -15,24 +16,71 @@ type Options = {
   defaultPreset?: DatePreset;
 };
 
+type OptionsInput = Options | (() => Options);
+
+function resolveOptions(input: OptionsInput): Options {
+  return typeof input === "function" ? input() : input;
+}
+
 export function createLoanListDateRange(
   getPage: () => Page,
-  options: Options = {},
+  optionsInput: OptionsInput = {},
 ) {
-  const enabled = options.enabled !== false;
-  const defaultPreset = options.defaultPreset ?? "month";
+  const getOptions = () => resolveOptions(optionsInput);
+  const enabled = $derived(getOptions().enabled !== false);
+  const defaultPreset = $derived(getOptions().defaultPreset ?? "month");
+
+  const initialUrl = getPage().url;
+  const initialOpts = getOptions();
+  const initialAllTime = isAllTimeDateRange(initialUrl);
+  const initialFrom = fromIsoDate(initialUrl.searchParams.get("from"));
+  const initialTo = fromIsoDate(initialUrl.searchParams.get("to"));
+
+  const dateNav = createDateNavigation({
+    initialPreset: initialAllTime
+      ? "all-time"
+      : (initialOpts.defaultPreset ?? "month"),
+    initialRange:
+      initialAllTime || !initialFrom || !initialTo
+        ? null
+        : { from: initialFrom, to: initialTo },
+  });
+
+  let pendingFrom: string | null = null;
+  let pendingTo: string | null = null;
+  let pendingAllTime = false;
+
   const urlFrom = $derived(getPage().url.searchParams.get("from"));
   const urlTo = $derived(getPage().url.searchParams.get("to"));
   const isAllTime = $derived(isAllTimeDateRange(getPage().url));
-  const dateNav = createDateNavigation({
-    initialPreset: isAllTime ? "all-time" : defaultPreset,
-    initialRange: (() => {
-      if (isAllTime) return null;
-      const from = fromIsoDate(urlFrom);
-      const to = fromIsoDate(urlTo);
-      return from && to ? { from, to } : null;
-    })(),
-  });
+
+  function markPendingFromNav() {
+    if (dateNav.datePreset === "all-time") {
+      pendingAllTime = true;
+      pendingFrom = null;
+      pendingTo = null;
+      return;
+    }
+    pendingAllTime = false;
+    const { from, to } = dateNav.getIsoRange();
+    pendingFrom = from;
+    pendingTo = to;
+  }
+
+  function clearPendingIfUrlMatches() {
+    const url = getPage().url;
+    if (pendingAllTime && isAllTimeDateRange(url)) {
+      pendingAllTime = false;
+      return;
+    }
+    if (!pendingFrom || !pendingTo) return;
+    const urlFrom = url.searchParams.get("from");
+    const urlTo = url.searchParams.get("to");
+    if (urlFrom === pendingFrom && urlTo === pendingTo) {
+      pendingFrom = null;
+      pendingTo = null;
+    }
+  }
 
   function patchDateParams(
     from: string | null,
@@ -53,11 +101,16 @@ export function createLoanListDateRange(
       else url.searchParams.delete("to");
     }
     const href = `${url.pathname}${url.search}${url.hash}`;
-    if (href === `${current.pathname}${current.search}${current.hash}`) return;
+    if (href === `${current.pathname}${current.search}${current.hash}`) {
+      clearPendingIfUrlMatches();
+      return;
+    }
     replaceState(href, getPage().state);
+    clearPendingIfUrlMatches();
   }
 
   function applyDateRangeToUrl() {
+    markPendingFromNav();
     if (dateNav.datePreset === "all-time") {
       patchDateParams(null, null, true);
       return;
@@ -87,18 +140,31 @@ export function createLoanListDateRange(
   }
 
   function clearDateFilter() {
-    dateNav.setDatePreset(defaultPreset);
+    dateNav.setDatePreset(getOptions().defaultPreset ?? "month");
     applyDateRangeToUrl();
   }
 
-  // Client-side fallback when navigating without a full load (e.g. in-app link).
+  // Default month range when params are missing (Managing / Investing lists).
   $effect(() => {
     if (!enabled) return;
-    if (isAllTime) return;
+    if (isAllTimeDateRange(getPage().url)) return;
     if (urlFrom && urlTo) return;
-    if (defaultPreset === "all-time") return;
+    const preset = defaultPreset;
+    if (preset === "all-time") return;
     untrack(() => {
-      dateNav.setDatePreset(defaultPreset);
+      dateNav.setDatePreset(preset);
+      applyDateRangeToUrl();
+    });
+  });
+
+  // Group hub: default all-time uses ?range=all so filtering matches the preset.
+  $effect(() => {
+    if (!enabled) return;
+    if (defaultPreset !== "all-time") return;
+    if (isAllTimeDateRange(getPage().url)) return;
+    if (urlFrom || urlTo) return;
+    untrack(() => {
+      dateNav.setDatePreset("all-time");
       applyDateRangeToUrl();
     });
   });
@@ -112,17 +178,45 @@ export function createLoanListDateRange(
 
     untrack(() => {
       if (allTime) {
+        pendingAllTime = false;
+        pendingFrom = null;
+        pendingTo = null;
         if (dateNav.datePreset !== "all-time") {
           dateNav.setDatePreset("all-time");
         }
         return;
       }
+
       if (!fromParam || !toParam) return;
+
       const from = fromIsoDate(fromParam);
       const to = fromIsoDate(toParam);
       if (!from || !to) return;
-      const current = dateNav.getIsoRange();
-      if (current.from === fromParam && current.to === toParam) return;
+
+      const nav = dateNav.getIsoRange();
+      if (nav.from === fromParam && nav.to === toParam) {
+        clearPendingIfUrlMatches();
+        return;
+      }
+
+      if (
+        shouldSkipUrlToDateNavSync({
+          urlFrom: fromParam,
+          urlTo: toParam,
+          navFrom: nav.from,
+          navTo: nav.to,
+          pendingFrom,
+          pendingTo,
+          pendingAllTime,
+          urlIsAllTime: allTime,
+        })
+      ) {
+        return;
+      }
+
+      pendingAllTime = false;
+      pendingFrom = null;
+      pendingTo = null;
       dateNav.setDateRange({ from, to });
     });
   });
@@ -139,20 +233,28 @@ export function createLoanListDateRange(
     navigatePeriod,
     goToToday,
     get isDateFilterActive() {
-      return Boolean(urlFrom || urlTo || isAllTime);
+      if (!enabled) return false;
+      if (isAllTime) return true;
+      if (urlFrom || urlTo) return true;
+      if (pendingRangeActive()) return true;
+      return defaultPreset !== "all-time";
     },
     get filterFrom() {
       if (!enabled) return null;
       if (isAllTime) return null;
-      if (!urlFrom && !urlTo && defaultPreset === "all-time") return null;
-      return urlFrom ?? dateNav.getIsoRange().from;
+      if (dateNav.datePreset === "all-time") return null;
+      return dateNav.getIsoRange().from;
     },
     get filterTo() {
       if (!enabled) return null;
       if (isAllTime) return null;
-      if (!urlFrom && !urlTo && defaultPreset === "all-time") return null;
-      return urlTo ?? dateNav.getIsoRange().to;
+      if (dateNav.datePreset === "all-time") return null;
+      return dateNav.getIsoRange().to;
     },
     clearDateFilter,
   };
+
+  function pendingRangeActive() {
+    return pendingAllTime || Boolean(pendingFrom && pendingTo);
+  }
 }

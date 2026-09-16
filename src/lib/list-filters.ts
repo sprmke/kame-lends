@@ -1,3 +1,4 @@
+import { isOpenLoan } from "$lib/calculations";
 import type { MultiSelectOption } from "$lib/components/common/MultiSelectFilter.svelte";
 
 export const LIST_FILTER_TRIGGER_CLASS =
@@ -42,10 +43,20 @@ export const UNASSIGNED_PARTICIPANT_FILTER_OPTION: MultiSelectOption = {
 
 export type LoanActivityFilter = "all" | "with_loans" | "without_loans";
 
+/** Witness list: any witnessed loan vs none. */
 export const LOAN_ACTIVITY_FILTER_OPTIONS = [
   { value: "all", label: "All" },
   { value: "with_loans", label: "With loans" },
   { value: "without_loans", label: "No loans" },
+] as const;
+
+/** Investors / borrowers: filter by current loan exposure. */
+export type ParticipantExposureFilter = "all" | "active" | "overdue";
+
+export const PARTICIPANT_EXPOSURE_FILTER_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "overdue", label: "Overdue" },
 ] as const;
 
 export type WitnessSigningFilter = "all" | "signed" | "pending";
@@ -63,6 +74,17 @@ export function matchesLoanActivityFilter(
   if (filter === "all") return true;
   if (filter === "with_loans") return loanCount > 0;
   return loanCount === 0;
+}
+
+export function matchesParticipantExposureFilter(
+  loans: Array<{ status: string }>,
+  filter: ParticipantExposureFilter,
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "active") {
+    return loans.some((loan) => isOpenLoan(loan));
+  }
+  return loans.some((loan) => loan.status === "Overdue");
 }
 
 export function matchesWitnessSigningFilter(

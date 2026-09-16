@@ -8,7 +8,6 @@
 		LOAN_TYPE_FILTER_OPTIONS
 	} from '$lib/list-filters';
 	import { UserCheck, UserRound, Users } from 'lucide-svelte';
-
 	interface Props {
 		statusFilter: string[];
 		typeFilter: string[];
@@ -74,29 +73,28 @@
 	}: Props = $props();
 </script>
 
-<div class="grid grid-cols-2 gap-3 border-b border-border/50 pb-3 xl:hidden">
-	<div>
-		<p class="mb-2 block text-xs font-semibold">Status</p>
-		<MultiSelectFilter
-			options={LOAN_STATUS_FILTER_OPTIONS}
-			selected={statusFilter}
-			onChange={onStatusChange}
-			placeholder="Select Status"
-			allLabel="All Status"
-			triggerClassName="w-full"
-		/>
-	</div>
-	<div>
-		<p class="mb-2 block text-xs font-semibold">Type</p>
-		<MultiSelectFilter
-			options={LOAN_TYPE_FILTER_OPTIONS}
-			selected={typeFilter}
-			onChange={onTypeChange}
-			placeholder="Select Type"
-			allLabel="All Types"
-			triggerClassName="w-full"
-		/>
-	</div>
+<div class="border-b border-border/50 pb-3">
+	<p class="mb-2 block text-xs font-semibold">Status</p>
+	<MultiSelectFilter
+		options={LOAN_STATUS_FILTER_OPTIONS}
+		selected={statusFilter}
+		onChange={onStatusChange}
+		placeholder="Select Status"
+		allLabel="All Status"
+		triggerClassName="w-full"
+	/>
+</div>
+
+<div class="border-b border-border/50 pb-3">
+	<p class="mb-2 block text-xs font-semibold">Type</p>
+	<MultiSelectFilter
+		options={LOAN_TYPE_FILTER_OPTIONS}
+		selected={typeFilter}
+		onChange={onTypeChange}
+		placeholder="Select Type"
+		allLabel="All Types"
+		triggerClassName="w-full"
+	/>
 </div>
 
 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

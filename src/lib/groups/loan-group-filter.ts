@@ -42,6 +42,35 @@ export function filterLoansByGroup(
   return loans.filter((loan) => loanGroupIds(loan).includes(selected));
 }
 
+export type GroupFilterOptionInput = {
+  id: number;
+  name: string;
+  loanCountOnPage: number;
+};
+
+export function buildGroupFilterOptions(input: {
+  groups: GroupFilterOptionInput[];
+  showUngrouped?: boolean;
+  ungroupedCount?: number;
+}): Array<{ value: string; label: string }> {
+  const items: Array<{ value: string; label: string }> = [
+    { value: "all", label: "All Groups" },
+  ];
+  for (const group of input.groups) {
+    items.push({
+      value: String(group.id),
+      label: `${group.name} (${group.loanCountOnPage})`,
+    });
+  }
+  if (input.showUngrouped && (input.ungroupedCount ?? 0) > 0) {
+    items.push({
+      value: "ungrouped",
+      label: `Ungrouped (${input.ungroupedCount})`,
+    });
+  }
+  return items;
+}
+
 export function buildGroupChipsForLoans(
   loans: LoanWithInvestors[],
   groupsIndex: GroupsIndexItem[],

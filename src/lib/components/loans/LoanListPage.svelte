@@ -6,8 +6,6 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
 	import LoanListMoreFiltersPanel from '$lib/components/common/LoanListMoreFiltersPanel.svelte';
-	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
-	import SyncCalendarButton from '$lib/components/common/SyncCalendarButton.svelte';
 	import ExportButton from '$lib/components/common/ExportButton.svelte';
 	import CardPagination from '$lib/components/common/CardPagination.svelte';
 	import ListPageSkeleton from '$lib/components/common/ListPageSkeleton.svelte';
@@ -42,11 +40,6 @@
 		passesLoanDueDateRangeFilter,
 		type ProfitStats
 	} from '$lib/loan-list-summary';
-	import {
-		LIST_FILTER_DESKTOP_TRIGGER_CLASS,
-		LOAN_STATUS_FILTER_OPTIONS,
-		LOAN_TYPE_FILTER_OPTIONS
-	} from '$lib/list-filters';
 	import DateRangeFilter from '$lib/components/common/DateRangeFilter.svelte';
 	import LoanListSummaryCards from '$lib/components/loans/LoanListSummaryCards.svelte';
 	import { createLoanListDateRange } from '$lib/composables/use-loan-list-date-range.svelte';
@@ -59,8 +52,8 @@
 	import { PlusCircle, X } from 'lucide-svelte';
 	import type { LoanWithInvestors } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
-	import GroupChipBar from '$lib/components/groups/GroupChipBar.svelte';
 	import GroupScopedFilterInfo from '$lib/components/groups/GroupScopedFilterInfo.svelte';
+	import LoanGroupFilter from '$lib/components/loans/LoanGroupFilter.svelte';
 	import LoanBulkActionBar from '$lib/components/loans/LoanBulkActionBar.svelte';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import { createLoanListGroupScope } from '$lib/composables/use-loan-list-group-scope.svelte';
@@ -72,13 +65,15 @@
 		LOAN_LIST_PAGE_VARIANTS,
 		type LoanListPageScope
 	} from '$lib/components/loans/loan-list-page-config';
+	import LoanScopeTabs from '$lib/components/loans/LoanScopeTabs.svelte';
 
 	type GroupListContext = { groupId: number };
 
 	let {
 		data,
 		scope,
-		groupContext = null
+		groupContext = null,
+		showScopeTabs = false
 	}: {
 		// Accept full page load (layout fields + list fields).
 		data: {
@@ -87,11 +82,12 @@
 			emptyMessage?: string;
 			canCreate?: boolean;
 			canManage?: boolean;
-			profitStats?: Promise<ProfitStats>;
+			profitStats?: Promise<ProfitStats> | ProfitStats;
 			[key: string]: unknown;
 		};
 		scope: LoanListPageScope;
 		groupContext?: GroupListContext | null;
+		showScopeTabs?: boolean;
 	} = $props();
 
 	const variant = $derived(LOAN_LIST_PAGE_VARIANTS[scope]);
@@ -129,8 +125,13 @@
 
 	$effect(() => {
 		if (!variant.showProfitSummary || !data.profitStats) return;
+		const source = data.profitStats;
+		if (!(source instanceof Promise)) {
+			profitStats = source;
+			return;
+		}
 		let active = true;
-		data.profitStats.then((value) => {
+		source.then((value) => {
 			if (active) profitStats = value;
 		});
 		return () => {
@@ -358,10 +359,10 @@
 
 	const dueDateFilter = $derived(page.url.searchParams.get('dueDate'));
 	const viewParam = $derived(page.url.searchParams.get('view'));
-	const dateRangeState = createLoanListDateRange(() => page, {
+	const dateRangeState = createLoanListDateRange(() => page, () => ({
 		enabled: LOAN_LIST_PAGE_VARIANTS[scope].showDateRange,
 		defaultPreset: LOAN_LIST_PAGE_VARIANTS[scope].defaultDatePreset
-	});
+	}));
 	const filterFrom = $derived(dateRangeState.filterFrom);
 	const filterTo = $derived(dateRangeState.filterTo);
 
@@ -383,6 +384,10 @@
 
 	const scopedLoans = $derived(
 		scope === 'group' ? preGroupLoans : groupScope.applyGroupFilter(preGroupLoans)
+	);
+
+	const showGroupFilter = $derived(
+		!variant.embedded && scope !== 'group' && groupScope.showGroupBar
 	);
 
 	const summaryStats = $derived(
@@ -444,7 +449,10 @@
 	);
 
 	const hasActiveAdvancedFilters = $derived(
-		hasActiveAmountFilters || participantFilters.hasActiveParticipantFilters
+		statusFilter.length > 0 ||
+			hasActiveAmountFilters ||
+			participantFilters.hasActiveParticipantFilters ||
+			typeFilter.length > 0
 	);
 
 	const hasActiveFilters = $derived(
@@ -518,15 +526,16 @@
 				onGeneratePDF={downloadLoansPdf}
 			/>
 			{#if canCreate}
-				{#if variant.showSyncCalendar}
-					<SyncCalendarButton variant="outline" size="default" />
-				{/if}
 				<Button class="px-3" adaptToMobileHero onclick={() => openCreateModal()} aria-label="New Loan">
 					<PlusCircle class="h-4 w-4 xl:mr-2" />
 					<span class="hidden xl:inline">New Loan</span>
 				</Button>
 			{/if}
 		</PageHeader>
+		{/if}
+
+		{#if showScopeTabs && !variant.embedded}
+			<LoanScopeTabs />
 		{/if}
 
 		{#if variant.embedded && variant.showDateRange}
@@ -574,17 +583,6 @@
 			<LoanProfitSummaryCards stats={profitStats} />
 		{/if}
 
-		{#if !variant.embedded && groupScope.showGroupBar}
-			<GroupChipBar
-				groups={groupScope.groupChips}
-				selected={groupScope.groupSelection}
-				onSelect={groupScope.setGroupSelection}
-				showUngrouped={groupScope.showUngrouped}
-				ungroupedCount={groupScope.ungroupedCount}
-				showManageLink={variant.groupShowManageLink}
-			/>
-		{/if}
-
 		{#if variant.showGroupScopedInfo && groupScope.selectedGroupInfo}
 			<GroupScopedFilterInfo
 				count={groupScope.selectedGroupInfo.countOnPage}
@@ -610,22 +608,15 @@
 			{hasActiveAdvancedFilters}
 		>
 			{#snippet filters()}
-				<MultiSelectFilter
-					options={LOAN_STATUS_FILTER_OPTIONS}
-					selected={statusFilter}
-					onChange={(value) => (statusFilter = value)}
-					placeholder="Select Status"
-					allLabel="All Status"
-					triggerClassName={LIST_FILTER_DESKTOP_TRIGGER_CLASS}
-				/>
-				<MultiSelectFilter
-					options={LOAN_TYPE_FILTER_OPTIONS}
-					selected={typeFilter}
-					onChange={(value) => (typeFilter = value)}
-					placeholder="Select Type"
-					allLabel="All Types"
-					triggerClassName={LIST_FILTER_DESKTOP_TRIGGER_CLASS}
-				/>
+				{#if showGroupFilter}
+					<LoanGroupFilter
+						groups={groupScope.groupChips}
+						selected={groupScope.groupSelection}
+						showUngrouped={groupScope.showUngrouped}
+						ungroupedCount={groupScope.ungroupedCount}
+						onChange={groupScope.setGroupSelection}
+					/>
+				{/if}
 			{/snippet}
 			{#snippet moreFilters()}
 				<LoanListMoreFiltersPanel
@@ -680,7 +671,7 @@
 
 		{#if hasActiveFilters}
 			<p class="text-sm text-muted-foreground">
-				Showing {filteredLoans.length} of {listLoans.length} loans
+				Showing {filteredLoans.length} of {scopedLoans.length} loans
 			</p>
 		{/if}
 

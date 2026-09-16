@@ -19,8 +19,10 @@
 	$effect(() => isMobileShell.init());
 </script>
 
-<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between lg:gap-4">
-	<div class="min-w-0 max-w-2xl space-y-2">
+<div
+	class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between lg:gap-4"
+>
+	<div class="min-w-0 max-w-2xl space-y-1">
 		{#if eyebrow}
 			<p class="section-eyebrow">{eyebrow}</p>
 		{/if}
@@ -33,7 +35,7 @@
 			{/if}
 		</div>
 		{#if description}
-			<p class="text-sm leading-relaxed text-muted-foreground">{description}</p>
+			<p class="text-sm leading-snug text-muted-foreground">{description}</p>
 		{/if}
 	</div>
 	{#if children}

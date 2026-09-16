@@ -66,7 +66,7 @@ export function createLoanListGroupScope(options: Options) {
     const param = groupSelectionToParam(value);
     if (param) url.searchParams.set("group", param);
     else url.searchParams.delete("group");
-    replaceState(`${url.pathname}${url.search}${url.hash}`, {});
+    replaceState(`${url.pathname}${url.search}${url.hash}`, page.state);
   }
 
   function applyGroupFilter(loans: LoanWithInvestors[]): LoanWithInvestors[] {
