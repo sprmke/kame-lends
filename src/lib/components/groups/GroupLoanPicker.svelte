@@ -1,3 +1,4 @@
+<!-- @deprecated Replaced by the multi-select loan picker sheet (loan groups v2). -->
 <script lang="ts">
 	import SearchableSelect from '$lib/components/common/SearchableSelect.svelte';
 	import { Button } from '$lib/components/ui/button';

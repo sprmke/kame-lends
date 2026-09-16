@@ -1,3 +1,4 @@
+<!-- @deprecated Replaced by GroupPeopleTab.svelte (loan groups v2). -->
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
