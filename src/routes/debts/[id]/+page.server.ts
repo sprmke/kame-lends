@@ -5,7 +5,6 @@ import { debts } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { hasDebtAccess } from "$lib/server/access-control";
 import { requireUserSession } from "$lib/server/request-auth";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 async function fetchOne(id: number, userId: string) {
   if (!(await hasDebtAccess(id, userId))) return null;
   return db.query.debts.findFirst({
@@ -26,9 +25,7 @@ export const load: PageServerLoad = async (event) => {
   if (Number.isNaN(id)) throw error(400, "Invalid id");
   const entity = await fetchOne(id, session.user.id);
   if (!entity) throw error(404, "Not found");
-  const canManage =
-    entity.userId === session.user.id &&
-    (await isWorkspaceAdmin(session.user.id));
+  const canManage = entity.userId === session.user.id;
   if (event.url.searchParams.get("edit") === "1" && !canManage) {
     throw error(403, "Read only");
   }

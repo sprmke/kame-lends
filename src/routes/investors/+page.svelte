@@ -4,6 +4,7 @@
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import ConfirmDeleteDialog from '$lib/components/common/ConfirmDeleteDialog.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
 	import SingleSelectFilter from '$lib/components/common/SingleSelectFilter.svelte';
 	import ExportButton from '$lib/components/common/ExportButton.svelte';
@@ -17,9 +18,9 @@
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
 	import {
-		LOAN_ACTIVITY_FILTER_OPTIONS,
-		matchesLoanActivityFilter,
-		type LoanActivityFilter
+		PARTICIPANT_EXPOSURE_FILTER_OPTIONS,
+		matchesParticipantExposureFilter,
+		type ParticipantExposureFilter
 	} from '$lib/list-filters';
 	import { toast } from '$lib/toast';
 	import { PlusCircle, Users, X } from 'lucide-svelte';
@@ -45,7 +46,7 @@
 
 	const viewModeState = createResponsiveViewMode();
 	let searchQuery = $state('');
-	let loanActivityFilter = $state<LoanActivityFilter>('all');
+	let exposureFilter = $state<ParticipantExposureFilter>('all');
 	let investorPendingDeletion = $state<InvestorWithLoans | null>(null);
 	let showFormModal = $state(false);
 	let editingInvestor = $state<InvestorWithLoans | null>(null);
@@ -90,11 +91,11 @@
 		await refreshInvestors();
 	}
 
-	const hasActiveFilters = $derived(searchQuery !== '' || loanActivityFilter !== 'all');
+	const hasActiveFilters = $derived(searchQuery !== '' || exposureFilter !== 'all');
 
 	function clearFilters() {
 		searchQuery = '';
-		loanActivityFilter = 'all';
+		exposureFilter = 'all';
 	}
 
 	const filteredInvestors = $derived(
@@ -108,7 +109,8 @@
 					return false;
 				}
 			}
-			return matchesLoanActivityFilter(investor.loanInvestors.length, loanActivityFilter);
+			const loans = investor.loanInvestors.map((li) => li.loan);
+			return matchesParticipantExposureFilter(loans, exposureFilter);
 		})
 	);
 </script>
@@ -121,7 +123,7 @@
 	<DashboardPage>
 		<PageHeader
 			title="Investors"
-			description="Track investor portfolios and balances"
+			description={PAGE_DESCRIPTIONS.investors}
 			showPriceToggle={true}
 		>
 			{#if items.length > 0}
@@ -153,9 +155,9 @@
 		>
 			{#snippet filters()}
 				<SingleSelectFilter
-					options={LOAN_ACTIVITY_FILTER_OPTIONS}
-					value={loanActivityFilter}
-					onChange={(value) => (loanActivityFilter = value as LoanActivityFilter)}
+					options={PARTICIPANT_EXPOSURE_FILTER_OPTIONS}
+					value={exposureFilter}
+					onChange={(value) => (exposureFilter = value as ParticipantExposureFilter)}
 				/>
 			{/snippet}
 		</ListPageToolbar>

@@ -18,13 +18,13 @@
 
   @media (width >= theme(--breakpoint-lg)) {
     html.dashboard-shell .dashboard-page {
-      @apply space-y-8 p-8;
+      @apply space-y-6 px-8 pb-8 pt-0;
     }
   }
 
   @media (width >= theme(--breakpoint-xl)) {
     html.dashboard-shell .dashboard-page {
-      @apply p-10;
+      @apply px-10 pb-10 pt-0;
     }
   }
 

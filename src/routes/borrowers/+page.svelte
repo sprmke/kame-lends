@@ -3,6 +3,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
 	import SingleSelectFilter from '$lib/components/common/SingleSelectFilter.svelte';
 	import CardPagination from '$lib/components/common/CardPagination.svelte';
@@ -18,9 +19,9 @@
 	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
 	import { toast } from '$lib/toast';
 	import {
-		LOAN_ACTIVITY_FILTER_OPTIONS,
-		matchesLoanActivityFilter,
-		type LoanActivityFilter
+		PARTICIPANT_EXPOSURE_FILTER_OPTIONS,
+		matchesParticipantExposureFilter,
+		type ParticipantExposureFilter
 	} from '$lib/list-filters';
 	import { ContactRound, PlusCircle, X } from 'lucide-svelte';
 	import type { BorrowerWithLoans } from '$lib/types';
@@ -43,7 +44,7 @@
 
 	const viewModeState = createResponsiveViewMode();
 	let searchQuery = $state('');
-	let loanActivityFilter = $state<LoanActivityFilter>('all');
+	let exposureFilter = $state<ParticipantExposureFilter>('all');
 	let selectedBorrower = $state<BorrowerWithLoans | null>(null);
 	let showDetailModal = $state(false);
 	let detailStartInEdit = $state(false);
@@ -88,11 +89,11 @@
 		await refreshBorrowers();
 	}
 
-	const hasActiveFilters = $derived(searchQuery !== '' || loanActivityFilter !== 'all');
+	const hasActiveFilters = $derived(searchQuery !== '' || exposureFilter !== 'all');
 
 	function clearFilters() {
 		searchQuery = '';
-		loanActivityFilter = 'all';
+		exposureFilter = 'all';
 	}
 
 	const filteredBorrowers = $derived(
@@ -107,7 +108,7 @@
 					return false;
 				}
 			}
-			return matchesLoanActivityFilter(borrower.loans?.length ?? 0, loanActivityFilter);
+			return matchesParticipantExposureFilter(borrower.loans ?? [], exposureFilter);
 		})
 	);
 </script>
@@ -120,7 +121,7 @@
 	<DashboardPage>
 		<PageHeader
 			title="Borrowers"
-			description="Borrowers linked to your loans"
+			description={PAGE_DESCRIPTIONS.borrowers}
 			showPriceToggle={false}
 		>
 			{#if canCreate}
@@ -144,9 +145,9 @@
 		>
 			{#snippet filters()}
 				<SingleSelectFilter
-					options={LOAN_ACTIVITY_FILTER_OPTIONS}
-					value={loanActivityFilter}
-					onChange={(value) => (loanActivityFilter = value as LoanActivityFilter)}
+					options={PARTICIPANT_EXPOSURE_FILTER_OPTIONS}
+					value={exposureFilter}
+					onChange={(value) => (exposureFilter = value as ParticipantExposureFilter)}
 				/>
 			{/snippet}
 		</ListPageToolbar>

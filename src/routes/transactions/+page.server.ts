@@ -8,7 +8,7 @@ export const load: PageServerLoad = async (event) => {
   const { navCapabilities } = await event.parent();
   return {
     items: getCachedTransactions(session.user.id, null),
-    canCreate: navCapabilities.isAdminWorkspace,
-    canManage: navCapabilities.isAdminWorkspace,
+    canCreate: true,
+    canManage: true,
   };
 };

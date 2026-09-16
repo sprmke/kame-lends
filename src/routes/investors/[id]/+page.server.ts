@@ -61,8 +61,7 @@ export const load: PageServerLoad = async (event) => {
   }
 
   const { navCapabilities } = await event.parent();
-  const canManage =
-    entity.userId === session.user.id && navCapabilities.isAdminWorkspace;
+  const canManage = entity.userId === session.user.id;
 
   if (event.url.searchParams.get("edit") === "1" && !canManage) {
     throw error(403, "Read only");

@@ -8,7 +8,7 @@ export const load: PageServerLoad = async (event) => {
   const { navCapabilities } = await event.parent();
   return {
     items: getCachedWitnesses(session.user.id, "list"),
-    canCreate: navCapabilities.isAdminWorkspace,
-    canManage: navCapabilities.isAdminWorkspace,
+    canCreate: true,
+    canManage: true,
   };
 };

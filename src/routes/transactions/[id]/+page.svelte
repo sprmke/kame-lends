@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
@@ -28,7 +29,7 @@
 <svelte:head><title>{title}</title></svelte:head>
 
 <DashboardPage>
-	<PageHeader {title} description="Transaction details">
+	<PageHeader {title} description={PAGE_DESCRIPTIONS.transactionDetail}>
 		<Button
 			href="/transactions"
 			variant="outline"

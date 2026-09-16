@@ -3,6 +3,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
 	import DebtsMoreFiltersPanel from '$lib/components/common/DebtsMoreFiltersPanel.svelte';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
@@ -178,15 +179,15 @@
 	);
 </script>
 
-<svelte:head><title>Borrowings</title></svelte:head>
+<svelte:head><title>Bank Loans</title></svelte:head>
 
 {#if items === null}
 	<ListPageSkeleton variant="debts" />
 {:else}
 	<DashboardPage>
 		<PageHeader
-			title="Borrowings"
-			description="Track borrowings and projected interest costs"
+			title="Bank Loans"
+			description={PAGE_DESCRIPTIONS.bankLoans}
 			showPriceToggle={true}
 		>
 			{#if canCreate}

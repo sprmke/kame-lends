@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 	import TransactionForm from '$lib/components/transactions/TransactionForm.svelte';
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -26,7 +27,7 @@
 <svelte:head><title>New Transaction</title></svelte:head>
 
 <DashboardPage>
-	<PageHeader title="New Transaction" description="Record money in or out">
+	<PageHeader title="New Transaction" description={PAGE_DESCRIPTIONS.newTransaction}>
 		<Button href="/transactions" variant="outline" size="sm">Back</Button>
 	</PageHeader>
 	{#if loading}

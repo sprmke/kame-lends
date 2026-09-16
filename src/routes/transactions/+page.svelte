@@ -3,6 +3,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
 	import ListPageSkeleton from '$lib/components/common/ListPageSkeleton.svelte';
@@ -115,7 +116,7 @@
 	<DashboardPage>
 		<PageHeader
 			title="Transactions"
-			description="View and manage all transactions"
+			description={PAGE_DESCRIPTIONS.transactions}
 			showPriceToggle={true}
 		>
 			{#if SHOW_TRANSACTIONS_UI && canCreate}
