@@ -86,7 +86,28 @@ export async function loadLoanDetail(
     userId,
     sessionUser?.email ?? null,
   );
-  if (!access.canView) return null;
+
+  if (!access.canView) {
+    const { getLoanGroupViewIds } = await import("$lib/server/access-control");
+    const { projectLoanForGroupViewer } =
+      await import("$lib/loan-group-viewer-projection");
+    const viaGroupIds = await getLoanGroupViewIds(loanId, userId);
+    if (viaGroupIds.length === 0) return null;
+
+    const projected = projectLoanForGroupViewer(entity);
+    return stripDataImageUrls({
+      ...(projected as unknown as LoanWithInvestors),
+      status: entity.status,
+      access: {
+        ...access,
+        canView: true,
+        canAdminEdit: false,
+        viaGroupIds,
+        isGroupViewer: true,
+        editableInvestorIds: [],
+      },
+    });
+  }
 
   let status = entity.status;
   if (
@@ -111,7 +132,7 @@ export async function loadLoanDetail(
   return stripDataImageUrls({
     ...(entity as unknown as LoanWithInvestors),
     status,
-    access,
+    access: { ...access, viaGroupIds: [], isGroupViewer: false },
     ...(access.memberships.includes("borrower") ? { paymentMethods } : {}),
   });
 }

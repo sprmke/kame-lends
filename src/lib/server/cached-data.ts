@@ -43,6 +43,7 @@ const listRelations = {
   loanWitnesses: {
     columns: { id: true, witnessId: true, profitType: true, profitValue: true },
   },
+  groupLoans: { columns: { groupId: true, source: true } },
 } as const;
 
 const partyContactColumns = {
@@ -71,6 +72,7 @@ const fullRelations = {
       witness: { columns: partyContactColumns },
     },
   },
+  groupLoans: { columns: { groupId: true, source: true } },
 } as const;
 
 export async function getCachedLoans(
@@ -424,9 +426,48 @@ export async function getCachedDebts(
 
 const groupRelations = {
   creator: { columns: { id: true, name: true, email: true } },
-  groupLoans: { columns: { loanId: true } },
-  members: { columns: { userId: true, status: true } },
+  groupLoans: {
+    columns: { loanId: true, source: true },
+    with: {
+      loan: {
+        columns: { id: true, dueDate: true, status: true },
+        with: {
+          loanInvestors: {
+            columns: { amount: true, isPaid: true },
+          },
+        },
+      },
+    },
+  },
+  members: {
+    columns: { userId: true, partyRoles: true },
+    with: { user: { columns: { id: true, name: true } } },
+  },
+  calendar: { columns: { status: true, googleCalendarId: true } },
+  telegram: { columns: { status: true, chatTitle: true } },
 } as const;
+
+export type GroupsIndexItem = {
+  id: number;
+  name: string;
+  color: string;
+  loanCount: number;
+};
+
+export async function getGroupsIndexForUser(
+  userId: string,
+  isAdmin: boolean,
+): Promise<GroupsIndexItem[]> {
+  return remember(`groups:index:${userId}`, async () => {
+    const groups = await loadGroupsForUser(userId, isAdmin);
+    return groups.map((g) => ({
+      id: g.id,
+      name: g.name,
+      color: g.color ?? "orange",
+      loanCount: g.groupLoans?.length ?? 0,
+    }));
+  });
+}
 
 export async function getCachedGroupsForUser(userId: string, isAdmin: boolean) {
   return remember(`groups:${userId}:${isAdmin}`, () =>
@@ -443,10 +484,7 @@ async function loadGroupsForUser(userId: string, isAdmin: boolean) {
   }
 
   const memberships = await db.query.loanGroupMembers.findMany({
-    where: and(
-      eq(loanGroupMembers.userId, userId),
-      eq(loanGroupMembers.status, "active"),
-    ),
+    where: eq(loanGroupMembers.userId, userId),
     columns: { groupId: true },
   });
   const memberGroupIds = memberships.map((m) => m.groupId);

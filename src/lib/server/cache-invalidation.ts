@@ -17,15 +17,22 @@ function drop(prefixes: string[]): void {
 }
 
 export function invalidateLoanData() {
-  drop(["loans:", "dashboard:"]);
+  drop(["loans:", "dashboard:", "groups:"]);
 }
 
 export function invalidateInvestorData() {
-  drop(["investors:", "loans:", "dashboard:", "debts:", "transactions:"]);
+  drop([
+    "investors:",
+    "loans:",
+    "dashboard:",
+    "debts:",
+    "transactions:",
+    "groups:",
+  ]);
 }
 
 export function invalidateBorrowerData() {
-  drop(["borrowers:", "loans:", "dashboard:"]);
+  drop(["borrowers:", "loans:", "dashboard:", "groups:"]);
 }
 
 export function invalidateWitnessData() {

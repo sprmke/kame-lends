@@ -9,6 +9,8 @@ import {
   transactions,
   debts,
   users,
+  loanGroupLoans,
+  loanGroupMembers,
 } from "$lib/server/db/schema";
 import { eq, and, or, isNotNull, inArray } from "drizzle-orm";
 import { loadLinkedInvestorContactIds } from "$lib/server/party-investor-links";
@@ -104,6 +106,47 @@ export async function hasLoanAdminAccess(
     .where(and(eq(loans.id, loanId), eq(loans.userId, userId)))
     .limit(1);
   return rows.length > 0;
+}
+
+/**
+ * Group membership grants read-only loan view. Separate from hasLoanViewAccess
+ * so payment/contract/storage endpoints stay party-only.
+ */
+export async function hasLoanGroupViewAccess(
+  loanId: number,
+  userId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ groupId: loanGroupLoans.groupId })
+    .from(loanGroupLoans)
+    .innerJoin(
+      loanGroupMembers,
+      and(
+        eq(loanGroupMembers.groupId, loanGroupLoans.groupId),
+        eq(loanGroupMembers.userId, userId),
+      ),
+    )
+    .where(eq(loanGroupLoans.loanId, loanId))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function getLoanGroupViewIds(
+  loanId: number,
+  userId: string,
+): Promise<number[]> {
+  const rows = await db
+    .select({ groupId: loanGroupLoans.groupId })
+    .from(loanGroupLoans)
+    .innerJoin(
+      loanGroupMembers,
+      and(
+        eq(loanGroupMembers.groupId, loanGroupLoans.groupId),
+        eq(loanGroupMembers.userId, userId),
+      ),
+    )
+    .where(eq(loanGroupLoans.loanId, loanId));
+  return [...new Set(rows.map((r) => r.groupId))];
 }
 
 /** Writes to an allocation. Workspace owners only. Party investors are read-only. */
@@ -293,6 +336,7 @@ export async function getNavCapabilities(userId: string): Promise<{
   hasInvestments: boolean;
   hasBorrowed: boolean;
   hasWitnessed: boolean;
+  hasGroups: boolean;
 }> {
   const [
     ownedLoan,
@@ -346,16 +390,20 @@ export async function getNavCapabilities(userId: string): Promise<{
       .limit(1),
   ]);
 
+  const isAdminWorkspace =
+    ownedLoan.length > 0 ||
+    ownedInvestorContact.length > 0 ||
+    ownedBorrowerContact.length > 0 ||
+    ownedWitnessContact.length > 0 ||
+    ownedDebt.length > 0;
+
   return {
-    isAdminWorkspace:
-      ownedLoan.length > 0 ||
-      ownedInvestorContact.length > 0 ||
-      ownedBorrowerContact.length > 0 ||
-      ownedWitnessContact.length > 0 ||
-      ownedDebt.length > 0,
+    isAdminWorkspace,
     hasInvestments: investorLink.length > 0,
     hasBorrowed: borrowerLink.length > 0,
     hasWitnessed: witnessLink.length > 0,
+    // Layout still gates with SHOW_GROUPS_UI. Any signed-in user may open Groups.
+    hasGroups: true,
   };
 }
 

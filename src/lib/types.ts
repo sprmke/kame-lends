@@ -143,7 +143,9 @@ export type GroupMemberStatus = "active" | "left" | "removed";
 
 export interface LoanGroupMember {
   userId: string;
-  status: GroupMemberStatus;
+  /** @deprecated Derived membership no longer uses sticky status. */
+  status?: GroupMemberStatus;
+  partyRoles?: string[];
   name?: string | null;
   email?: string | null;
 }
@@ -153,17 +155,20 @@ export interface LoanGroup {
   creatorUserId: string;
   name: string;
   notes: string | null;
+  color?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface LoanGroupWithDetails extends LoanGroup {
   creator?: { id: string; name: string | null; email: string } | null;
-  groupLoans: Array<{ loanId: number }>;
+  groupLoans: Array<{ loanId: number; source?: string }>;
   members: LoanGroupMember[];
   canEdit?: boolean;
   canLeave?: boolean;
   isCreator?: boolean;
+  calendar?: { status?: string; googleCalendarId?: string | null } | null;
+  telegram?: { status?: string; chatTitle?: string | null } | null;
 }
 
 export interface GroupLoanSummary {
@@ -238,6 +243,10 @@ export interface LoanWithInvestors extends Loan {
     createdAt: Date;
     updatedAt: Date;
   } | null;
+  /** Present when loaded with group relations (list/full cache). */
+  groupLoans?: Array<{ groupId: number; source: string }>;
+  /** Convenience ids derived client-side from groupLoans + groupsIndex. */
+  groupIds?: number[];
 }
 
 /** Payment destination for borrowers (loan owner bank / QR). */
