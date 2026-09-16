@@ -2,6 +2,7 @@
 	import {
 		ArrowDownToLine,
 		ArrowUpFromLine,
+		BadgePercent,
 		CheckCircle,
 		Copy,
 		Edit,
@@ -37,6 +38,8 @@
 	<Folders class={className} />
 {:else if icon === 'contract'}
 	<FileText class={className} />
+{:else if icon === 'commission'}
+	<BadgePercent class={className} />
 {:else if icon === 'complete'}
 	<CheckCircle class={className} />
 {:else if icon === 'view'}

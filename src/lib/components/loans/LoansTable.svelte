@@ -16,7 +16,7 @@
 	import { TABLE_ROW_CLICKABLE } from '$lib/table-styles';
 	import { cn } from '$lib/utils';
 	import type { LoanWithInvestors } from '$lib/types';
-	import LoanSigningStatusBadge from '$lib/components/loans/LoanSigningStatusBadge.svelte';
+	import LoanSigningProgressBadge from '$lib/components/loans/LoanSigningProgressBadge.svelte';
 
 	interface Props {
 		loans: LoanWithInvestors[];
@@ -29,6 +29,7 @@
 		onAddReceivedPayment?: (loan: LoanWithInvestors) => void;
 		onDuplicate?: (loan: LoanWithInvestors) => void;
 		onContractDetails?: (loan: LoanWithInvestors) => void;
+		onAddCommission?: (loan: LoanWithInvestors) => void;
 		onDelete?: (loan: LoanWithInvestors) => void;
 		onRemoveFromGroup?: (loan: LoanWithInvestors) => void;
 		emptyMessage?: string;
@@ -50,6 +51,7 @@
 		onAddReceivedPayment,
 		onDuplicate,
 		onContractDetails,
+		onAddCommission,
 		onDelete,
 		onRemoveFromGroup,
 		investorId,
@@ -144,8 +146,15 @@
 							{#if (loan as LoanWithInvestors & { groupSource?: string }).groupSource === 'rule'}
 								<Badge variant="secondary" class="mt-1 text-[10px]">Added by rule</Badge>
 							{/if}
-							<div class="mt-1 md:hidden">
-								<LoanSigningStatusBadge {loan} class="mt-0" />
+							<div class="mt-1 md:hidden" onclick={(event) => event.stopPropagation()}>
+								<LoanSigningProgressBadge
+									{loan}
+									class="mt-0"
+									linkWhenViewerPending
+									onOpenContractDetails={onContractDetails
+										? () => onContractDetails(loan)
+										: undefined}
+								/>
 							</div>
 						</div>
 					</Table.Cell>
@@ -165,8 +174,16 @@
 							{formatText(loan.status)}
 						</Badge>
 					</Table.Cell>
-					<Table.Cell class="hidden md:table-cell">
-						<LoanSigningStatusBadge {loan} class="mt-0" showEmpty />
+					<Table.Cell class="hidden md:table-cell" onclick={(event) => event.stopPropagation()}>
+						<LoanSigningProgressBadge
+							{loan}
+							class="mt-0"
+							showEmpty
+							linkWhenViewerPending
+							onOpenContractDetails={onContractDetails
+								? () => onContractDetails(loan)
+								: undefined}
+						/>
 					</Table.Cell>
 					<Table.Cell class="text-right tabular-nums">
 						{formatCurrency(principal)}
@@ -193,6 +210,9 @@
 								showDuplicate: Boolean(onDuplicate),
 								onContractDetails: onContractDetails
 									? () => onContractDetails(loan)
+									: undefined,
+								onAddCommission: onAddCommission
+									? () => onAddCommission(loan)
 									: undefined,
 								onDelete: onDelete ? () => onDelete(loan) : undefined,
 								onRemoveFromGroup: onRemoveFromGroup

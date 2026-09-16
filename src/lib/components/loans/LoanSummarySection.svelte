@@ -20,12 +20,17 @@
 		totalReceived?: number;
 		totalBalance?: number;
 		uniqueInvestors: number;
+		borrowerCount?: number;
 		status?: LoanStatus;
 		balance?: number;
 		title?: string;
+		/** Borrower commission (separate from loan interest / total amount). */
 		profit?: number;
 		profitRate?: number;
 		profitType?: 'rate' | 'fixed';
+		/** When set with signingTotal > 0, shows contacts signed (e.g. 1/3). */
+		signingSigned?: number | null;
+		signingTotal?: number | null;
 	}
 
 	let {
@@ -36,13 +41,23 @@
 		totalReceived = 0,
 		totalBalance = 0,
 		uniqueInvestors,
+		borrowerCount = 0,
 		status,
 		balance,
 		title = 'Summary',
 		profit,
 		profitRate,
-		profitType
+		profitType,
+		signingSigned = null,
+		signingTotal = null
 	}: Props = $props();
+
+	const showSigningProgress = $derived(
+		signingTotal != null && signingTotal > 0 && signingSigned != null
+	);
+	const signingComplete = $derived(
+		showSigningProgress && signingSigned === signingTotal
+	);
 
 	const rateDisplay = $derived(
 		totalPrincipal > 0
@@ -87,11 +102,11 @@
 			</div>
 			{#if profit !== undefined}
 				<div class="dashboard-metric-cell">
-					<p class="text-caption mb-1">Profit Rate</p>
+					<p class="text-caption mb-1">Commission Rate</p>
 					<p class="text-sm font-semibold">{profitRateDisplay}</p>
 				</div>
 				<div class="dashboard-metric-cell">
-					<p class="text-caption mb-1">Profit</p>
+					<p class="text-caption mb-1">Commission</p>
 					<p class="text-sm font-semibold break-all tabular-nums">
 						{formatCurrency(profit)}
 					</p>
@@ -113,6 +128,25 @@
 				<p class="text-caption mb-1">Investors</p>
 				<p class="text-sm font-semibold">{formatCount(uniqueInvestors)}</p>
 			</div>
+			<div class="dashboard-metric-cell">
+				<p class="text-caption mb-1">Borrowers</p>
+				<p class="text-sm font-semibold">{formatCount(borrowerCount)}</p>
+			</div>
+			{#if showSigningProgress}
+				<div class="dashboard-metric-cell">
+					<p class="text-caption mb-1">Contacts signed</p>
+					<p
+						class={cn(
+							'text-sm font-semibold tabular-nums',
+							signingComplete
+								? 'text-emerald-700 dark:text-emerald-400'
+								: 'text-amber-700 dark:text-amber-300'
+						)}
+					>
+						{signingSigned}/{signingTotal}
+					</p>
+				</div>
+			{/if}
 			{#if status}
 				<div class="dashboard-metric-cell">
 					<p class="text-caption mb-1">Status</p>

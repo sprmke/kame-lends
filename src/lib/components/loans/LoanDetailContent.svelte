@@ -9,6 +9,7 @@
 	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
 	import LoanWitnessesSection from './LoanWitnessesSection.svelte';
 	import LoanBorrowerProfitCard from './LoanBorrowerProfitCard.svelte';
+	import LoanInvestorCommissionCard from './LoanInvestorCommissionCard.svelte';
 	import {
 		calculateTotalPrincipal,
 		calculateTotalInterest,
@@ -28,6 +29,7 @@
 	import { badgesForLoan, type GroupsIndexItem } from '$lib/groups/loan-group-filter';
 	import { page } from '$app/state';
 	import { toast } from '$lib/toast';
+	import { fetchSigningClient } from '$lib/composables/loan-detail-client-cache';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -39,6 +41,7 @@
 		paymentMethods?: PaymentMethod[];
 		access?: LoanAccessContext;
 		groupPickerOpen?: boolean;
+		startCommissionEdit?: boolean;
 	}
 
 	let {
@@ -50,7 +53,8 @@
 		editableInvestorIds = [],
 		paymentMethods = [],
 		access,
-		groupPickerOpen = $bindable(false)
+		groupPickerOpen = $bindable(false),
+		startCommissionEdit = false
 	}: Props = $props();
 
 	const totalPrincipal = $derived(calculateTotalPrincipal(loan.loanInvestors));
@@ -58,6 +62,9 @@
 	const totalAmount = $derived(calculateTotalAmount(loan.loanInvestors));
 	const averageRate = $derived(calculateAverageRate(loan.loanInvestors));
 	const uniqueInvestors = $derived(countUniqueInvestors(loan.loanInvestors));
+	const borrowerCount = $derived(
+		loan.borrowerId != null || loan.borrower?.id != null ? 1 : 0
+	);
 
 	const profit = $derived(
 		calculateInterest(totalPrincipal, loan.profitValue, loan.profitType)
@@ -68,6 +75,17 @@
 		access
 			? !access.isGroupViewer &&
 					(access.canAdminEdit || access.memberships.includes('borrower'))
+			: false
+	);
+	const myLoanInvestor = $derived(
+		access?.linkedInvestorId != null
+			? loan.loanInvestors.find((row) => row.investorId === access.linkedInvestorId)
+			: undefined
+	);
+	const canEditInvestorCommission = $derived(
+		access && myLoanInvestor
+			? !access.isGroupViewer &&
+					(access.canAdminEdit || access.memberships.includes('investor'))
 			: false
 	);
 	const isGroupViewer = $derived(Boolean(access?.isGroupViewer));
@@ -138,6 +156,41 @@
 	);
 	const balance = $derived(totalPrincipal - fundedCapital);
 
+	let signingSigned = $state<number | null>(null);
+	let signingTotal = $state<number | null>(null);
+
+	$effect(() => {
+		const id = loanId ?? loan.id;
+		void loan.updatedAt;
+		if (isGroupViewer) {
+			signingSigned = null;
+			signingTotal = null;
+			return;
+		}
+
+		let active = true;
+		void fetchSigningClient(id)
+			.then((data) => {
+				if (!active) return;
+				if (!data?.invitations?.length) {
+					signingSigned = null;
+					signingTotal = null;
+					return;
+				}
+				signingTotal = data.invitations.length;
+				signingSigned = data.invitations.filter((invitation) => invitation.signedAt).length;
+			})
+			.catch(() => {
+				if (!active) return;
+				signingSigned = null;
+				signingTotal = null;
+			});
+
+		return () => {
+			active = false;
+		};
+	});
+
 	const investorGroups = $derived(
 		Array.from(groupByInvestor(loan.loanInvestors).values()).map((transactions) => {
 			const transactionWithPeriods = transactions.find(
@@ -201,15 +254,27 @@
 		{totalReceived}
 		{totalBalance}
 		{uniqueInvestors}
+		{borrowerCount}
 		status={loan.status}
 		{balance}
 		{profit}
 		{profitRate}
 		profitType={loan.profitType}
+		{signingSigned}
+		{signingTotal}
 	/>
 
 	{#if canEditBorrowerProfit}
-		<LoanBorrowerProfitCard {loan} {onRefresh} />
+		<LoanBorrowerProfitCard {loan} {onRefresh} autoStartEdit={startCommissionEdit} />
+	{/if}
+
+	{#if canEditInvestorCommission && myLoanInvestor}
+		<LoanInvestorCommissionCard
+			{loan}
+			allocation={myLoanInvestor}
+			{onRefresh}
+			autoStartEdit={startCommissionEdit}
+		/>
 	{/if}
 
 	<LoanPaymentMethodsSection {paymentMethods} />
@@ -297,6 +362,7 @@
 		{onRefresh}
 		canAdminEdit={access?.canAdminEdit ?? false}
 		{myLoanWitnessId}
+		autoStartCommissionEdit={startCommissionEdit && !canEditBorrowerProfit && !canEditInvestorCommission}
 	/>
 </div>
 

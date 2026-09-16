@@ -34,6 +34,7 @@
 		onUpdate?: (change?: LoanListChange) => void | Promise<void>;
 		onDuplicate?: (duplicateData: DuplicateLoanData) => void | Promise<void>;
 		startInEditMode?: boolean;
+		startCommissionEdit?: boolean;
 		readOnly?: boolean;
 	}
 
@@ -44,6 +45,7 @@
 		onUpdate,
 		onDuplicate,
 		startInEditMode = false,
+		startCommissionEdit = false,
 		readOnly = false
 	}: Props = $props();
 
@@ -374,6 +376,7 @@
 						{paymentMethods}
 						access={access ?? undefined}
 						bind:groupPickerOpen
+						startCommissionEdit={startCommissionEdit}
 					/>
 				</div>
 			{/if}

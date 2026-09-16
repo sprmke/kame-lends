@@ -27,6 +27,7 @@ export type LoanActionIcon =
   | "duplicate"
   | "groups"
   | "contract"
+  | "commission"
   | "complete"
   | "view"
   | "delete"
@@ -61,6 +62,7 @@ export interface CreateLoanActionItemsOptions {
   showPayBalance?: boolean;
   onPayBalance?: () => void;
   onContractDetails?: () => void;
+  onAddCommission?: () => void;
   showComplete?: boolean;
   onComplete?: () => void;
   showViewLoan?: boolean;
@@ -122,6 +124,13 @@ export function createLoanActionItems(
       icon: "pay",
     });
   }
+  if (options.onAddCommission) {
+    transactionGroup.push({
+      label: "Add Commission",
+      onClick: options.onAddCommission,
+      icon: "commission",
+    });
+  }
   if (options.onContractDetails) {
     transactionGroup.push({
       label: "Contract Details",
@@ -169,7 +178,7 @@ export function createLoanActionItems(
 }
 
 export type LoanListScope =
-  "loans" | "investments" | "borrowed" | "witnessed" | "group";
+  "loans" | "investments" | "borrowed" | "commissioned" | "witnessed" | "group";
 
 /** Row/card ⋯ handlers for loan list pages — scope gates edit/delete vs payments. */
 export function loanListRowActionHandlers<T extends { id: number }>(options: {
@@ -180,8 +189,10 @@ export function loanListRowActionHandlers<T extends { id: number }>(options: {
   onAddPayment?: (loan: T) => void;
   onAddReceivedPayment?: (loan: T) => void;
   onContractDetails: (loan: T) => void;
+  onAddCommission?: (loan: T) => void;
   onDelete?: (loan: T) => void;
   onRemoveFromGroup?: (loan: T) => void;
+  showAddCommission?: boolean;
 }) {
   return {
     onEdit: options.canManage ? options.onEdit : undefined,
@@ -191,6 +202,10 @@ export function loanListRowActionHandlers<T extends { id: number }>(options: {
       ? options.onAddReceivedPayment
       : undefined,
     onContractDetails: options.onContractDetails,
+    onAddCommission:
+      options.showAddCommission && options.onAddCommission
+        ? options.onAddCommission
+        : undefined,
     onDelete: options.canManage ? options.onDelete : undefined,
     onRemoveFromGroup: options.canManage
       ? options.onRemoveFromGroup

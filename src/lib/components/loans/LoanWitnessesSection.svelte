@@ -19,6 +19,7 @@
 		onRefresh?: () => void | Promise<void>;
 		canAdminEdit?: boolean;
 		myLoanWitnessId?: number | null;
+		autoStartCommissionEdit?: boolean;
 	}
 
 	let {
@@ -27,7 +28,8 @@
 		totalPrincipal,
 		onRefresh,
 		canAdminEdit = false,
-		myLoanWitnessId = null
+		myLoanWitnessId = null,
+		autoStartCommissionEdit = false
 	}: Props = $props();
 
 	let editingId = $state<number | null>(null);
@@ -55,6 +57,18 @@
 	function cancelEdit() {
 		editingId = null;
 	}
+
+	$effect(() => {
+		if (!autoStartCommissionEdit || myLoanWitnessId == null || editingId != null) return;
+		const row = loanWitnesses.find((witness) => witness.id === myLoanWitnessId);
+		if (!row || !canEditRow(row)) return;
+		startEdit(row);
+		requestAnimationFrame(() => {
+			document
+				.getElementById('loan-commission-section')
+				?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		});
+	});
 
 	async function saveEdit(loanWitness: LoanWitness) {
 		isSaving = true;
@@ -151,7 +165,7 @@
 </script>
 
 {#if loanWitnesses.length > 0 || canAdminEdit}
-	<Card.Root>
+	<Card.Root id={myLoanWitnessId != null ? 'loan-commission-section' : undefined}>
 		<Card.Header class="flex flex-row items-center justify-between space-y-0">
 			<Card.Title class="dashboard-section-title">Witnesses</Card.Title>
 			{#if canAdminEdit && !isAdding}

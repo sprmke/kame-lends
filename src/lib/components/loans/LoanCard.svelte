@@ -31,6 +31,7 @@
 		onAddReceivedPayment?: (loan: LoanWithInvestors) => void;
 		onDuplicate?: (loan: LoanWithInvestors) => void;
 		onContractDetails?: (loan: LoanWithInvestors) => void;
+		onAddCommission?: (loan: LoanWithInvestors) => void;
 		onDelete?: (loan: LoanWithInvestors) => void;
 		onRemoveFromGroup?: (loan: LoanWithInvestors) => void;
 		onGroupFilter?: (groupId: number) => void;
@@ -48,6 +49,7 @@
 		onAddReceivedPayment,
 		onDuplicate,
 		onContractDetails,
+		onAddCommission,
 		onDelete,
 		onRemoveFromGroup,
 		onGroupFilter,
@@ -76,6 +78,7 @@
 			onDuplicate: onDuplicate ? () => onDuplicate(loan) : undefined,
 			showDuplicate: Boolean(onDuplicate),
 			onContractDetails: onContractDetails ? () => onContractDetails(loan) : undefined,
+			onAddCommission: onAddCommission ? () => onAddCommission(loan) : undefined,
 			onDelete: onDelete ? () => onDelete(loan) : undefined,
 			onRemoveFromGroup: onRemoveFromGroup ? () => onRemoveFromGroup(loan) : undefined
 		})
@@ -110,7 +113,13 @@
 				>
 					{formatText(loan.status)}
 				</Badge>
-				<LoanPendingSignBadge {loan} class="mt-0" />
+				<LoanPendingSignBadge
+					{loan}
+					class="mt-0"
+					onOpenContractDetails={onContractDetails
+						? () => onContractDetails(loan)
+						: undefined}
+				/>
 			</div>
 		</div>
 		{#if addedByRule}

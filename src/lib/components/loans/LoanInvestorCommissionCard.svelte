@@ -8,15 +8,16 @@
 	import { calculateInterest, calculateTotalPrincipal } from '$lib/calculations';
 	import { formatCurrency, formatPercentage, formatText } from '$lib/format';
 	import { toast } from '$lib/toast';
-	import type { LoanWithInvestors } from '$lib/types';
+	import type { LoanInvestor, LoanWithInvestors } from '$lib/types';
 
 	interface Props {
 		loan: LoanWithInvestors;
+		allocation: LoanInvestor;
 		onRefresh?: () => void | Promise<void>;
 		autoStartEdit?: boolean;
 	}
 
-	let { loan, onRefresh, autoStartEdit = false }: Props = $props();
+	let { loan, allocation, onRefresh, autoStartEdit = false }: Props = $props();
 
 	let isEditing = $state(false);
 	let profitType = $state<'rate' | 'fixed'>('rate');
@@ -24,8 +25,8 @@
 	let isSaving = $state(false);
 
 	const totalPrincipal = $derived(calculateTotalPrincipal(loan.loanInvestors));
-	const currentProfit = $derived(
-		calculateInterest(totalPrincipal, loan.profitValue, loan.profitType)
+	const currentCommission = $derived(
+		calculateInterest(totalPrincipal, allocation.profitValue, allocation.profitType)
 	);
 	const draftValue = $derived(Number.parseFloat(profitValue));
 	const draftValueValid = $derived(Number.isFinite(draftValue) && draftValue >= 0);
@@ -34,8 +35,8 @@
 	);
 
 	function startEdit() {
-		profitType = loan.profitType;
-		profitValue = loan.profitValue;
+		profitType = allocation.profitType;
+		profitValue = allocation.profitValue;
 		isEditing = true;
 	}
 
@@ -52,11 +53,14 @@
 	async function save() {
 		isSaving = true;
 		try {
-			const response = await fetch(`/api/loans/${loan.id}/profit`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ profitType, profitValue })
-			});
+			const response = await fetch(
+				`/api/loans/${loan.id}/investors/${allocation.id}/commission`,
+				{
+					method: 'PATCH',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ profitType, profitValue })
+				}
+			);
 			if (!response.ok) {
 				const body = await response.json().catch(() => ({}));
 				throw new Error(body.error ?? 'Failed to update commission');
@@ -92,11 +96,11 @@
 					</Tabs.List>
 				</Tabs.Root>
 				<div class="space-y-1.5">
-					<Label for="commission-value">
+					<Label for="investor-commission-value">
 						{profitType === 'rate' ? 'Rate (% of principal)' : 'Fixed amount'}
 					</Label>
 					<Input
-						id="commission-value"
+						id="investor-commission-value"
 						type="number"
 						min="0"
 						step="0.01"
@@ -146,24 +150,24 @@
 					<div>
 						<p class="text-caption mb-1">Commission Rate</p>
 						<p class="text-sm font-semibold">
-							{loan.profitType === 'fixed'
+							{allocation.profitType === 'fixed'
 								? formatText('Fixed')
-								: formatPercentage(Number(loan.profitValue))}
+								: formatPercentage(Number(allocation.profitValue))}
 						</p>
 					</div>
 					<div>
 						<p class="text-caption mb-1">Commission</p>
-						<p class="text-sm font-semibold tabular-nums">{formatCurrency(currentProfit)}</p>
+						<p class="text-sm font-semibold tabular-nums">{formatCurrency(currentCommission)}</p>
 					</div>
 				</div>
 				<div class="rounded-lg border border-border/60 bg-muted/30 p-3">
 					<p class="text-caption mb-1">Calculation</p>
-					{#if loan.profitType === 'rate'}
+					{#if allocation.profitType === 'rate'}
 						<p class="text-sm tabular-nums">
-							{formatPercentage(Number(loan.profitValue))} of {formatCurrency(totalPrincipal)}
+							{formatPercentage(Number(allocation.profitValue))} of {formatCurrency(totalPrincipal)}
 						</p>
 						<p class="mt-1 text-sm tabular-nums text-muted-foreground">
-							= {formatCurrency(currentProfit)}
+							= {formatCurrency(currentCommission)}
 						</p>
 					{:else}
 						<p class="text-sm">Fixed amount, not tied to principal.</p>
