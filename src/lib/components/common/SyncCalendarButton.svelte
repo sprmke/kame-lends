@@ -13,7 +13,7 @@
 		variant?: 'default' | 'outline' | 'ghost' | 'secondary';
 		size?: 'default' | 'sm' | 'lg' | 'icon';
 		/** Batched sync endpoint (`prepare` / `wipe` / `loans` / `summaries`). */
-		syncEndpoint?: string;
+		syncEndpoint: string;
 		/** Optional clear-only endpoint. When omitted, Clear uses wipe on syncEndpoint. */
 		cleanupEndpoint?: string | null;
 		showClear?: boolean;
@@ -23,8 +23,8 @@
 	let {
 		variant = 'outline',
 		size = 'default',
-		syncEndpoint = '/api/loans/sync-calendar',
-		cleanupEndpoint = '/api/loans/cleanup-calendar',
+		syncEndpoint,
+		cleanupEndpoint = null,
 		showClear = true,
 		label = 'Calendar'
 	}: Props = $props();

@@ -107,7 +107,6 @@ export interface Loan {
   dueDate: Date;
   freeLotSqm: number | null;
   notes: string | null;
-  googleCalendarEventIds?: unknown; // JSON array of event IDs
   userId?: string;
   profitType: InterestType;
   profitValue: string;

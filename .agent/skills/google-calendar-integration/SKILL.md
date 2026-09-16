@@ -1,6 +1,6 @@
 # Google Calendar integration — Kame Lends
 
-Use when changing calendar sync, event shapes, or settings UI.
+Use when changing calendar sync, event shapes, or group settings UI.
 
 ## Auth
 
@@ -8,29 +8,34 @@ Service account (not user OAuth):
 
 - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
 - `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
-- `GOOGLE_CALENDAR_ID` (optional: legacy **workspace-wide** calendar id, never `primary`)
 
-Credentials alone (`readGoogleServiceAccountCredentials`) are enough to **create and manage per-group calendars**. The workspace calendar still needs `GOOGLE_CALENDAR_ID`.
+Credentials are enough to create and manage per-group calendars. There is no workspace-wide shared calendar.
 
 Read at runtime via `$env/dynamic/private` (`src/lib/server/google-calendar-config.ts`). Use a **kame-lends / pawn-tracker** Google Cloud service account, never kame-homes.
 
-## Two calendar surfaces
+## Calendar surface
 
-| Surface            | Module                              | Sync                                                                                                                                                                                                                                                             |
-| ------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Workspace (legacy) | `src/lib/server/google-calendar.ts` | Manual batches from settings (`POST /api/loans/sync-calendar`)                                                                                                                                                                                                   |
-| Per group          | `src/lib/server/group-calendar.ts`  | Automatic via `integration_jobs` (`waitUntil` + daily `/api/cron/groups`). ACL readers = group member emails. Owner full resync: `POST /api/groups/[id]/calendar/sync` (`prepare` / `wipe` / `loans` / `summaries`) via `SyncCalendarButton` `syncEndpoint` prop |
+| Surface   | Module                             | Sync                                                                                                                                                             |
+| --------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Per group | `src/lib/server/group-calendar.ts` | Automatic via `integration_jobs` (`waitUntil` + daily `/api/cron/groups`). ACL readers = group member emails. Full resync: `POST /api/groups/[id]/calendar/sync` |
+
+Shared pure helpers: `src/lib/calendar-summaries.ts`, `src/lib/calendar-events.ts`, `src/lib/calendar-sync-plan.ts`.
 
 ## Implementation notes
 
 - Events: disbursements, due dates, interest due, **Total Summary**. All-day events use YYYY-MM-DD start and exclusive next-day end. Never `new Date(dateKey + "T00:00:00")`.
-- Private `kameKey` / `kameLoanId` on group events for idempotent upserts.
+- Private `kameKey` / `kameLoanId` on group events for idempotent upserts; stale keys are removed after loan updates.
 - Group calendar subscribe URL: `https://calendar.google.com/calendar/r?cid=<id>`
 - Dates: `manilaTodayKey`, `googleAllDayRange`
+- Loan create/update/delete and due-date sync enqueue `group.calendar.syncLoan` / `removeLoan` via `enqueueGroupLoanChanged`.
+
+## Legacy workspace calendar
+
+Removed from the app. To wipe events on an old shared calendar before decommissioning env vars, use `bun run dev:wipe-workspace-calendar -- --dry-run` then `--confirm`. The script refuses to run if `GOOGLE_CALENDAR_ID` matches any `group_calendars.google_calendar_id`.
 
 ## Testing
 
-Use a **test calendar** / throwaway secondary calendars on the QA Neon branch — never the prod calendar.
+Use throwaway secondary calendars on the QA Neon branch.
 
 ## App URL in events
 

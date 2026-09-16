@@ -20,7 +20,10 @@ import {
   withGoogleCalendarRetry,
 } from "$lib/server/google-calendar-config";
 import { enqueueJob } from "$lib/server/jobs/queue";
-import { getAffectedDatesFromLoan } from "$lib/server/google-calendar";
+import {
+  collectDailySummaryDays,
+  getAffectedDatesFromLoan,
+} from "$lib/calendar-summaries";
 import type { LoanWithInvestors } from "$lib/types";
 import { resolveAppUrl } from "$lib/server/app-url";
 
@@ -299,12 +302,6 @@ export async function syncGroupLoanEvents(
   const loan = await loadLoanForCalendar(loanId);
   if (!loan) return;
 
-  const { generateLoanCalendarEvents } =
-    await import("$lib/server/google-calendar");
-
-  // Temporarily swap env calendar by calling generate with a wrapper:
-  // generateLoanCalendarEvents currently uses the workspace calendar.
-  // Use private helpers via upsert on the group calendar ID.
   await syncLoanEventsToCalendar(row.googleCalendarId, loan);
 
   const dates = getAffectedDatesFromLoan(loan);
@@ -325,8 +322,6 @@ export async function syncGroupLoanEvents(
     .update(groupCalendars)
     .set({ lastEventSyncAt: new Date(), updatedAt: new Date() })
     .where(eq(groupCalendars.groupId, groupId));
-
-  void generateLoanCalendarEvents;
 }
 
 async function syncLoanEventsToCalendar(
@@ -338,6 +333,7 @@ async function syncLoanEventsToCalendar(
     await import("$lib/calendar-events");
   const drafts = draftLoanGoogleEvents(loan, "all");
   const appUrl = resolveAppUrl();
+  const currentKeys = new Set(drafts.map((d) => d.key));
 
   for (const draft of drafts) {
     const key = draft.key;
@@ -380,6 +376,15 @@ async function syncLoanEventsToCalendar(
         }),
       );
     }
+  }
+
+  const existingForLoan = await findEventsByLoanId(calendarId, loan.id);
+  for (const event of existingForLoan) {
+    const key = event.extendedProperties?.private?.kameKey;
+    if (!key || currentKeys.has(key) || !event.id) continue;
+    await mutate(() =>
+      calendar.events.delete({ calendarId, eventId: event.id! }),
+    );
   }
 }
 
@@ -458,8 +463,6 @@ export async function syncGroupSummaries(
     loans = rows as LoanWithInvestors[];
   }
 
-  const { collectDailySummaryDays } =
-    await import("$lib/server/google-calendar");
   const {
     calendarEventKey,
     formatCalendarCurrency,

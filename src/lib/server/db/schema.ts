@@ -190,7 +190,6 @@ export const loans = pgTable(
     dueDate: timestamp("due_date").notNull(),
     freeLotSqm: integer("free_lot_sqm"),
     notes: text("notes"),
-    googleCalendarEventIds: jsonb("google_calendar_event_ids"), // Store array of event IDs for sent/due/interest events
     profitType: interestTypeEnum("profit_type").notNull().default("rate"),
     profitValue: decimal("profit_value", { precision: 15, scale: 2 })
       .notNull()

@@ -35,6 +35,7 @@ export const POST: RequestHandler = async (event) => {
 
     const updatedLoans: string[] = [];
     const skippedLoans: string[] = [];
+    const updatedLoanIds: number[] = [];
 
     for (const loan of userLoans) {
       // Collect all interest period due dates across investors
@@ -74,6 +75,17 @@ export const POST: RequestHandler = async (event) => {
         .where(and(eq(loans.id, loan.id), eq(loans.userId, session.user.id)));
 
       updatedLoans.push(loan.loanName);
+      updatedLoanIds.push(loan.id);
+    }
+
+    if (updatedLoanIds.length > 0) {
+      const { enqueueGroupLoanChanged } =
+        await import("$lib/server/jobs/queue");
+      const { scheduleDrain } = await import("$lib/server/jobs/after-response");
+      for (const loanId of updatedLoanIds) {
+        await enqueueGroupLoanChanged(loanId);
+      }
+      scheduleDrain(event);
     }
 
     const message =
