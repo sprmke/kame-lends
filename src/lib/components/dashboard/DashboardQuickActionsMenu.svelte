@@ -6,18 +6,9 @@
 		buildDashboardQuickActions,
 		type DashboardQuickAction
 	} from '$lib/dashboard-quick-actions';
-	import { DEFAULT_NAV_CAPABILITIES, type NavCapabilities } from '$lib/nav/app-nav';
 	import { ChevronDown, PlusCircle } from 'lucide-svelte';
 
-	interface Props {
-		navCapabilities?: NavCapabilities | null;
-	}
-
-	let { navCapabilities = null }: Props = $props();
-
-	const actions = $derived(
-		buildDashboardQuickActions(navCapabilities ?? DEFAULT_NAV_CAPABILITIES)
-	);
+	const actions = $derived(buildDashboardQuickActions());
 
 	function handleSelect(action: DashboardQuickAction) {
 		void goto(action.href);

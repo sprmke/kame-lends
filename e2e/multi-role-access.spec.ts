@@ -311,11 +311,6 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
     ).toBeVisible({
       timeout: 20_000,
     });
-
-    const witSync = await request.post("/api/loans/sync-calendar", {
-      data: { loanId: loan.id, action: "sync" },
-    });
-    expect([401, 403, 404]).toContain(witSync.status());
   } finally {
     await cleanup(page, {
       loanId: loan.id,

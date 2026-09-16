@@ -7,7 +7,6 @@ import {
   Users,
 } from "lucide-svelte";
 import { SHOW_TRANSACTIONS_UI } from "$lib/feature-flags";
-import type { NavCapabilities } from "$lib/nav/app-nav";
 import type { IconComponent } from "$lib/types/icon";
 
 export interface DashboardQuickAction {
@@ -17,20 +16,17 @@ export interface DashboardQuickAction {
   icon: IconComponent;
 }
 
-export function buildDashboardQuickActions(
-  caps: NavCapabilities,
-): DashboardQuickAction[] {
-  if (!caps.isAdminWorkspace) return [];
-
+/** Create shortcuts on Dashboard. Same set for every signed-in user. */
+export function buildDashboardQuickActions(): DashboardQuickAction[] {
   const actions: DashboardQuickAction[] = [
     { id: "loan", label: "Loan", href: "/loans/new", icon: FileText },
     {
       id: "borrowing",
-      label: "Borrowing",
+      label: "Bank loan",
       href: "/debts/new",
       icon: HandCoins,
     },
-    { id: "investor", label: "Investor", href: "/investors/new", icon: Users },
+    { id: "investor", label: "Lender", href: "/investors/new", icon: Users },
     {
       id: "borrower",
       label: "Borrower",

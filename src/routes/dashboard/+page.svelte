@@ -10,6 +10,7 @@
 	import CashflowTrendChart from '$lib/components/charts/CashflowTrendChart.svelte';
 	import CurrencyBarChart from '$lib/components/charts/CurrencyBarChart.svelte';
 	import LoanTypePieChart from '$lib/components/charts/LoanTypePieChart.svelte';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 	import { SHOW_GROUPS_UI, SHOW_TRANSACTIONS_UI } from '$lib/feature-flags';
 	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
 	import { page } from '$app/state';
@@ -40,11 +41,10 @@
 
 		<PageHeader
 			title="Dashboard"
-			description="Overview of your lending performance and upcoming activity."
-			eyebrow="Welcome back"
+			description={PAGE_DESCRIPTIONS.dashboard}
 			showPriceToggle={true}
 		>
-			<DashboardQuickActionsMenu navCapabilities={data.navCapabilities} />
+			<DashboardQuickActionsMenu />
 		</PageHeader>
 
 		<SummaryCard

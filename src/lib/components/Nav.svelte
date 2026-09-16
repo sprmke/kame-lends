@@ -243,8 +243,8 @@
 		isPublicChromeless
 			? 'pt-0'
 			: user
-				? 'pt-mobile-top pb-mobile-tab lg:pt-4 lg:pb-0'
-				: 'pt-12 lg:pt-14',
+				? 'pt-mobile-top pb-mobile-tab lg:pt-5 lg:pb-5'
+				: 'pt-14 lg:pt-16',
 		user && !isCollapsed ? 'lg:ml-[19rem]' : user && isCollapsed ? 'lg:ml-[7.5rem]' : 'lg:ml-0',
 		user && !isPublicChromeless && 'lg:pr-4'
 	)}

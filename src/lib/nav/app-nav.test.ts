@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_NAV_CAPABILITIES,
+  LOANS_ITEM,
   buildAppNav,
   buildDestinationItems,
   buildSidebarGroups,
@@ -8,211 +9,135 @@ import {
   resolveMobileDockHighlight,
 } from "$lib/nav/app-nav";
 
+const STANDARD_SIDEBAR_GROUP_IDS = [
+  "overview",
+  "people",
+  "bank-loans",
+  "settings",
+] as const;
+
 describe("buildSidebarGroups", () => {
-  it("uses one flat group for party-only sessions", () => {
-    const groups = buildSidebarGroups(DEFAULT_NAV_CAPABILITIES);
-    expect(groups).toEqual([
-      {
-        id: "main",
-        items: expect.any(Array),
-      },
+  it("shows the same groups for party-only and workspace-owner caps", () => {
+    const party = buildSidebarGroups(DEFAULT_NAV_CAPABILITIES);
+    const owner = buildSidebarGroups({
+      ...DEFAULT_NAV_CAPABILITIES,
+      isAdminWorkspace: true,
+    });
+    expect(party.map((group) => group.id)).toEqual([
+      ...STANDARD_SIDEBAR_GROUP_IDS,
     ]);
-    expect(flattenNavItems(groups).map((item) => item.id)).toEqual([
-      "dashboard",
-      "investments",
-      "borrowed",
-      "witnessed",
-      "settings",
+    expect(owner.map((group) => group.id)).toEqual([
+      ...STANDARD_SIDEBAR_GROUP_IDS,
     ]);
   });
 
-  it("groups admin workspace links into overview, roles, workspace, and settings", () => {
+  it("shows Loans and People for every signed-in user", () => {
+    const groups = buildSidebarGroups(DEFAULT_NAV_CAPABILITIES);
+    expect(groups[0]?.items.map((item) => item.id)).toEqual([
+      "dashboard",
+      "loans",
+    ]);
+    expect(groups[0]?.items.find((i) => i.id === "loans")).toEqual(LOANS_ITEM);
+    expect(groups[1]?.label).toBe("People");
+    expect(groups[1]?.items.map((item) => item.id)).toContain("investors");
+    expect(groups[1]?.items.map((item) => item.id)).not.toContain("debts");
+    expect(groups[2]?.label).toBe("Tools");
+    expect(groups[2]?.items).toEqual([
+      expect.objectContaining({ id: "debts", title: "Bank Loans" }),
+    ]);
+  });
+
+  it("does not duplicate party routes in the sidebar", () => {
     const groups = buildSidebarGroups({
-      isAdminWorkspace: true,
+      ...DEFAULT_NAV_CAPABILITIES,
       hasInvestments: true,
       hasBorrowed: true,
-      hasWitnessed: true,
-      hasGroups: false,
     });
-    expect(groups.map((group) => group.id)).toEqual([
-      "overview",
-      "your-roles",
-      "workspace",
-      "settings",
-    ]);
-    expect(groups[0]?.items.map((item) => item.id)).toEqual(["dashboard"]);
-    expect(groups[1]?.label).toBe("Your roles");
-    expect(groups[1]?.items.map((item) => item.id)).toEqual([
-      "investments",
-      "borrowed",
-      "witnessed",
-    ]);
-    expect(groups[2]?.label).toBe("Workspace");
-    expect(groups[2]?.items.map((item) => item.id)).toEqual([
-      "loans",
-      "debts",
-      "investors",
-      "borrowers",
-      "witnesses",
-    ]);
+    const ids = flattenNavItems(groups).map((item) => item.id);
+    expect(ids).not.toContain("investments");
+    expect(ids).not.toContain("borrowed");
   });
 
   it("shows Groups in overview when hasGroups is true", () => {
     const groups = buildSidebarGroups({
-      isAdminWorkspace: true,
-      hasInvestments: false,
-      hasBorrowed: false,
-      hasWitnessed: false,
+      ...DEFAULT_NAV_CAPABILITIES,
       hasGroups: true,
     });
     expect(groups[0]?.items.map((item) => item.id)).toEqual([
       "dashboard",
       "groups",
+      "loans",
     ]);
   });
 });
 
 describe("buildDestinationItems", () => {
-  it("shows party views only for a normal user session", () => {
+  it("includes People and Bank Loans for any session", () => {
     const ids = buildDestinationItems(DEFAULT_NAV_CAPABILITIES).map(
       (item) => item.id,
     );
-    expect(ids).toEqual(["dashboard", "investments", "borrowed", "witnessed"]);
-  });
-
-  it("adds Groups for party users with hasGroups", () => {
-    const ids = buildDestinationItems({
-      ...DEFAULT_NAV_CAPABILITIES,
-      hasGroups: true,
-    }).map((item) => item.id);
-    expect(ids).toEqual([
-      "dashboard",
-      "groups",
-      "investments",
-      "borrowed",
-      "witnessed",
-    ]);
-  });
-
-  it("keeps Groups off when hasGroups is false (feature flag off)", () => {
-    const ids = buildDestinationItems({
-      ...DEFAULT_NAV_CAPABILITIES,
-      hasGroups: false,
-    }).map((item) => item.id);
-    expect(ids).not.toContain("groups");
-  });
-
-  it("adds workspace-admin CRM destinations for an admin workspace", () => {
-    const ids = buildDestinationItems({
-      isAdminWorkspace: true,
-      hasInvestments: true,
-      hasBorrowed: true,
-      hasWitnessed: true,
-      hasGroups: false,
-    }).map((item) => item.id);
-    expect(ids).toEqual([
-      "dashboard",
-      "loans",
-      "investments",
-      "borrowed",
-      "witnessed",
-      "debts",
-      "investors",
-      "borrowers",
-      "witnesses",
-    ]);
+    expect(ids).toContain("loans");
+    expect(ids).toContain("investors");
+    expect(ids).toContain("debts");
   });
 });
 
 describe("buildAppNav", () => {
-  it("keeps up to four destinations on the dock and lists every link in More", () => {
-    const nav = buildAppNav(DEFAULT_NAV_CAPABILITIES);
-    expect(nav.primaryTabs.map((item) => item.id)).toEqual([
-      "dashboard",
-      "investments",
-      "borrowed",
-      "witnessed",
-    ]);
-    expect(nav.moreNavItems.map((item) => item.id)).toEqual([
-      "dashboard",
-      "investments",
-      "borrowed",
-      "witnessed",
-      "settings",
-    ]);
-    expect(nav.sidebarItems).toEqual(nav.moreNavItems);
-    expect(nav.sidebarGroups).toHaveLength(1);
+  it("lists full nav in the More sheet for party users", () => {
+    const { moreNavItems } = buildAppNav(DEFAULT_NAV_CAPABILITIES);
+    const ids = moreNavItems.map((item) => item.id);
+    expect(ids).toContain("settings");
+    expect(ids).toContain("loans");
+    expect(ids).toContain("investors");
+    expect(ids).toContain("debts");
   });
 
-  it("lists every workspace-admin link in the More sheet", () => {
-    const nav = buildAppNav({
-      isAdminWorkspace: true,
-      hasInvestments: true,
-      hasBorrowed: true,
-      hasWitnessed: true,
-      hasGroups: false,
+  it("uses Dashboard, Groups, Loans, Settings on the phone dock when groups are on", () => {
+    const { primaryTabs } = buildAppNav({
+      ...DEFAULT_NAV_CAPABILITIES,
+      hasGroups: true,
     });
-    expect(nav.primaryTabs.map((item) => item.id)).toEqual([
+    expect(primaryTabs.map((item) => item.id)).toEqual([
       "dashboard",
+      "groups",
       "loans",
-      "investments",
-      "borrowed",
-    ]);
-    expect(nav.moreNavItems.map((item) => item.id)).toEqual([
-      "dashboard",
-      "loans",
-      "investments",
-      "borrowed",
-      "witnessed",
-      "debts",
-      "investors",
-      "borrowers",
-      "witnesses",
       "settings",
     ]);
-    expect(nav.sidebarItems).toEqual(nav.moreNavItems);
-    expect(nav.sidebarGroups.map((group) => group.id)).toEqual([
-      "overview",
-      "your-roles",
-      "workspace",
+  });
+
+  it("omits Groups on the phone dock when SHOW_GROUPS_UI is off", () => {
+    const { primaryTabs } = buildAppNav(DEFAULT_NAV_CAPABILITIES);
+    expect(primaryTabs.map((item) => item.id)).toEqual([
+      "dashboard",
+      "loans",
       "settings",
     ]);
   });
 });
 
 describe("resolveMobileDockHighlight", () => {
-  const nav = buildAppNav(DEFAULT_NAV_CAPABILITIES);
-
-  it("highlights only the matching dock shortcut for primary routes", () => {
-    expect(
-      resolveMobileDockHighlight(
-        "/investments",
-        nav.primaryTabs,
-        nav.moreNavItems,
-        false,
-      ),
-    ).toEqual({ moreActive: false });
+  it("highlights Settings on the dock, not More", () => {
+    const { primaryTabs, moreNavItems } = buildAppNav({
+      ...DEFAULT_NAV_CAPABILITIES,
+      hasGroups: true,
+    });
+    const { moreActive } = resolveMobileDockHighlight(
+      "/settings",
+      primaryTabs,
+      moreNavItems,
+      false,
+    );
+    expect(moreActive).toBe(false);
   });
 
-  it("highlights More for sheet-only routes", () => {
-    expect(
-      resolveMobileDockHighlight(
-        "/settings",
-        nav.primaryTabs,
-        nav.moreNavItems,
-        false,
-      ),
-    ).toEqual({ moreActive: true });
-  });
-
-  it("highlights only More while the sheet is open on a dock route", () => {
-    expect(
-      resolveMobileDockHighlight(
-        "/investments",
-        nav.primaryTabs,
-        nav.moreNavItems,
-        true,
-      ),
-    ).toEqual({ moreActive: true });
+  it("highlights More when route is only in the sheet", () => {
+    const { primaryTabs, moreNavItems } = buildAppNav(DEFAULT_NAV_CAPABILITIES);
+    const { moreActive } = resolveMobileDockHighlight(
+      "/investors",
+      primaryTabs,
+      moreNavItems,
+      false,
+    );
+    expect(moreActive).toBe(true);
   });
 });

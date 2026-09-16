@@ -6,14 +6,13 @@ import {
   ArrowLeftRight,
   Settings,
   HandCoins,
-  PiggyBank,
-  Eye,
   UserCheck,
   Folders,
 } from "lucide-svelte";
 import { SHOW_TRANSACTIONS_UI } from "$lib/feature-flags";
 
 export interface NavCapabilities {
+  /** User owns loan/CRM/debt rows (Settings maintenance, account Owner role). */
   isAdminWorkspace: boolean;
   hasInvestments: boolean;
   hasBorrowed: boolean;
@@ -62,26 +61,13 @@ const GROUPS_ITEM: AppNavItem = {
   icon: Folders,
 };
 
-const PARTY_ITEMS: AppNavItem[] = [
-  {
-    id: "investments",
-    title: "Investments",
-    href: "/investments",
-    icon: PiggyBank,
-  },
-  {
-    id: "borrowed",
-    title: "Borrowed",
-    href: "/borrowed",
-    icon: HandCoins,
-  },
-  {
-    id: "witnessed",
-    title: "Witnessed",
-    href: "/witnessed",
-    icon: Eye,
-  },
-];
+/** Single loans hub; party views are tabs on `/loans?scope=…`. */
+export const LOANS_ITEM: AppNavItem = {
+  id: "loans",
+  title: "Loans",
+  href: "/loans",
+  icon: FileText,
+};
 
 function settingsItem(): AppNavItem {
   return {
@@ -92,27 +78,17 @@ function settingsItem(): AppNavItem {
   };
 }
 
-function buildWorkspaceItems(): AppNavItem[] {
+/** Workspace-owner bank / external loan tracker (`/debts`). */
+const BANK_LOANS_ITEM: AppNavItem = {
+  id: "debts",
+  title: "Bank Loans",
+  href: "/debts",
+  icon: HandCoins,
+};
+
+/** CRM contact lists (`/investors`, `/borrowers`, `/witnesses`). */
+function buildPeopleItems(): AppNavItem[] {
   const items: AppNavItem[] = [
-    { id: "loans", title: "Loans", href: "/loans", icon: FileText },
-  ];
-
-  if (SHOW_TRANSACTIONS_UI) {
-    items.push({
-      id: "transactions",
-      title: "Transactions",
-      href: "/transactions",
-      icon: ArrowLeftRight,
-    });
-  }
-
-  items.push(
-    {
-      id: "debts",
-      title: "Borrowings",
-      href: "/debts",
-      icon: HandCoins,
-    },
     {
       id: "investors",
       title: "Investors",
@@ -131,7 +107,16 @@ function buildWorkspaceItems(): AppNavItem[] {
       href: "/witnesses",
       icon: UserCheck,
     },
-  );
+  ];
+
+  if (SHOW_TRANSACTIONS_UI) {
+    items.push({
+      id: "transactions",
+      title: "Transactions",
+      href: "/transactions",
+      icon: ArrowLeftRight,
+    });
+  }
 
   return items;
 }
@@ -140,43 +125,29 @@ export function flattenNavItems(groups: AppNavGroup[]): AppNavItem[] {
   return groups.flatMap((group) => group.items);
 }
 
-const PARTY_ITEM_IDS = new Set(PARTY_ITEMS.map((item) => item.id));
-
-/** Sidebar / More sheet groups. Admin workspace splits personal vs CRM links. */
+/** Same sidebar for every signed-in user; `hasGroups` only toggles Groups link. */
 export function buildSidebarGroups(
   caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES,
 ): AppNavGroup[] {
-  const destinations = buildDestinationItems(caps);
+  const overviewItems: AppNavItem[] = [DASHBOARD_ITEM];
+  if (caps.hasGroups) overviewItems.push(GROUPS_ITEM);
+  overviewItems.push(LOANS_ITEM);
 
-  if (!caps.isAdminWorkspace) {
-    return [
-      {
-        id: "main",
-        items: [...destinations, settingsItem()],
-      },
-    ];
-  }
+  const groups: AppNavGroup[] = [{ id: "overview", items: overviewItems }];
 
-  const overviewItems = caps.hasGroups
-    ? [DASHBOARD_ITEM, GROUPS_ITEM]
-    : [DASHBOARD_ITEM];
-  const workspaceItems = destinations.filter(
-    (item) =>
-      item.id !== "dashboard" &&
-      item.id !== "groups" &&
-      !PARTY_ITEM_IDS.has(item.id),
-  );
+  groups.push({
+    id: "people",
+    label: "People",
+    items: buildPeopleItems(),
+  });
+  groups.push({
+    id: "bank-loans",
+    label: "Tools",
+    items: [BANK_LOANS_ITEM],
+  });
 
-  return [
-    { id: "overview", items: overviewItems },
-    {
-      id: "your-roles",
-      label: "Your roles",
-      items: destinations.filter((item) => PARTY_ITEM_IDS.has(item.id)),
-    },
-    { id: "workspace", label: "Workspace", items: workspaceItems },
-    { id: "settings", items: [settingsItem()] },
-  ];
+  groups.push({ id: "settings", items: [settingsItem()] });
+  return groups;
 }
 
 export function buildDestinationItems(
@@ -188,26 +159,25 @@ export function buildDestinationItems(
     items.push(GROUPS_ITEM);
   }
 
-  if (caps.isAdminWorkspace) {
-    items.push({
-      id: "loans",
-      title: "Loans",
-      href: "/loans",
-      icon: FileText,
-    });
-  }
-
-  items.push(...PARTY_ITEMS);
-
-  if (caps.isAdminWorkspace) {
-    items.push(...buildWorkspaceItems().filter((item) => item.id !== "loans"));
-  }
+  items.push(LOANS_ITEM);
+  items.push(...buildPeopleItems());
+  items.push(BANK_LOANS_ITEM);
 
   return items;
 }
 
-/** Phone dock shows up to four destination shortcuts plus More; the sheet lists every nav link. */
-export const MOBILE_DOCK_MAX_PRIMARY_TABS = 4;
+/** Floating phone dock: hub routes only; People / Tools stay under More. */
+export function buildMobilePrimaryTabs(
+  caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES,
+): AppNavItem[] {
+  const tabs: AppNavItem[] = [DASHBOARD_ITEM];
+  if (caps.hasGroups) {
+    tabs.push(GROUPS_ITEM);
+  }
+  tabs.push(LOANS_ITEM);
+  tabs.push(settingsItem());
+  return tabs;
+}
 
 export function buildAppNav(caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES): {
   primaryTabs: AppNavItem[];
@@ -218,7 +188,7 @@ export function buildAppNav(caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES): {
   const destinations = buildDestinationItems(caps);
   const sidebarGroups = buildSidebarGroups(caps);
   const sidebarItems = [...destinations, settingsItem()];
-  const primaryTabs = destinations.slice(0, MOBILE_DOCK_MAX_PRIMARY_TABS);
+  const primaryTabs = buildMobilePrimaryTabs(caps);
   const moreNavItems = sidebarItems;
 
   return { primaryTabs, moreNavItems, sidebarItems, sidebarGroups };
@@ -253,9 +223,9 @@ export function resolveMobilePageTitle(pathname: string): string {
   if (pathname.startsWith("/loans/new")) return "New loan";
   if (pathname.startsWith("/loans/")) return "Loan";
   if (pathname.startsWith("/loans")) return "Loans";
-  if (pathname.startsWith("/debts/new")) return "New borrowing";
-  if (pathname.startsWith("/debts/")) return "Borrowing";
-  if (pathname.startsWith("/debts")) return "Borrowings";
+  if (pathname.startsWith("/debts/new")) return "New bank loan";
+  if (pathname.startsWith("/debts/")) return "Bank loan";
+  if (pathname.startsWith("/debts")) return "Bank Loans";
   if (pathname.startsWith("/investors/new")) return "New investor";
   if (pathname.startsWith("/investors/")) return "Investor";
   if (pathname.startsWith("/investors")) return "Investors";
@@ -268,9 +238,9 @@ export function resolveMobilePageTitle(pathname: string): string {
   if (pathname.startsWith("/transactions/new")) return "New transaction";
   if (pathname.startsWith("/transactions/")) return "Transaction";
   if (pathname.startsWith("/transactions")) return "Transactions";
-  if (pathname.startsWith("/investments")) return "Investments";
-  if (pathname.startsWith("/borrowed")) return "Borrowed";
-  if (pathname.startsWith("/witnessed")) return "Witnessed";
+  if (pathname.startsWith("/investments")) return "Loans";
+  if (pathname.startsWith("/borrowed")) return "Loans";
+  if (pathname.startsWith("/witnessed")) return "Loans";
   if (pathname.startsWith("/settings")) return "Settings";
   if (pathname.startsWith("/dashboard")) return "Dashboard";
   return "Kame Lends";
