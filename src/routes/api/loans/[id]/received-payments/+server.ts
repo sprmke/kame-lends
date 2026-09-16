@@ -157,6 +157,20 @@ export const POST: RequestHandler = async (event) => {
     await syncLoanStatusFromInterestPeriods(loanId);
 
     invalidateLoanData();
+    try {
+      const { enqueueGroupLoanChanged } =
+        await import("$lib/server/jobs/queue");
+      const { scheduleDrain } = await import("$lib/server/jobs/after-response");
+      await enqueueGroupLoanChanged(loanId, {
+        activity: {
+          type: "payment_received",
+          entityId: loanId,
+        },
+      });
+      scheduleDrain(event);
+    } catch (groupErr) {
+      console.error("[groups] post-received-payment sync failed", groupErr);
+    }
     return json({ success: true }, { status: 201 });
   } catch (error) {
     console.error("Error adding received payment:", error);

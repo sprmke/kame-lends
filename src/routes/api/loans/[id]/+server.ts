@@ -303,6 +303,26 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     invalidateLoanData();
+
+    try {
+      const { recomputeGroupsForLoans } =
+        await import("$lib/server/group-access");
+      const { enqueueGroupLoanChanged } =
+        await import("$lib/server/jobs/queue");
+      const { scheduleDrain } = await import("$lib/server/jobs/after-response");
+      await recomputeGroupsForLoans([loanId]);
+      await enqueueGroupLoanChanged(loanId, {
+        activity: {
+          type: "loan_updated",
+          entityId: loanId,
+          summary: updatedLoan?.loanName,
+        },
+      });
+      scheduleDrain(event);
+    } catch (groupErr) {
+      console.error("[groups] post-update sync failed", groupErr);
+    }
+
     return json(updatedLoan);
   } catch (error) {
     console.error("Error updating loan:", error);

@@ -207,6 +207,20 @@ export const POST: RequestHandler = async (event) => {
     });
 
     invalidateLoanData();
+    try {
+      const { enqueueGroupLoanChanged } =
+        await import("$lib/server/jobs/queue");
+      const { scheduleDrain } = await import("$lib/server/jobs/after-response");
+      await enqueueGroupLoanChanged(loanId, {
+        activity: {
+          type: "interest_extended",
+          entityId: loanId,
+        },
+      });
+      scheduleDrain(event);
+    } catch (groupErr) {
+      console.error("[groups] post-extend-interest sync failed", groupErr);
+    }
     return json(updatedLoan);
   } catch (error) {
     console.error("Error extending interest:", error);

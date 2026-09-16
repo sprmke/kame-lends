@@ -11,4 +11,8 @@ export type LoanAccessContext = {
   linkedInvestorId: number | null;
   /** The caller's own loan_witnesses row id, when they are a witness on this loan. */
   linkedLoanWitnessId: number | null;
+  /** Group ids granting view when the user is not a party. */
+  viaGroupIds: number[];
+  /** True when canView is only via group membership (not a party). */
+  isGroupViewer: boolean;
 };

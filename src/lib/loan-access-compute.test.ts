@@ -44,4 +44,26 @@ describe("computeLoanAccessContext", () => {
     expect(witness.memberships).toContain("witness");
     expect(witness.linkedLoanWitnessId).toBe(4);
   });
+
+  it("does not grant view from blank invitation emails", () => {
+    const openSlots = {
+      ...graph,
+      loanWitnesses: [],
+      signingInvitations: [
+        {
+          partyRole: "witness_1",
+          partyEmail: null,
+          investorId: null,
+          witness: null,
+        },
+      ],
+    };
+    const access = computeLoanAccessContext(
+      openSlots,
+      "stranger-1",
+      "stranger@example.com",
+    );
+    expect(access.canView).toBe(false);
+    expect(access.memberships).toEqual([]);
+  });
 });

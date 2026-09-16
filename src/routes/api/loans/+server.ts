@@ -215,6 +215,23 @@ export const POST: RequestHandler = async (event) => {
     }
 
     invalidateLoanData();
+
+    if (completeLoan) {
+      try {
+        const { applyGroupRulesForLoan } =
+          await import("$lib/server/group-access");
+        const { scheduleDrain } =
+          await import("$lib/server/jobs/after-response");
+        await applyGroupRulesForLoan(completeLoan.id, session.user.id);
+        scheduleDrain(event);
+      } catch (groupErr) {
+        console.error(
+          "[groups] apply rules after loan create failed",
+          groupErr,
+        );
+      }
+    }
+
     return json({ ...completeLoan, signingInvitations }, { status: 201 });
   } catch (error) {
     console.error("Error creating loan:", error);

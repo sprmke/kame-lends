@@ -47,6 +47,21 @@ export const PATCH: RequestHandler = async (event) => {
     });
 
     invalidateLoanData();
+    try {
+      const { enqueueGroupLoanChanged } =
+        await import("$lib/server/jobs/queue");
+      const { scheduleDrain } = await import("$lib/server/jobs/after-response");
+      await enqueueGroupLoanChanged(loanId, {
+        activity: {
+          type: "loan_completed",
+          entityId: loanId,
+          summary: updatedLoan?.loanName,
+        },
+      });
+      scheduleDrain(event);
+    } catch (groupErr) {
+      console.error("[groups] post-status sync failed", groupErr);
+    }
     return json(updatedLoan);
   } catch (error) {
     console.error("Error updating loan status:", error);

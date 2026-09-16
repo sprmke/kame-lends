@@ -1,5 +1,5 @@
 import type { SigningPartyRole } from "$lib/loan-signing";
-import { emailsMatch } from "$lib/loan-signing";
+import { emailsMatch, normalizeEmail } from "$lib/loan-signing";
 import type { LoanAccessContext, LoanMembership } from "$lib/loan-access";
 
 export type LoanAccessGraph = {
@@ -42,6 +42,8 @@ export const emptyLoanAccess: LoanAccessContext = {
   signingPartyRoles: [],
   linkedInvestorId: null,
   linkedLoanWitnessId: null,
+  viaGroupIds: [],
+  isGroupViewer: false,
 };
 
 /** Membership from an already-loaded loan graph. Avoids a second access query. */
@@ -56,7 +58,11 @@ export function computeLoanAccessContext(
   let linkedLoanWitnessId: number | null = null;
 
   const emailMatchesParty = (partyEmail: string | null | undefined) =>
-    !!sessionEmail && emailsMatch(sessionEmail, partyEmail);
+    Boolean(
+      sessionEmail &&
+      normalizeEmail(partyEmail) &&
+      emailsMatch(sessionEmail, partyEmail),
+    );
 
   if (loan.userId === userId) {
     memberships.add("owner");
@@ -141,5 +147,7 @@ export function computeLoanAccessContext(
     signingPartyRoles: [...signingPartyRoles],
     linkedInvestorId,
     linkedLoanWitnessId,
+    viaGroupIds: [],
+    isGroupViewer: false,
   };
 }
