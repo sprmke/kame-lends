@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import { loadEnv } from "vite";
+import { E2E_DEV_PORT } from "./scripts/dev/local-dev-port.mjs";
 
-const previewPort = 4174;
+const previewPort = E2E_DEV_PORT;
 const localEnv = loadEnv("development", process.cwd(), "");
 for (const [key, value] of Object.entries(localEnv)) {
   if (process.env[key] === undefined) process.env[key] = value;

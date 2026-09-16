@@ -4,7 +4,8 @@
   "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "bash scripts/dev/free-local-ports.sh && vite dev --strictPort",
+    "dev:free-ports": "bash scripts/dev/free-local-ports.sh",
     "build": "vite build",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
@@ -37,6 +38,7 @@
     "db:backfill:storage": "bun scripts/db/backfill-storage-to-r2.ts",
     "db:backfill:group-members": "bun scripts/db/backfill-group-members.ts",
     "dev:wipe-workspace-calendar": "bun scripts/dev/wipe-workspace-calendar.ts",
+    "dev:backfill-group-calendar-colors": "bun scripts/dev/backfill-group-calendar-colors.ts",
     "telegram:set-webhook": "bun scripts/telegram/set-webhook.ts",
     "db:apply:migration": "bash scripts/db/apply-migration.sh",
     "db:apply:migration:prod": "bash scripts/db/apply-migration.sh --prod",
