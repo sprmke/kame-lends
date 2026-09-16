@@ -4,6 +4,8 @@
 	import DetailHeader from '$lib/components/common/DetailHeader.svelte';
 	import LoanDetailContent from './LoanDetailContent.svelte';
 	import LoanContractDetailsModal from './LoanContractDetailsModal.svelte';
+	import LoanCommissionModal from './LoanCommissionModal.svelte';
+	import { canShowMyCommissionCard } from '$lib/commission-edit-slot';
 	import LoanForm from './LoanForm.svelte';
 	import LoanQuickPaymentDialog, {
 		type LoanQuickPaymentKind
@@ -37,6 +39,7 @@
 		page.url.searchParams.get('edit') === '1' && access.canAdminEdit
 	);
 	let showContractDetailsModal = $state(false);
+	let showCommissionModal = $state(false);
 	let quickPaymentKind = $state<LoanQuickPaymentKind | null>(null);
 	let showDuplicateModal = $state(false);
 	let editSubmitting = $state(false);
@@ -55,6 +58,12 @@
 	$effect(() => {
 		if (highlightSigning && access.canView) {
 			showContractDetailsModal = true;
+		}
+	});
+
+	$effect(() => {
+		if (highlightCommission && canShowMyCommissionCard(access)) {
+			showCommissionModal = true;
 		}
 	});
 	const isOverdue = $derived(loan.status === 'Overdue');
@@ -176,7 +185,6 @@
 			{paymentMethods}
 			{access}
 			bind:groupPickerOpen
-			startCommissionEdit={highlightCommission}
 		/>
 
 		{#if access.canAdminEdit}
@@ -244,3 +252,12 @@
 	{investors}
 	onSaved={handleRefresh}
 />
+
+{#if canShowMyCommissionCard(access)}
+	<LoanCommissionModal
+		{loan}
+		open={showCommissionModal}
+		onOpenChange={(open) => (showCommissionModal = open)}
+		onSaved={handleRefresh}
+	/>
+{/if}

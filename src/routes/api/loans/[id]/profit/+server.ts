@@ -1,12 +1,13 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
-import { db } from "$lib/server/db";
-import { loans } from "$lib/server/db/schema";
-import { hasBorrowerProfitWriteAccess } from "$lib/server/access-control";
+import {
+  hasMyCommissionAccess,
+  upsertUserCommission,
+} from "$lib/server/loan-user-commission";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 
+/** @deprecated Use PATCH /api/loans/[id]/my-commission */
 export const PATCH: RequestHandler = async (event) => {
   const { params, request } = event;
   try {
@@ -20,7 +21,7 @@ export const PATCH: RequestHandler = async (event) => {
       return json({ error: "Invalid loan ID." }, { status: 400 });
     }
 
-    const allowed = await hasBorrowerProfitWriteAccess(loanId, session.user.id);
+    const allowed = await hasMyCommissionAccess(loanId, session.user.id);
     if (!allowed) {
       return json({ error: "Forbidden" }, { status: 403 });
     }
@@ -36,19 +37,15 @@ export const PATCH: RequestHandler = async (event) => {
       );
     }
 
-    await db
-      .update(loans)
-      .set({
-        profitType,
-        profitValue: String(profitValue),
-        updatedAt: new Date(),
-      })
-      .where(eq(loans.id, loanId));
+    await upsertUserCommission(loanId, session.user.id, {
+      profitType,
+      profitValue: String(profitValue),
+    });
 
     invalidateLoanData();
     return json({ success: true });
   } catch (error) {
-    console.error("Error updating borrower profit:", error);
-    return json({ error: "Failed to update profit." }, { status: 500 });
+    console.error("Error updating commission:", error);
+    return json({ error: "Failed to update commission." }, { status: 500 });
   }
 };

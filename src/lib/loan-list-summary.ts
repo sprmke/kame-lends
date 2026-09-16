@@ -252,72 +252,40 @@ export interface ProfitStats {
  * Profit stats for a borrower across their loans.
  * Estimate = open loans, Earned = completed loans — same split as investor interest.
  */
-export type PartyCommissionContext = {
-  userId: string;
-  investorIds: number[];
-  witnessIds: number[];
-};
-
-export function partyCommissionAmountForLoan(
-  loan: LoanWithInvestors,
-  ctx: PartyCommissionContext,
-): number {
+export function partyCommissionAmountForLoan(loan: LoanWithInvestors): number {
+  if (!loan.myCommission) return 0;
   const principal = calculateTotalPrincipal(loan.loanInvestors);
-  let total = 0;
-
-  if (loan.borrower?.borrowerUserId === ctx.userId) {
-    total += calculateInterest(principal, loan.profitValue, loan.profitType);
-  }
-
-  for (const row of loan.loanWitnesses ?? []) {
-    if (ctx.witnessIds.includes(row.witnessId)) {
-      total += calculateInterest(principal, row.profitValue, row.profitType);
-    }
-  }
-
-  for (const allocation of loan.loanInvestors) {
-    if (ctx.investorIds.includes(allocation.investorId)) {
-      total += calculateInterest(
-        principal,
-        allocation.profitValue ?? "0",
-        allocation.profitType ?? "rate",
-      );
-    }
-  }
-
-  return total;
+  return calculateInterest(
+    principal,
+    loan.myCommission.profitValue,
+    loan.myCommission.profitType,
+  );
 }
 
-export function loanHasPartyCommission(
-  loan: LoanWithInvestors,
-  ctx: PartyCommissionContext,
-): boolean {
-  return partyCommissionAmountForLoan(loan, ctx) > 0;
+export function loanHasPartyCommission(loan: LoanWithInvestors): boolean {
+  return partyCommissionAmountForLoan(loan) > 0;
 }
 
 /**
- * Commission stats for the signed-in user across loans (borrower, witness, and investor slots).
+ * Commission stats for the signed-in user across loans (private per-user commission).
  */
 export function computePartyCommissionStats(
   loans: LoanWithInvestors[],
-  ctx: PartyCommissionContext,
   from: string | null = null,
   to: string | null = null,
 ): ProfitStats {
-  const loansWithCommission = loans.filter((loan) =>
-    loanHasPartyCommission(loan, ctx),
-  );
+  const loansWithCommission = loans.filter(loanHasPartyCommission);
   const openLoans = loansWithCommission.filter(isOpenLoan);
   const completedLoans = loansWithCommission.filter(
     (loan) => !isOpenLoan(loan),
   );
 
   const profitEstimate = openLoans.reduce(
-    (sum, loan) => sum + partyCommissionAmountForLoan(loan, ctx),
+    (sum, loan) => sum + partyCommissionAmountForLoan(loan),
     0,
   );
   const profitEarned = completedLoans.reduce(
-    (sum, loan) => sum + partyCommissionAmountForLoan(loan, ctx),
+    (sum, loan) => sum + partyCommissionAmountForLoan(loan),
     0,
   );
 

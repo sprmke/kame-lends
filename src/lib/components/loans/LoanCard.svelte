@@ -15,6 +15,11 @@
 		formatText
 	} from '$lib/format';
 	import { calculateTransactionStats } from '$lib/calculations';
+	import {
+		normalizeCommissionType,
+		parseCommissionValue
+	} from '$lib/commission';
+	import { partyCommissionAmountForLoan } from '$lib/loan-list-summary';
 	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
 	import { cn } from '$lib/utils';
 	import type { LoanWithInvestors } from '$lib/types';
@@ -36,6 +41,8 @@
 		onRemoveFromGroup?: (loan: LoanWithInvestors) => void;
 		onGroupFilter?: (groupId: number) => void;
 		hideGroupBadges?: boolean;
+		/** Commissioned tab: show the viewer's commission instead of loan interest. */
+		showCommissionMetrics?: boolean;
 		selectable?: boolean;
 		selected?: boolean;
 		onSelectedChange?: (selected: boolean) => void;
@@ -54,12 +61,22 @@
 		onRemoveFromGroup,
 		onGroupFilter,
 		hideGroupBadges = false,
+		showCommissionMetrics = false,
 		selectable = false,
 		selected = false,
 		onSelectedChange
 	}: Props = $props();
 
 	const stats = $derived(calculateTransactionStats(loan.loanInvestors));
+	const commissionType = $derived(
+		normalizeCommissionType(loan.myCommission?.profitType ?? 'rate')
+	);
+	const commissionValue = $derived(
+		parseCommissionValue(loan.myCommission?.profitValue ?? '0')
+	);
+	const commissionAmount = $derived(
+		showCommissionMetrics ? partyCommissionAmountForLoan(loan) : 0
+	);
 	const addedByRule = $derived(
 		(loan as LoanWithInvestors & { groupSource?: string }).groupSource === 'rule'
 	);
@@ -146,15 +163,27 @@
 			</div>
 			<div class="dashboard-metric-cell p-2">
 				<p class="text-caption mb-1">Rate</p>
-				<p class="text-sm font-medium">{formatPercentage(stats.averageRate)}</p>
+				<p class="text-sm font-medium">
+					{showCommissionMetrics
+						? commissionType === 'fixed'
+							? 'Fixed'
+							: formatPercentage(commissionValue)
+						: formatPercentage(stats.averageRate)}
+				</p>
 			</div>
 			<div class="dashboard-metric-cell p-2">
 				<p class="text-caption mb-1">Due</p>
 				<p class="text-sm font-medium">{formatDateVeryShort(loan.dueDate)}</p>
 			</div>
 			<div class="dashboard-metric-cell p-2">
-				<p class="text-caption mb-1">Interest</p>
-				<p class="text-sm font-medium">{formatCurrency(stats.totalInterest)}</p>
+				<p class="text-caption mb-1">
+					{showCommissionMetrics ? 'Commission' : 'Interest'}
+				</p>
+				<p class="text-sm font-medium">
+					{showCommissionMetrics
+						? formatCurrency(commissionAmount)
+						: formatCurrency(stats.totalInterest)}
+				</p>
 			</div>
 		</div>
 	</Card.Content>

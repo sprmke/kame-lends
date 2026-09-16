@@ -8,14 +8,12 @@
 	import { formatDate, formatText, formatSqm } from '$lib/format';
 	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
 	import LoanWitnessesSection from './LoanWitnessesSection.svelte';
-	import LoanBorrowerProfitCard from './LoanBorrowerProfitCard.svelte';
-	import LoanInvestorCommissionCard from './LoanInvestorCommissionCard.svelte';
+	import LoanMyCommissionCard from './LoanMyCommissionCard.svelte';
 	import {
 		calculateTotalPrincipal,
 		calculateTotalInterest,
 		calculateTotalAmount,
 		calculateAverageRate,
-		calculateInterest,
 		countUniqueInvestors,
 		groupByInvestor,
 		calculateLoanDuration
@@ -30,6 +28,7 @@
 	import { page } from '$app/state';
 	import { toast } from '$lib/toast';
 	import { fetchSigningClient } from '$lib/composables/loan-detail-client-cache';
+	import { canShowMyCommissionCard } from '$lib/commission-edit-slot';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -41,7 +40,6 @@
 		paymentMethods?: PaymentMethod[];
 		access?: LoanAccessContext;
 		groupPickerOpen?: boolean;
-		startCommissionEdit?: boolean;
 	}
 
 	let {
@@ -53,8 +51,7 @@
 		editableInvestorIds = [],
 		paymentMethods = [],
 		access,
-		groupPickerOpen = $bindable(false),
-		startCommissionEdit = false
+		groupPickerOpen = $bindable(false)
 	}: Props = $props();
 
 	const totalPrincipal = $derived(calculateTotalPrincipal(loan.loanInvestors));
@@ -66,31 +63,10 @@
 		loan.borrowerId != null || loan.borrower?.id != null ? 1 : 0
 	);
 
-	const profit = $derived(
-		calculateInterest(totalPrincipal, loan.profitValue, loan.profitType)
-	);
-	const profitRate = $derived(loan.profitType === 'rate' ? Number(loan.profitValue) : 0);
-
-	const canEditBorrowerProfit = $derived(
-		access
-			? !access.isGroupViewer &&
-					(access.canAdminEdit || access.memberships.includes('borrower'))
-			: false
-	);
-	const myLoanInvestor = $derived(
-		access?.linkedInvestorId != null
-			? loan.loanInvestors.find((row) => row.investorId === access.linkedInvestorId)
-			: undefined
-	);
-	const canEditInvestorCommission = $derived(
-		access && myLoanInvestor
-			? !access.isGroupViewer &&
-					(access.canAdminEdit || access.memberships.includes('investor'))
-			: false
-	);
+	const showMyCommissionCard = $derived(canShowMyCommissionCard(access));
+	const myLoanWitnessId = $derived(access?.linkedLoanWitnessId ?? null);
 	const isGroupViewer = $derived(Boolean(access?.isGroupViewer));
 	const effectiveReadOnly = $derived(readOnly || isGroupViewer);
-	const myLoanWitnessId = $derived(access?.linkedLoanWitnessId ?? null);
 
 	const groupsIndex = $derived(
 		((page.data as { groupsIndex?: GroupsIndexItem[] }).groupsIndex ?? []) as GroupsIndexItem[]
@@ -257,24 +233,12 @@
 		{borrowerCount}
 		status={loan.status}
 		{balance}
-		{profit}
-		{profitRate}
-		profitType={loan.profitType}
 		{signingSigned}
 		{signingTotal}
 	/>
 
-	{#if canEditBorrowerProfit}
-		<LoanBorrowerProfitCard {loan} {onRefresh} autoStartEdit={startCommissionEdit} />
-	{/if}
-
-	{#if canEditInvestorCommission && myLoanInvestor}
-		<LoanInvestorCommissionCard
-			{loan}
-			allocation={myLoanInvestor}
-			{onRefresh}
-			autoStartEdit={startCommissionEdit}
-		/>
+	{#if showMyCommissionCard}
+		<LoanMyCommissionCard {loan} {onRefresh} />
 	{/if}
 
 	<LoanPaymentMethodsSection {paymentMethods} />
@@ -358,11 +322,9 @@
 	<LoanWitnessesSection
 		loanWitnesses={loan.loanWitnesses ?? []}
 		loanId={loanId ?? loan.id}
-		{totalPrincipal}
 		{onRefresh}
 		canAdminEdit={access?.canAdminEdit ?? false}
 		{myLoanWitnessId}
-		autoStartCommissionEdit={startCommissionEdit && !canEditBorrowerProfit && !canEditInvestorCommission}
 	/>
 </div>
 

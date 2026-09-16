@@ -303,34 +303,20 @@ describe("computeLoanListSummaryStats", () => {
 });
 
 describe("computePartyCommissionStats", () => {
-  it("sums borrower, witness, and investor commission for the signed-in user", () => {
+  it("uses the private myCommission field for the signed-in user", () => {
     const loan = loanFixture({
       status: "Fully Funded",
       amount: "100000",
       sentDate: "2026-09-01",
       dueDate: "2026-09-30",
       profitType: "rate",
-      profitValue: "10",
+      profitValue: "0",
     });
-    loan.borrower = { borrowerUserId: "user-borrower" };
-    loan.loanWitnesses = [
-      {
-        id: 1,
-        witnessId: 7,
-        profitType: "fixed",
-        profitValue: "500",
-      },
-    ];
-    loan.loanInvestors[0]!.profitType = "rate";
-    loan.loanInvestors[0]!.profitValue = "5";
+    loan.myCommission = { profitType: "rate", profitValue: "10" };
 
-    const stats = computePartyCommissionStats([loan], {
-      userId: "user-borrower",
-      investorIds: [1],
-      witnessIds: [7],
-    });
+    const stats = computePartyCommissionStats([loan]);
 
-    expect(stats.profitEstimate).toBe(10000 + 500 + 5000);
+    expect(stats.profitEstimate).toBe(10000);
     expect(stats.totalLoanCount).toBe(1);
   });
 
@@ -341,31 +327,27 @@ describe("computePartyCommissionStats", () => {
       sentDate: "2026-09-01",
       dueDate: "2026-09-30",
       profitType: "rate",
-      profitValue: "10",
+      profitValue: "0",
     });
-    withCommission.borrower = { borrowerUserId: "user-borrower" };
+    withCommission.myCommission = { profitType: "rate", profitValue: "10" };
 
     const withoutCommission = loanFixture({
       status: "Completed",
       amount: "50000",
+      sentDate: "2026-08-01",
+      dueDate: "2026-08-31",
       profitType: "rate",
       profitValue: "0",
     });
-    withoutCommission.borrower = { borrowerUserId: "user-borrower" };
+    withoutCommission.myCommission = null;
 
-    const ctx = {
-      userId: "user-borrower",
-      investorIds: [] as number[],
-      witnessIds: [] as number[],
-    };
+    expect(loanHasPartyCommission(withCommission)).toBe(true);
+    expect(loanHasPartyCommission(withoutCommission)).toBe(false);
 
-    expect(loanHasPartyCommission(withCommission, ctx)).toBe(true);
-    expect(loanHasPartyCommission(withoutCommission, ctx)).toBe(false);
-
-    const stats = computePartyCommissionStats(
-      [withCommission, withoutCommission],
-      ctx,
-    );
+    const stats = computePartyCommissionStats([
+      withCommission,
+      withoutCommission,
+    ]);
     expect(stats.totalLoanCount).toBe(1);
     expect(stats.completedCount).toBe(0);
     expect(stats.profitEstimate).toBe(10000);

@@ -136,7 +136,7 @@ export async function renderLoanContractPdfBuffer(
 
 export function pdfResponse(buffer: Uint8Array, filename: string): Response {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-  return new Response(bytes, {
+  return new Response(new Blob([bytes.slice()]), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,

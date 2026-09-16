@@ -44,6 +44,8 @@ function loan(overrides: Partial<LoanWithInvestors> = {}): LoanWithInvestors {
         sentDate: new Date("2026-09-01T00:00:00.000Z"),
         isPaid: true,
         hasMultipleInterest: false,
+        profitType: "rate",
+        profitValue: "0",
         createdAt: new Date("2026-09-01T00:00:00.000Z"),
         updatedAt: new Date("2026-09-01T00:00:00.000Z"),
         investor,

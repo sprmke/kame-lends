@@ -217,53 +217,32 @@ export async function getLoanAccessContext(
   return computeLoanAccessContext(loan, userId, sessionUser?.email ?? null);
 }
 
-/** Writes to a loan's own borrowerProfit field. Owner or the loan's linked borrower. */
+/** @deprecated Use hasMyCommissionAccess from loan-user-commission.ts */
 export async function hasBorrowerProfitWriteAccess(
   loanId: number,
   userId: string,
 ): Promise<boolean> {
-  const ctx = await getLoanAccessContext(loanId, userId);
-  return ctx.canAdminEdit || ctx.memberships.includes("borrower");
+  const { hasMyCommissionAccess } =
+    await import("$lib/server/loan-user-commission");
+  return hasMyCommissionAccess(loanId, userId);
 }
 
-/**
- * Resolves the loan_witnesses row id the caller may write profit fields on.
- * Owner may write any row on the loan (id passed in by the caller); a witness
- * may write only their own linked row.
- */
+/** @deprecated Commission is private per user via loan_user_commissions */
 export async function resolveWitnessProfitWriteAccess(
-  loanId: number,
-  userId: string,
-  witnessLoanId: number,
+  _loanId: number,
+  _userId: string,
+  _witnessLoanId: number,
 ): Promise<boolean> {
-  const ctx = await getLoanAccessContext(loanId, userId);
-  if (ctx.canAdminEdit) return true;
-  return (
-    ctx.memberships.includes("witness") &&
-    ctx.linkedLoanWitnessId === witnessLoanId
-  );
+  return false;
 }
 
-/** Writes commission on a loan_investors row. Owner or the linked investor on that row. */
+/** @deprecated Commission is private per user via loan_user_commissions */
 export async function resolveInvestorCommissionWriteAccess(
-  loanId: number,
-  userId: string,
-  loanInvestorId: number,
+  _loanId: number,
+  _userId: string,
+  _loanInvestorId: number,
 ): Promise<boolean> {
-  const ctx = await getLoanAccessContext(loanId, userId);
-  if (ctx.canAdminEdit) return true;
-  if (!ctx.memberships.includes("investor") || ctx.linkedInvestorId == null) {
-    return false;
-  }
-
-  const row = await db.query.loanInvestors.findFirst({
-    where: and(
-      eq(loanInvestors.id, loanInvestorId),
-      eq(loanInvestors.loanId, loanId),
-    ),
-    columns: { investorId: true },
-  });
-  return row?.investorId === ctx.linkedInvestorId;
+  return false;
 }
 
 /** True when this witness contact was created by (and thus is manageable by) this workspace owner. */

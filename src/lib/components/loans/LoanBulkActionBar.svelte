@@ -113,7 +113,8 @@
 
 {#if selectedCount > 0}
 	<div
-		class="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 flex flex-wrap items-center gap-2 border-t px-3 py-2 backdrop-blur lg:bottom-0"
+		class="fixed inset-x-0 z-[45] flex flex-wrap items-center gap-2 border-t border-border/60 bg-background px-3 py-2 shadow-[var(--shadow-native-float)] max-lg:bottom-[calc(var(--mobile-dock-clearance)+var(--safe-area-bottom))] lg:sticky lg:bottom-0 lg:z-30 lg:shadow-none"
+		style="padding-left: max(0.75rem, var(--safe-area-left)); padding-right: max(0.75rem, var(--safe-area-right));"
 	>
 		<span class="text-sm font-medium">{formatCount(selectedCount)} selected</span>
 		{#if showAddToGroup}

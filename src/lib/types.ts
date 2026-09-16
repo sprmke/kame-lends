@@ -31,6 +31,7 @@ export interface Investor {
 export interface Borrower {
   id: number;
   name: string;
+  borrowerUserId?: string | null;
   contactNumber: string | null;
   email: string | null;
   address: string | null;
@@ -72,6 +73,7 @@ export interface BorrowerWithLoans extends Borrower {
 export interface Witness {
   id: number;
   name: string;
+  witnessUserId?: string | null;
   email: string | null;
   contactNumber: string | null;
   address: string | null;
@@ -107,7 +109,7 @@ export interface Loan {
   dueDate: Date;
   freeLotSqm: number | null;
   notes: string | null;
-  userId?: string;
+  userId: string;
   profitType: InterestType;
   profitValue: string;
   createdAt: Date;
@@ -236,6 +238,12 @@ export interface LoanWitness {
   witness: Witness;
 }
 
+/** Private commission for the signed-in user on a loan. */
+export interface LoanUserCommission {
+  profitType: InterestType;
+  profitValue: string;
+}
+
 export interface LoanWithInvestors extends Loan {
   borrower?: Borrower | null;
   loanInvestors: (LoanInvestor & { investor: Investor })[];
@@ -253,6 +261,8 @@ export interface LoanWithInvestors extends Loan {
   groupLoans?: Array<{ groupId: number; source: string }>;
   /** Convenience ids derived client-side from groupLoans + groupsIndex. */
   groupIds?: number[];
+  /** Present only for the requesting user when they are a party on the loan. */
+  myCommission?: LoanUserCommission | null;
 }
 
 /** Payment destination for borrowers (loan owner bank / QR). */

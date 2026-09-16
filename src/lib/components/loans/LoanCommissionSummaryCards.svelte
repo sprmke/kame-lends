@@ -17,13 +17,14 @@
 			amount: stats.totalPrincipal
 		},
 		{
-			label: 'Commission Estimate',
+			label: 'Com Estimate',
 			amount: stats.profitEstimate
 		},
 		{
-			label: 'Commission Earned',
+			label: 'Com Earned',
 			amount: stats.profitEarned,
-			valueClassName: 'text-chart-2'
+			valueClassName: 'text-chart-2',
+			empty: false
 		},
 		{
 			label: 'Completed',

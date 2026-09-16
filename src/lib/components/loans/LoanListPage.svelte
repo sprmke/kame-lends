@@ -30,6 +30,7 @@
 	import { loanPDFSections } from '$lib/pdf-sections';
 	import { createDuplicateDataFromLoan } from '$lib/loan-duplicate';
 	import LoanContractDetailsModal from '$lib/components/loans/LoanContractDetailsModal.svelte';
+	import LoanCommissionModal from '$lib/components/loans/LoanCommissionModal.svelte';
 	import { toast } from '$lib/toast';
 	import {
 		hasActiveLoanAmountFilters,
@@ -149,11 +150,12 @@
 	let loanPendingDeletion = $state<LoanWithInvestors | null>(null);
 	let contractDetailsLoan = $state<LoanWithInvestors | null>(null);
 	let showContractDetailsModal = $state(false);
+	let commissionLoan = $state<LoanWithInvestors | null>(null);
+	let showCommissionModal = $state(false);
 	let showCreateModal = $state(false);
 	let createModalDuplicateData = $state<DuplicateLoanData | null>(null);
 	let duplicateSourceLoanId = $state<number | null>(null);
 	let detailStartInEdit = $state(false);
-	let detailStartCommissionEdit = $state(false);
 	const loanFormOptions = createLoanFormOptions();
 
 	const groupScope = createLoanListGroupScope({
@@ -196,7 +198,6 @@
 			return;
 		}
 		detailStartInEdit = false;
-		detailStartCommissionEdit = false;
 		selectedLoan = loan;
 		isModalOpen = true;
 	}
@@ -204,19 +205,43 @@
 	function handleRowEdit(loan: LoanWithInvestors) {
 		selectedLoan = loan;
 		detailStartInEdit = true;
-		detailStartCommissionEdit = false;
 		isModalOpen = true;
 	}
 
 	function handleRowAddCommission(loan: LoanWithInvestors) {
-		if (isMobileShellViewport()) {
-			goto(`/loans/${loan.id}?commission=1`);
+		commissionLoan = loan;
+		showCommissionModal = true;
+		refreshLoanIfCurrent(
+			() => commissionLoan,
+			(full) => {
+				commissionLoan = full;
+			},
+			loan
+		);
+	}
+
+	function handleCommissionModalOpenChange(open: boolean) {
+		showCommissionModal = open;
+	}
+
+	function handleCommissionModalOpenChangeComplete(open: boolean) {
+		if (!open) commissionLoan = null;
+	}
+
+	async function handleCommissionSaved() {
+		const current = commissionLoan;
+		if (!current) {
+			await refreshLoans();
 			return;
 		}
-		detailStartInEdit = false;
-		detailStartCommissionEdit = true;
-		selectedLoan = loan;
-		isModalOpen = true;
+		await refreshLoans({ kind: 'upsert', loanId: current.id });
+		refreshLoanIfCurrent(
+			() => commissionLoan,
+			(full) => {
+				commissionLoan = full;
+			},
+			current
+		);
 	}
 
 	function handleRowDuplicate(loan: LoanWithInvestors) {
@@ -345,7 +370,7 @@
 		loanListRowActionHandlers({
 			scope,
 			canManage,
-			showAddCommission: variant.showCommissionSummary,
+			showAddCommission: variant.showAddCommission,
 			onEdit: handleRowEdit,
 			onDuplicate: handleRowDuplicate,
 			onAddPayment: (loan) => handleQuickPayment(loan, 'payment'),
@@ -378,20 +403,10 @@
 		if (typeParams.length) typeFilter = typeParams;
 	});
 
-	const partyCommissionContext = $derived(
-		data.userId
-			? {
-					userId: data.userId,
-					investorIds: data.myInvestorIds ?? [],
-					witnessIds: data.myWitnessIds ?? []
-				}
-			: null
-	);
-
 	const scopeBaseLoans = $derived.by(() => {
 		const list = loans ?? [];
-		if (scope !== 'commissioned' || !partyCommissionContext) return list;
-		return list.filter((loan) => loanHasPartyCommission(loan, partyCommissionContext));
+		if (scope !== 'commissioned') return list;
+		return list.filter((loan) => loanHasPartyCommission(loan));
 	});
 
 	const preGroupLoans = $derived(
@@ -415,13 +430,8 @@
 	);
 
 	const commissionStats = $derived(
-		variant.showCommissionSummary && scopedLoans.length > 0 && partyCommissionContext
-			? computePartyCommissionStats(
-					scopedLoans,
-					partyCommissionContext,
-					filterFrom,
-					filterTo
-				)
+		variant.showCommissionSummary && scopedLoans.length > 0
+			? computePartyCommissionStats(scopedLoans, filterFrom, filterTo)
 			: null
 	);
 
@@ -752,6 +762,7 @@
 						{#each cardLoans as loan (loan.id)}
 							<LoanCard
 								{loan}
+								showCommissionMetrics={scope === 'commissioned'}
 								onQuickView={handleQuickView}
 								onEdit={rowActions.onEdit}
 								onAddPayment={rowActions.onAddPayment}
@@ -797,13 +808,11 @@
 			loan={selectedLoan}
 			open={isModalOpen}
 			startInEditMode={detailStartInEdit}
-			startCommissionEdit={detailStartCommissionEdit}
 			onOpenChange={(open) => {
 				isModalOpen = open;
 				if (!open) {
 					selectedLoan = null;
 					detailStartInEdit = false;
-					detailStartCommissionEdit = false;
 				}
 			}}
 			onUpdate={refreshLoans}
@@ -839,6 +848,20 @@
 				canEdit={canManage}
 				onSaved={handleContractDetailsSaved}
 			/>
+		{/if}
+
+		{#if commissionLoan}
+			<LoanCommissionModal
+				loan={commissionLoan}
+				open={showCommissionModal}
+				onOpenChange={handleCommissionModalOpenChange}
+				onOpenChangeComplete={handleCommissionModalOpenChangeComplete}
+				onSaved={handleCommissionSaved}
+			/>
+		{/if}
+
+		{#if variant.showBulkActions && selectedLoans.length > 0 && isMobileShell.matches}
+			<div class="h-14 shrink-0 lg:hidden" aria-hidden="true"></div>
 		{/if}
 
 		{#if variant.showBulkActions && SHOW_GROUPS_UI && canManage}

@@ -687,9 +687,7 @@ export function pickViewerSigningInvitation<
 
 /** List/calendar badge: pending or signed for the signed-in party only. */
 export function loanSigningDisplayStatus(
-  loan: LoanAccessGraph & {
-    signingInvitations?: SigningInvitationViewerFields[] | null;
-  },
+  loan: LoanAccessGraph | LoanWithInvestors,
   userId: string | null | undefined,
   sessionEmail: string | null | undefined,
 ): LoanSigningDisplayStatus {
@@ -700,7 +698,7 @@ export function loanSigningDisplayStatus(
   if (access.signingPartyRoles.length === 0) return "none";
 
   const viewerInvitation = pickViewerSigningInvitation(
-    invitations,
+    invitations as SigningInvitationViewerFields[],
     access.signingPartyRoles,
     sessionEmail,
     access.linkedInvestorId,
@@ -713,9 +711,7 @@ export function loanSigningDisplayStatus(
 }
 
 export function loanIsFullySigned(
-  loan: LoanAccessGraph & {
-    signingInvitations?: SigningInvitationViewerFields[] | null;
-  },
+  loan: LoanAccessGraph | LoanWithInvestors,
   userId: string | null | undefined,
   sessionEmail: string | null | undefined,
 ): boolean {

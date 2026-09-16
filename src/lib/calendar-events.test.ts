@@ -41,6 +41,8 @@ function allocation(
     sentDate: new Date(`${sentDate}T00:00:00.000Z`),
     isPaid: true,
     hasMultipleInterest: false,
+    profitType: "rate" as const,
+    profitValue: "0",
     createdAt: new Date("2026-09-01T00:00:00.000Z"),
     updatedAt: new Date("2026-09-01T00:00:00.000Z"),
     investor,

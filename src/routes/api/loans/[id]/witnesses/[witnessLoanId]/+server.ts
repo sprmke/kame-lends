@@ -7,7 +7,6 @@ import { loanWitnesses } from "$lib/server/db/schema";
 import {
   getLoanAccessContext,
   isOwnedWitness,
-  resolveWitnessProfitWriteAccess,
 } from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 
@@ -36,12 +35,7 @@ export const PATCH: RequestHandler = async (event) => {
     }
 
     const access = await getLoanAccessContext(loanId, session.user.id);
-    const allowed = await resolveWitnessProfitWriteAccess(
-      loanId,
-      session.user.id,
-      witnessLoanId,
-    );
-    if (!allowed) {
+    if (!access.canAdminEdit) {
       return json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -50,25 +44,17 @@ export const PATCH: RequestHandler = async (event) => {
       updatedAt: new Date(),
     };
 
-    if (body.profitType !== undefined) {
-      updates.profitType = body.profitType === "fixed" ? "fixed" : "rate";
-    }
-    if (body.profitValue !== undefined) {
-      const profitValue = Number.parseFloat(String(body.profitValue));
-      if (!Number.isFinite(profitValue) || profitValue < 0) {
-        return json(
-          { error: "Enter a profit amount of zero or more." },
-          { status: 400 },
-        );
-      }
-      updates.profitValue = String(profitValue);
+    if (body.profitType !== undefined || body.profitValue !== undefined) {
+      return json(
+        {
+          error:
+            "Commission is private. Use PATCH /api/loans/[id]/my-commission.",
+        },
+        { status: 400 },
+      );
     }
 
-    // Only the owner may reassign which witness this row belongs to.
     if (body.witnessId !== undefined) {
-      if (!access.canAdminEdit) {
-        return json({ error: "Forbidden" }, { status: 403 });
-      }
       const witnessId = Number.parseInt(String(body.witnessId), 10);
       if (!Number.isFinite(witnessId)) {
         return json({ error: "Select a witness." }, { status: 400 });

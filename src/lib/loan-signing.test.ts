@@ -57,6 +57,8 @@ function buildFixtureLoan(): LoanWithInvestors {
         sentDate: new Date("2026-01-01"),
         isPaid: false,
         hasMultipleInterest: false,
+        profitType: "rate",
+        profitValue: "0",
         createdAt: new Date(),
         updatedAt: new Date(),
         investor: {
@@ -310,6 +312,7 @@ describe("loanHasPendingSigning", () => {
 
   it("returns signed only when the viewer's slot is signed", () => {
     const loan = {
+      id: 1,
       userId: "owner-1",
       borrower: { borrowerUserId: "borrower-1", email: "borrower@example.com" },
       loanInvestors: [

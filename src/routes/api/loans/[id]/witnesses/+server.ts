@@ -31,19 +31,6 @@ export const POST: RequestHandler = async (event) => {
       return json({ error: "Select a witness." }, { status: 400 });
     }
 
-    const profitType = body.profitType === "fixed" ? "fixed" : "rate";
-    const profitValue = Number.isFinite(
-      Number.parseFloat(String(body.profitValue)),
-    )
-      ? Number.parseFloat(String(body.profitValue))
-      : 0;
-    if (profitValue < 0) {
-      return json(
-        { error: "Enter a profit amount of zero or more." },
-        { status: 400 },
-      );
-    }
-
     if (!(await isOwnedWitness(witnessId, session.user.id))) {
       return json({ error: "Witness not found." }, { status: 404 });
     }
@@ -66,8 +53,6 @@ export const POST: RequestHandler = async (event) => {
       .values({
         loanId,
         witnessId,
-        profitType,
-        profitValue: String(profitValue),
       })
       .returning();
 

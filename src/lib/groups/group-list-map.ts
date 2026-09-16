@@ -121,7 +121,12 @@ type OwnedLoanForWizard = {
   status: string;
   dueDate: Date | string;
   borrowerId?: number | null;
-  borrower?: { id?: number; name: string | null } | null;
+  borrower?: {
+    id?: number;
+    name?: string | null;
+    borrowerUserId?: string | null;
+    email?: string | null;
+  } | null;
   loanInvestors?: Array<{
     amount: string;
     isPaid?: boolean | null;

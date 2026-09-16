@@ -22,6 +22,7 @@ export type LoanListPageVariant = {
   showLoanListSummary: boolean;
   showProfitSummary: boolean;
   showCommissionSummary: boolean;
+  showAddCommission: boolean;
   showBulkActions: boolean;
   showGroupScopedInfo: boolean;
   groupScopeNoun: string;
@@ -48,6 +49,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showLoanListSummary: true,
     showProfitSummary: false,
     showCommissionSummary: false,
+    showAddCommission: true,
     showBulkActions: true,
     showGroupScopedInfo: false,
     groupScopeNoun: "loans",
@@ -68,6 +70,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showLoanListSummary: true,
     showProfitSummary: false,
     showCommissionSummary: false,
+    showAddCommission: true,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "investments",
@@ -88,6 +91,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showLoanListSummary: true,
     showProfitSummary: false,
     showCommissionSummary: false,
+    showAddCommission: true,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "borrowed loans",
@@ -108,6 +112,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showLoanListSummary: false,
     showProfitSummary: false,
     showCommissionSummary: true,
+    showAddCommission: true,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "commissioned loans",
@@ -128,6 +133,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showLoanListSummary: true,
     showProfitSummary: false,
     showCommissionSummary: false,
+    showAddCommission: true,
     showBulkActions: false,
     showGroupScopedInfo: true,
     groupScopeNoun: "witnessed loans",
@@ -148,6 +154,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showLoanListSummary: true,
     showProfitSummary: false,
     showCommissionSummary: false,
+    showAddCommission: false,
     showBulkActions: true,
     showGroupScopedInfo: false,
     groupScopeNoun: "loans",

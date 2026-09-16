@@ -298,6 +298,34 @@ export const loanInvestors = pgTable(
   }),
 );
 
+// Per-user commission on a loan (private to the user who set it).
+export const loanUserCommissions = pgTable(
+  "loan_user_commissions",
+  {
+    id: serial("id").primaryKey(),
+    loanId: integer("loan_id")
+      .references(() => loans.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: text("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    profitType: interestTypeEnum("profit_type").notNull().default("rate"),
+    profitValue: decimal("profit_value", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    loanUserUnique: unique("loan_user_commissions_loan_user_unique").on(
+      table.loanId,
+      table.userId,
+    ),
+    userIdIdx: index("loan_user_commissions_user_id_idx").on(table.userId),
+    loanIdIdx: index("loan_user_commissions_loan_id_idx").on(table.loanId),
+  }),
+);
+
 // Loan Witnesses (Junction Table — witness profit per loan)
 export const loanWitnesses = pgTable(
   "loan_witnesses",
@@ -894,10 +922,25 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
   }),
   loanInvestors: many(loanInvestors),
   loanWitnesses: many(loanWitnesses),
+  userCommissions: many(loanUserCommissions),
   signingInvitations: many(loanSigningInvitations),
   transactions: many(transactions),
   groupLoans: many(loanGroupLoans),
 }));
+
+export const loanUserCommissionsRelations = relations(
+  loanUserCommissions,
+  ({ one }) => ({
+    loan: one(loans, {
+      fields: [loanUserCommissions.loanId],
+      references: [loans.id],
+    }),
+    user: one(users, {
+      fields: [loanUserCommissions.userId],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const loanContractsRelations = relations(
   loanContracts,
@@ -1131,6 +1174,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   paymentMethods: many(paymentMethods),
   loanGroups: many(loanGroups),
   loanGroupMemberships: many(loanGroupMembers),
+  loanUserCommissions: many(loanUserCommissions),
 }));
 
 export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({

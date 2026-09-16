@@ -104,16 +104,8 @@ export const PUT: RequestHandler = async (event) => {
       dueDate: new Date(loanData.dueDate),
       freeLotSqm: loanData.freeLotSqm ? Number(loanData.freeLotSqm) : null,
       notes: loanData.notes || null,
-      // Borrower profit is optional in this payload — preserve the existing
-      // value when the caller (e.g. an older LoanForm submission) omits it.
-      profitType:
-        loanData.profitType === "fixed" || loanData.profitType === "rate"
-          ? loanData.profitType
-          : existingLoan.profitType,
-      profitValue:
-        loanData.profitValue !== undefined && loanData.profitValue !== null
-          ? String(loanData.profitValue)
-          : existingLoan.profitValue,
+      profitType: existingLoan.profitType,
+      profitValue: existingLoan.profitValue,
       updatedAt: new Date(),
     };
 

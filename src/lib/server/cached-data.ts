@@ -7,6 +7,11 @@ import {
   loadLinkedInvestorContactIds,
 } from "$lib/server/party-investor-links";
 import {
+  finalizeLoansForViewer,
+  stripLegacyCommissionFields,
+} from "$lib/server/loan-user-commission";
+import type { LoanWithInvestors } from "$lib/types";
+import {
   borrowers,
   debts,
   investors,
@@ -142,7 +147,9 @@ async function loadLoansByIds(ids: number[], mode: LoanCacheMode) {
           where: inArray(loans.id, ids),
           with: fullRelations,
         });
-  return stripDataImageUrls(rows);
+  return stripDataImageUrls(
+    rows.map((row) => stripLegacyCommissionFields(row as LoanWithInvestors)),
+  );
 }
 
 async function loadOwnedLoanIds(userId: string) {
@@ -216,7 +223,10 @@ async function loadLoans(
             with: fullRelations,
             orderBy: (table, { desc }) => [desc(table.createdAt)],
           });
-    return stripDataImageUrls(rows);
+    return finalizeLoansForViewer(
+      stripDataImageUrls(rows) as LoanWithInvestors[],
+      userId,
+    );
   }
 
   let ids: number[];
@@ -239,7 +249,10 @@ async function loadLoans(
   }
 
   const result = await loadLoansByIds(ids, mode);
-  return result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  const sorted = result.sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+  return finalizeLoansForViewer(sorted as LoanWithInvestors[], userId);
 }
 
 export async function getCachedInvestors(

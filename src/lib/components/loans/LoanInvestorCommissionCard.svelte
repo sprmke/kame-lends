@@ -6,18 +6,33 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { Pencil, X } from 'lucide-svelte';
 	import { calculateInterest, calculateTotalPrincipal } from '$lib/calculations';
-	import { formatCurrency, formatPercentage, formatText } from '$lib/format';
+	import {
+		isCommissionConfigured,
+		normalizeCommissionType,
+		parseCommissionValue
+	} from '$lib/commission';
+	import { scrollCommissionSectionIntoView } from '$lib/commission-edit-slot';
+	import { formatCurrency, formatPercentage } from '$lib/format';
 	import { toast } from '$lib/toast';
 	import type { LoanInvestor, LoanWithInvestors } from '$lib/types';
 
 	interface Props {
 		loan: LoanWithInvestors;
 		allocation: LoanInvestor;
+		title?: string;
+		sectionId?: string;
 		onRefresh?: () => void | Promise<void>;
 		autoStartEdit?: boolean;
 	}
 
-	let { loan, allocation, onRefresh, autoStartEdit = false }: Props = $props();
+	let {
+		loan,
+		allocation,
+		title = 'Your Commission',
+		sectionId = 'loan-investor-commission-section',
+		onRefresh,
+		autoStartEdit = false
+	}: Props = $props();
 
 	let isEditing = $state(false);
 	let profitType = $state<'rate' | 'fixed'>('rate');
@@ -25,8 +40,13 @@
 	let isSaving = $state(false);
 
 	const totalPrincipal = $derived(calculateTotalPrincipal(loan.loanInvestors));
+	const commissionType = $derived(normalizeCommissionType(allocation.profitType));
+	const commissionValue = $derived(parseCommissionValue(allocation.profitValue));
+	const hasCommission = $derived(
+		isCommissionConfigured(allocation.profitType, allocation.profitValue)
+	);
 	const currentCommission = $derived(
-		calculateInterest(totalPrincipal, allocation.profitValue, allocation.profitType)
+		calculateInterest(totalPrincipal, allocation.profitValue, commissionType)
 	);
 	const draftValue = $derived(Number.parseFloat(profitValue));
 	const draftValueValid = $derived(Number.isFinite(draftValue) && draftValue >= 0);
@@ -43,11 +63,7 @@
 	$effect(() => {
 		if (!autoStartEdit || isEditing) return;
 		startEdit();
-		requestAnimationFrame(() => {
-			document
-				.getElementById('loan-commission-section')
-				?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-		});
+		scrollCommissionSectionIntoView();
 	});
 
 	async function save() {
@@ -76,9 +92,9 @@
 	}
 </script>
 
-<Card.Root id="loan-commission-section">
+<Card.Root id={sectionId}>
 	<Card.Header class="flex flex-row items-center justify-between space-y-0">
-		<Card.Title class="dashboard-section-title">Your Commission</Card.Title>
+		<Card.Title class="dashboard-section-title">{title}</Card.Title>
 		{#if !isEditing}
 			<Button variant="outline" size="sm" onclick={startEdit}>
 				<Pencil class="mr-1 h-4 w-4" />
@@ -144,15 +160,19 @@
 					</Button>
 				</div>
 			</div>
+		{:else if !hasCommission}
+			<p class="text-sm text-muted-foreground">Not set</p>
 		{:else}
 			<div class="space-y-3">
 				<div class="grid grid-cols-2 gap-3">
 					<div>
-						<p class="text-caption mb-1">Commission Rate</p>
+						<p class="text-caption mb-1">
+							{commissionType === 'rate' ? 'Rate' : 'Type'}
+						</p>
 						<p class="text-sm font-semibold">
-							{allocation.profitType === 'fixed'
-								? formatText('Fixed')
-								: formatPercentage(Number(allocation.profitValue))}
+							{commissionType === 'fixed'
+								? 'Fixed'
+								: formatPercentage(commissionValue)}
 						</p>
 					</div>
 					<div>
@@ -160,19 +180,17 @@
 						<p class="text-sm font-semibold tabular-nums">{formatCurrency(currentCommission)}</p>
 					</div>
 				</div>
-				<div class="rounded-lg border border-border/60 bg-muted/30 p-3">
-					<p class="text-caption mb-1">Calculation</p>
-					{#if allocation.profitType === 'rate'}
+				{#if commissionType === 'rate'}
+					<div class="rounded-lg border border-border/60 bg-muted/30 p-3">
+						<p class="text-caption mb-1">Calculation</p>
 						<p class="text-sm tabular-nums">
-							{formatPercentage(Number(allocation.profitValue))} of {formatCurrency(totalPrincipal)}
+							{formatPercentage(commissionValue)} of {formatCurrency(totalPrincipal)}
 						</p>
 						<p class="mt-1 text-sm tabular-nums text-muted-foreground">
 							= {formatCurrency(currentCommission)}
 						</p>
-					{:else}
-						<p class="text-sm">Fixed amount, not tied to principal.</p>
-					{/if}
-				</div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</Card.Content>

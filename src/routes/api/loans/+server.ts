@@ -70,14 +70,8 @@ export const POST: RequestHandler = async (event) => {
       dueDate: new Date(loanData.dueDate),
       freeLotSqm: loanData.freeLotSqm ? Number(loanData.freeLotSqm) : null,
       notes: loanData.notes || null,
-      profitType:
-        loanData.profitType === "fixed"
-          ? ("fixed" as const)
-          : ("rate" as const),
-      profitValue:
-        loanData.profitValue !== undefined && loanData.profitValue !== null
-          ? String(loanData.profitValue)
-          : "0",
+      profitType: "rate" as const,
+      profitValue: "0",
     };
 
     // Insert loan

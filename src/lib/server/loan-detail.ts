@@ -12,6 +12,11 @@ import {
   isLoanFullyReceived,
 } from "$lib/calculations";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import {
+  finalizeLoansForViewer,
+  hasPartyMembershipForCommission,
+  stripLegacyCommissionFields,
+} from "$lib/server/loan-user-commission";
 
 const partyColumns = {
   id: true,
@@ -99,9 +104,13 @@ export async function loadLoanDetail(
     if (viaGroupIds.length === 0) return null;
 
     const projected = projectLoanForGroupViewer(entity);
+    const stripped = stripLegacyCommissionFields(
+      projected as unknown as LoanWithInvestors,
+    );
     return stripDataImageUrls({
-      ...(projected as unknown as LoanWithInvestors),
+      ...stripped,
       status: entity.status,
+      myCommission: null,
       access: {
         ...access,
         canView: true,
@@ -133,9 +142,18 @@ export async function loadLoanDetail(
     ? await listPaymentMethodsForBorrowerLoanView(entity.userId, access)
     : [];
 
+  const [finalized] = await finalizeLoansForViewer(
+    [entity as unknown as LoanWithInvestors],
+    userId,
+  );
+
   return stripDataImageUrls({
-    ...(entity as unknown as LoanWithInvestors),
+    ...finalized,
     status,
+    myCommission:
+      hasPartyMembershipForCommission(access) && !access.isGroupViewer
+        ? (finalized.myCommission ?? null)
+        : null,
     access: { ...access, viaGroupIds: [], isGroupViewer: false },
     ...(access.memberships.includes("borrower") ? { paymentMethods } : {}),
   });
