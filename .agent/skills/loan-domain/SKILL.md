@@ -50,12 +50,12 @@ Use when changing loans, investors, interest periods, payments, debts, or the in
 
 ## Where to look
 
-| Concern        | Path                                                |
-| -------------- | --------------------------------------------------- |
-| Schema         | `src/lib/server/db/schema.ts`                       |
-| Calculations   | `src/lib/calculations.ts`, `src/lib/loan-status.ts` |
-| Access control | `src/lib/server/access-control.ts`                  |
-| Feature flag   | `src/lib/feature-flags.ts`                          |
-| Calendar       | `src/lib/server/google-calendar.ts`                 |
+| Concern        | Path                                                                |
+| -------------- | ------------------------------------------------------------------- |
+| Schema         | `src/lib/server/db/schema.ts`                                       |
+| Calculations   | `src/lib/calculations.ts`, `src/lib/loan-status.ts`                 |
+| Access control | `src/lib/server/access-control.ts`                                  |
+| Feature flag   | `src/lib/feature-flags.ts`                                          |
+| Calendar       | `src/lib/server/group-calendar.ts`, `src/lib/calendar-summaries.ts` |
 
 Preserve behavior exactly; add Vitest coverage for calculation changes.
