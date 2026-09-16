@@ -22,14 +22,15 @@ Make the phone experience feel like a native app: orange brand hero, floating gl
 
 ## Key modules
 
-| Piece            | Path                                               |
-| ---------------- | -------------------------------------------------- |
-| Nav config       | `src/lib/nav/app-nav.ts`                           |
-| Tab / top / more | `src/lib/components/layout/Mobile*.svelte`         |
-| Sheet            | `src/lib/components/ui/sheet/*`                    |
-| Responsive modal | `src/lib/components/common/ResponsiveModal.svelte` |
-| Form chrome      | `src/lib/components/common/FormHeader.svelte`      |
-| Safe-area CSS    | `src/lib/styles/mobile.css`                        |
+| Piece            | Path                                                      |
+| ---------------- | --------------------------------------------------------- |
+| Nav config       | `src/lib/nav/app-nav.ts`                                  |
+| Tab / top / more | `src/lib/components/layout/Mobile*.svelte`                |
+| Sheet            | `src/lib/components/ui/sheet/*`                           |
+| Responsive modal | `src/lib/components/common/ResponsiveModal.svelte`        |
+| Overflow menu    | `src/lib/components/common/ResponsiveOverflowMenu.svelte` |
+| Form chrome      | `src/lib/components/common/FormHeader.svelte`             |
+| Safe-area CSS    | `src/lib/styles/mobile.css`                               |
 
 ## Production hardening notes
 
@@ -56,5 +57,6 @@ Make the phone experience feel like a native app: orange brand hero, floating gl
 - [x] Payment / date-list / signing consent overlays on ResponsiveModal
 - [x] Transaction / borrower / investor form sticky actions aligned
 - [x] Brand hero + floating glass dock + native type/surface scale (2026-09-10)
+- [x] `ResponsiveOverflowMenu`: row/hero/toolbar ⋯ menus use bottom sheets under `lg` (2026-09-17)
 - [ ] Full route-guide set (partial: dashboard + loans notes)
 - [ ] Device QA matrix signed off

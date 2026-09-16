@@ -12,6 +12,7 @@ alwaysApply: true
 3. **`docs/guides/routes/README.md`** — per-page behavior (when guides exist)
 4. Loan math / domain → **`loan-domain`** skill
 5. Modals / sheets → **`overlay-performance`** skill
+6. Mobile overflow menus / sheets → **`mobile-responsive`** skill + **`mobile-native-ui.mdc`**
 
 ## Stack (authoritative)
 

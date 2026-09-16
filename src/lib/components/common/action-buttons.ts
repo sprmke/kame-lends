@@ -1,3 +1,5 @@
+import type { IconComponent } from "$lib/types/icon";
+
 /** Shared ActionButtons props for list grid cards (Open + optional ⋮ menu). */
 export const GRID_CARD_ACTION_PROPS = {
   showView: false,
@@ -37,6 +39,8 @@ export interface RowActionItem {
   label: string;
   onClick: () => void;
   icon?: LoanActionIcon;
+  /** Lucide icon when `icon` is not set (export, dashboard shortcuts, etc.). */
+  lucideIcon?: IconComponent;
   destructive?: boolean;
   separatorBefore?: boolean;
   disabled?: boolean;

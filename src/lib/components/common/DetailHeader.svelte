@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import PriceVisibilityToggle from './PriceVisibilityToggle.svelte';
 	import { formatText } from '$lib/format';
@@ -8,7 +7,7 @@
 	import RegisterMobileHeroActions from '$lib/components/layout/RegisterMobileHeroActions.svelte';
 	import PageBackHeader from '$lib/components/common/PageBackHeader.svelte';
 	import { createLoanActionItems } from '$lib/components/common/action-buttons';
-	import ActionMenuList from '$lib/components/common/ActionMenuList.svelte';
+	import ResponsiveOverflowMenu from '$lib/components/common/ResponsiveOverflowMenu.svelte';
 	import { ArrowLeft, AlertCircle, CheckCircle, MoreHorizontal } from 'lucide-svelte';
 
 	interface Props {
@@ -131,26 +130,21 @@
 </script>
 
 {#snippet heroActions()}
-	<DropdownMenu.Root>
-		<DropdownMenu.Trigger>
-			{#snippet child({ props })}
-				<Button
-					{...props}
-					variant="outline"
-					size="sm"
-					class="touch-target h-10 shrink-0 px-2 md:h-8 md:px-3"
-					adaptToMobileHero
-					title="Actions"
-					aria-label="Actions"
-				>
-					<MoreHorizontal class="h-4 w-4" />
-				</Button>
-			{/snippet}
-		</DropdownMenu.Trigger>
-		<DropdownMenu.Content align="end">
-			<ActionMenuList items={actionItems} />
-		</DropdownMenu.Content>
-	</DropdownMenu.Root>
+	<ResponsiveOverflowMenu items={actionItems} ariaLabel="Actions" sheetTitle="Actions">
+		{#snippet trigger({ props })}
+			<Button
+				{...props}
+				variant="outline"
+				size="sm"
+				class="touch-target h-10 shrink-0 px-2 md:h-8 md:px-3"
+				adaptToMobileHero
+				title="Actions"
+				aria-label="Actions"
+			>
+				<MoreHorizontal class="h-4 w-4" />
+			</Button>
+		{/snippet}
+	</ResponsiveOverflowMenu>
 {/snippet}
 
 {#if actionItems.length > 0}

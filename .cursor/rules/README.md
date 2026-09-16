@@ -15,6 +15,7 @@ Agent context for **SvelteKit 2 + Svelte 5 + Neon + Drizzle + Auth.js**.
 | `deployment.mdc`                | Prod via GitHub Actions CD on `main` |
 | `route-guides.mdc`              | Route docs in `docs/guides/routes/`  |
 | `overlay-performance.mdc`       | Modal/sheet jank bans                |
+| `mobile-native-ui.mdc`          | Sheets not dropdowns under `lg`      |
 
 ## Conditional rules (by glob)
 
@@ -55,6 +56,7 @@ bun run setup:ai-tooling
 | `documentation-maintenance`   | Same-change docs                           |
 | `route-guides`                | Per-route specs                            |
 | `overlay-performance`         | Modal/sheet jank (blur, defer, `$effect`)  |
+| `mobile-responsive`           | Bottom sheets, overflow menus, shell `lg`  |
 
 ## Related
 

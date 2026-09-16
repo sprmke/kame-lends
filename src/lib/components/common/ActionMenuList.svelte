@@ -21,6 +21,8 @@
 	>
 		{#if item.icon}
 			<ActionMenuIcon icon={item.icon} />
+		{:else if item.lucideIcon}
+			<item.lucideIcon class="h-4 w-4" />
 		{/if}
 		{item.label}
 	</DropdownMenu.Item>

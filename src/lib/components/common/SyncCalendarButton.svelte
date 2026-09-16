@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import * as Sheet from '$lib/components/ui/sheet';
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
+	import ResponsiveOverflowMenu from '$lib/components/common/ResponsiveOverflowMenu.svelte';
+	import type { RowActionItem } from '$lib/components/common/action-buttons';
 	import { toast } from '$lib/toast';
-	import { createIsMobileShell } from '$lib/composables/use-media-query.svelte';
 	import { formatToMMDDYYYY } from '$lib/date-utils';
 	import type { CalendarSyncScope, PlannedLoanSync } from '$lib/calendar-sync-plan';
 	import { Calendar, Loader2, RefreshCw, Trash2, ChevronDown } from 'lucide-svelte';
@@ -37,7 +36,6 @@
 	type ModalMode = 'idle' | 'choose' | 'sync' | 'clear';
 	type SyncPhase = 'clearing' | 'loans' | 'summaries' | 'done';
 
-	let sheetOpen = $state(false);
 	let modalMode = $state<ModalMode>('idle');
 	let scope = $state<CalendarSyncScope>('open');
 	let running = $state(false);
@@ -54,22 +52,37 @@
 	let summariesTotal = $state(0);
 	let percent = $state(0);
 
-	const isMobileShell = createIsMobileShell(false);
 	const modalOpen = $derived(modalMode !== 'idle');
 	const title = $derived(
 		modalMode === 'clear' ? 'Clear calendar' : modalMode === 'sync' ? 'Syncing calendar' : 'Sync calendar'
 	);
 
-	$effect(() => isMobileShell.init());
+	const calendarMenuItems = $derived.by((): RowActionItem[] => {
+		const items: RowActionItem[] = [
+			{
+				label: 'Sync calendar',
+				lucideIcon: RefreshCw,
+				onClick: openChoose
+			}
+		];
+		if (showClear) {
+			items.push({
+				label: 'Clear events',
+				lucideIcon: Trash2,
+				onClick: openClear,
+				destructive: true,
+				separatorBefore: true
+			});
+		}
+		return items;
+	});
 
 	function openChoose() {
-		sheetOpen = false;
 		scope = 'open';
 		modalMode = 'choose';
 	}
 
 	function openClear() {
-		sheetOpen = false;
 		void handleClear();
 	}
 
@@ -244,97 +257,31 @@
 	}
 </script>
 
-{#if isMobileShell.matches}
-	<Button
-		{variant}
-		{size}
-		disabled={running}
-		class={triggerButtonClass}
-		adaptToMobileHero={!triggerClass}
-		aria-label={label}
-		onclick={() => (sheetOpen = true)}
-	>
-		{#if running}
-			<Loader2 class="h-4 w-4 animate-spin" />
-		{:else}
-			<Calendar class="h-4 w-4" />
-		{/if}
-		{#if triggerClass}
-			<span>{label}</span>
-		{/if}
-	</Button>
-
-	<Sheet.Root open={sheetOpen} onOpenChange={(open) => (sheetOpen = open)}>
-		<Sheet.Content side="bottom" class="h-auto gap-0 p-0">
-			<Sheet.Header class="border-b border-border/60 px-4 py-3">
-				<Sheet.Title class="text-sm font-semibold">{label}</Sheet.Title>
-			</Sheet.Header>
-
-			<div class="flex flex-col gap-0.5 px-2 py-2 pb-[max(0.5rem,var(--safe-area-bottom))]">
-				<button
-					type="button"
-					class="native-press flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-accent"
-					disabled={running}
-					onclick={openChoose}
-				>
-					<RefreshCw class="size-4 shrink-0" strokeWidth={1.75} />
-					Sync calendar
-				</button>
-				{#if showClear}
-					<button
-						type="button"
-						class="native-press flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/5"
-						disabled={running}
-						onclick={openClear}
-					>
-						<Trash2 class="size-4 shrink-0" strokeWidth={1.75} />
-						Clear events
-					</button>
-				{/if}
-			</div>
-		</Sheet.Content>
-	</Sheet.Root>
-{:else}
-	<DropdownMenu.Root>
-		<DropdownMenu.Trigger>
-			{#snippet child({ props })}
-				<Button
-					{...props}
-					{variant}
-					{size}
-					disabled={running}
-					class={triggerButtonClass}
-					adaptToMobileHero={!triggerClass}
-					aria-label={label}
-				>
-					{#if running}
-						<Loader2 class="h-4 w-4 animate-spin" />
-					{:else}
-						<Calendar class="h-4 w-4" />
-					{/if}
-					{#if triggerClass}
-						<span>{label}</span>
-					{:else}
-						<span class="hidden xl:inline">{label}</span>
-						<ChevronDown class="hidden h-3.5 w-3.5 opacity-60 xl:inline" />
-					{/if}
-				</Button>
-			{/snippet}
-		</DropdownMenu.Trigger>
-		<DropdownMenu.Content align="end">
-			<DropdownMenu.Item onclick={openChoose}>
-				<RefreshCw class="h-4 w-4" />
-				Sync calendar
-			</DropdownMenu.Item>
-			{#if showClear}
-				<DropdownMenu.Item onclick={openClear} class="text-destructive">
-					<Trash2 class="h-4 w-4" />
-					Clear events
-				</DropdownMenu.Item>
+<ResponsiveOverflowMenu items={calendarMenuItems} ariaLabel={label} sheetTitle={label}>
+	{#snippet trigger({ props })}
+		<Button
+			{...props}
+			{variant}
+			{size}
+			disabled={running}
+			class={triggerButtonClass}
+			adaptToMobileHero={!triggerClass}
+			aria-label={label}
+		>
+			{#if running}
+				<Loader2 class="h-4 w-4 animate-spin" />
+			{:else}
+				<Calendar class="h-4 w-4" />
 			{/if}
-		</DropdownMenu.Content>
-	</DropdownMenu.Root>
-{/if}
+			{#if triggerClass}
+				<span>{label}</span>
+			{:else}
+				<span class="hidden xl:inline">{label}</span>
+				<ChevronDown class="hidden h-3.5 w-3.5 opacity-60 xl:inline" />
+			{/if}
+		</Button>
+	{/snippet}
+</ResponsiveOverflowMenu>
 
 <ResponsiveModal
 	open={modalOpen}

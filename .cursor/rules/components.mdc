@@ -32,6 +32,11 @@ globs:
 
 - **Charts:** `chart-theme.ts` palette. SVG donuts (`LoanTypePieChart.svelte`) and CSS ranking tracks (`CurrencyBarChart.svelte`). ApexCharts via `ApexChart.svelte` for cashflow only. Not Recharts.
 
+## Overflow menus
+
+- Under `lg`: **`ResponsiveOverflowMenu`** (bottom sheet). Desktop: `DropdownMenu`.
+- Do not mount floating dropdown panels on phone. See `mobile-native-ui.mdc` and `mobile-responsive` skill.
+
 ## Accessibility
 
 - shadcn-svelte provides labels and focus rings; verify icon-only buttons have `aria-label`.

@@ -3,7 +3,8 @@
 	import RegisterMobileHeroActions from '$lib/components/layout/RegisterMobileHeroActions.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import ResponsiveOverflowMenu from '$lib/components/common/ResponsiveOverflowMenu.svelte';
+	import type { RowActionItem } from '$lib/components/common/action-buttons';
 	import { resolveGroupColor } from '$lib/groups/group-colors';
 	import { formatPartyRoles } from '$lib/groups/party-role-labels';
 	import type { PartyRole } from '$lib/group-membership-diff';
@@ -80,36 +81,44 @@
 	const showDesktopActions = $derived(
 		Boolean(onAddLoans || onOpenSettings || onDelete)
 	);
+
+	const moreMenuItems = $derived.by((): RowActionItem[] => {
+		const items: RowActionItem[] = [];
+		if (onOpenSettings) {
+			items.push({ label: 'Settings', onClick: onOpenSettings });
+		}
+		if (onDelete) {
+			items.push({
+				label: 'Delete',
+				onClick: onDelete,
+				destructive: true,
+				separatorBefore: items.length > 0
+			});
+		}
+		return items;
+	});
 </script>
 
 {#snippet moreMenu(hero = false)}
-	{#if isOwner && (onOpenSettings || onDelete)}
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger>
-				{#snippet child({ props })}
-					<Button
-						{...props}
-						variant={hero ? 'outline' : 'outline'}
-						size={hero ? 'sm' : 'icon'}
-						class={hero ? 'touch-target h-10 shrink-0 px-2 md:h-8 md:px-3' : 'touch-target'}
-						adaptToMobileHero={hero}
-						aria-label="More actions"
-					>
-						<MoreHorizontal class="size-4" />
-					</Button>
-				{/snippet}
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content align="end">
-				{#if onOpenSettings}
-					<DropdownMenu.Item onclick={onOpenSettings}>Settings</DropdownMenu.Item>
-				{/if}
-				{#if onDelete}
-					<DropdownMenu.Item class="text-destructive" onclick={onDelete}>
-						Delete
-					</DropdownMenu.Item>
-				{/if}
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
+	{#if isOwner && moreMenuItems.length > 0}
+		<ResponsiveOverflowMenu
+			items={moreMenuItems}
+			ariaLabel="More actions"
+			sheetTitle="Actions"
+		>
+			{#snippet trigger({ props })}
+				<Button
+					{...props}
+					variant="outline"
+					size={hero ? 'sm' : 'icon'}
+					class={hero ? 'touch-target h-10 shrink-0 px-2 md:h-8 md:px-3' : 'touch-target'}
+					adaptToMobileHero={hero}
+					aria-label="More actions"
+				>
+					<MoreHorizontal class="size-4" />
+				</Button>
+			{/snippet}
+		</ResponsiveOverflowMenu>
 	{/if}
 {/snippet}
 

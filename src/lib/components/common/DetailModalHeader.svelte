@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { createLoanActionItems } from '$lib/components/common/action-buttons';
-	import ActionMenuList from '$lib/components/common/ActionMenuList.svelte';
+	import ResponsiveOverflowMenu from '$lib/components/common/ResponsiveOverflowMenu.svelte';
 	import { MoreVertical, X } from 'lucide-svelte';
 
 	interface Props {
@@ -77,25 +76,20 @@
 
 <div class={cn('flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2', className)}>
 	{#if actionItems.length > 0}
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger>
-				{#snippet child({ props })}
-					<Button
-						{...props}
-						variant="outline"
-						size="sm"
-						class={btnClass}
-						title="Actions"
-						aria-label="Actions"
-					>
-						<MoreVertical class="h-4 w-4" />
-					</Button>
-				{/snippet}
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content align="end">
-				<ActionMenuList items={actionItems} />
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
+		<ResponsiveOverflowMenu items={actionItems} ariaLabel="Actions" sheetTitle="Actions">
+			{#snippet trigger({ props })}
+				<Button
+					{...props}
+					variant="outline"
+					size="sm"
+					class={btnClass}
+					title="Actions"
+					aria-label="Actions"
+				>
+					<MoreVertical class="h-4 w-4" />
+				</Button>
+			{/snippet}
+		</ResponsiveOverflowMenu>
 	{/if}
 	{#if onClose}
 		<Button variant="outline" size="sm" onclick={onClose} class={btnClass} title="Close">

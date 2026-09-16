@@ -1,6 +1,7 @@
 <script lang="ts" generics="T">
 	import { Button } from '$lib/components/ui/button';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import ResponsiveOverflowMenu from '$lib/components/common/ResponsiveOverflowMenu.svelte';
+	import type { RowActionItem } from '$lib/components/common/action-buttons';
 	import ExportColumnsModal from '$lib/components/common/ExportColumnsModal.svelte';
 	import { toast } from '$lib/toast';
 	import { CheckSquare, FileText, Filter, Loader2 } from 'lucide-svelte';
@@ -51,6 +52,31 @@
 
 	const showDropdown = $derived((hasFilters ? 1 : 0) + (hasSelection ? 1 : 0) + 1 > 1);
 
+	const exportMenuItems = $derived.by((): RowActionItem[] => {
+		const items: RowActionItem[] = [
+			{
+				label: `Export All Data (${data.length} ${data.length === 1 ? 'item' : 'items'})`,
+				lucideIcon: FileText,
+				onClick: () => handleExportClick('all')
+			}
+		];
+		if (hasFilters) {
+			items.push({
+				label: `Export Filtered Data (${filteredData.length} ${filteredData.length === 1 ? 'item' : 'items'})`,
+				lucideIcon: Filter,
+				onClick: () => handleExportClick('filtered')
+			});
+		}
+		if (hasSelection) {
+			items.push({
+				label: `Export Selected (${selectedData.length} ${selectedData.length === 1 ? 'item' : 'items'})`,
+				lucideIcon: CheckSquare,
+				onClick: () => handleExportClick('selected')
+			});
+		}
+		return items;
+	});
+
 	function handleExportClick(scope: ExportScope) {
 		exportScope = scope;
 		showModal = true;
@@ -86,49 +112,30 @@
 </script>
 
 {#if showDropdown}
-	<DropdownMenu.Root>
-		<DropdownMenu.Trigger>
-			{#snippet child({ props })}
-				<Button
-					{...props}
-					{variant}
-					{size}
-					class={className}
-					adaptToMobileHero
-					disabled={isGenerating}
-					aria-label="Export PDF"
-				>
-					{#if isGenerating}
-						<Loader2 class="h-4 w-4 animate-spin md:mr-2" />
-					{:else}
-						<FileText class="h-4 w-4 md:mr-2" />
-					{/if}
-					<span class="hidden md:inline">Export PDF</span>
-				</Button>
-			{/snippet}
-		</DropdownMenu.Trigger>
-		<DropdownMenu.Content align="end">
-			<DropdownMenu.Item onclick={() => handleExportClick('all')}>
-				<FileText class="h-4 w-4" />
-				Export All Data ({data.length}
-				{data.length === 1 ? 'item' : 'items'})
-			</DropdownMenu.Item>
-			{#if hasFilters}
-				<DropdownMenu.Item onclick={() => handleExportClick('filtered')}>
-					<Filter class="h-4 w-4" />
-					Export Filtered Data ({filteredData.length}
-					{filteredData.length === 1 ? 'item' : 'items'})
-				</DropdownMenu.Item>
-			{/if}
-			{#if hasSelection}
-				<DropdownMenu.Item onclick={() => handleExportClick('selected')}>
-					<CheckSquare class="h-4 w-4" />
-					Export Selected ({selectedData.length}
-					{selectedData.length === 1 ? 'item' : 'items'})
-				</DropdownMenu.Item>
-			{/if}
-		</DropdownMenu.Content>
-	</DropdownMenu.Root>
+	<ResponsiveOverflowMenu
+		items={exportMenuItems}
+		ariaLabel="Export PDF"
+		sheetTitle="Export PDF"
+	>
+		{#snippet trigger({ props })}
+			<Button
+				{...props}
+				{variant}
+				{size}
+				class={className}
+				adaptToMobileHero
+				disabled={isGenerating}
+				aria-label="Export PDF"
+			>
+				{#if isGenerating}
+					<Loader2 class="h-4 w-4 animate-spin md:mr-2" />
+				{:else}
+					<FileText class="h-4 w-4 md:mr-2" />
+				{/if}
+				<span class="hidden md:inline">Export PDF</span>
+			</Button>
+		{/snippet}
+	</ResponsiveOverflowMenu>
 {:else}
 	<Button
 		{variant}

@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Eye, Maximize2, MoreVertical } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
-	import ActionMenuList from './ActionMenuList.svelte';
+	import ResponsiveOverflowMenu from './ResponsiveOverflowMenu.svelte';
 	import type { RowActionItem } from './action-buttons';
 
 	interface Props {
@@ -93,32 +92,27 @@
 	{/if}
 
 	{#if actionItems.length > 0}
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger>
-				{#snippet child({ props })}
-					<Button
-						{...props}
-						variant={isInlineCardFooter ? 'outline' : 'ghost'}
-						size="sm"
-						title="More actions"
-						aria-label="More actions"
-						class={cn(
-							isInlineCardFooter
-								? inlineCardMoreClass
-								: isCardSize
-									? cardActionButtonClass
-									: tableActionButtonClass,
-							isCardSize && !isInlineCardFooter && 'flex-1'
-						)}
-					>
-						<MoreVertical />
-						{#if isCardSize && moreLabel !== null}<span>{moreLabel}</span>{/if}
-					</Button>
-				{/snippet}
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content align="end">
-				<ActionMenuList items={actionItems} />
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
+		<ResponsiveOverflowMenu items={actionItems} ariaLabel="More actions" sheetTitle="Actions">
+			{#snippet trigger({ props })}
+				<Button
+					{...props}
+					variant={isInlineCardFooter ? 'outline' : 'ghost'}
+					size="sm"
+					title="More actions"
+					aria-label="More actions"
+					class={cn(
+						isInlineCardFooter
+							? inlineCardMoreClass
+							: isCardSize
+								? cardActionButtonClass
+								: tableActionButtonClass,
+						isCardSize && !isInlineCardFooter && 'flex-1'
+					)}
+				>
+					<MoreVertical />
+					{#if isCardSize && moreLabel !== null}<span>{moreLabel}</span>{/if}
+				</Button>
+			{/snippet}
+		</ResponsiveOverflowMenu>
 	{/if}
 </div>

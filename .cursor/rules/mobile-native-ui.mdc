@@ -1,0 +1,46 @@
+---
+description: Native mobile UI — bottom sheets for overflow menus under lg
+alwaysApply: true
+---
+
+# Mobile-native UI gate (always-on)
+
+Every **UI change** in `src/**` must preserve the native mobile shell: bottom sheets, thumb-first actions, and no floating dropdown panels on phone.
+
+## When this applies
+
+- New or changed pages, components, modals, menus, toolbars, forms, cards, tables
+- Layout, spacing, typography, or navigation on any screen
+- **Skip:** backend/SQL with no UI; internal renames with no layout change
+
+## Before implementing (mandatory)
+
+1. Invoke **`mobile-responsive`** skill (`.agent/skills/mobile-responsive/SKILL.md`) on UI tasks.
+2. Design mobile first at 375px; shell breakpoint is **`lg` (1024px)** / `max-width: 1023px`.
+3. Reuse shared primitives in `src/lib/components/common/` and `src/lib/components/layout/`.
+
+| Need | Use |
+| ---- | --- |
+| Modal / form | `ResponsiveModal` |
+| Overflow ⋯ menu | `ResponsiveOverflowMenu` (+ `ActionMenuList` / `ActionSheetList`) |
+| Bottom nav | `MobileTabBar` + `MobileMoreSheet` |
+| List → detail on phone | `isMobileShellViewport()` → navigate to detail route |
+
+## Hard rules below `lg`
+
+- **No floating `DropdownMenu` panels** for overflow actions or option lists. Use `ResponsiveOverflowMenu` (sheet on phone, dropdown on desktop).
+- **No centered `Dialog`** for forms or pickers. Use `ResponsiveModal` (sheet under `lg`).
+- **Touch targets** ≥ 44×44px (`touch-target`, `min-h-11` on sheet rows).
+- **One bottom nav layer.** Tab bar only; no second dock on detail pages.
+
+## Desktop-only exception
+
+`DropdownMenu` is allowed only where the trigger is **`hidden` below `lg`** (e.g. sidebar user menu in `Nav.svelte`). Never render a dropdown on viewports under `lg`.
+
+## Before claiming UI work done
+
+- [ ] 375px: overflow menus open as bottom sheets, not dropdowns
+- [ ] Modals open as sheets on phone (`ResponsiveModal`)
+- [ ] Route guide updated if page UX changed (`route-guides` skill)
+
+Inventory: `docs/workflow/planned/mobile-native-redesign.md`.

@@ -8,7 +8,8 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Select from '$lib/components/ui/select';
 	import * as Tabs from '$lib/components/ui/tabs';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import ResponsiveOverflowMenu from '$lib/components/common/ResponsiveOverflowMenu.svelte';
+	import type { RowActionItem } from '$lib/components/common/action-buttons';
 	import MultipleInterestManager from '$lib/components/loans/MultipleInterestManager.svelte';
 	import BorrowerFormModal from '$lib/components/borrowers/BorrowerFormModal.svelte';
 	import InvestorFormModal from '$lib/components/investors/InvestorFormModal.svelte';
@@ -46,7 +47,7 @@
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import type { Borrower, Investor, LoanStatus, LoanType, LoanWithInvestors } from '$lib/types';
 	import { isLoanFullyReceived } from '$lib/calculations';
-	import { ChevronDown, Copy, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-svelte';
+	import { ChevronDown, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-svelte';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
 	import type { PaymentReceipt } from '$lib/payment-receipts';
@@ -1017,28 +1018,31 @@
 					<div class="flex items-center justify-between gap-3">
 						<p class="font-medium">{si.investor.name}</p>
 						<div class="flex items-center gap-1">
-							<DropdownMenu.Root>
-								<DropdownMenu.Trigger>
-									{#snippet child({ props })}
-										<Button
-											{...props}
-											type="button"
-											variant="ghost"
-											size="sm"
-											disabled={isSubmitting}
-											title="Actions"
-										>
-											<MoreVertical class="h-4 w-4" />
-										</Button>
-									{/snippet}
-								</DropdownMenu.Trigger>
-								<DropdownMenu.Content align="end">
-									<DropdownMenu.Item onclick={() => handleCopy(si.investor.id)}>
-										<Copy class="h-4 w-4" />
-										Copy
-									</DropdownMenu.Item>
-								</DropdownMenu.Content>
-							</DropdownMenu.Root>
+							<ResponsiveOverflowMenu
+								items={[
+									{
+										label: 'Copy',
+										icon: 'duplicate',
+										onClick: () => handleCopy(si.investor.id)
+									} satisfies RowActionItem
+								]}
+								ariaLabel="Investor actions"
+								sheetTitle="Actions"
+							>
+								{#snippet trigger({ props })}
+									<Button
+										{...props}
+										type="button"
+										variant="ghost"
+										size="sm"
+										disabled={isSubmitting}
+										title="Actions"
+										aria-label="Investor actions"
+									>
+										<MoreVertical class="h-4 w-4" />
+									</Button>
+								{/snippet}
+							</ResponsiveOverflowMenu>
 							<Button
 								type="button"
 								variant="ghost"
