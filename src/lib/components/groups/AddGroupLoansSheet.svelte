@@ -15,12 +15,14 @@
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
 		groupId: number;
-		availableLoans: WizardLoanRow[];
+		availableLoans?: WizardLoanRow[];
 		onAdded?: () => void | Promise<void>;
 	}
 
-	let { open, onOpenChange, groupId, availableLoans, onAdded }: Props = $props();
+	let { open, onOpenChange, groupId, availableLoans = [], onAdded }: Props = $props();
 
+	let loadedLoans = $state<WizardLoanRow[]>([]);
+	let loansLoading = $state(false);
 	let selectedLoanIds = $state<number[]>([]);
 	let loanQuery = $state('');
 	let showCompleted = $state(false);
@@ -40,12 +42,49 @@
 			preview = null;
 			previewError = null;
 			saveError = null;
+			return;
 		}
+
+		if (availableLoans.length > 0) {
+			loadedLoans = availableLoans;
+			return;
+		}
+
+		let active = true;
+		loansLoading = true;
+		void fetch(`/api/groups/${groupId}/addable-loans`)
+			.then(async (response) => {
+				if (!response.ok) {
+					const body = await response.json().catch(() => ({}));
+					throw new Error(body.error || 'Failed to load loans');
+				}
+				return response.json() as Promise<{ addableLoans: WizardLoanRow[] }>;
+			})
+			.then((body) => {
+				if (active) loadedLoans = body.addableLoans;
+			})
+			.catch((error) => {
+				if (active) {
+					toast.error(error instanceof Error ? error.message : 'Failed to load loans');
+					loadedLoans = [];
+				}
+			})
+			.finally(() => {
+				if (active) loansLoading = false;
+			});
+
+		return () => {
+			active = false;
+		};
 	});
+
+	const loanChoices = $derived(
+		availableLoans.length > 0 ? availableLoans : loadedLoans
+	);
 
 	const filteredLoans = $derived.by(() => {
 		const q = loanQuery.trim().toLowerCase();
-		return availableLoans.filter((loan) => {
+		return loanChoices.filter((loan) => {
 			if (!showCompleted && String(loan.status ?? '').toLowerCase() === 'completed') {
 				return false;
 			}
@@ -129,7 +168,9 @@
 >
 	{#if step === 'pick'}
 		<div class="space-y-3">
-			{#if availableLoans.length === 0}
+			{#if loansLoading}
+				<p class="text-sm text-muted-foreground">Loading loans…</p>
+			{:else if loanChoices.length === 0}
 				<p class="text-sm text-muted-foreground">All of your loans are already in this group.</p>
 			{:else}
 				<div class="relative">

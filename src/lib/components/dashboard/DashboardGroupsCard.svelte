@@ -4,20 +4,24 @@
 	import { resolveGroupColor } from '$lib/groups/group-colors';
 	import { formatCount, formatText } from '$lib/format';
 	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
+	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 	import { Folders } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 
 	interface Props {
 		groups: GroupsIndexItem[];
 		totalCount: number;
+		class?: string;
 	}
 
-	let { groups, totalCount }: Props = $props();
+	let { groups, totalCount, class: className }: Props = $props();
 </script>
 
 <ActivityPanelCard
-	title="Groups"
+	title="Your groups"
+	description={PAGE_DESCRIPTIONS.dashboardGroups}
 	count={totalCount}
+	class={className}
 	icon={Folders}
 	accentClassName="bg-primary/10"
 	iconClassName="text-primary"

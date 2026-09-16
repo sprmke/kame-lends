@@ -18,8 +18,16 @@
 
 	type SortMode = 'attention' | 'name' | 'updated';
 
+	type WizardPayload = {
+		ownedLoans: import('$lib/components/groups/types').WizardLoanRow[];
+		usedColorKeys: string[];
+		existingNames: string[];
+		contactOptions: WizardContactOption[];
+	};
+
 	let items = $state<GroupListCardWithMeta[] | null>(null);
-	let wizardData = $state<Awaited<typeof data.wizard> | null>(null);
+	let wizardData = $state<WizardPayload | null>(null);
+	let wizardLoading = $state(false);
 
 	let searchQuery = $state('');
 	let sortMode = $state<SortMode>('attention');
@@ -31,16 +39,6 @@
 		let active = true;
 		void data.items.then((value) => {
 			if (active) items = value;
-		});
-		return () => {
-			active = false;
-		};
-	});
-
-	$effect(() => {
-		let active = true;
-		void data.wizard.then((value) => {
-			if (active) wizardData = value;
 		});
 		return () => {
 			active = false;
@@ -77,6 +75,7 @@
 			wizardContact = null;
 		}
 		showWizard = true;
+		void ensureWizardData();
 		const url = new URL(page.url);
 		url.searchParams.delete('create');
 		url.searchParams.delete('loanIds');
@@ -93,16 +92,28 @@
 		searchQuery = '';
 	}
 
+	async function ensureWizardData() {
+		if (wizardData !== null || wizardLoading) return;
+		wizardLoading = true;
+		try {
+			const response = await fetch('/api/groups/wizard-data');
+			if (!response.ok) throw new Error('Failed to load wizard data');
+			wizardData = (await response.json()) as WizardPayload;
+		} finally {
+			wizardLoading = false;
+		}
+	}
+
 	function openWizard() {
 		wizardContact = null;
 		wizardLoanIds = [];
 		showWizard = true;
+		void ensureWizardData();
 	}
 
 	async function refreshGroups() {
+		wizardData = null;
 		await invalidate('app:groups');
-		items = await data.items;
-		wizardData = await data.wizard;
 	}
 
 	function handleOpenGroup(group: GroupListCardData) {
@@ -265,7 +276,7 @@
 		initialLoanIds={wizardLoanIds}
 		initialContact={wizardContact}
 		{contactOptions}
-		contactsReady={wizardData !== null}
+		contactsReady={wizardData !== null && !wizardLoading}
 		createCalendarAvailable={data.createCalendarAvailable}
 		telegramStartGroupAvailable={data.telegramStartGroupAvailable}
 		telegramBotConfigured={data.telegramBotConfigured}

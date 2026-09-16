@@ -4,6 +4,10 @@
 	import SyncCalendarButton from '$lib/components/common/SyncCalendarButton.svelte';
 	import { toast } from '$lib/toast';
 	import { Calendar } from 'lucide-svelte';
+	import {
+		groupSettingsActionClass,
+		groupSettingsActionsLayoutClass
+	} from '$lib/groups/group-settings-actions';
 
 	interface Props {
 		groupId: number;
@@ -85,22 +89,33 @@
 		<p class="text-sm text-muted-foreground">
 			One calendar for this group. Shared read-only with members who have an email.
 		</p>
-		<div class="flex flex-wrap items-center gap-2">
+		<div class={groupSettingsActionsLayoutClass}>
 			{#if !hasCalendar}
-				<Button type="button" size="sm" disabled={creating} onclick={() => void createCalendar()}>
+				<Button
+					type="button"
+					variant="default"
+					class={groupSettingsActionClass}
+					disabled={creating}
+					onclick={() => void createCalendar()}
+				>
 					{creating ? 'Creating…' : 'Create calendar'}
 				</Button>
 			{:else}
 				<SyncCalendarButton
 					variant="outline"
-					size="sm"
 					label="Sync events"
+					triggerClass={groupSettingsActionClass}
 					{syncEndpoint}
 					cleanupEndpoint={null}
 					showClear={true}
 				/>
 				{#if subscribeUrl || googleCalendarId}
-					<Button type="button" variant="outline" size="sm" onclick={copySubscribe}>
+					<Button
+						type="button"
+						variant="outline"
+						class={groupSettingsActionClass}
+						onclick={copySubscribe}
+					>
 						Copy subscribe link
 					</Button>
 				{/if}

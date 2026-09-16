@@ -4,25 +4,17 @@ import { db } from "$lib/server/db";
 import {
   borrowers,
   investors,
+  loanGroupMembers,
   loanGroups,
-  loans as loansTable,
 } from "$lib/server/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { requireUserSession } from "$lib/server/request-auth";
-import {
-  hasGroupViewAccess,
-  hasGroupManageAccess,
-} from "$lib/server/group-access";
 import { projectLoanForGroupViewer } from "$lib/loan-group-viewer-projection";
 import { stripDataImageUrls } from "$lib/json-safe-images";
 import { isTelegramConfigured } from "$lib/server/telegram/config";
 import { publicTelegramSettings } from "$lib/server/telegram/public-settings";
 import { groupCalendarSubscribeUrl } from "$lib/server/group-calendar";
-import { getCachedGroupsForUser } from "$lib/server/cached-data";
-import {
-  mapOwnedLoanToWizardRow,
-  buildWizardContactOptions,
-} from "$lib/groups/group-list-map";
+import { getCachedLoansByIds } from "$lib/server/cached-data";
 
 async function resolveRuleContactNames(
   rules: Array<{ partyType: string; contactId: number }>,
@@ -72,34 +64,11 @@ export const load: PageServerLoad = async (event) => {
   const groupId = parseInt(event.params.id);
   if (!Number.isFinite(groupId)) throw error(404, "Group not found");
 
-  if (!(await hasGroupViewAccess(groupId, session.user.id))) {
-    throw error(404, "Group not found");
-  }
-
-  const canManage = await hasGroupManageAccess(groupId, session.user.id);
-
   const group = await db.query.loanGroups.findFirst({
     where: eq(loanGroups.id, groupId),
     with: {
       creator: { columns: { id: true, name: true, email: true } },
-      groupLoans: {
-        columns: { loanId: true, source: true },
-        with: {
-          loan: {
-            with: {
-              borrower: true,
-              loanInvestors: {
-                with: {
-                  investor: true,
-                  interestPeriods: true,
-                  receivedPayments: true,
-                },
-              },
-              loanWitnesses: { with: { witness: true } },
-            },
-          },
-        },
-      },
+      groupLoans: { columns: { loanId: true, source: true } },
       members: {
         columns: { userId: true, partyRoles: true },
         with: { user: { columns: { id: true, name: true, email: true } } },
@@ -112,16 +81,44 @@ export const load: PageServerLoad = async (event) => {
 
   if (!group) throw error(404, "Group not found");
 
-  const loans = group.groupLoans.map((gl) => {
-    const loan = gl.loan;
-    const projected = canManage ? loan : projectLoanForGroupViewer(loan);
-    return stripDataImageUrls({
-      ...projected,
-      groupSource: gl.source,
+  const userId = session.user.id;
+  const isCreator = group.creatorUserId === userId;
+  let hasMembership = isCreator;
+  if (!hasMembership) {
+    const membership = await db.query.loanGroupMembers.findFirst({
+      where: and(
+        eq(loanGroupMembers.groupId, groupId),
+        eq(loanGroupMembers.userId, userId),
+      ),
+      columns: { id: true },
     });
-  });
+    hasMembership = Boolean(membership);
+  }
+  if (!hasMembership) throw error(404, "Group not found");
 
-  const viewerMember = group.members.find((m) => m.userId === session.user.id);
+  const canManage = isCreator;
+
+  const loanIds = group.groupLoans.map((link) => link.loanId);
+  const sourceByLoanId = new Map(
+    group.groupLoans.map((link) => [link.loanId, link.source]),
+  );
+
+  const loadedLoans =
+    loanIds.length > 0 ? await getCachedLoansByIds(loanIds, "list") : [];
+
+  const loansById = new Map(loadedLoans.map((loan) => [loan.id, loan]));
+  const loans = loanIds
+    .map((id) => loansById.get(id))
+    .filter((loan): loan is NonNullable<typeof loan> => Boolean(loan))
+    .map((loan) => {
+      const projected = canManage ? loan : projectLoanForGroupViewer(loan);
+      return stripDataImageUrls({
+        ...projected,
+        groupSource: sourceByLoanId.get(loan.id),
+      });
+    });
+
+  const viewerMember = group.members.find((m) => m.userId === userId);
   const viewerRoles = (viewerMember?.partyRoles ?? []) as string[];
 
   const members = canManage
@@ -155,38 +152,6 @@ export const load: PageServerLoad = async (event) => {
       `Contact ${rule.contactId}`,
   }));
 
-  const inGroupIds = new Set(group.groupLoans.map((link) => link.loanId));
-  let addableLoans: ReturnType<typeof mapOwnedLoanToWizardRow>[] = [];
-  let ruleContacts: ReturnType<typeof buildWizardContactOptions> = [];
-  if (canManage) {
-    const [ownedLoans, allGroups] = await Promise.all([
-      db.query.loans.findMany({
-        where: eq(loansTable.userId, session.user.id),
-        with: {
-          borrower: { columns: { id: true, name: true } },
-          loanInvestors: {
-            columns: { amount: true, isPaid: true, investorId: true },
-            with: { investor: { columns: { id: true, name: true } } },
-          },
-          groupLoans: { columns: { groupId: true } },
-        },
-        orderBy: (table, { desc }) => [desc(table.createdAt)],
-      }),
-      getCachedGroupsForUser(session.user.id),
-    ]);
-    const stripped = stripDataImageUrls(ownedLoans);
-    const groupMeta = new Map(
-      allGroups.map((row) => [
-        row.id,
-        { id: row.id, name: row.name, color: row.color ?? "orange" },
-      ]),
-    );
-    addableLoans = stripped
-      .filter((loan) => !inGroupIds.has(loan.id))
-      .map((loan) => mapOwnedLoanToWizardRow(loan, groupMeta));
-    ruleContacts = buildWizardContactOptions(stripped);
-  }
-
   return {
     group: {
       id: group.id,
@@ -203,13 +168,11 @@ export const load: PageServerLoad = async (event) => {
       members,
     },
     loans,
-    addableLoans,
-    ruleContacts,
     canManage,
     canCreate: false,
     emptyMessage: "No loans in this group yet",
     viewerRoles,
-    isCreator: group.creatorUserId === session.user.id,
+    isCreator,
     telegramStartGroupAvailable: isTelegramConfigured(),
     calendarSubscribeUrl:
       canManage && group.calendar?.googleCalendarId

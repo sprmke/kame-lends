@@ -13,7 +13,7 @@
 		formatText
 	} from '$lib/format';
 	import { createIsMobileShell } from '$lib/composables/use-media-query.svelte';
-	import { ArrowLeft, MoreHorizontal } from 'lucide-svelte';
+	import { ArrowLeft, MoreHorizontal, PlusCircle } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 
 	interface Props {
@@ -82,16 +82,17 @@
 	);
 </script>
 
-{#snippet moreMenu()}
+{#snippet moreMenu(hero = false)}
 	{#if isOwner && (onOpenSettings || onDelete)}
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}
 					<Button
 						{...props}
-						variant="outline"
-						size="icon"
-						class="touch-target"
+						variant={hero ? 'outline' : 'outline'}
+						size={hero ? 'sm' : 'icon'}
+						class={hero ? 'touch-target h-10 shrink-0 px-2 md:h-8 md:px-3' : 'touch-target'}
+						adaptToMobileHero={hero}
 						aria-label="More actions"
 					>
 						<MoreHorizontal class="size-4" />
@@ -113,12 +114,24 @@
 {/snippet}
 
 {#snippet heroActions()}
-	{#if isOwner && onAddLoans}
-		<Button type="button" class="touch-target w-full" onclick={onAddLoans}>Add loans</Button>
-	{/if}
+	<div class="flex items-center justify-end gap-1.5">
+		{#if isOwner && onAddLoans}
+			<Button
+				type="button"
+				size="sm"
+				adaptToMobileHero
+				aria-label="Add loans"
+				onclick={onAddLoans}
+			>
+				<PlusCircle class="h-4 w-4 lg:mr-2" />
+				<span class="hidden lg:inline">Add loans</span>
+			</Button>
+		{/if}
+		{@render moreMenu(true)}
+	</div>
 {/snippet}
 
-<div class={cn('space-y-4', className)}>
+<div class={cn('space-y-2 lg:space-y-4', className)}>
 	<!-- Mobile: back + title, primary CTA in hero -->
 	<div class="lg:hidden">
 		<PageBackHeader title={name} backLabel="Groups" {backHref} {onBack}>
@@ -126,23 +139,16 @@
 				<span class={cn('size-3 shrink-0 rounded-sm', palette.dot)} aria-hidden="true"></span>
 			{/snippet}
 			{#snippet descriptionContent()}
-				<p class="text-sm text-muted-foreground">{metaLine}</p>
+				<div class="flex flex-wrap items-center gap-2">
+					<p class="text-sm text-muted-foreground">{metaLine}</p>
+					{#if resolvedViewerLabel}
+						<Badge variant="secondary" class="text-[11px]">{resolvedViewerLabel}</Badge>
+					{/if}
+				</div>
 				{#if description?.trim()}
 					<p class="pt-1 text-sm text-muted-foreground line-clamp-2">
 						{formatText(description)}
 					</p>
-				{/if}
-				{#if resolvedViewerLabel}
-					<div class="pt-1">
-						<Badge variant="secondary" class="text-[11px]">{resolvedViewerLabel}</Badge>
-					</div>
-				{/if}
-			{/snippet}
-			{#snippet actions()}
-				{#if showDesktopActions}
-					<div class="flex items-center justify-end gap-2">
-						{@render moreMenu()}
-					</div>
 				{/if}
 			{/snippet}
 		</PageBackHeader>
@@ -172,11 +178,13 @@
 						{formatText(name)}
 					</h1>
 					<span class={cn('size-3 shrink-0 rounded-sm', palette.dot)} aria-hidden="true"></span>
+				</div>
+				<div class="flex flex-wrap items-center gap-2">
+					<p class="text-sm text-muted-foreground">{metaLine}</p>
 					{#if resolvedViewerLabel}
 						<Badge variant="secondary" class="text-[11px]">{resolvedViewerLabel}</Badge>
 					{/if}
 				</div>
-				<p class="text-sm text-muted-foreground">{metaLine}</p>
 				{#if description?.trim()}
 					<p class="text-sm text-muted-foreground line-clamp-2">{formatText(description)}</p>
 				{/if}
@@ -185,13 +193,18 @@
 			{#if showDesktopActions}
 				<div class="flex shrink-0 items-center justify-end gap-2">
 					{#if isOwner && onAddLoans}
-						<Button type="button" onclick={onAddLoans}>Add loans</Button>
+						<Button type="button" onclick={onAddLoans}>
+							<PlusCircle class="mr-2 size-4" />
+							Add loans
+						</Button>
 					{/if}
-					{@render moreMenu()}
+					{@render moreMenu(false)}
 				</div>
 			{/if}
 		</div>
 	</div>
 
-	<RegisterMobileHeroActions snippet={heroActions} active={mobileShell.matches} />
+	{#if showDesktopActions}
+		<RegisterMobileHeroActions snippet={heroActions} active={mobileShell.matches} />
+	{/if}
 </div>

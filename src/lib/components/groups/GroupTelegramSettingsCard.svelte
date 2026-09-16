@@ -13,6 +13,10 @@
 		GROUP_TELEGRAM_TEMPLATE_LABELS,
 		type GroupTelegramTemplateKind
 	} from '$lib/groups/group-telegram-templates';
+	import {
+		groupSettingsActionClass,
+		groupSettingsActionsLayoutClass
+	} from '$lib/groups/group-settings-actions';
 
 	type TelegramSettings = {
 		status?: string;
@@ -265,7 +269,13 @@
 						bind:value={chatIdInput}
 					/>
 				</div>
-				<Button type="button" size="sm" disabled={busy} onclick={connectManual}>
+				<Button
+					type="button"
+					variant="default"
+					class={groupSettingsActionClass}
+					disabled={busy}
+					onclick={connectManual}
+				>
 					{busy ? 'Connecting…' : 'Connect'}
 				</Button>
 			</div>
@@ -273,7 +283,13 @@
 			{#if startGroupAvailable}
 				<div class="space-y-2 border-t border-border pt-4">
 					<p class="text-sm text-muted-foreground">Or add the shared bot to a group:</p>
-					<Button type="button" size="sm" variant="outline" disabled={busy} onclick={connectViaLink}>
+					<Button
+						type="button"
+						variant="outline"
+						class={groupSettingsActionClass}
+						disabled={busy}
+						onclick={connectViaLink}
+					>
 						Open Telegram
 					</Button>
 				</div>
@@ -399,7 +415,13 @@
 						<p class="text-xs text-muted-foreground">{placeholdersFor(kind)}</p>
 					</div>
 				{/each}
-				<Button type="button" size="sm" variant="secondary" disabled={busy} onclick={saveTemplates}>
+				<Button
+					type="button"
+					variant="outline"
+					class={groupSettingsActionClass}
+					disabled={busy}
+					onclick={saveTemplates}
+				>
 					Save templates
 				</Button>
 			</div>
@@ -408,11 +430,23 @@
 				<p class="text-sm text-destructive">{settings.lastError}</p>
 			{/if}
 
-			<div class="flex flex-wrap gap-2">
-				<Button type="button" size="sm" variant="outline" disabled={busy} onclick={sendTest}>
+			<div class={groupSettingsActionsLayoutClass}>
+				<Button
+					type="button"
+					variant="outline"
+					class={groupSettingsActionClass}
+					disabled={busy}
+					onclick={sendTest}
+				>
 					Send test
 				</Button>
-				<Button type="button" size="sm" variant="outline" disabled={busy} onclick={disconnect}>
+				<Button
+					type="button"
+					variant="destructive"
+					class={groupSettingsActionClass}
+					disabled={busy}
+					onclick={disconnect}
+				>
 					Disconnect
 				</Button>
 			</div>

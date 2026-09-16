@@ -10,6 +10,7 @@
 	import type { GroupGeneralDraft, GroupRuleRow } from '$lib/components/groups/types';
 	import type { GroupColorKey } from '$lib/groups/group-colors';
 	import { cn } from '$lib/utils';
+	import { groupSettingsActionClass } from '$lib/groups/group-settings-actions';
 
 	interface Props {
 		general: GroupGeneralDraft;
@@ -81,7 +82,8 @@
 			</div>
 			<Button
 				type="button"
-				class="touch-target"
+				variant="default"
+				class={groupSettingsActionClass}
 				disabled={isSavingGeneral || !general.name.trim()}
 				onclick={() => onSaveGeneral()}
 			>
@@ -91,20 +93,13 @@
 	</Card.Root>
 
 	<Card.Root>
-		<Card.Header class="flex flex-row items-center justify-between gap-2">
-			<div class="min-w-0 space-y-1">
-				<Card.Title class="text-base">Auto-add loans</Card.Title>
-				<p class="text-sm font-normal text-muted-foreground">
-					When a matching investor or borrower appears on a new loan, add that loan to this group.
-				</p>
-			</div>
-			{#if canManageRules && onAddRule}
-				<Button type="button" variant="outline" size="sm" class="touch-target shrink-0" onclick={onAddRule}>
-					Add rule
-				</Button>
-			{/if}
+		<Card.Header class="space-y-1">
+			<Card.Title class="text-base">Auto-add loans</Card.Title>
+			<p class="text-sm font-normal text-muted-foreground">
+				When a matching investor or borrower appears on a new loan, add that loan to this group.
+			</p>
 		</Card.Header>
-		<Card.Content class="space-y-2">
+		<Card.Content class="space-y-3">
 			{#if rules.length === 0}
 				<p class="text-sm text-muted-foreground">No rules yet.</p>
 			{:else}
@@ -129,6 +124,16 @@
 						</li>
 					{/each}
 				</ul>
+			{/if}
+			{#if canManageRules && onAddRule}
+				<Button
+					type="button"
+					variant="outline"
+					class={groupSettingsActionClass}
+					onclick={onAddRule}
+				>
+					Add rule
+				</Button>
 			{/if}
 		</Card.Content>
 	</Card.Root>

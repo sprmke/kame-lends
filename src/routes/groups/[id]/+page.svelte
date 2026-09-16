@@ -15,6 +15,7 @@
 	import LoanListPage from '$lib/components/loans/LoanListPage.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
+	import { groupSettingsActionClass } from '$lib/groups/group-settings-actions';
 	import { Label } from '$lib/components/ui/label';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Tabs from '$lib/components/ui/tabs';
@@ -43,6 +44,8 @@
 	let ruleApplyExisting = $state(true);
 	let isSavingRule = $state(false);
 	let isSavingGeneral = $state(false);
+	let ruleContacts = $state<WizardContactOption[]>([]);
+	let ruleContactsLoading = $state(false);
 	let generalEdit = $state<Partial<GroupGeneralDraft>>({});
 	const general = $derived({
 		name: generalEdit.name ?? data.group.name,
@@ -186,10 +189,39 @@
 	}
 
 	const ruleContactsForType = $derived(
-		((data.ruleContacts ?? []) as WizardContactOption[]).filter(
-			(option) => option.partyType === rulePartyType
-		)
+		ruleContacts.filter((option) => option.partyType === rulePartyType)
 	);
+
+	$effect(() => {
+		if (!showAddRule) return;
+
+		let active = true;
+		ruleContactsLoading = true;
+		void fetch(`/api/groups/${data.group.id}/addable-loans`)
+			.then(async (response) => {
+				if (!response.ok) {
+					const body = await response.json().catch(() => ({}));
+					throw new Error(body.error || 'Failed to load contacts');
+				}
+				return response.json() as Promise<{ ruleContacts: WizardContactOption[] }>;
+			})
+			.then((body) => {
+				if (active) ruleContacts = body.ruleContacts ?? [];
+			})
+			.catch((error) => {
+				if (active) {
+					toast.error(error instanceof Error ? error.message : 'Failed to load contacts');
+					ruleContacts = [];
+				}
+			})
+			.finally(() => {
+				if (active) ruleContactsLoading = false;
+			});
+
+		return () => {
+			active = false;
+		};
+	});
 
 	$effect(() => {
 		if (!showAddRule) return;
@@ -391,7 +423,11 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="loans" class="text-base">
-			<LoanListPage {data} scope="group" groupContext={{ groupId: data.group.id }} />
+			<LoanListPage
+				data={{ ...data, loans: data.loans as LoanWithInvestors[] }}
+				scope="group"
+				groupContext={{ groupId: data.group.id }}
+			/>
 		</Tabs.Content>
 
 		<Tabs.Content value="people">
@@ -435,7 +471,11 @@
 							</Card.Header>
 							<Card.Content class="space-y-3">
 								<p class="text-sm text-muted-foreground">{deleteDescription}</p>
-								<Button variant="destructive" onclick={() => (showDeleteDialog = true)}>
+								<Button
+									variant="destructive"
+									class={groupSettingsActionClass}
+									onclick={() => (showDeleteDialog = true)}
+								>
 									Delete group
 								</Button>
 							</Card.Content>
@@ -460,7 +500,6 @@
 		open={showAddLoans}
 		onOpenChange={(open) => (showAddLoans = open)}
 		groupId={data.group.id}
-		availableLoans={data.addableLoans ?? []}
 		onAdded={refresh}
 	/>
 
@@ -492,7 +531,9 @@
 					</Button>
 				</div>
 			</div>
-			{#if ruleContactsForType.length === 0}
+			{#if ruleContactsLoading}
+				<p class="text-sm text-muted-foreground">Loading contacts…</p>
+			{:else if ruleContactsForType.length === 0}
 				<p class="text-sm text-muted-foreground">No {rulePartyType}s with loans yet.</p>
 			{:else}
 				<div class="space-y-2">

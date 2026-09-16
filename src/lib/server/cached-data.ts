@@ -35,7 +35,12 @@ const listRelations = {
     },
   },
   signingInvitations: {
-    columns: { witnessId: true, partyRole: true },
+    columns: {
+      witnessId: true,
+      partyRole: true,
+      signedAt: true,
+      expiresAt: true,
+    },
     with: {
       witness: { columns: { id: true, name: true } },
     },
@@ -90,6 +95,17 @@ export async function getCachedLoansByScope(
 ) {
   return remember(`loans:${scope}:${mode}:${userId}`, () =>
     loadLoans(userId, mode, scope),
+  );
+}
+
+export async function getCachedLoansByIds(
+  ids: number[],
+  mode: LoanCacheMode = "list",
+) {
+  const sorted = [...new Set(ids)].sort((a, b) => a - b);
+  if (sorted.length === 0) return [];
+  return remember(`loans:by-ids:${mode}:${sorted.join(",")}`, () =>
+    loadLoansByIds(sorted, mode),
   );
 }
 
