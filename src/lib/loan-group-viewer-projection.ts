@@ -55,8 +55,6 @@ export function projectLoanForGroupViewer<T>(entity: T): T {
   delete loan.signingInvitations;
   delete loan.loanContract;
   delete loan.paymentMethods;
-  delete loan.googleCalendarEventIds;
-
   if (loan.borrower && typeof loan.borrower === "object") {
     loan.borrower = redactParty(loan.borrower as Record<string, unknown>);
   }
@@ -101,7 +99,6 @@ export const GROUP_VIEWER_FORBIDDEN_PATHS = [
   "signingInvitations",
   "loanContract",
   "paymentMethods",
-  "googleCalendarEventIds",
 ] as const;
 
 export function collectForbiddenHits(

@@ -13,9 +13,9 @@ import { saveLoanContractAndInvitations } from "$lib/server/loan-contract-persis
 import { toSigningInvitationSummary } from "$lib/loan-signing";
 import { getCachedLoans } from "$lib/server/cached-data";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
-import { workspaceAdminForbidden } from "$lib/server/workspace-admin";
 import { receiptColumnsFromInput } from "$lib/payment-receipts";
 import { resolveAppUrl } from "$lib/server/app-url";
+import { validateLoanCrmOwnership } from "$lib/server/loan-crm-ownership";
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -38,19 +38,27 @@ export const POST: RequestHandler = async (event) => {
     if (!session?.user?.id) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
-    const forbidden = await workspaceAdminForbidden(session.user.id);
-    if (forbidden) return forbidden;
-
     const body = await request.json();
     const {
       loanData,
       investorData,
       receivedPaymentsByInvestor = [],
       contractCustomization = null,
+      groupIds: requestedGroupIds = [],
     } = body;
 
-    console.log("Received loan data:", loanData);
-    console.log("Received investor data:", investorData);
+    const investorIds = Array.isArray(investorData)
+      ? investorData.map((inv: { investorId?: unknown }) =>
+          Number(inv.investorId),
+        )
+      : [];
+    const crmCheck = await validateLoanCrmOwnership(session.user.id, {
+      borrowerId: loanData.borrowerId ? Number(loanData.borrowerId) : null,
+      investorIds,
+    });
+    if (!crmCheck.ok) {
+      return json({ error: crmCheck.message }, { status: crmCheck.status });
+    }
 
     // Convert date strings to Date objects and ensure proper types
     const processedLoanData = {
@@ -72,14 +80,11 @@ export const POST: RequestHandler = async (event) => {
           : "0",
     };
 
-    console.log("Processed loan data:", processedLoanData);
-
     // Insert loan
     const newLoan = await db
       .insert(loans)
       .values(processedLoanData)
       .returning();
-    console.log("Loan inserted:", newLoan);
     const loanId = newLoan[0].id;
 
     // Insert loan investors with proper date conversion
@@ -96,14 +101,10 @@ export const POST: RequestHandler = async (event) => {
       ...receiptColumnsFromInput(inv),
     }));
 
-    console.log("Loan investor data:", loanInvestorData);
-
     const insertedLoanInvestors = await db
       .insert(loanInvestors)
       .values(loanInvestorData)
       .returning();
-    console.log("Loan investors inserted");
-
     // Insert interest periods if any
     // Group by investor to avoid inserting periods multiple times for the same investor
     const processedInvestors = new Set<number>();
@@ -129,11 +130,6 @@ export const POST: RequestHandler = async (event) => {
         }));
 
         await db.insert(interestPeriods).values(periodData);
-        console.log(
-          "Interest periods inserted for loan investor:",
-          loanInvestorId,
-        );
-
         processedInvestors.add(investorId);
       }
     }
@@ -183,8 +179,6 @@ export const POST: RequestHandler = async (event) => {
       },
     });
 
-    console.log("Complete loan fetched:", completeLoan);
-
     let signingInvitations: ReturnType<typeof toSigningInvitationSummary>[] =
       [];
     if (completeLoan) {
@@ -220,9 +214,27 @@ export const POST: RequestHandler = async (event) => {
       try {
         const { applyGroupRulesForLoan } =
           await import("$lib/server/group-access");
+        const { attachLoanToGroups } =
+          await import("$lib/server/loan-group-attach");
+        const { enqueueGroupLoanChanged } =
+          await import("$lib/server/jobs/queue");
         const { scheduleDrain } =
           await import("$lib/server/jobs/after-response");
+
+        const manualGroupIds = Array.isArray(requestedGroupIds)
+          ? requestedGroupIds
+              .map((id: unknown) => Number(id))
+              .filter(Number.isFinite)
+          : [];
+        if (manualGroupIds.length > 0) {
+          await attachLoanToGroups({
+            loanId: completeLoan.id,
+            groupIds: manualGroupIds,
+            addedByUserId: session.user.id,
+          });
+        }
         await applyGroupRulesForLoan(completeLoan.id, session.user.id);
+        await enqueueGroupLoanChanged(completeLoan.id);
         scheduleDrain(event);
       } catch (groupErr) {
         console.error(

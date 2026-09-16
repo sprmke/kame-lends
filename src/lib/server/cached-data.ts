@@ -456,10 +456,9 @@ export type GroupsIndexItem = {
 
 export async function getGroupsIndexForUser(
   userId: string,
-  isAdmin: boolean,
 ): Promise<GroupsIndexItem[]> {
   return remember(`groups:index:${userId}`, async () => {
-    const groups = await loadGroupsForUser(userId, isAdmin);
+    const groups = await loadGroupsForUser(userId);
     return groups.map((g) => ({
       id: g.id,
       name: g.name,
@@ -469,20 +468,11 @@ export async function getGroupsIndexForUser(
   });
 }
 
-export async function getCachedGroupsForUser(userId: string, isAdmin: boolean) {
-  return remember(`groups:${userId}:${isAdmin}`, () =>
-    loadGroupsForUser(userId, isAdmin),
-  );
+export async function getCachedGroupsForUser(userId: string) {
+  return remember(`groups:${userId}`, () => loadGroupsForUser(userId));
 }
 
-async function loadGroupsForUser(userId: string, isAdmin: boolean) {
-  if (isAdmin) {
-    return db.query.loanGroups.findMany({
-      with: groupRelations,
-      orderBy: (table, { desc }) => [desc(table.createdAt)],
-    });
-  }
-
+async function loadGroupsForUser(userId: string) {
   const memberships = await db.query.loanGroupMembers.findMany({
     where: eq(loanGroupMembers.userId, userId),
     columns: { groupId: true },

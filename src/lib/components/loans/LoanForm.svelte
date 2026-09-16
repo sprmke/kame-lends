@@ -669,6 +669,7 @@
 				method,
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
+					groupIds: SHOW_GROUPS_UI && !isEditMode ? selectedGroupIds : undefined,
 					loanData: {
 						borrowerId: Number(borrowerId),
 						loanName: loanName.trim(),

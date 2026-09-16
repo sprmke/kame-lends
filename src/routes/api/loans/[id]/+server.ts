@@ -7,7 +7,7 @@ import {
   interestPeriods,
   receivedPayments,
 } from "$lib/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { hasLoanAdminAccess } from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
@@ -18,6 +18,7 @@ import {
 } from "$lib/server/loan-contract-persistence";
 import type { ContractCustomization } from "$lib/loan-contract-customization";
 import { receiptColumnsFromInput } from "$lib/payment-receipts";
+import { validateLoanCrmOwnership } from "$lib/server/loan-crm-ownership";
 
 export const GET: RequestHandler = async (event) => {
   const { params } = event;
@@ -62,12 +63,21 @@ export const PUT: RequestHandler = async (event) => {
       contractCustomization = null,
     } = body;
 
-    console.log("Updating loan:", loanId);
-    console.log("Received loan data:", loanData);
-    console.log("Received investor data:", investorData);
-
     if (!(await hasLoanAdminAccess(loanId, session.user.id))) {
       return json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const investorIds = Array.isArray(investorData)
+      ? investorData.map((inv: { investorId?: unknown }) =>
+          Number(inv.investorId),
+        )
+      : [];
+    const crmCheck = await validateLoanCrmOwnership(session.user.id, {
+      borrowerId: loanData.borrowerId ? Number(loanData.borrowerId) : null,
+      investorIds,
+    });
+    if (!crmCheck.ok) {
+      return json({ error: crmCheck.message }, { status: crmCheck.status });
     }
 
     const existingLoan = await db.query.loans.findFirst({
@@ -170,13 +180,6 @@ export const PUT: RequestHandler = async (event) => {
         const inv = investorData[i];
         const investorId = Number(inv.investorId);
 
-        console.log(`Processing investor ${i} (ID: ${investorId}):`, {
-          hasMultipleInterest: inv.hasMultipleInterest,
-          interestPeriodsLength: inv.interestPeriods?.length || 0,
-          interestPeriods: inv.interestPeriods,
-          alreadyProcessed: processedInvestors.has(investorId),
-        });
-
         // Only insert interest periods once per investor (skip if already processed)
         if (
           !processedInvestors.has(investorId) &&
@@ -230,13 +233,7 @@ export const PUT: RequestHandler = async (event) => {
             };
           });
 
-          console.log(
-            "Inserting interest periods for loanInvestorId:",
-            loanInvestorId,
-            periodData,
-          );
           await db.insert(interestPeriods).values(periodData);
-          console.log("Interest periods inserted successfully");
 
           processedInvestors.add(investorId);
         }
@@ -289,8 +286,6 @@ export const PUT: RequestHandler = async (event) => {
         },
       },
     });
-
-    console.log("Loan updated successfully:", updatedLoan);
 
     if (updatedLoan) {
       if (contractCustomization) {
@@ -357,12 +352,45 @@ export const DELETE: RequestHandler = async (event) => {
       return json({ error: "Loan not found" }, { status: 404 });
     }
 
-    // Delete loan (cascade will handle loan_investors)
+    const { loanGroupLoans, groupCalendars } =
+      await import("$lib/server/db/schema");
+    const { enqueueJob } = await import("$lib/server/jobs/queue");
+    const { scheduleDrain } = await import("$lib/server/jobs/after-response");
+
+    const groupLinks = await db
+      .select({ groupId: loanGroupLoans.groupId })
+      .from(loanGroupLoans)
+      .where(eq(loanGroupLoans.loanId, loanId));
+    const groupIds = groupLinks.map((r) => r.groupId);
+    if (groupIds.length > 0) {
+      const calendars = await db
+        .select({
+          groupId: groupCalendars.groupId,
+          googleCalendarId: groupCalendars.googleCalendarId,
+        })
+        .from(groupCalendars)
+        .where(inArray(groupCalendars.groupId, groupIds));
+      const calMap = new Map(
+        calendars.map((c) => [c.groupId, c.googleCalendarId]),
+      );
+      for (const groupId of groupIds) {
+        const calendarId = calMap.get(groupId);
+        if (calendarId) {
+          await enqueueJob({
+            kind: "group.calendar.removeLoan",
+            groupId,
+            payload: { loanId, calendarId },
+          });
+        }
+      }
+    }
+
     await db
       .delete(loans)
       .where(and(eq(loans.id, loanId), eq(loans.userId, session.user.id)));
 
     invalidateLoanData();
+    scheduleDrain(event);
     return json({ success: true });
   } catch (error) {
     console.error("Error deleting loan:", error);

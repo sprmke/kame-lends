@@ -13,7 +13,6 @@ import {
   users,
 } from "$lib/server/db/schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 import { invalidateGroupData } from "$lib/server/cache-invalidation";
 import {
   diffGroupMembers,
@@ -22,8 +21,52 @@ import {
   type PartyRole,
 } from "$lib/group-membership-diff";
 import { matchGroupRulesForLoan, type GroupRule } from "$lib/group-rules";
+import { normalizeEmail } from "$lib/loan-signing";
+import { findOrCreatePartyUser } from "$lib/server/party-user";
+import { findUserByNormalizedEmail } from "$lib/server/auth-sign-in";
+import { invalidateWitnessData } from "$lib/server/cache-invalidation";
 
 export type { PartyRole };
+
+/**
+ * Links `witnesses.witness_user_id` from witness email (same as witness CRM create)
+ * so group membership and calendar ACL can include loan witnesses.
+ */
+export async function syncWitnessUserLinksForLoans(
+  loanIds: number[],
+): Promise<void> {
+  if (loanIds.length === 0) return;
+
+  const rows = await db
+    .select({
+      witnessId: witnesses.id,
+      witnessUserId: witnesses.witnessUserId,
+      email: witnesses.email,
+      name: witnesses.name,
+    })
+    .from(loanWitnesses)
+    .innerJoin(witnesses, eq(loanWitnesses.witnessId, witnesses.id))
+    .where(inArray(loanWitnesses.loanId, loanIds));
+
+  let linked = false;
+  for (const row of rows) {
+    if (row.witnessUserId) continue;
+    const email = row.email?.trim();
+    if (!email) continue;
+    const partyUser = await findOrCreatePartyUser({
+      email,
+      name: row.name,
+      role: "witness",
+    });
+    if (!partyUser) continue;
+    await db
+      .update(witnesses)
+      .set({ witnessUserId: partyUser.id, updatedAt: new Date() })
+      .where(eq(witnesses.id, row.witnessId));
+    linked = true;
+  }
+  if (linked) invalidateWitnessData();
+}
 
 async function findGroup(groupId: number) {
   return db.query.loanGroups.findFirst({ where: eq(loanGroups.id, groupId) });
@@ -36,7 +79,6 @@ export async function hasGroupViewAccess(
   const group = await findGroup(groupId);
   if (!group) return false;
   if (group.creatorUserId === userId) return true;
-  if (await isWorkspaceAdmin(userId)) return true;
 
   const membership = await db.query.loanGroupMembers.findFirst({
     where: and(
@@ -48,15 +90,14 @@ export async function hasGroupViewAccess(
   return Boolean(membership);
 }
 
-/** Creator or workspace owner. Replaces hasGroupEditAccess. */
+/** Group creator only. Replaces hasGroupEditAccess. */
 export async function hasGroupManageAccess(
   groupId: number,
   userId: string,
 ): Promise<boolean> {
   const group = await findGroup(groupId);
   if (!group) return false;
-  if (group.creatorUserId === userId) return true;
-  return isWorkspaceAdmin(userId);
+  return group.creatorUserId === userId;
 }
 
 /** @deprecated Use hasGroupManageAccess */
@@ -112,13 +153,23 @@ export async function resolvePartyUsersForLoans(
   const witnessRows = await db
     .select({
       witnessUserId: witnesses.witnessUserId,
+      email: witnesses.email,
     })
     .from(loanWitnesses)
     .innerJoin(witnesses, eq(loanWitnesses.witnessId, witnesses.id))
     .where(inArray(loanWitnesses.loanId, loanIds));
 
+  const witnessEmailsWithoutUser = new Set<string>();
   for (const row of witnessRows) {
     add(row.witnessUserId, "witness");
+    if (!row.witnessUserId && row.email) {
+      const normalized = normalizeEmail(row.email);
+      if (normalized) witnessEmailsWithoutUser.add(normalized);
+    }
+  }
+  for (const email of witnessEmailsWithoutUser) {
+    const user = await findUserByNormalizedEmail(email);
+    if (user) add(user.id, "witness");
   }
 
   return result;
@@ -206,6 +257,7 @@ export async function recomputeGroupMembers(
     .where(eq(loanGroupLoans.groupId, groupId));
   const loanIds = groupLoanRows.map((r) => r.loanId);
 
+  await syncWitnessUserLinksForLoans(loanIds);
   const desiredRoles = await resolvePartyUsersForLoans(loanIds);
   const desired = await enrichDesired(desiredRoles);
   const current = await loadMemberSnapshots(groupId);
@@ -342,11 +394,7 @@ export async function applyGroupRulesForLoan(
   for (const groupId of groupIds) {
     const group = await findGroup(groupId);
     if (!group) continue;
-    // Only add to groups owned by the loan owner (or workspace admin creator)
-    if (group.creatorUserId !== loan.userId) {
-      const creatorIsAdmin = await isWorkspaceAdmin(group.creatorUserId);
-      if (!creatorIsAdmin) continue;
-    }
+    if (group.creatorUserId !== loan.userId) continue;
     await db
       .insert(loanGroupLoans)
       .values({
@@ -379,6 +427,8 @@ export async function previewAccessForLoanIds(options: {
   );
   for (const id of options.addLoanIds ?? []) resulting.add(id);
   const resultingLoanIds = [...resulting];
+
+  await syncWitnessUserLinksForLoans(resultingLoanIds);
 
   const currentRoles = await resolvePartyUsersForLoans(options.existingLoanIds);
   const desiredRoles = await resolvePartyUsersForLoans(resultingLoanIds);
@@ -418,7 +468,6 @@ export async function getGroupLoanIds(groupId: number): Promise<number[]> {
 export async function userHasAnyGroupMembership(
   userId: string,
 ): Promise<boolean> {
-  if (await isWorkspaceAdmin(userId)) return true;
   const row = await db
     .select({ id: loanGroupMembers.id })
     .from(loanGroupMembers)

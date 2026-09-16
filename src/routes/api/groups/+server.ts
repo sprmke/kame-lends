@@ -10,7 +10,6 @@ import {
 import { getSession } from "$lib/server/session";
 import { getCachedGroupsForUser } from "$lib/server/cached-data";
 import { invalidateGroupData } from "$lib/server/cache-invalidation";
-import { isWorkspaceAdmin } from "$lib/server/workspace-admin";
 import { hasLoanAdminAccess } from "$lib/server/access-control";
 import {
   recomputeGroupMembers,
@@ -27,8 +26,7 @@ export const GET: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isAdmin = await isWorkspaceAdmin(session.user.id);
-    return json(await getCachedGroupsForUser(session.user.id, isAdmin));
+    return json(await getCachedGroupsForUser(session.user.id));
   } catch (error) {
     console.error("Error fetching groups:", error);
     return json({ error: "Failed to fetch groups" }, { status: 500 });
@@ -119,6 +117,11 @@ export const POST: RequestHandler = async (event) => {
         kind: "group.calendar.provision",
         groupId: group.id,
         dedupeKey: `group.calendar.provision:${group.id}`,
+      });
+      await enqueueJob({
+        kind: "group.calendar.acl",
+        groupId: group.id,
+        dedupeKey: `group.calendar.acl:${group.id}`,
       });
     }
     for (const loanId of body.loanIds) {
