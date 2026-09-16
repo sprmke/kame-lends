@@ -12,6 +12,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
 	import { nextGroupColor, type GroupColorKey } from '$lib/groups/group-colors';
+	import { resolveWizardContactLoanIds } from '$lib/groups/group-list-map';
 	import type {
 		AccessPreviewData,
 		WizardContactOption,
@@ -70,14 +71,6 @@
 	): WizardContactOption[] {
 		const set = new Set(keys);
 		return options.filter((option) => set.has(contactKey(option)));
-	}
-
-	function unionLoanIds(contacts: WizardContactOption[]): number[] {
-		const ids = new Set<number>();
-		for (const contact of contacts) {
-			for (const id of contact.loanIds) ids.add(id);
-		}
-		return [...ids];
 	}
 
 	function suggestedNameFor(contacts: WizardContactOption[]): string {
@@ -237,7 +230,7 @@
 			: []
 	);
 
-	const contactLoanIds = $derived(new Set(unionLoanIds(selectedContacts)));
+	const contactLoanIds = $derived(new Set(resolveWizardContactLoanIds(selectedContacts)));
 
 	const filteredLoans = $derived.by(() => {
 		if (step !== 2) return [];
@@ -269,7 +262,7 @@
 		if (!name.trim() || name.trim() === previousSuggested) {
 			if (nextSuggested) name = nextSuggested;
 		}
-		selectedLoanIds = unionLoanIds(next);
+		selectedLoanIds = resolveWizardContactLoanIds(next);
 		showAllLoans = false;
 	}
 

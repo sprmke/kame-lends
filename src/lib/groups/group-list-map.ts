@@ -3,6 +3,7 @@ import type {
   GroupBadgeData,
   GroupIntegrationStatus,
   GroupListCardData,
+  WizardContactOption,
   WizardLoanRow,
 } from "$lib/components/groups/types";
 import { calculateTotalPrincipal, isOpenLoan } from "$lib/calculations";
@@ -202,4 +203,29 @@ export function buildWizardContactOptions(
   }
   out.sort((a, b) => a.name.localeCompare(b.name));
   return out;
+}
+
+function unionContactLoanIds(contacts: WizardContactOption[]): Set<number> {
+  const ids = new Set<number>();
+  for (const contact of contacts) {
+    for (const id of contact.loanIds) ids.add(id);
+  }
+  return ids;
+}
+
+/** Loans to preselect / filter in the create-group wizard for the current contact picks. */
+export function resolveWizardContactLoanIds(
+  contacts: WizardContactOption[],
+): number[] {
+  const investors = contacts.filter((c) => c.partyType === "investor");
+  const borrowers = contacts.filter((c) => c.partyType === "borrower");
+
+  if (investors.length > 0 && borrowers.length > 0) {
+    const investorIds = unionContactLoanIds(investors);
+    const borrowerIds = unionContactLoanIds(borrowers);
+    return [...investorIds].filter((id) => borrowerIds.has(id));
+  }
+  if (investors.length > 0) return [...unionContactLoanIds(investors)];
+  if (borrowers.length > 0) return [...unionContactLoanIds(borrowers)];
+  return [];
 }
