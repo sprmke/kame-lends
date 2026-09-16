@@ -244,6 +244,28 @@ export async function resolveWitnessProfitWriteAccess(
   );
 }
 
+/** Writes commission on a loan_investors row. Owner or the linked investor on that row. */
+export async function resolveInvestorCommissionWriteAccess(
+  loanId: number,
+  userId: string,
+  loanInvestorId: number,
+): Promise<boolean> {
+  const ctx = await getLoanAccessContext(loanId, userId);
+  if (ctx.canAdminEdit) return true;
+  if (!ctx.memberships.includes("investor") || ctx.linkedInvestorId == null) {
+    return false;
+  }
+
+  const row = await db.query.loanInvestors.findFirst({
+    where: and(
+      eq(loanInvestors.id, loanInvestorId),
+      eq(loanInvestors.loanId, loanId),
+    ),
+    columns: { investorId: true },
+  });
+  return row?.investorId === ctx.linkedInvestorId;
+}
+
 /** True when this witness contact was created by (and thus is manageable by) this workspace owner. */
 export async function isOwnedWitness(
   witnessId: number,

@@ -274,6 +274,10 @@ export const loanInvestors = pgTable(
     hasMultipleInterest: boolean("has_multiple_interest")
       .notNull()
       .default(false),
+    profitType: interestTypeEnum("profit_type").notNull().default("rate"),
+    profitValue: decimal("profit_value", { precision: 15, scale: 2 })
+      .notNull()
+      .default("0"),
     /** Evidence of the investor's fund transfer (`data:` URL legacy or `storage:` R2 ref). */
     receiptImageUrl: text("receipt_image_url"),
     /** AI-extracted snapshot from receiptImageUrl at upload time; kept for audit even if fields are later hand-edited. */

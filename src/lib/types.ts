@@ -188,6 +188,8 @@ export interface LoanInvestor {
   sentDate: Date;
   isPaid: boolean;
   hasMultipleInterest: boolean;
+  profitType: InterestType;
+  profitValue: string;
   receiptImageUrl?: string | null;
   receiptExtractedData?: ReceiptExtractedData | null;
   receipts?: PaymentReceipt[];
@@ -213,11 +215,14 @@ export interface Transaction {
 }
 
 export interface LoanListSigningInvitation {
+  id?: number;
   witnessId: number | null;
+  investorId?: number | null;
   partyRole: string;
+  partyEmail?: string | null;
   signedAt?: Date | string | null;
   expiresAt?: Date | string | null;
-  witness?: Pick<Witness, "id" | "name"> | null;
+  witness?: Pick<Witness, "id" | "name" | "witnessUserId"> | null;
 }
 
 export interface LoanWitness {
