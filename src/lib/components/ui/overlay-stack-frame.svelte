@@ -52,7 +52,7 @@
 
 <div
 	bind:this={frame}
-	class="pointer-events-none fixed inset-0 isolate"
+	class="pointer-events-none fixed inset-0"
 	style:z-index={zIndex}
 >
 	{@render children()}

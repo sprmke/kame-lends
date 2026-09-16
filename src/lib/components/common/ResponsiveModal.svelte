@@ -16,6 +16,11 @@
 		contentClass?: string;
 		bodyClass?: string;
 		sheetSide?: 'bottom' | 'right';
+		/**
+		 * Defer the body until after the shell paints. Only for heavy trees
+		 * (loan form/detail). Light dialogs must leave this off.
+		 */
+		deferBody?: boolean;
 		children: Snippet;
 		header?: Snippet;
 		footer?: Snippet;
@@ -31,6 +36,7 @@
 		contentClass = '',
 		bodyClass = '',
 		sheetSide = 'bottom',
+		deferBody = false,
 		children,
 		header,
 		footer
@@ -53,8 +59,11 @@
 	$effect(() => mobile.init());
 
 	$effect(() => {
+		if (!deferBody) return;
 		overlayContent.armWhenOpen(open);
 	});
+
+	const showBody = $derived(!deferBody || overlayContent.ready);
 
 	$effect(() => {
 		if (open) {
@@ -92,7 +101,7 @@
 				</Sheet.Header>
 			{/if}
 			<div class={cn('min-h-0 overflow-y-auto px-5 py-4', bodyClass)}>
-				{#if overlayContent.ready}
+				{#if showBody}
 					{@render children()}
 				{:else}
 					<div class="space-y-3 py-2" aria-hidden="true">
@@ -143,7 +152,7 @@
 				</Dialog.Header>
 			{/if}
 			<div class={cn('min-h-0 flex-1 overflow-y-auto px-5 py-4 md:px-6 md:py-5', bodyClass)}>
-				{#if overlayContent.ready}
+				{#if showBody}
 					{@render children()}
 				{:else}
 					<div class="space-y-3 py-2" aria-hidden="true">

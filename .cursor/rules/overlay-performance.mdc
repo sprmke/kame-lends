@@ -1,0 +1,27 @@
+---
+description: Prevent overlay/modal jank (blur, deferred skeletons, $effect re-arm)
+alwaysApply: true
+---
+
+# Overlay performance
+
+Opening a dialog/sheet must stay cheap. This class of lag has shipped more than once (loan detail, then New group).
+
+## Bans
+
+| Do not | Do this |
+| --- | --- |
+| `backdrop-blur` / `backdrop-filter` on modal scrims | Solid tint (`.modal-scrim`, `bg-black/35`) |
+| `transition-all` on chrome that also uses blur (sidebar, dock) | Transition only `width` / `margin` |
+| Defer **every** `ResponsiveModal` body | `deferBody` only for heavy trees (loan form/detail) |
+| `$effect(() => armWhenOpen(open))` that resets `ready` on every run | Rising-edge / `armed` guard in `createOverlayContentReady` |
+| `$effect` on open that re-runs from `prop ?? []` | `$derived` for fallbacks; `untrack()` for one-shot init |
+| `isolate` on full-viewport overlay wrappers | `z-index` already creates a stacking context |
+
+Light dialogs (New group, pickers, confirms) mount the real form on open. The 3-bar skeleton in `ResponsiveModal` means `deferBody` is on; do not leave it on for a name field.
+
+## Heavy overlay pattern
+
+Lazy-load the heavy child **inside** the modal (`import()`, `createOverlayContentReady`). Do not hide a small form behind the shared shell skeleton.
+
+See `.agent/skills/overlay-performance/SKILL.md`.

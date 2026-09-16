@@ -14,6 +14,7 @@ Agent context for **SvelteKit 2 + Svelte 5 + Neon + Drizzle + Auth.js**.
 | `git-commits.mdc`               | No AI attribution in commits         |
 | `deployment.mdc`                | Prod via GitHub Actions CD on `main` |
 | `route-guides.mdc`              | Route docs in `docs/guides/routes/`  |
+| `overlay-performance.mdc`       | Modal/sheet jank bans                |
 
 ## Conditional rules (by glob)
 
@@ -53,6 +54,7 @@ bun run setup:ai-tooling
 | `google-calendar-integration` | Calendar sync                              |
 | `documentation-maintenance`   | Same-change docs                           |
 | `route-guides`                | Per-route specs                            |
+| `overlay-performance`         | Modal/sheet jank (blur, defer, `$effect`)  |
 
 ## Related
 

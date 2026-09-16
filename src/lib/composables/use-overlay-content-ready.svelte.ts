@@ -1,22 +1,34 @@
-import { tick } from "svelte";
-
-function afterPaint(callback: () => void) {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(callback);
-  });
-}
+import { tick, untrack } from "svelte";
 
 /**
  * Defers mounting heavy overlay body content until after the shell has painted.
- * Keeps sheet/dialog open animations responsive on mobile and desktop.
+ * Only heavy overlays should use this (loan form/detail). Light dialogs should
+ * render their body immediately.
+ *
+ * `armWhenOpen` is rising-edge: re-calling it while still open must not reset
+ * `ready`, or the skeleton stays up and rAF callbacks never match.
  */
 export function createOverlayContentReady() {
   let ready = $state(false);
   let openToken = 0;
+  let armed = false;
+  let outerRaf = 0;
+  let innerRaf = 0;
+
+  function cancelPaint() {
+    if (outerRaf) cancelAnimationFrame(outerRaf);
+    if (innerRaf) cancelAnimationFrame(innerRaf);
+    outerRaf = 0;
+    innerRaf = 0;
+  }
 
   function reset() {
+    cancelPaint();
     openToken += 1;
-    ready = false;
+    armed = false;
+    untrack(() => {
+      ready = false;
+    });
   }
 
   function armWhenOpen(open: boolean) {
@@ -25,12 +37,23 @@ export function createOverlayContentReady() {
       return;
     }
 
+    if (armed) return;
+    armed = true;
     const token = ++openToken;
-    ready = false;
+    untrack(() => {
+      ready = false;
+    });
 
     void tick().then(() => {
-      afterPaint(() => {
-        if (token === openToken) ready = true;
+      if (token !== openToken) return;
+      outerRaf = requestAnimationFrame(() => {
+        innerRaf = requestAnimationFrame(() => {
+          if (token === openToken) {
+            untrack(() => {
+              ready = true;
+            });
+          }
+        });
       });
     });
   }
