@@ -32,7 +32,7 @@ Use when changing loans, investors, interest periods, payments, debts, or the in
 - One user can hold all three party memberships. `users.role` is a label, not an exclusive type.
 - Owner: full edit. Investor, borrower, and witness: read-only. Signing still allowed for their slot.
 - Party users: `/investments`, `/borrowed`, `/witnessed` (empty states stay open). Admins also get `/loans`, `/debts`, `/investors`, `/borrowers`, `/witnesses`.
-- **Groups** (`/groups`, `src/lib/server/group-access.ts`) are an orthogonal, organizational-only layer on top of this — any user can create a group and file loans into it, and it auto-adds those loans' parties as members, but membership never changes who can see a loan. `hasLoanViewAccess` above stays the only security boundary.
+- **Groups** (`/groups`, `src/lib/server/group-access.ts`) — Loan Groups v2: derived membership from loan parties; group members get read-only view of every loan in the group (separate from `hasLoanViewAccess`). Any signed-in user can create; creator/workspace admin manage. Behind `SHOW_GROUPS_UI`.
 
 ## Contracts & signing
 

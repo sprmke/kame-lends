@@ -11,6 +11,7 @@ alwaysApply: true
 2. **`docs/workflow/done/sveltekit-migration.md`** — migration tracker on `feat/sveltekit-migration`
 3. **`docs/guides/routes/README.md`** — per-page behavior (when guides exist)
 4. Loan math / domain → **`loan-domain`** skill
+5. Modals / sheets → **`overlay-performance`** skill
 
 ## Stack (authoritative)
 

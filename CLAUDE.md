@@ -60,7 +60,7 @@ See `.cursor/rules/ai-usage.mdc`: one task per chat, no subagent swarms, prefer 
 
 ## Skills
 
-Canonical: `.agent/skills/<name>/SKILL.md` (symlinked to `.claude/skills/`). Invoke `loan-domain`, `sveltekit-conventions`, `drizzle-neon`, `auth-js-sveltekit` for domain work.
+Canonical: `.agent/skills/<name>/SKILL.md` (symlinked to `.claude/skills/`). Invoke `loan-domain`, `sveltekit-conventions`, `drizzle-neon`, `auth-js-sveltekit`, `overlay-performance` for domain work.
 
 ## Don'ts
 
