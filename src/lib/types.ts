@@ -215,6 +215,8 @@ export interface Transaction {
 export interface LoanListSigningInvitation {
   witnessId: number | null;
   partyRole: string;
+  signedAt?: Date | string | null;
+  expiresAt?: Date | string | null;
   witness?: Pick<Witness, "id" | "name"> | null;
 }
 

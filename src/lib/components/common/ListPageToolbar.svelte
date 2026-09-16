@@ -23,6 +23,8 @@
 		onToggleMoreFilters?: () => void;
 		hasActiveAdvancedFilters?: boolean;
 		moreFilters?: Snippet;
+		/** Extra controls on the toolbar row (e.g. mobile bulk select). */
+		toolbarTrailing?: Snippet;
 		class?: string;
 	}
 
@@ -42,6 +44,7 @@
 		onToggleMoreFilters,
 		hasActiveAdvancedFilters = false,
 		moreFilters,
+		toolbarTrailing,
 		class: className
 	}: Props = $props();
 </script>
@@ -91,6 +94,9 @@
 				<X class="h-4 w-4 xl:mr-2" />
 				<span class="hidden xl:inline">Clear All</span>
 			</Button>
+		{/if}
+		{#if toolbarTrailing}
+			{@render toolbarTrailing()}
 		{/if}
 	</div>
 </div>

@@ -4,6 +4,7 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import SummaryCard from '$lib/components/common/SummaryCard.svelte';
 	import DashboardActivityCards from '$lib/components/common/DashboardActivityCards.svelte';
+	import DashboardGroupsCard from '$lib/components/dashboard/DashboardGroupsCard.svelte';
 	import DashboardSummarySkeleton from '$lib/components/common/DashboardSummarySkeleton.svelte';
 	import DashboardChartsSkeleton from '$lib/components/common/DashboardChartsSkeleton.svelte';
 	import OverdueChecker from '$lib/components/common/OverdueChecker.svelte';
@@ -69,7 +70,7 @@
 			]}
 		/>
 
-		<section class={cn('dashboard-section', !hasAnyActivity && !showGroupsCard && 'hidden 2xl:block')}>
+		<section class={cn('dashboard-section', !hasAnyActivity && 'hidden 2xl:block')}>
 			<div class="dashboard-section-header">
 				<div>
 					<p class="section-eyebrow">Activity</p>
@@ -81,21 +82,19 @@
 				overdueLoans={summary.overdueLoansData}
 				pendingDisbursements={summary.upcomingPaymentsToSend}
 				upcomingPaymentsDue={summary.upcomingPaymentsDue}
-				groupsPreview={showGroupsCard ? dashboardGroups : []}
-				groupsTotalCount={groupsIndex.length}
 			/>
 		</section>
 
 		{#await data.charts}
-			<DashboardChartsSkeleton />
+			<DashboardChartsSkeleton showGroupsColumn={showGroupsCard} />
 		{:then charts}
 			<section class="dashboard-section">
 				<div>
 					<p class="section-eyebrow">Analytics</p>
 					<h2 class="dashboard-section-title">Trends & insights</h2>
 				</div>
-				<div class={cn('grid gap-5', SHOW_TRANSACTIONS_UI ? 'lg:grid-cols-2' : 'lg:grid-cols-1')}>
-					{#if SHOW_TRANSACTIONS_UI}
+				{#if SHOW_TRANSACTIONS_UI}
+					<div class="mb-5">
 						<CashflowTrendChart
 							dailyData={charts.dailyData}
 							weeklyData={charts.weeklyData}
@@ -103,10 +102,21 @@
 							title="Cashflow Trend"
 							emptyMessage="No cashflow data"
 						/>
+					</div>
+				{/if}
+				<div
+					class={cn('grid gap-5', showGroupsCard ? 'lg:grid-cols-2' : 'lg:grid-cols-1')}
+				>
+					{#if showGroupsCard}
+						<DashboardGroupsCard
+							groups={dashboardGroups}
+							totalCount={groupsIndex.length}
+							class="h-full min-h-0"
+						/>
 					{/if}
 					<CurrencyBarChart
 						data={charts.investorCapitalData}
-						title="Top Investors by Capital"
+						title="Top investors"
 						emptyMessage="No investors found"
 					/>
 				</div>

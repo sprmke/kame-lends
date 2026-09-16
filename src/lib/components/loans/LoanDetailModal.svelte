@@ -25,6 +25,7 @@
 	import type { Borrower, Investor, LoanWithInvestors, PaymentMethod } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import type { LoanAccessContext } from '$lib/loan-access';
+	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 
 	interface Props {
 		loan: LoanWithInvestors | null;
@@ -66,6 +67,7 @@
 	let loadingLoanFormModule = $state(false);
 	let LoanDetailContentComponent = $state<typeof LoanDetailContent | null>(null);
 	let loadingDetailContentModule = $state(false);
+	let groupPickerOpen = $state(false);
 	const editOverlayContent = createOverlayContentReady();
 	const viewOverlayContent = createOverlayContentReady();
 
@@ -78,6 +80,7 @@
 			isEditing = false;
 			paymentMethods = [];
 			access = null;
+			groupPickerOpen = false;
 			return;
 		}
 		isEditing = startInEditMode && !readOnly;
@@ -117,6 +120,10 @@
 			loadingDetailContentModule = false;
 		});
 	});
+
+	const showManageGroups = $derived(
+		SHOW_GROUPS_UI && !readOnly && Boolean(access?.canAdminEdit)
+	);
 
 	const showViewDetailSkeleton = $derived(
 		loadingDetailContentModule || !viewOverlayContent.ready || !LoanDetailContentComponent
@@ -314,6 +321,8 @@
 						showComplete={!readOnly && isOverdue}
 						onDuplicate={handleDuplicate}
 						showDuplicate={!readOnly}
+						onManageGroups={() => (groupPickerOpen = true)}
+						{showManageGroups}
 						onContractDetails={() => {
 							showContractDetailsModal = true;
 							if (loan?.id && !loan.loanContract) {
@@ -364,6 +373,7 @@
 						readOnly={readOnly}
 						{paymentMethods}
 						access={access ?? undefined}
+						bind:groupPickerOpen
 					/>
 				</div>
 			{/if}

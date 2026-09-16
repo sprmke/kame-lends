@@ -18,6 +18,7 @@
 	import { formatText } from '$lib/format';
 	import type { Borrower, Investor, LoanWithInvestors, PaymentMethod } from '$lib/types';
 	import type { LoanAccessContext } from '$lib/loan-access';
+	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -39,6 +40,7 @@
 	let quickPaymentKind = $state<LoanQuickPaymentKind | null>(null);
 	let showDuplicateModal = $state(false);
 	let editSubmitting = $state(false);
+	let groupPickerOpen = $state(false);
 	const mobile = createIsMobileOverlay(
 		typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false
 	);
@@ -50,12 +52,13 @@
 	const highlightSigning = $derived(page.url.searchParams.get('signing') === '1');
 
 	$effect(() => {
-		if (highlightSigning && access.canAdminEdit) {
+		if (highlightSigning && access.canView) {
 			showContractDetailsModal = true;
 		}
 	});
 	const isOverdue = $derived(loan.status === 'Overdue');
 	const isPartiallyFunded = $derived(loan.status === 'Partially Funded');
+	const showManageGroups = $derived(SHOW_GROUPS_UI && access.canAdminEdit);
 
 	function handlePayBalance() {
 		document
@@ -150,6 +153,8 @@
 			onComplete={handleComplete}
 			showDuplicate={access.canAdminEdit}
 			onDuplicate={handleDuplicate}
+			onManageGroups={() => (groupPickerOpen = true)}
+			{showManageGroups}
 			onContractDetails={() => (showContractDetailsModal = true)}
 			onAddPayment={
 				access.canAdminEdit ? () => (quickPaymentKind = 'payment') : undefined
@@ -169,6 +174,7 @@
 			editableInvestorIds={access.editableInvestorIds}
 			{paymentMethods}
 			{access}
+			bind:groupPickerOpen
 		/>
 
 		{#if access.canAdminEdit}

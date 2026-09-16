@@ -3,12 +3,16 @@
  */
 export const PAGE_DESCRIPTIONS = {
   dashboard: "Overview of your lending performance and upcoming activity.",
-  groups: "Shared loan lists, people, and calendars for a lending circle.",
+  groups:
+    "Loan groups with shared access, Google Calendar, and optional Telegram for parties on those loans.",
+  dashboardGroups:
+    "Shared calendars and read-only access for investors, borrowers, and witnesses on grouped loans.",
   settings: "Account, payment methods, backups, and maintenance tools.",
   investors: "Lender contacts and their loan activity.",
   borrowers: "Borrower contacts linked to your loans.",
   witnesses: "Witness contacts for contracts and signing.",
-  bankLoans: "External loans tied to your investors.",
+  bankLoans:
+    "Borrowings from your lender contacts, separate from loans you issue.",
   transactions: "Money in and out across your lending activity.",
   transactionDetail: "Details for this transaction.",
   newTransaction: "Record money in or out.",

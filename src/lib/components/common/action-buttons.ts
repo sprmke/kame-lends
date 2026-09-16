@@ -25,6 +25,7 @@ export type LoanActionIcon =
   | "pay"
   | "edit"
   | "duplicate"
+  | "groups"
   | "contract"
   | "complete"
   | "view"
@@ -53,6 +54,8 @@ export interface CreateLoanActionItemsOptions {
   onEdit?: () => void;
   showDuplicate?: boolean;
   onDuplicate?: () => void;
+  showManageGroups?: boolean;
+  onManageGroups?: () => void;
   onAddPayment?: () => void;
   onAddReceivedPayment?: () => void;
   showPayBalance?: boolean;
@@ -86,6 +89,13 @@ export function createLoanActionItems(
       label: "Duplicate",
       onClick: options.onDuplicate,
       icon: "duplicate",
+    });
+  }
+  if (options.showManageGroups && options.onManageGroups) {
+    managementGroup.push({
+      label: "Manage groups",
+      onClick: options.onManageGroups,
+      icon: "groups",
     });
   }
   appendGroup(items, managementGroup);

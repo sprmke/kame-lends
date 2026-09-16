@@ -6,6 +6,7 @@
 
 	interface Props {
 		title: string;
+		description?: string;
 		count?: number;
 		// Lucide icon components (legacy constructor shape)
 		icon: any;
@@ -18,6 +19,7 @@
 
 	let {
 		title,
+		description,
 		count = 0,
 		icon: Icon,
 		accentClassName,
@@ -48,6 +50,9 @@
 						</button>
 					{/if}
 				</div>
+				{#if description}
+					<p class="mt-1 text-xs leading-snug text-muted-foreground">{description}</p>
+				{/if}
 			</div>
 			<div class={cn('icon-well-xs', accentClassName)}>
 				<Icon class={cn('h-3 w-3', iconClassName)} />

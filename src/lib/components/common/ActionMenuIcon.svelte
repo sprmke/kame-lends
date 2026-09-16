@@ -9,6 +9,7 @@
 		Eye,
 		FileText,
 		FolderMinus,
+		Folders,
 		Trash2,
 		Wallet
 	} from 'lucide-svelte';
@@ -32,6 +33,8 @@
 	<Edit class={className} />
 {:else if icon === 'duplicate'}
 	<Copy class={className} />
+{:else if icon === 'groups'}
+	<Folders class={className} />
 {:else if icon === 'contract'}
 	<FileText class={className} />
 {:else if icon === 'complete'}

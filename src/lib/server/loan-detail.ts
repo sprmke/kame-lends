@@ -74,6 +74,7 @@ export async function loadLoanDetail(
         transactions: {
           orderBy: (table, { asc }) => [asc(table.date)],
         },
+        groupLoans: { columns: { groupId: true, source: true } },
         ...(options.includeContract ? { loanContract: true } : {}),
       },
     }),

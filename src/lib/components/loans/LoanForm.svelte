@@ -51,7 +51,7 @@
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
 	import type { PaymentReceipt } from '$lib/payment-receipts';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
-	import GroupBadge from '$lib/components/groups/GroupBadge.svelte';
+	import LoanFormGroupsField from '$lib/components/loans/LoanFormGroupsField.svelte';
 	import { page } from '$app/state';
 	import { loanGroupIds, type GroupsIndexItem } from '$lib/groups/loan-group-filter';
 
@@ -961,52 +961,11 @@
 			</div>
 
 			{#if showGroupsField}
-				<div class="space-y-2 border-t border-border/60 pt-4">
-					<Label>Groups</Label>
-					{#if groupsIndex.length === 0}
-						<p class="text-sm text-muted-foreground">No groups yet.</p>
-						<a
-							href="/groups?create=1"
-							data-sveltekit-preload-data="tap"
-							class="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-						>
-							New group
-						</a>
-					{:else}
-						<ul class="max-h-48 space-y-1 overflow-y-auto">
-							{#each groupsIndex as group (group.id)}
-								<li>
-									<label
-										class={cn(
-											'flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/50',
-											selectedGroupIds.includes(group.id) && 'bg-primary/5'
-										)}
-									>
-										<Checkbox
-											checked={selectedGroupIds.includes(group.id)}
-											onCheckedChange={(checked) => {
-												if (checked) {
-													selectedGroupIds = [...selectedGroupIds, group.id];
-												} else {
-													selectedGroupIds = selectedGroupIds.filter((id) => id !== group.id);
-												}
-											}}
-											disabled={isSubmitting}
-										/>
-										<GroupBadge name={group.name} color={group.color} size="md" class="min-w-0 flex-1" />
-									</label>
-								</li>
-							{/each}
-						</ul>
-						<a
-							href="/groups?create=1"
-							data-sveltekit-preload-data="tap"
-							class="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-						>
-							New group
-						</a>
-					{/if}
-				</div>
+				<LoanFormGroupsField
+					groups={groupsIndex}
+					bind:selectedGroupIds
+					disabled={isSubmitting}
+				/>
 			{/if}
 		</Card.Content>
 	</Card.Root>
@@ -1133,10 +1092,12 @@
 											)}
 									/>
 
-									<div class="grid gap-3 sm:grid-cols-3">
-										<div class="space-y-2">
-											<Label>Principal</Label>
+									<div class="grid w-full gap-3 sm:grid-cols-2">
+										<div class="min-w-0 space-y-2">
+											<Label for={`principal-${transaction.id}`}>Principal</Label>
 											<Input
+												id={`principal-${transaction.id}`}
+												class="w-full"
 												type="number"
 												min="0"
 												step="0.01"
@@ -1151,9 +1112,11 @@
 													)}
 											/>
 										</div>
-										<div class="space-y-2">
-											<Label>Sent Date</Label>
+										<div class="min-w-0 space-y-2">
+											<Label for={`sent-date-${transaction.id}`}>Sent Date</Label>
 											<Input
+												id={`sent-date-${transaction.id}`}
+												class="w-full"
 												type="date"
 												value={transaction.sentDate}
 												disabled={isSubmitting}
@@ -1164,69 +1127,83 @@
 													})}
 											/>
 										</div>
-										<div class="flex items-end gap-2 pb-2">
-											<Checkbox
-												id={`paid-${transaction.id}`}
-												checked={transaction.isPaid}
-												disabled={isSubmitting}
-												onCheckedChange={(checked) =>
-													updateTransaction(
-														si.investor.id,
-														transaction.id,
-														'isPaid',
-														checked === true
-													)}
-											/>
-											<Label for={`paid-${transaction.id}`} class="text-sm">Disbursed</Label>
-										</div>
 									</div>
-
-									{#if !si.hasMultipleInterest}
-										<Tabs.Root
-											value={transaction.interestType}
-											onValueChange={(value) =>
+									<label
+										for={`paid-${transaction.id}`}
+										class="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg border border-border/50 bg-card px-3"
+									>
+										<Checkbox
+											id={`paid-${transaction.id}`}
+											checked={transaction.isPaid}
+											disabled={isSubmitting}
+											onCheckedChange={(checked) =>
 												updateTransaction(
 													si.investor.id,
 													transaction.id,
-													'interestType',
-													value as 'rate' | 'fixed'
+													'isPaid',
+													checked === true
 												)}
-										>
-											<Tabs.List class="grid h-8 w-full max-w-xs grid-cols-2">
-												<Tabs.Trigger value="rate" class="text-xs">Rate (%)</Tabs.Trigger>
-												<Tabs.Trigger value="fixed" class="text-xs">Fixed (₱)</Tabs.Trigger>
-											</Tabs.List>
-											<Tabs.Content value="rate" class="mt-2 max-w-xs">
-												<Input
-													type="number"
-													step="0.01"
-													value={transaction.interestRate}
-													disabled={isSubmitting}
-													oninput={(e) =>
-														updateTransaction(
-															si.investor.id,
-															transaction.id,
-															'interestRate',
-															e.currentTarget.value
-														)}
-												/>
-											</Tabs.Content>
-											<Tabs.Content value="fixed" class="mt-2 max-w-xs">
-												<Input
-													type="number"
-													step="0.01"
-													value={transaction.interestAmount}
-													disabled={isSubmitting}
-													oninput={(e) =>
-														updateTransaction(
-															si.investor.id,
-															transaction.id,
-															'interestAmount',
-															e.currentTarget.value
-														)}
-												/>
-											</Tabs.Content>
-										</Tabs.Root>
+										/>
+										<span class="text-sm font-medium leading-none">Disbursed</span>
+									</label>
+
+									{#if !si.hasMultipleInterest}
+										<div class="w-full space-y-2">
+											<Tabs.Root
+												class="w-full"
+												value={transaction.interestType}
+												onValueChange={(value) =>
+													updateTransaction(
+														si.investor.id,
+														transaction.id,
+														'interestType',
+														value as 'rate' | 'fixed'
+													)}
+											>
+												<Tabs.List class="grid h-11 w-full grid-cols-2">
+													<Tabs.Trigger value="rate" class="text-xs sm:text-sm">
+														Rate (%)
+													</Tabs.Trigger>
+													<Tabs.Trigger value="fixed" class="text-xs sm:text-sm">
+														Fixed (₱)
+													</Tabs.Trigger>
+												</Tabs.List>
+												<Tabs.Content value="rate" class="mt-2 w-full">
+													<Input
+														class="w-full"
+														type="number"
+														step="0.01"
+														aria-label="Interest rate percent"
+														value={transaction.interestRate}
+														disabled={isSubmitting}
+														oninput={(e) =>
+															updateTransaction(
+																si.investor.id,
+																transaction.id,
+																'interestRate',
+																e.currentTarget.value
+															)}
+													/>
+												</Tabs.Content>
+												<Tabs.Content value="fixed" class="mt-2 w-full">
+													<Input
+														class="w-full"
+														type="number"
+														step="0.01"
+														aria-label="Fixed interest amount"
+														value={transaction.interestAmount}
+														disabled={isSubmitting}
+														oninput={(e) =>
+															updateTransaction(
+																si.investor.id,
+																transaction.id,
+																'interestAmount',
+																e.currentTarget.value
+															)}
+													/>
+												</Tabs.Content>
+											</Tabs.Root>
+										</div>
 									{/if}
 								</div>
 							{/each}

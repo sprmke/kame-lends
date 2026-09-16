@@ -27,7 +27,6 @@
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import { badgesForLoan, type GroupsIndexItem } from '$lib/groups/loan-group-filter';
 	import { page } from '$app/state';
-	import { Button } from '$lib/components/ui/button';
 	import { toast } from '$lib/toast';
 
 	interface Props {
@@ -39,6 +38,7 @@
 		editableInvestorIds?: number[];
 		paymentMethods?: PaymentMethod[];
 		access?: LoanAccessContext;
+		groupPickerOpen?: boolean;
 	}
 
 	let {
@@ -49,7 +49,8 @@
 		readOnly = false,
 		editableInvestorIds = [],
 		paymentMethods = [],
-		access
+		access,
+		groupPickerOpen = $bindable(false)
 	}: Props = $props();
 
 	const totalPrincipal = $derived(calculateTotalPrincipal(loan.loanInvestors));
@@ -85,7 +86,6 @@
 	});
 	/* Local picker selection needs $state; badge list sync is not a pure derived. */
 	/* eslint-disable svelte/prefer-writable-derived */
-	let groupPickerOpen = $state(false);
 	let selectedGroupIds = $state<number[]>([]);
 
 	$effect(() => {
@@ -193,31 +193,6 @@
 		</div>
 	{/if}
 
-	{#if SHOW_GROUPS_UI && (groupBadges.length > 0 || canManageGroups)}
-		<div class="flex flex-wrap items-center gap-2">
-			{#if groupBadges.length > 0}
-				<GroupBadgeList
-					groups={groupBadges}
-					size="md"
-					badgeHref={(group) => `/groups/${group.id}`}
-				/>
-			{:else}
-				<span class="text-sm text-muted-foreground">No groups</span>
-			{/if}
-			{#if canManageGroups}
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					class="touch-target"
-					onclick={() => (groupPickerOpen = true)}
-				>
-					Manage groups
-				</Button>
-			{/if}
-		</div>
-	{/if}
-
 	<LoanSummarySection
 		{totalPrincipal}
 		{averageRate}
@@ -283,6 +258,20 @@
 					<p class="text-caption">Duration</p>
 					<p class="text-sm font-medium">{formatText(duration)}</p>
 				</div>
+				{#if SHOW_GROUPS_UI}
+					<div class="space-y-1">
+						<p class="text-caption">Groups</p>
+						{#if groupBadges.length > 0}
+							<GroupBadgeList
+								groups={groupBadges}
+								size="md"
+								badgeHref={(group) => `/groups/${group.id}`}
+							/>
+						{:else}
+							<p class="text-sm font-medium">-</p>
+						{/if}
+					</div>
+				{/if}
 			</div>
 			<div class="space-y-1">
 				<p class="text-caption">Notes</p>

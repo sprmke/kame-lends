@@ -15,6 +15,11 @@ describe("pdfSafeImageSrc", () => {
     expect(pdfSafeImageSrc(` ${JPEG} `)).toBe(JPEG);
   });
 
+  it("drops oversized data URLs", () => {
+    const huge = `data:image/png;base64,${"A".repeat(700_000)}`;
+    expect(pdfSafeImageSrc(huge)).toBeNull();
+  });
+
   it("drops webp, empty, storage refs, and non-data URLs", () => {
     expect(pdfSafeImageSrc(WEBP)).toBeNull();
     expect(pdfSafeImageSrc("")).toBeNull();

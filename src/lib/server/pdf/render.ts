@@ -8,6 +8,7 @@ import { formatDateForPDF } from "$lib/pdf-export";
 import {
   buildLoanContractData,
   getLoanContractFilename,
+  normalizeLoanContractData,
 } from "$lib/loan-contract-data";
 import type { ContractCustomization } from "$lib/loan-contract-customization";
 import type { LoanContractData } from "$lib/loan-contract-data";
@@ -60,17 +61,33 @@ export async function renderTransactionsPdfBuffer(
   );
 }
 
+async function renderLoanContractDocumentToBuffer(
+  data: LoanContractData,
+  customization?: ContractCustomization,
+): Promise<Uint8Array> {
+  return renderToBuffer(
+    React.createElement(LoanContractPDFDocument, {
+      data,
+      customization,
+    }) as any,
+  );
+}
+
 export async function renderLoanContractPdfBuffer(
   loan: LoanWithInvestors,
   customization?: ContractCustomization,
   contractDataOverride?: LoanContractData,
 ): Promise<Uint8Array> {
-  const contractData = contractDataOverride ?? buildLoanContractData(loan);
+  const contractData = normalizeLoanContractData(
+    contractDataOverride ?? buildLoanContractData(loan),
+  );
   let resolvedData: LoanContractData;
   let resolvedCustomization: ContractCustomization | undefined;
 
   try {
-    resolvedData = await resolveLoanContractDataImages(contractData);
+    resolvedData = normalizeLoanContractData(
+      await resolveLoanContractDataImages(contractData),
+    );
     resolvedCustomization = customization
       ? await resolveContractCustomizationImages(customization)
       : customization;
@@ -85,11 +102,9 @@ export async function renderLoanContractPdfBuffer(
   }
 
   try {
-    return await renderToBuffer(
-      React.createElement(LoanContractPDFDocument, {
-        data: resolvedData,
-        customization: resolvedCustomization,
-      }) as any,
+    return await renderLoanContractDocumentToBuffer(
+      resolvedData,
+      resolvedCustomization,
     );
   } catch (error) {
     console.error(
@@ -100,18 +115,28 @@ export async function renderLoanContractPdfBuffer(
       resolvedData,
       resolvedCustomization,
     );
-    return renderToBuffer(
-      React.createElement(LoanContractPDFDocument, {
-        data: stripped.data,
-        customization: stripped.customization,
-      }) as any,
-    );
+    try {
+      return await renderLoanContractDocumentToBuffer(
+        stripped.data,
+        stripped.customization,
+      );
+    } catch (retryError) {
+      console.error(
+        "Contract PDF render failed after stripping images; minimal retry:",
+        retryError,
+      );
+      const minimal = stripContractEmbeddedImages(contractData, customization);
+      return await renderLoanContractDocumentToBuffer(
+        minimal.data,
+        minimal.customization,
+      );
+    }
   }
 }
 
 export function pdfResponse(buffer: Uint8Array, filename: string): Response {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-  return new Response(Buffer.from(bytes), {
+  return new Response(bytes, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,

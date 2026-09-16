@@ -219,6 +219,52 @@ describe("loan contract PDF", () => {
     },
   );
 
+  it.skipIf(!hasDatabase)("renders loan 98 specifically", async () => {
+    const loan = await db.query.loans.findFirst({
+      where: eq(loans.id, 98),
+      with: {
+        borrower: true,
+        loanContract: true,
+        signingInvitations: true,
+        loanWitnesses: { with: { witness: true } },
+        loanInvestors: {
+          with: {
+            investor: true,
+            interestPeriods: true,
+            receivedPayments: true,
+          },
+        },
+      },
+    });
+
+    if (!loan) return;
+
+    const baseData = buildLoanContractData(loan);
+    const storedCustomization = loan.loanContract?.customization as
+      | import("$lib/loan-contract-customization").ContractCustomization
+      | undefined;
+    const customization =
+      storedCustomization ??
+      buildDefaultContractCustomizationFromLoan(baseData);
+    const appliedData = applyContractCustomization(baseData, customization);
+    const investorEmailById = buildInvestorEmailMap(loan);
+    const merged = applySigningSignatures(
+      appliedData,
+      customization,
+      (loan.signingInvitations ?? []) as SigningInvitationRecord[],
+      investorEmailById,
+      buildSavedPartySignaturesFromLoan(loan),
+    );
+
+    const buffer = await renderLoanContractPdfBuffer(
+      loan,
+      merged.customization,
+      merged.data,
+    );
+
+    expect(buffer.byteLength).toBeGreaterThan(1000);
+  });
+
   it.skipIf(!hasDatabase)("renders loan 87 specifically", async () => {
     const loan = await db.query.loans.findFirst({
       where: eq(loans.id, 87),

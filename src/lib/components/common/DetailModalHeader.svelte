@@ -20,6 +20,8 @@
 		showViewLoan?: boolean;
 		onDuplicate?: () => void;
 		showDuplicate?: boolean;
+		onManageGroups?: () => void;
+		showManageGroups?: boolean;
 		onContractDetails?: () => void;
 		onAddPayment?: () => void;
 		onAddReceivedPayment?: () => void;
@@ -40,6 +42,8 @@
 		showViewLoan = false,
 		onDuplicate,
 		showDuplicate = false,
+		onManageGroups,
+		showManageGroups = false,
 		onContractDetails,
 		onAddPayment,
 		onAddReceivedPayment,
@@ -54,6 +58,8 @@
 			onEdit,
 			showDuplicate,
 			onDuplicate,
+			showManageGroups,
+			onManageGroups,
 			onAddPayment,
 			onAddReceivedPayment,
 			showPayBalance,

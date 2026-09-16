@@ -21,6 +21,7 @@
 	import GroupBadgeList from '$lib/components/groups/GroupBadgeList.svelte';
 	import { badgesForLoan, type GroupsIndexItem } from '$lib/groups/loan-group-filter';
 	import { page } from '$app/state';
+	import LoanPendingSignBadge from '$lib/components/loans/LoanPendingSignBadge.svelte';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -96,7 +97,7 @@
 				{/if}
 				<Card.Title class="truncate text-sm sm:text-base">{formatText(loan.loanName)}</Card.Title>
 			</div>
-			<div class="flex shrink-0 gap-1">
+			<div class="flex shrink-0 flex-wrap justify-end gap-1">
 				<Badge
 					variant={getLoanTypeBadge(loan.type).variant}
 					class={cn('text-[10px]', getLoanTypeBadge(loan.type).className)}
@@ -109,6 +110,7 @@
 				>
 					{formatText(loan.status)}
 				</Badge>
+				<LoanPendingSignBadge {loan} class="mt-0" />
 			</div>
 		</div>
 		{#if addedByRule}

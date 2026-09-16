@@ -182,7 +182,9 @@ export const POST: RequestHandler = async (event) => {
     );
     return pdfResponse(buffer, loanContractPdfFilename(loan));
   } catch (error) {
-    console.error("Error generating loan contract PDF:", error);
+    const detail =
+      error instanceof Error ? error.message : String(error ?? "unknown");
+    console.error("Error generating loan contract PDF:", detail, error);
     return new Response("Failed to generate contract PDF", { status: 500 });
   }
 };

@@ -16,6 +16,7 @@
 	import { TABLE_ROW_CLICKABLE } from '$lib/table-styles';
 	import { cn } from '$lib/utils';
 	import type { LoanWithInvestors } from '$lib/types';
+	import LoanSigningStatusBadge from '$lib/components/loans/LoanSigningStatusBadge.svelte';
 
 	interface Props {
 		loans: LoanWithInvestors[];
@@ -98,6 +99,7 @@
 				<Table.Head>Loan</Table.Head>
 				<Table.Head class="hidden md:table-cell">Type</Table.Head>
 				<Table.Head class="hidden lg:table-cell">Status</Table.Head>
+				<Table.Head class="hidden md:table-cell">Signing</Table.Head>
 				<Table.Head class="text-right">Principal</Table.Head>
 				<Table.Head class="hidden md:table-cell text-right">Due</Table.Head>
 				<Table.Head class="w-28 text-right">Actions</Table.Head>
@@ -106,7 +108,7 @@
 		<Table.Body>
 			{#if loans.length === 0}
 				<TableEmptyRow
-					colspan={enableRowSelection ? 8 : 7}
+					colspan={enableRowSelection ? 9 : 8}
 					message={emptyMessage}
 				/>
 			{:else}
@@ -142,6 +144,9 @@
 							{#if (loan as LoanWithInvestors & { groupSource?: string }).groupSource === 'rule'}
 								<Badge variant="secondary" class="mt-1 text-[10px]">Added by rule</Badge>
 							{/if}
+							<div class="mt-1 md:hidden">
+								<LoanSigningStatusBadge {loan} class="mt-0" />
+							</div>
 						</div>
 					</Table.Cell>
 					<Table.Cell class="hidden md:table-cell">
@@ -159,6 +164,9 @@
 						>
 							{formatText(loan.status)}
 						</Badge>
+					</Table.Cell>
+					<Table.Cell class="hidden md:table-cell">
+						<LoanSigningStatusBadge {loan} class="mt-0" showEmpty />
 					</Table.Cell>
 					<Table.Cell class="text-right tabular-nums">
 						{formatCurrency(principal)}

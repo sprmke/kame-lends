@@ -539,25 +539,29 @@
 		{/if}
 
 		{#if variant.embedded && variant.showDateRange}
-			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<DateRangeFilter
-					dateRange={dateRangeState.dateRange}
-					datePreset={dateRangeState.datePreset}
-					isActive={dateRangeState.isDateFilterActive}
-					fullWidth={isMobileShell.matches}
-					setDatePreset={dateRangeState.setDatePreset}
-					setDateRange={dateRangeState.setDateRange}
-					navigatePeriod={dateRangeState.navigatePeriod}
-					goToToday={dateRangeState.goToToday}
-					onClear={dateRangeState.clearDateFilter}
-				/>
-				<ExportButton
-					data={listLoans}
-					filteredData={sortedLoans}
-					selectedData={selectedLoans}
-					sections={loanPDFSections}
-					onGeneratePDF={downloadLoansPdf}
-				/>
+			<div class="flex items-center gap-2 sm:justify-between">
+				<div class={isMobileShell.matches ? 'min-w-0 flex-1' : ''}>
+					<DateRangeFilter
+						dateRange={dateRangeState.dateRange}
+						datePreset={dateRangeState.datePreset}
+						isActive={dateRangeState.isDateFilterActive}
+						fullWidth={isMobileShell.matches}
+						setDatePreset={dateRangeState.setDatePreset}
+						setDateRange={dateRangeState.setDateRange}
+						navigatePeriod={dateRangeState.navigatePeriod}
+						goToToday={dateRangeState.goToToday}
+						onClear={dateRangeState.clearDateFilter}
+					/>
+				</div>
+				{#if !isMobileShell.matches}
+					<ExportButton
+						data={listLoans}
+						filteredData={sortedLoans}
+						selectedData={selectedLoans}
+						sections={loanPDFSections}
+						onGeneratePDF={downloadLoansPdf}
+					/>
+				{/if}
 			</div>
 		{/if}
 
@@ -618,6 +622,22 @@
 					/>
 				{/if}
 			{/snippet}
+			{#snippet toolbarTrailing()}
+				{#if variant.showBulkActions && SHOW_GROUPS_UI && canManage && isMobileShell.matches}
+					<Button
+						type="button"
+						variant={phoneSelectMode ? 'default' : 'outline'}
+						size="sm"
+						class="shrink-0 whitespace-nowrap"
+						onclick={() => {
+							phoneSelectMode = !phoneSelectMode;
+							if (!phoneSelectMode) selectedRowIds = new Set();
+						}}
+					>
+						{phoneSelectMode ? 'Done' : 'Select'}
+					</Button>
+				{/if}
+			{/snippet}
 			{#snippet moreFilters()}
 				<LoanListMoreFiltersPanel
 					{statusFilter}
@@ -652,22 +672,6 @@
 				/>
 			{/snippet}
 		</ListPageToolbar>
-
-		{#if variant.showBulkActions && SHOW_GROUPS_UI && canManage && isMobileShell.matches}
-			<div class="mb-2 flex justify-end">
-				<Button
-					type="button"
-					variant={phoneSelectMode ? 'default' : 'outline'}
-					size="sm"
-					onclick={() => {
-						phoneSelectMode = !phoneSelectMode;
-						if (!phoneSelectMode) selectedRowIds = new Set();
-					}}
-				>
-					{phoneSelectMode ? 'Done' : 'Select'}
-				</Button>
-			</div>
-		{/if}
 
 		{#if hasActiveFilters}
 			<p class="text-sm text-muted-foreground">

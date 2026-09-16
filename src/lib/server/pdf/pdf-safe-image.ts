@@ -4,11 +4,15 @@ import type { LoanContractData } from "$lib/loan-contract-data";
 
 const PDF_EMBEDDABLE_IMAGE = /^data:image\/(jpeg|jpg|png);base64,/i;
 
+/** Match signing capture limit; oversized data URLs can OOM or crash react-pdf on serverless. */
+export const MAX_PDF_EMBED_DATA_URL_LENGTH = 600_000;
+
 /** @react-pdf Image supports JPEG, PNG, and SVG data URLs. WebP and other formats throw. */
 export function pdfSafeImageSrc(src: string | null | undefined): string | null {
   if (typeof src !== "string") return null;
   const trimmed = src.trim();
   if (!trimmed || isStorageRef(trimmed)) return null;
+  if (trimmed.length > MAX_PDF_EMBED_DATA_URL_LENGTH) return null;
   return PDF_EMBEDDABLE_IMAGE.test(trimmed) ? trimmed : null;
 }
 
