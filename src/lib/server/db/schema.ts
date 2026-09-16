@@ -3,6 +3,7 @@ import {
   text,
   serial,
   integer,
+  bigint,
   decimal,
   timestamp,
   boolean,
@@ -11,6 +12,7 @@ import {
   primaryKey,
   index,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import type { AdapterAccount } from "@auth/core/adapters";
@@ -59,10 +61,30 @@ export const signingPartyRoleEnum = pgEnum("signing_party_role", [
   "witness_1",
   "witness_2",
 ]);
-export const groupMemberStatusEnum = pgEnum("group_member_status", [
+export const groupRulePartyTypeEnum = pgEnum("group_rule_party_type", [
+  "investor",
+  "borrower",
+]);
+export const groupCalendarStatusEnum = pgEnum("group_calendar_status", [
+  "provisioning",
   "active",
-  "left",
-  "removed",
+  "error",
+]);
+export const groupTelegramStatusEnum = pgEnum("group_telegram_status", [
+  "disconnected",
+  "connected",
+  "bot_removed",
+]);
+export const groupNotificationStatusEnum = pgEnum("group_notification_status", [
+  "claimed",
+  "sent",
+  "failed",
+]);
+export const integrationJobStatusEnum = pgEnum("integration_job_status", [
+  "pending",
+  "running",
+  "done",
+  "failed",
 ]);
 
 // Investors Table
@@ -301,7 +323,7 @@ export const loanWitnesses = pgTable(
   }),
 );
 
-// Loan Groups (user-created collections of loans, shared with the loans' parties)
+// Loan Groups (shared loan sets with derived membership, calendar, Telegram)
 export const loanGroups = pgTable(
   "loan_groups",
   {
@@ -310,13 +332,19 @@ export const loanGroups = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    /** UI label: Description */
     notes: text("notes"),
+    color: text("color").notNull().default("orange"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     creatorUserIdIdx: index("loan_groups_creator_user_id_idx").on(
       table.creatorUserId,
+    ),
+    creatorNameIdx: index("loan_groups_creator_user_id_name_idx").on(
+      table.creatorUserId,
+      table.name,
     ),
   }),
 );
@@ -332,6 +360,11 @@ export const loanGroupLoans = pgTable(
     loanId: integer("loan_id")
       .references(() => loans.id, { onDelete: "cascade" })
       .notNull(),
+    addedByUserId: text("added_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    /** 'manual' | 'rule' */
+    source: text("source").notNull().default("manual"),
     addedAt: timestamp("added_at").defaultNow().notNull(),
   },
   (table) => ({
@@ -344,7 +377,7 @@ export const loanGroupLoans = pgTable(
   }),
 );
 
-/** Sticky membership: once "left" or "removed", never silently re-added by loan sync. */
+/** Derived membership cache: rewritten only by recomputeGroupMembers. */
 export const loanGroupMembers = pgTable(
   "loan_group_members",
   {
@@ -355,7 +388,11 @@ export const loanGroupMembers = pgTable(
     userId: text("user_id")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
-    status: groupMemberStatusEnum("status").notNull().default("active"),
+    partyRoles: text("party_roles")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    syncedAt: timestamp("synced_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -365,6 +402,175 @@ export const loanGroupMembers = pgTable(
     groupUserUnique: unique("loan_group_members_group_user_unique").on(
       table.groupId,
       table.userId,
+    ),
+  }),
+);
+
+/** Smart group rules: auto-add future loans for a contact. */
+export const loanGroupRules = pgTable(
+  "loan_group_rules",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .references(() => loanGroups.id, { onDelete: "cascade" })
+      .notNull(),
+    partyType: groupRulePartyTypeEnum("party_type").notNull(),
+    contactId: integer("contact_id").notNull(),
+    createdByUserId: text("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    groupIdIdx: index("loan_group_rules_group_id_idx").on(table.groupId),
+    partyContactIdx: index("loan_group_rules_party_contact_idx").on(
+      table.partyType,
+      table.contactId,
+    ),
+    groupPartyContactUnique: unique(
+      "loan_group_rules_group_party_contact_unique",
+    ).on(table.groupId, table.partyType, table.contactId),
+  }),
+);
+
+export const groupCalendars = pgTable("group_calendars", {
+  groupId: integer("group_id")
+    .primaryKey()
+    .references(() => loanGroups.id, { onDelete: "cascade" }),
+  googleCalendarId: text("google_calendar_id").unique(),
+  status: groupCalendarStatusEnum("status").notNull().default("provisioning"),
+  lastEventSyncAt: timestamp("last_event_sync_at"),
+  lastAclSyncAt: timestamp("last_acl_sync_at"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const groupTelegramSettings = pgTable(
+  "group_telegram_settings",
+  {
+    groupId: integer("group_id")
+      .primaryKey()
+      .references(() => loanGroups.id, { onDelete: "cascade" }),
+    chatId: text("chat_id"),
+    chatTitle: text("chat_title"),
+    chatType: text("chat_type"),
+    status: groupTelegramStatusEnum("status").notNull().default("disconnected"),
+    enabled: boolean("enabled").notNull().default(true),
+    notifyUpcoming: boolean("notify_upcoming").notNull().default(true),
+    reminderDays: integer("reminder_days")
+      .array()
+      .notNull()
+      .default(sql`'{3,1}'::integer[]`),
+    notifyDueToday: boolean("notify_due_today").notNull().default(true),
+    notifyOverdue: boolean("notify_overdue").notNull().default(true),
+    overdueRepeatEveryDays: integer("overdue_repeat_every_days")
+      .notNull()
+      .default(1),
+    notifyDailyDigest: boolean("notify_daily_digest").notNull().default(false),
+    notifyActivity: boolean("notify_activity").notNull().default(true),
+    includeAmounts: boolean("include_amounts").notNull().default(true),
+    botToken: text("bot_token"),
+    templates: jsonb("templates")
+      .$type<Record<string, string>>()
+      .notNull()
+      .default({}),
+    linkedByUserId: text("linked_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    linkedAt: timestamp("linked_at"),
+    lastSentAt: timestamp("last_sent_at"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    chatIdUnique: uniqueIndex("group_telegram_settings_chat_id_unique")
+      .on(table.chatId)
+      .where(sql`${table.chatId} IS NOT NULL`),
+  }),
+);
+
+export const telegramLinkTokens = pgTable(
+  "telegram_link_tokens",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .references(() => loanGroups.id, { onDelete: "cascade" })
+      .notNull(),
+    tokenHash: text("token_hash").notNull(),
+    createdByUserId: text("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    tokenHashUnique: uniqueIndex("telegram_link_tokens_token_hash_unique").on(
+      table.tokenHash,
+    ),
+    groupIdIdx: index("telegram_link_tokens_group_id_idx").on(table.groupId),
+  }),
+);
+
+export const groupNotificationLog = pgTable(
+  "group_notification_log",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .references(() => loanGroups.id, { onDelete: "cascade" })
+      .notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    kind: text("kind").notNull(),
+    status: groupNotificationStatusEnum("status").notNull().default("claimed"),
+    attempts: integer("attempts").notNull().default(0),
+    telegramMessageId: text("telegram_message_id"),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    sentAt: timestamp("sent_at"),
+  },
+  (table) => ({
+    groupFingerprintUnique: unique(
+      "group_notification_log_group_fingerprint_unique",
+    ).on(table.groupId, table.fingerprint),
+    statusCreatedAtIdx: index(
+      "group_notification_log_status_created_at_idx",
+    ).on(table.status, table.createdAt),
+  }),
+);
+
+/** Outbox for Google Calendar and Telegram side effects. groupId has no FK. */
+export const integrationJobs = pgTable(
+  "integration_jobs",
+  {
+    id: bigint("id", { mode: "number" })
+      .generatedAlwaysAsIdentity()
+      .primaryKey(),
+    kind: text("kind").notNull(),
+    groupId: integer("group_id"),
+    payload: jsonb("payload")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    dedupeKey: text("dedupe_key"),
+    status: integrationJobStatusEnum("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    runAfter: timestamp("run_after").defaultNow().notNull(),
+    lockedAt: timestamp("locked_at"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    pendingDedupeUnique: uniqueIndex("integration_jobs_pending_dedupe_unique")
+      .on(table.dedupeKey)
+      .where(
+        sql`${table.status} = 'pending' AND ${table.dedupeKey} IS NOT NULL`,
+      ),
+    statusRunAfterIdx: index("integration_jobs_status_run_after_idx").on(
+      table.status,
+      table.runAfter,
     ),
   }),
 );
@@ -687,6 +893,7 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
   loanWitnesses: many(loanWitnesses),
   signingInvitations: many(loanSigningInvitations),
   transactions: many(transactions),
+  groupLoans: many(loanGroupLoans),
 }));
 
 export const loanContractsRelations = relations(
@@ -770,6 +977,15 @@ export const loanGroupsRelations = relations(loanGroups, ({ one, many }) => ({
   }),
   groupLoans: many(loanGroupLoans),
   members: many(loanGroupMembers),
+  rules: many(loanGroupRules),
+  calendar: one(groupCalendars, {
+    fields: [loanGroups.id],
+    references: [groupCalendars.groupId],
+  }),
+  telegram: one(groupTelegramSettings, {
+    fields: [loanGroups.id],
+    references: [groupTelegramSettings.groupId],
+  }),
 }));
 
 export const loanGroupLoansRelations = relations(loanGroupLoans, ({ one }) => ({
@@ -780,6 +996,10 @@ export const loanGroupLoansRelations = relations(loanGroupLoans, ({ one }) => ({
   loan: one(loans, {
     fields: [loanGroupLoans.loanId],
     references: [loans.id],
+  }),
+  addedBy: one(users, {
+    fields: [loanGroupLoans.addedByUserId],
+    references: [users.id],
   }),
 }));
 
@@ -793,6 +1013,58 @@ export const loanGroupMembersRelations = relations(
     user: one(users, {
       fields: [loanGroupMembers.userId],
       references: [users.id],
+    }),
+  }),
+);
+
+export const loanGroupRulesRelations = relations(loanGroupRules, ({ one }) => ({
+  group: one(loanGroups, {
+    fields: [loanGroupRules.groupId],
+    references: [loanGroups.id],
+  }),
+  createdBy: one(users, {
+    fields: [loanGroupRules.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const groupCalendarsRelations = relations(groupCalendars, ({ one }) => ({
+  group: one(loanGroups, {
+    fields: [groupCalendars.groupId],
+    references: [loanGroups.id],
+  }),
+}));
+
+export const groupTelegramSettingsRelations = relations(
+  groupTelegramSettings,
+  ({ one }) => ({
+    group: one(loanGroups, {
+      fields: [groupTelegramSettings.groupId],
+      references: [loanGroups.id],
+    }),
+    linkedBy: one(users, {
+      fields: [groupTelegramSettings.linkedByUserId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const telegramLinkTokensRelations = relations(
+  telegramLinkTokens,
+  ({ one }) => ({
+    group: one(loanGroups, {
+      fields: [telegramLinkTokens.groupId],
+      references: [loanGroups.id],
+    }),
+  }),
+);
+
+export const groupNotificationLogRelations = relations(
+  groupNotificationLog,
+  ({ one }) => ({
+    group: one(loanGroups, {
+      fields: [groupNotificationLog.groupId],
+      references: [loanGroups.id],
     }),
   }),
 );
