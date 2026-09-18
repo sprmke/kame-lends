@@ -42,11 +42,7 @@
 	let isCollapsed = $state(false);
 	let moreOpen = $state(false);
 	let pendingDockHref = $state<string | null>(null);
-	let standalone = $state(false);
-
-	$effect(() => {
-		standalone = isStandaloneDisplay();
-	});
+	const standalone = $derived(isStandaloneDisplay());
 
 	const caps = $derived(navCapabilities ?? DEFAULT_NAV_CAPABILITIES);
 	const nav = $derived(buildAppNav(caps));

@@ -38,16 +38,15 @@ async function columnExists(table: string, column: string): Promise<boolean> {
 
 export async function getMigrationStatus(): Promise<MigrationStatus> {
   const onDisk = listMigrationFiles();
-  let dbConnected = false;
   let applied: string[] = [];
   const missingColumns: string[] = [];
+  let dbConnected: boolean;
 
   try {
     const rows = await db.execute<{ filename: string }>(
       sql`SELECT filename FROM schema_migrations ORDER BY filename`,
     );
     applied = queryRows(rows).map((row) => row.filename);
-    dbConnected = true;
 
     if (!(await columnExists("loan_investors", "profit_type"))) {
       missingColumns.push("loan_investors.profit_type");
@@ -55,6 +54,7 @@ export async function getMigrationStatus(): Promise<MigrationStatus> {
     if (!(await columnExists("loan_investors", "profit_value"))) {
       missingColumns.push("loan_investors.profit_value");
     }
+    dbConnected = true;
   } catch {
     dbConnected = false;
   }

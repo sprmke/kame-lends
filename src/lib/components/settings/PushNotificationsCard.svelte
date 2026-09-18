@@ -26,13 +26,14 @@
 
 	let { initialPreferences }: Props = $props();
 
-	let prefs = $state<Preferences>({ ...initialPreferences });
+	// Local editable copy; reset when server prefs change.
+	// eslint-disable-next-line svelte/prefer-writable-derived -- form state synced from server load
+	let prefs = $state(initialPreferences);
+	$effect.pre(() => {
+		prefs = initialPreferences;
+	});
 	let pushState = $state<PushClientState | null>(null);
 	let busy = $state(false);
-
-	$effect(() => {
-		prefs = { ...initialPreferences };
-	});
 
 	$effect(() => {
 		void refreshPushState();

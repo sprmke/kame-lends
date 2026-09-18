@@ -67,7 +67,7 @@ async function main() {
   const sqlClient = postgres(databaseUrl, { max: 1 });
   const db = drizzle(sqlClient);
 
-  let calendarsQuery = db
+  const calendarsQuery = db
     .select({
       groupId: groupCalendars.groupId,
       googleCalendarId: groupCalendars.googleCalendarId,

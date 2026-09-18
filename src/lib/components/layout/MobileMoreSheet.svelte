@@ -26,11 +26,7 @@
 
 	let { open, onOpenChange, pathname, moreNavGroups, user, onNavNavigate }: Props = $props();
 
-	let standalone = $state(false);
-
-	$effect(() => {
-		standalone = isStandaloneDisplay();
-	});
+	const standalone = $derived(isStandaloneDisplay());
 
 	const moreNavItems = $derived(moreNavGroups.flatMap((group) => group.items));
 

@@ -77,12 +77,10 @@ async function main() {
     const events = res.data.items ?? [];
     listed += events.length;
     if (events.length === 0) {
-      remaining = false;
       break;
     }
     if (dryRun) {
       console.log(`Dry run: would delete ${events.length} event(s) this batch`);
-      remaining = events.length >= BATCH;
       break;
     }
     for (const event of events) {

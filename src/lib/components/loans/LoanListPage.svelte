@@ -84,9 +84,6 @@
 			emptyMessage?: string;
 			canCreate?: boolean;
 			canManage?: boolean;
-			userId?: string;
-			myInvestorIds?: number[];
-			myWitnessIds?: number[];
 			[key: string]: unknown;
 		};
 		scope: LoanListPageScope;

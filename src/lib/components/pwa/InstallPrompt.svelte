@@ -13,11 +13,7 @@
 	let { installAvailable, onInstall }: Props = $props();
 
 	let dismissed = $state(false);
-	let ios = $state(false);
-
-	$effect(() => {
-		ios = isIosSafari();
-	});
+	const ios = $derived(isIosSafari());
 
 	const visible = $derived(
 		!dismissed &&

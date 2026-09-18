@@ -288,7 +288,7 @@
 								onCheckedChange={(checked) =>
 									onTelegramChange({
 										connectViaLinkAfterCreate: Boolean(checked),
-										...(Boolean(checked) ? { chatId: '' } : {})
+										...(checked ? { chatId: '' } : {})
 									})}
 							/>
 							Connect via shared bot after create
