@@ -14,8 +14,10 @@
 	} from '$lib/components/common/DetailPageSkeleton.svelte';
 	import NavigationProgress from '$lib/components/common/NavigationProgress.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
+	import PwaProvider from '$lib/components/pwa/PwaProvider.svelte';
 	import { navigating, page } from '$app/state';
 	import { releaseStaleBodyScrollLock } from '$lib/composables/body-scroll-lock-release';
+	import { createDelayedFlag } from '$lib/composables/use-delayed-flag.svelte';
 	import { overlayStackIsOpen } from '$lib/composables/overlay-stack.svelte';
 	import { tick } from 'svelte';
 	import {
@@ -82,10 +84,14 @@
 		return null;
 	}
 
-	const showRouteSkeleton = $derived(
+	const routeSkeletonPending = $derived(
 		navigating.to?.url.pathname != null &&
 			navigating.from?.url.pathname !== navigating.to.url.pathname
 	);
+
+	const delayedRouteSkeleton = createDelayedFlag(() => routeSkeletonPending, 120);
+
+	const showRouteSkeleton = $derived(delayedRouteSkeleton.active);
 
 	const destinationPath = $derived(navigating.to?.url.pathname ?? '');
 
@@ -161,4 +167,5 @@
 	</PriceVisibilityShell>
 </Nav>
 
+<PwaProvider userId={data.session?.user?.id ?? null} />
 <Toaster />

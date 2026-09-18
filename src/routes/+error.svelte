@@ -28,11 +28,23 @@
 		crash: 'bg-destructive/15 text-destructive'
 	};
 
-	const Icon = $derived(icons[presentation.icon]);
 	const isPublicSigningLink = $derived(page.url.pathname.startsWith('/sign/'));
+	const isOffline = $derived(typeof navigator !== 'undefined' && !navigator.onLine);
+	const offlinePresentation = $derived(
+		isOffline
+			? {
+					title: "You're offline",
+					detail: 'Open a page you visited before, or retry when you are back online.',
+					icon: 'crash' as const,
+					actions: [{ kind: 'reload' as const, label: 'Retry', variant: 'default' as const }]
+				}
+			: null
+	);
+	const activePresentation = $derived(offlinePresentation ?? presentation);
+	const Icon = $derived(icons[activePresentation.icon]);
 </script>
 
-<svelte:head><title>{presentation.title}</title></svelte:head>
+<svelte:head><title>{activePresentation.title}</title></svelte:head>
 
 <div
 	class="flex min-h-[calc(100svh-7rem)] w-full flex-col items-center justify-center gap-6 px-4 py-10 sm:px-6"
@@ -46,18 +58,18 @@
 		style="box-shadow: var(--shadow-elevated)"
 	>
 		<div
-			class={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${iconTones[presentation.icon]}`}
+			class={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${iconTones[activePresentation.icon]}`}
 		>
 			<Icon class="h-6 w-6" />
 		</div>
 
 		<h1 class="mt-5 text-xl font-semibold tracking-tight text-balance sm:text-2xl">
-			{presentation.title}
+			{activePresentation.title}
 		</h1>
-		<p class="mt-2 text-sm text-pretty text-muted-foreground">{presentation.detail}</p>
+		<p class="mt-2 text-sm text-pretty text-muted-foreground">{activePresentation.detail}</p>
 
 		<div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-			{#each presentation.actions as action (action.label)}
+			{#each activePresentation.actions as action (action.label)}
 				{#if action.kind === 'link' && action.href}
 					<Button
 						href={action.href}
