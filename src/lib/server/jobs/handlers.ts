@@ -68,3 +68,39 @@ registerJobHandler("group.calendar.removeLoan", handleCalendarRemoveLoan);
 registerJobHandler("group.calendar.summaries", handleCalendarSummaries);
 registerJobHandler("group.calendar.delete", handleCalendarDelete);
 registerJobHandler("group.telegram.activity", handleTelegramActivity);
+
+async function handlePushActivity(job: JobRow) {
+  const event = (
+    job.payload as { event?: import("$lib/server/jobs/queue").ActivityEvent }
+  ).event;
+  if (!event?.loanId) return;
+
+  const { db } = await import("$lib/server/db");
+  const { loans } = await import("$lib/server/db/schema");
+  const { eq } = await import("drizzle-orm");
+  const { enqueuePushForLoanActivity } =
+    await import("$lib/server/push/activity");
+
+  const loan = await db.query.loans.findFirst({
+    where: eq(loans.id, event.loanId),
+    with: {
+      borrower: true,
+      loanInvestors: { with: { investor: true } },
+      loanWitnesses: { with: { witness: true } },
+    },
+  });
+  if (!loan) return;
+
+  const emails: string[] = [];
+  if (loan.borrower?.email) emails.push(loan.borrower.email);
+  for (const li of loan.loanInvestors) {
+    if (li.investor?.email) emails.push(li.investor.email);
+  }
+  for (const lw of loan.loanWitnesses) {
+    if (lw.witness?.email) emails.push(lw.witness.email);
+  }
+
+  await enqueuePushForLoanActivity(loan.userId, emails, event);
+}
+
+registerJobHandler("push.user.activity", handlePushActivity);

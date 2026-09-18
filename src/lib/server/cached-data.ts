@@ -31,7 +31,9 @@ export type LoanListScope =
   "owned" | "investments" | "borrowed" | "commissioned" | "witnessed" | "all";
 
 const listRelations = {
-  borrower: { columns: { borrowerUserId: true, email: true } },
+  borrower: {
+    columns: { id: true, name: true, borrowerUserId: true, email: true },
+  },
   loanInvestors: {
     columns: {
       id: true,

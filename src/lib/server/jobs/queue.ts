@@ -12,7 +12,8 @@ export type IntegrationJobKind =
   | "group.calendar.removeLoan"
   | "group.calendar.summaries"
   | "group.calendar.delete"
-  | "group.telegram.activity";
+  | "group.telegram.activity"
+  | "push.user.activity";
 
 export type ActivityEvent = {
   type: string;
@@ -79,11 +80,18 @@ export async function enqueueGroupLoanChanged(
     }
     if (options.activity) {
       const updatedAt = options.activity.updatedAt ?? new Date().toISOString();
+      const event = { ...options.activity, loanId, updatedAt };
       await enqueueJob({
         kind: "group.telegram.activity",
         groupId,
-        payload: { event: { ...options.activity, loanId, updatedAt } },
+        payload: { event },
         dedupeKey: `group.telegram.activity:${groupId}:${options.activity.type}:${options.activity.entityId}:${updatedAt}`,
+      });
+      await enqueueJob({
+        kind: "push.user.activity",
+        groupId,
+        payload: { event },
+        dedupeKey: `push.user.activity:${groupId}:${options.activity.type}:${options.activity.entityId}:${updatedAt}`,
       });
     }
   }

@@ -141,6 +141,21 @@ export async function sendLoanCreatedSigningEmails(input: {
     input.recipients,
   );
 
+  try {
+    const { sendSigningPushForEmails } =
+      await import("$lib/server/push/signing");
+    await sendSigningPushForEmails({
+      loanId: input.loanId,
+      loanName: input.loanName,
+      emails: groups.map((group) => group.email),
+    });
+  } catch (error) {
+    console.error("[push] loan-created fanout failed", {
+      loanId: input.loanId,
+      error,
+    });
+  }
+
   if (!isTransactionalEmailConfigured()) {
     return {
       sent: 0,
