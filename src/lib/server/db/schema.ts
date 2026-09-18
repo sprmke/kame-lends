@@ -545,6 +545,72 @@ export const telegramLinkTokens = pgTable(
   }),
 );
 
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    deviceLabel: text("device_label"),
+    failureCount: integer("failure_count").notNull().default(0),
+    disabledAt: timestamp("disabled_at"),
+    lastSuccessAt: timestamp("last_success_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    endpointUnique: unique("push_subscriptions_endpoint_unique").on(
+      table.endpoint,
+    ),
+    userIdIdx: index("push_subscriptions_user_id_idx").on(table.userId),
+  }),
+);
+
+export const pushNotificationLog = pgTable(
+  "push_notification_log",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    fingerprint: text("fingerprint").notNull(),
+    kind: text("kind").notNull(),
+    status: groupNotificationStatusEnum("status").notNull().default("claimed"),
+    attempts: integer("attempts").notNull().default(0),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    sentAt: timestamp("sent_at"),
+  },
+  (table) => ({
+    userFingerprintUnique: unique(
+      "push_notification_log_user_fingerprint_unique",
+    ).on(table.userId, table.fingerprint),
+    statusCreatedAtIdx: index("push_notification_log_status_created_at_idx").on(
+      table.status,
+      table.createdAt,
+    ),
+  }),
+);
+
+export const userPushPreferences = pgTable("user_push_preferences", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  notifyUpcoming: boolean("notify_upcoming").notNull().default(true),
+  reminderDays: integer("reminder_days").array().notNull().default([3, 1]),
+  notifyDueToday: boolean("notify_due_today").notNull().default(true),
+  notifyOverdue: boolean("notify_overdue").notNull().default(true),
+  notifyActivity: boolean("notify_activity").notNull().default(true),
+  notifySigning: boolean("notify_signing").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const groupNotificationLog = pgTable(
   "group_notification_log",
   {
