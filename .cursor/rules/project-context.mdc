@@ -13,6 +13,7 @@ alwaysApply: true
 4. Loan math / domain → **`loan-domain`** skill
 5. Modals / sheets → **`overlay-performance`** skill
 6. Mobile overflow menus / sheets → **`mobile-responsive`** skill + **`mobile-native-ui.mdc`**
+7. PWA / offline / push → **`pwa`** skill + **`pwa.mdc`** · `docs/architecture/pwa.md`
 
 ## Stack (authoritative)
 

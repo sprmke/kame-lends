@@ -4,25 +4,25 @@
  *   bun run dev:backfill-group-calendar-colors -- --dry-run
  *   bun run dev:backfill-group-calendar-colors -- --confirm
  *   bun run dev:backfill-group-calendar-colors -- --confirm --group-id=3
+ *   bun run dev:backfill-group-calendar-colors -- --dry-run --db=prod
  *
- * Requires GOOGLE_SERVICE_ACCOUNT_* and DATABASE_URL in .env.local.
+ * Requires GOOGLE_SERVICE_ACCOUNT_* and a database URL in .env.local.
+ * Default --db=app uses DATABASE_URL (often local Docker). Group calendars on Neon:
+ * use --db=prod or --db=vercel.
  */
 import { config } from "dotenv";
 import { eq, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { google, type calendar_v3 } from "googleapis";
 import postgres from "postgres";
-import { envForScript } from "./env-local.ts";
+import {
+  databaseUrlHostLabel,
+  envForScript,
+  parseScriptDatabaseTarget,
+  resolveScriptDatabaseUrl,
+} from "./env-local.ts";
 
 config({ path: ".env.local" });
-
-function resolveDatabaseUrl(env: Record<string, string | undefined>): string {
-  const url = env.DATABASE_URL?.trim();
-  if (url && !url.includes("...") && !url.includes("<")) return url;
-  throw new Error(
-    "DATABASE_URL is required in .env.local (or the environment).",
-  );
-}
 
 function parseGroupId(): number | null {
   const arg = process.argv.find((a) => a.startsWith("--group-id="));
@@ -42,6 +42,11 @@ async function main() {
   }
 
   const env = envForScript();
+  const dbTarget = parseScriptDatabaseTarget();
+  const databaseUrl = resolveScriptDatabaseUrl(env, dbTarget);
+  console.log(
+    `Database: ${databaseUrlHostLabel(databaseUrl)} (--db=${dbTarget})`,
+  );
 
   const { readGoogleServiceAccountCredentials, withGoogleCalendarRetry } =
     await import("../../src/lib/server/google-calendar-config.ts");
@@ -59,7 +64,7 @@ async function main() {
   const { groupCalendars, loanGroups } =
     await import("../../src/lib/server/db/schema.ts");
 
-  const sqlClient = postgres(resolveDatabaseUrl(env), { max: 1 });
+  const sqlClient = postgres(databaseUrl, { max: 1 });
   const db = drizzle(sqlClient);
 
   let calendarsQuery = db
@@ -72,12 +77,25 @@ async function main() {
     .innerJoin(loanGroups, eq(loanGroups.id, groupCalendars.groupId))
     .where(isNotNull(groupCalendars.googleCalendarId));
 
-  const calendarRows = groupIdFilter
-    ? (await calendarsQuery).filter((r) => r.groupId === groupIdFilter)
-    : await calendarsQuery;
+  let calendarRows;
+  try {
+    calendarRows = groupIdFilter
+      ? (await calendarsQuery).filter((r) => r.groupId === groupIdFilter)
+      : await calendarsQuery;
+  } catch (error) {
+    await sqlClient.end({ timeout: 5 });
+    if (isLocalConnectionRefused(error, databaseUrl)) {
+      throw new Error(
+        "Could not connect to local Postgres. Start Docker (`bun run db:local:start`) or pass --db=prod / --db=vercel for hosted Neon.",
+        { cause: error },
+      );
+    }
+    throw error;
+  }
 
   if (calendarRows.length === 0) {
     console.log("No group calendars found.");
+    await sqlClient.end({ timeout: 5 });
     return;
   }
 
@@ -167,6 +185,17 @@ async function main() {
   );
 
   await sqlClient.end({ timeout: 5 });
+}
+
+function isLocalConnectionRefused(
+  error: unknown,
+  databaseUrl: string,
+): boolean {
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? String(error.code)
+      : "";
+  return code === "ECONNREFUSED" && /127\.0\.0\.1|localhost/.test(databaseUrl);
 }
 
 main().catch((error) => {

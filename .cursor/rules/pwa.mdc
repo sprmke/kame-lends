@@ -1,0 +1,38 @@
+---
+description: PWA — service worker, offline cache, install/update prompts, push
+alwaysApply: true
+---
+
+# PWA rule
+
+Canonical detail: **`docs/architecture/pwa.md`**. Skill: **`.agent/skills/pwa/SKILL.md`**.
+
+## Service worker
+
+- **`src/service-worker.ts` is worker-only** — never import `$lib/server/*` or DOM modules. Shared constants live in **`src/lib/pwa/shared.ts`**.
+- **No default fetch handler for POST/PUT/DELETE** — only intercept non-GET when offline (503 JSON). Online mutations pass through.
+- Registration is manual via **`src/lib/pwa/register.ts`** with `kit.serviceWorker.register = false`. Never auto-reload; use **`UpdatePrompt`**.
+
+## Offline cache allowlist
+
+- **`OFFLINE_API_READS` in `shared.ts` is canonical.** Adding a root caches borrower/investor PII on disk, unencrypted at rest.
+- **`normalizeDataCacheKey`** must strip `x-sveltekit-invalidated` for `__data.json` cache keys.
+
+## Identity isolation
+
+- Cache names are `kl-*`. **`purgeOfflineState()`** wipes `kl-pages` and `kl-data` on sign-out and account switch.
+- Update purge when adding new per-viewer offline stores.
+
+## Push
+
+- Subscriptions in **`push_subscriptions`**; dedupe via **`push_notification_log`** (`onConflictDoNothing` before send).
+- **`enablePush()`** requires a user gesture. Hide device opt-in on iOS until installed (`needsInstallFirst`).
+- New notification kinds need a preference flag and a documented trigger path.
+
+## Precache budget
+
+- **`scripts/pwa/precache-budget.json`** is enforced by CI after `build`. Fix size by code-splitting, not by raising the budget blindly.
+
+## Kill-switch
+
+- **`/api/pwa/version`** returns `{ disabled, minVersion }` with `cache-control: no-store`. SW checks must not self-destruct on fetch failure.

@@ -14,6 +14,7 @@ Whenever you **implement or materially change** behavior (features, routes, vali
 | Change type | Update |
 | ----------- | ------ |
 | Architecture, routes, env, API, data model | **`docs/PROJECT.md`** |
+| PWA, offline cache, push, install/update UX | **`docs/architecture/pwa.md`** |
 | Page/section UX in `src/` | **`docs/guides/routes/*.md`** (`route-guides` skill) |
 | Ops / backup / cutover | **`docs/archive/operations/`** |
 | Agent path pointers | **`.cursor/rules/project-context.mdc`** |

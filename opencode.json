@@ -9,6 +9,7 @@
     ".cursor/rules/git-commits.mdc",
     ".cursor/rules/deployment.mdc",
     ".cursor/rules/route-guides.mdc",
+    ".cursor/rules/pwa.mdc",
     ".cursor/rules/tech-stack.mdc",
     "CLAUDE.md"
   ],

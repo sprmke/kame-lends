@@ -26,7 +26,7 @@ bun run setup:ai-tooling
 
 Edit `.agent/skills/<name>/SKILL.md` — do not edit symlinked `.claude/skills/` paths.
 
-Key domain skills: `loan-domain`, `sveltekit-conventions`, `drizzle-neon`, `auth-js-sveltekit`, `pdf-export`, `google-calendar-integration`.
+Key domain skills: `loan-domain`, `sveltekit-conventions`, `drizzle-neon`, `auth-js-sveltekit`, `pdf-export`, `google-calendar-integration`, `pwa`.
 
 ## Hooks (`.claude/settings.json`)
 

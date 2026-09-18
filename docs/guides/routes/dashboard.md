@@ -19,9 +19,9 @@ While summary loads, `DashboardSummarySkeleton` renders the page chrome: `PageHe
 
 **Analytics layout:** When the user has at least one group (`SHOW_GROUPS_UI` and non-empty `groupsIndex`), **Your groups** (`DashboardGroupsCard`, copy from `PAGE_DESCRIPTIONS.dashboardGroups`) sits in a two-column row beside **Top investors** (`CurrencyBarChart`). Cashflow (when transactions UI is on) stays full width above that row. Groups no longer appear under **Needs attention**.
 
-**New menu:** `PageHeader` **New** dropdown matches for every signed-in user: Loan, Bank loan, Lender, Borrower, Witness, and Transaction when enabled. Sidebar is the same for party-only and workspace-owner accounts: Dashboard, Groups, **Loans**, **People**, **Tools** (Bank Loans), Settings. Investing / borrowed / witnessed lists live on **Loans** scope tabs (`/loans?scope=investing`, etc.).
+**New menu:** `PageHeader` **New** dropdown matches for every signed-in user: Loan, Bank loan, Lender, Borrower, Witness, and Transaction when enabled. Sidebar is the same for party-only and workspace-owner accounts: Dashboard, Groups, **Loans**, **People**, **Tools** (Bank Loans), Settings. Invested / borrowed / witnessed lists live on **Loans** scope tabs (`/loans?scope=investing`, etc.).
 
-On client navigation to `/dashboard`, the layout swaps in `DashboardSkeleton` (summary + charts) until navigation completes. `NavigationProgress` runs on every client-side route change.
+On client navigation to `/dashboard`, the layout swaps in `DashboardSkeleton` (summary + charts) after ~120ms if the route is still loading (fast tab taps keep the current page visible). `NavigationProgress` runs on every client-side route change. The phone dock highlights the tapped tab immediately (pending tap + in-flight navigation) so rapid switches stay in sync with the page.
 
 List pages (`/loans`, `/investments`, `/borrowed`, `/witnessed`, `/investors`, `/borrowers`, `/witnesses`, `/debts`, `/transactions`) share `ListPageToolbar`: search and controls on one row on phone (view toggle, module-specific inline filters, Clear All when filters are active).
 

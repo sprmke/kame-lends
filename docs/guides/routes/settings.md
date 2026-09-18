@@ -12,6 +12,8 @@ Account summary card (title **Account**, name / email / **Roles** in a compact g
 All signed-in users get:
 
 - **Payment methods** — each user manages their own bank/QR rows.
+- **Install app** — instructions for Add to Home Screen (iOS) or browser install (Chromium). Hidden when already installed.
+- **Notifications** — per-device Web Push opt-in, reminder/activity/signing preferences, **Send test** when subscribed.
 - **Data & maintenance** — sync loan due dates, fix received payments, **Download my data** (`GET /api/backup?download=true`).
 
 Platform owner email only:
