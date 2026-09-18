@@ -52,7 +52,7 @@
 
 	const pendingBadgeClass = $derived(
 		cn(
-			'gap-1 border-amber-500/45 text-[10px] text-amber-800 dark:text-amber-300',
+			'gap-1 border-destructive/45 text-[10px] text-destructive dark:text-red-400',
 			className
 		)
 	);
@@ -89,7 +89,7 @@
 			>
 				<Badge
 					variant="outline"
-					class={cn(pendingBadgeClass, 'transition-colors hover:bg-amber-500/10')}
+					class={cn(pendingBadgeClass, 'transition-colors hover:bg-destructive/10')}
 				>
 					<PenLine class="size-3 shrink-0" aria-hidden="true" />
 					Pending sign

@@ -78,5 +78,14 @@ export async function downloadLoanContractPdf(loanId: number): Promise<void> {
   const blob = await response.blob();
   const disposition = response.headers.get("Content-Disposition");
   const match = disposition?.match(/filename="([^"]+)"/);
-  downloadBlob(blob, match?.[1] ?? `loan-contract-${loanId}.pdf`);
+  const filename = match?.[1] ?? `loan-contract-${loanId}.pdf`;
+  const { shareOrDownloadFile } = await import("$lib/pwa/share");
+  const outcome = await shareOrDownloadFile({
+    blob,
+    filename,
+    title: filename,
+  });
+  if (outcome === "failed") {
+    downloadBlob(blob, filename);
+  }
 }

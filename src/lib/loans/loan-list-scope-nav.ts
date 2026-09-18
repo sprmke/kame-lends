@@ -21,7 +21,7 @@ export const LOAN_SCOPE_TABS: LoanScopeTab[] = [
   },
   {
     param: "investing",
-    label: "Investing",
+    label: "Invested",
     listScope: "investments",
     pageScope: "investments",
   },

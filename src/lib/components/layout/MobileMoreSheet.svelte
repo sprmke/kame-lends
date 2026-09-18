@@ -5,7 +5,9 @@
 	import ThemeToggle from '$lib/components/theme/ThemeToggle.svelte';
 	import { isNavActive, type AppNavGroup } from '$lib/nav/app-nav';
 	import { cn } from '$lib/utils';
-	import { LogOut } from 'lucide-svelte';
+	import SignOutForm from '$lib/components/common/SignOutForm.svelte';
+	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
+	import { Download, LogOut } from 'lucide-svelte';
 
 	interface UserInfo {
 		name?: string | null;
@@ -19,9 +21,16 @@
 		pathname: string;
 		moreNavGroups: AppNavGroup[];
 		user: UserInfo;
+		onNavNavigate?: (href: string) => void;
 	}
 
-	let { open, onOpenChange, pathname, moreNavGroups, user }: Props = $props();
+	let { open, onOpenChange, pathname, moreNavGroups, user, onNavNavigate }: Props = $props();
+
+	let standalone = $state(false);
+
+	$effect(() => {
+		standalone = isStandaloneDisplay();
+	});
 
 	const moreNavItems = $derived(moreNavGroups.flatMap((group) => group.items));
 
@@ -68,7 +77,8 @@
 								{@const active = isNavActive(pathname, item.href)}
 								<a
 									href={item.href}
-									data-sveltekit-preload-data="tap"
+									data-sveltekit-preload-data="off"
+									data-sveltekit-noscroll
 									aria-current={active ? 'page' : undefined}
 									class={cn(
 										'native-press flex min-h-11 w-full items-center gap-2.5 px-4 py-2 text-[13px] font-medium leading-snug transition-colors',
@@ -76,7 +86,10 @@
 											? 'bg-primary/10 text-primary'
 											: 'text-foreground hover:bg-muted/60 active:bg-muted'
 									)}
-									onclick={() => onOpenChange(false)}
+									onclick={() => {
+										onNavNavigate?.(item.href);
+										onOpenChange(false);
+									}}
 								>
 									<item.icon class="size-4 shrink-0 opacity-90" strokeWidth={1.75} />
 									<span class="min-w-0 truncate">{item.title}</span>
@@ -125,9 +138,20 @@
 						/>
 					</div>
 
+					{#if !standalone}
+						<a
+							href="/settings"
+							class="native-press flex min-h-11 w-full items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium"
+							onclick={() => onOpenChange(false)}
+						>
+							<Download class="size-4 shrink-0" />
+							Install app
+						</a>
+					{/if}
+
 					<ThemeToggle variant="segmented" class="w-full shadow-none" />
 
-					<form method="POST" action="/auth/signout?/signOut">
+					<SignOutForm>
 						<button
 							type="submit"
 							class="native-press flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
@@ -135,7 +159,7 @@
 							<LogOut class="size-3.5 shrink-0" strokeWidth={1.75} />
 							Sign out
 						</button>
-					</form>
+					</SignOutForm>
 				</div>
 			</div>
 		</div>

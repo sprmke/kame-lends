@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { page } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import { cn } from '$lib/utils';
 	import BrandIcon from '$lib/components/BrandIcon.svelte';
 	import Logo from '$lib/components/Logo.svelte';
@@ -12,15 +12,18 @@
 	import MobileTopBar from '$lib/components/layout/MobileTopBar.svelte';
 	import MobileHeroActions from '$lib/components/layout/MobileHeroActions.svelte';
 	import MobileMoreSheet from '$lib/components/layout/MobileMoreSheet.svelte';
+	import SignOutForm from '$lib/components/common/SignOutForm.svelte';
 	import {
 		buildAppNav,
 		DEFAULT_NAV_CAPABILITIES,
 		isNavActive,
 		resolveMobileDockHighlight,
+		resolveMobileDockPathname,
 		type NavCapabilities
 	} from '$lib/nav/app-nav';
 	import { THEME_COLOR_DASHBOARD } from '$lib/theme/preferences';
-	import { ChevronLeft, ChevronRight, LogOut } from 'lucide-svelte';
+	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
+	import { ChevronLeft, ChevronRight, Download, LogOut } from 'lucide-svelte';
 
 	interface UserInfo {
 		name?: string | null;
@@ -38,22 +41,37 @@
 
 	let isCollapsed = $state(false);
 	let moreOpen = $state(false);
+	let pendingDockHref = $state<string | null>(null);
+	let standalone = $state(false);
+
+	$effect(() => {
+		standalone = isStandaloneDisplay();
+	});
 
 	const caps = $derived(navCapabilities ?? DEFAULT_NAV_CAPABILITIES);
 	const nav = $derived(buildAppNav(caps));
 
 	const pathname = $derived(page.url.pathname);
+	const dockPathname = $derived(
+		resolveMobileDockPathname(pathname, navigating.to?.url.pathname, pendingDockHref)
+	);
 	const isLandingPage = $derived(!user && pathname === '/');
 	const isSignInPage = $derived(!user && pathname === '/signin');
 	const isSignPage = $derived(pathname.startsWith('/sign/'));
 	const isPublicChromeless = $derived(isLandingPage || isSignInPage || isSignPage);
 
 	const { moreActive } = $derived(
-		resolveMobileDockHighlight(pathname, nav.primaryTabs, nav.moreNavItems, moreOpen)
+		resolveMobileDockHighlight(dockPathname, nav.primaryTabs, nav.moreNavItems, moreOpen)
 	);
+
+	function handleDockNavigate(href: string) {
+		pendingDockHref = href;
+		moreOpen = false;
+	}
 
 	$effect(() => {
 		void pathname;
+		pendingDockHref = null;
 		moreOpen = false;
 	});
 
@@ -83,19 +101,21 @@
 	</MobileTopBar>
 
 	<MobileTabBar
-		{pathname}
+		pathname={dockPathname}
 		primaryTabs={nav.primaryTabs}
 		{moreActive}
 		{moreOpen}
 		onMoreClick={() => (moreOpen = true)}
+		onTabNavigate={handleDockNavigate}
 	/>
 
 	<MobileMoreSheet
 		open={moreOpen}
 		onOpenChange={(open) => (moreOpen = open)}
-		{pathname}
+		pathname={dockPathname}
 		moreNavGroups={nav.sidebarGroups}
 		{user}
+		onNavNavigate={handleDockNavigate}
 	/>
 
 	<aside
@@ -182,6 +202,18 @@
 			{/each}
 		</nav>
 		<div class="border-t border-border/50 p-4">
+			{#if !standalone}
+				<a
+					href="/settings"
+					class={cn(
+						'mb-3 flex min-h-11 items-center rounded-xl text-sm font-medium transition-all duration-200 hover:bg-accent',
+						isCollapsed ? 'justify-center px-2' : 'gap-3 px-3'
+					)}
+				>
+					<Download class="h-4 w-4 shrink-0" />
+					{#if !isCollapsed}<span>Install app</span>{/if}
+				</a>
+			{/if}
 			<div class={cn('mb-3', isCollapsed && 'flex justify-center')}>
 				<ThemeToggle variant={isCollapsed ? 'icon' : 'segmented'} class={isCollapsed ? undefined : 'w-full'} />
 			</div>
@@ -209,12 +241,12 @@
 					<DropdownMenu.Label class="font-semibold">My Account</DropdownMenu.Label>
 					<DropdownMenu.Separator />
 					<DropdownMenu.Item>
-						<form method="POST" action="/auth/signout?/signOut" class="w-full">
+						<SignOutForm>
 							<button type="submit" class="flex w-full items-center gap-2.5 text-destructive">
 								<LogOut class="h-4 w-4" />
 								Sign out
 							</button>
-						</form>
+						</SignOutForm>
 					</DropdownMenu.Item>
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>

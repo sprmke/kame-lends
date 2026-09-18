@@ -198,6 +198,17 @@ export function isNavActive(pathname: string, href: string): boolean {
   return pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
 }
 
+/** Mobile dock highlight: in-flight navigation and last tap beat the settled route. */
+export function resolveMobileDockPathname(
+  pathname: string,
+  navigatingToPathname: string | null | undefined,
+  pendingHref: string | null,
+): string {
+  if (navigatingToPathname) return navigatingToPathname;
+  if (pendingHref) return pendingHref;
+  return pathname;
+}
+
 /** One dock highlight at a time: primary shortcut, or More when the sheet is open / route is sheet-only. */
 export function resolveMobileDockHighlight(
   pathname: string,

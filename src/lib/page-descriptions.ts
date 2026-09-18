@@ -21,7 +21,7 @@ export const PAGE_DESCRIPTIONS = {
     investments: "Loans where you are an investor.",
     borrowed: "Loans where you are the borrower.",
     commissioned:
-      "Your commission across loans you invest in, borrow on, or witness. Rate is % of principal; fixed is a flat amount.",
+      "Your commission across loans you invest in, borrow on, or witness.",
     witnessed: "Loans where you are a witness.",
     group: "",
   },

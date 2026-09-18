@@ -7,6 +7,8 @@
 	import SyncLoanDueDatesButton from '$lib/components/common/SyncLoanDueDatesButton.svelte';
 	import PaymentMethodsManager from '$lib/components/settings/PaymentMethodsManager.svelte';
 	import PartyIdentityDocumentsManager from '$lib/components/settings/PartyIdentityDocumentsManager.svelte';
+	import InstallAppCard from '$lib/components/settings/InstallAppCard.svelte';
+	import PushNotificationsCard from '$lib/components/settings/PushNotificationsCard.svelte';
 	import { formatAccountRoles } from '$lib/account-roles';
 	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 
@@ -45,6 +47,9 @@
 	{/if}
 
 	<PaymentMethodsManager initialMethods={data.paymentMethods ?? []} />
+
+	<InstallAppCard />
+	<PushNotificationsCard initialPreferences={data.pushPreferences} />
 
 	<Card.Root>
 		<Card.Header>

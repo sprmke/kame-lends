@@ -144,7 +144,7 @@ export function createLoanListDateRange(
     applyDateRangeToUrl();
   }
 
-  // Default month range when params are missing (Managing / Investing lists).
+  // Default month range when params are missing (Managing / Invested lists).
   $effect(() => {
     if (!enabled) return;
     if (isAllTimeDateRange(getPage().url)) return;

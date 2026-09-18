@@ -9,17 +9,24 @@ import {
 } from "$lib/server/party-profile";
 import { accountRolesFromCapabilities } from "$lib/account-roles";
 import { isWorkspaceOwnerEmail } from "$lib/server/workspace-owner";
+import { getUserPushPreferences } from "$lib/server/push/preferences";
 
 export const load: PageServerLoad = async (event) => {
   const session = requireUserSession(event);
   const userId = session.user.id;
-  const [navCapabilities, partyActivity, paymentMethods, hasPartyLinks] =
-    await Promise.all([
-      getNavCapabilities(userId),
-      loadPartyActivityRoles(userId, session.user.email),
-      listPaymentMethodsForUser(userId),
-      hasPartyUserCrmLinks(userId),
-    ]);
+  const [
+    navCapabilities,
+    partyActivity,
+    paymentMethods,
+    hasPartyLinks,
+    pushPreferences,
+  ] = await Promise.all([
+    getNavCapabilities(userId),
+    loadPartyActivityRoles(userId, session.user.email),
+    listPaymentMethodsForUser(userId),
+    hasPartyUserCrmLinks(userId),
+    getUserPushPreferences(userId),
+  ]);
   const identityDocuments = hasPartyLinks
     ? await loadPartyUserIdentityDocuments(userId)
     : { validIdUrl: null, eSignatureUrl: null };
@@ -39,5 +46,6 @@ export const load: PageServerLoad = async (event) => {
     paymentMethods,
     hasPartyLinks,
     identityDocuments,
+    pushPreferences,
   };
 };

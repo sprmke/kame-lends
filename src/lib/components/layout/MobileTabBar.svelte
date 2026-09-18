@@ -12,6 +12,7 @@
 		/** Sheet open state for aria-expanded only. */
 		moreOpen?: boolean;
 		onMoreClick: () => void;
+		onTabNavigate?: (href: string) => void;
 	}
 
 	let {
@@ -19,7 +20,8 @@
 		primaryTabs,
 		moreActive = false,
 		moreOpen = false,
-		onMoreClick
+		onMoreClick,
+		onTabNavigate
 	}: Props = $props();
 </script>
 
@@ -30,7 +32,7 @@
 >
 	<div
 		class={cn(
-			'mobile-floating-dock pointer-events-auto mx-auto flex items-stretch rounded-[1.75rem] border border-border/40 bg-background/88 py-1 ring-1 ring-black/[0.04] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/72 dark:ring-white/[0.08]',
+			'mobile-floating-dock pointer-events-auto mx-auto flex items-stretch rounded-[1.75rem] border border-border/40 bg-background py-1 ring-1 ring-black/[0.04] dark:ring-white/[0.08]',
 			primaryTabs.length > 0 ? 'w-full max-w-lg' : 'w-auto min-w-[4.5rem] px-1'
 		)}
 	>
@@ -44,8 +46,8 @@
 				{@const active = isNavActive(pathname, item.href) && !moreActive}
 				<a
 					href={item.href}
-					data-sveltekit-preload-data="tap"
-					data-sveltekit-preload-code="hover"
+					data-sveltekit-preload-data="off"
+					data-sveltekit-noscroll
 					aria-current={active ? 'page' : undefined}
 					class={cn(
 						'native-press relative z-[1] flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[1rem] px-1 py-1 transition-colors duration-150',
@@ -53,6 +55,7 @@
 							? 'bg-primary text-primary-foreground shadow-[var(--shadow-native-primary)]'
 							: 'text-muted-foreground'
 					)}
+					onclick={() => onTabNavigate?.(item.href)}
 				>
 					<item.icon class="size-[18px] shrink-0" strokeWidth={1.75} />
 					<span

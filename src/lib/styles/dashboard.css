@@ -108,9 +108,11 @@ html.dashboard-shell [data-slot="sheet-content"] {
   background-color: var(--popover);
 }
 
-/* Skip painting the list while an overlay is open so the table cannot show through a janky fade. */
-html.dashboard-shell.overlay-open .app-shell {
-  content-visibility: hidden;
+/* Desktop dialogs only: skip painting the list while open so the table cannot show through a janky fade. Mobile sheets keep page content visible under the solid scrim. */
+@media (width >= 1024px) {
+  html.dashboard-shell.overlay-open .app-shell {
+    content-visibility: hidden;
+  }
 }
 
 html.dashboard-shell.overlay-open aside,

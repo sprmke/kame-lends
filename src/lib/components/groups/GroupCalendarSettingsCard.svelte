@@ -67,9 +67,12 @@
 			toast.error('No calendar link yet');
 			return;
 		}
-		void navigator.clipboard.writeText(url).then(
-			() => toast.success('Subscribe link copied'),
-			() => toast.error('Could not copy link')
+		void import('$lib/pwa/share').then(({ shareOrCopy }) =>
+			shareOrCopy({ title: 'Calendar subscribe link', url }).then((result) => {
+				if (result === 'shared') toast.success('Link shared');
+				else if (result === 'copied') toast.success('Subscribe link copied');
+				else toast.error('Could not share link');
+			})
 		);
 	}
 </script>

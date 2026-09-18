@@ -2,7 +2,9 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
-	import { CheckCircle2, Clock, Link2 } from 'lucide-svelte';
+	import { toast } from '$lib/toast';
+	import { CheckCircle2, Clock, Link2, Share2 } from 'lucide-svelte';
+	import { buildAuthenticatedSigningUrl } from '$lib/loan-signing';
 	import { getSigningPartyRoleLabel } from '$lib/loan-signing-consent';
 	import type { SigningInvitationSummary } from '$lib/loan-signing';
 	import { formatDate } from '$lib/format';
@@ -17,6 +19,18 @@
 	let { invitations, loanId, viewerInvitationId = null, variant = 'card' }: Props = $props();
 
 	const signedCount = $derived(invitations.filter((item) => item.signedAt).length);
+
+	async function shareSigningLink() {
+		const url = buildAuthenticatedSigningUrl(loanId, window.location.origin);
+		const { shareOrCopy } = await import('$lib/pwa/share');
+		const result = await shareOrCopy({
+			title: 'Contract signing link',
+			url
+		});
+		if (result === 'shared') toast.success('Link shared');
+		else if (result === 'copied') toast.success('Signing link copied');
+		else toast.error('Could not share link');
+	}
 </script>
 
 {#snippet invitationList(listClass: string)}
@@ -72,7 +86,19 @@
 						<Link2 class="h-4 w-4 text-primary" />
 						Contract signing
 					</Card.Title>
-					<Badge variant="secondary">{signedCount} of {invitations.length} signed</Badge>
+					<div class="flex flex-wrap items-center gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							class="touch-target"
+							onclick={() => void shareSigningLink()}
+						>
+							<Share2 class="mr-1 h-3.5 w-3.5" />
+							Share link
+						</Button>
+						<Badge variant="secondary">{signedCount} of {invitations.length} signed</Badge>
+					</div>
 				</div>
 			</Card.Header>
 			<Card.Content class="pt-0">

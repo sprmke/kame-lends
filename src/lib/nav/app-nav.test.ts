@@ -7,6 +7,7 @@ import {
   buildSidebarGroups,
   flattenNavItems,
   resolveMobileDockHighlight,
+  resolveMobileDockPathname,
 } from "$lib/nav/app-nav";
 
 const STANDARD_SIDEBAR_GROUP_IDS = [
@@ -112,6 +113,30 @@ describe("buildAppNav", () => {
       "loans",
       "settings",
     ]);
+  });
+});
+
+describe("resolveMobileDockPathname", () => {
+  it("prefers in-flight navigation over the settled route", () => {
+    expect(resolveMobileDockPathname("/dashboard", "/loans", null)).toBe(
+      "/loans",
+    );
+  });
+
+  it("prefers pending tap over the settled route when not navigating", () => {
+    expect(resolveMobileDockPathname("/dashboard", null, "/settings")).toBe(
+      "/settings",
+    );
+  });
+
+  it("prefers in-flight navigation over a stale pending tap", () => {
+    expect(resolveMobileDockPathname("/dashboard", "/loans", "/settings")).toBe(
+      "/loans",
+    );
+  });
+
+  it("falls back to the settled route", () => {
+    expect(resolveMobileDockPathname("/loans", null, null)).toBe("/loans");
   });
 });
 

@@ -9,3 +9,8 @@ export function publicAppUrl(): string {
 export function publicContractDisputeVenue(): string {
   return env.PUBLIC_CONTRACT_DISPUTE_VENUE ?? "Pampanga, Philippines";
 }
+
+export function publicVapidKey(): string | undefined {
+  const key = env.PUBLIC_VAPID_PUBLIC_KEY?.trim();
+  return key || undefined;
+}
