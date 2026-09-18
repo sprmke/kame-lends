@@ -9,6 +9,14 @@ const config = {
       runtime: "nodejs22.x",
       regions: ["sin1"],
     }),
+    serviceWorker: {
+      register: false,
+    },
+    version: {
+      // Must stay deterministic across config reads during one build (no Date.now()).
+      name: process.env.VERCEL_GIT_COMMIT_SHA ?? "dev-local",
+      pollInterval: 300_000,
+    },
   },
 };
 

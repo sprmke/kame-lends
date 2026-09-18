@@ -231,11 +231,24 @@ async function main() {
   const browser = await chromium.launch();
   const page = await browser.newPage({ deviceScaleFactor: 1 });
 
+  const shortcutSvg = tileSvg("ks", { ...ICON, scale: 3.2 });
+  const badgeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" role="img" aria-label="${APP_NAME}">
+<circle cx="36" cy="36" r="32" fill="#FFFFFF"/>
+<g transform="translate(11 10) scale(0.5)">
+${markBody("kb", COLORS.primary, "compact")}
+</g>
+</svg>`;
+
   const pngs: [string, string, number][] = [
+    [join(STATIC_DIR, "icon-96.png"), iconSvg, 96],
     [join(STATIC_DIR, "icon-192.png"), iconSvg, 192],
     [join(STATIC_DIR, "icon-512.png"), iconSvg, 512],
     [join(STATIC_DIR, "icon-maskable-512.png"), tileSvg("km", MASKABLE), 512],
     [join(STATIC_DIR, "apple-touch-icon.png"), tileSvg("ka", APPLE), 180],
+    [join(STATIC_DIR, "notification-badge.png"), badgeSvg, 72],
+    [join(STATIC_DIR, "shortcut-dashboard.png"), shortcutSvg, 96],
+    [join(STATIC_DIR, "shortcut-loans.png"), shortcutSvg, 96],
+    [join(STATIC_DIR, "shortcut-new-loan.png"), shortcutSvg, 96],
     [join(BRAND_DIR, "kame-lends-icon-1024.png"), iconSvg, 1024],
   ];
   for (const [path, svg, size] of pngs) {
@@ -254,6 +267,23 @@ async function main() {
   await writeFile(
     join(STATIC_DIR, "og-image.png"),
     await page.screenshot({ clip: { x: 0, y: 0, width: 1200, height: 630 } }),
+  );
+
+  const screenshotsDir = join(STATIC_DIR, "screenshots");
+  await mkdir(screenshotsDir, { recursive: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setContent(ogHtml(iconSvg, mark), { waitUntil: "networkidle" });
+  await page.evaluate(() => document.fonts.ready);
+  await writeFile(
+    join(screenshotsDir, "narrow-dashboard.png"),
+    await page.screenshot({ clip: { x: 0, y: 0, width: 390, height: 844 } }),
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setContent(ogHtml(iconSvg, mark), { waitUntil: "networkidle" });
+  await page.evaluate(() => document.fonts.ready);
+  await writeFile(
+    join(screenshotsDir, "wide-dashboard.png"),
+    await page.screenshot({ clip: { x: 0, y: 0, width: 1440, height: 900 } }),
   );
 
   await browser.close();

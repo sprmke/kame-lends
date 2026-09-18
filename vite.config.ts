@@ -18,6 +18,7 @@ export default defineConfig({
       "@react-pdf/font",
       "@react-pdf/primitives",
       "yoga-layout",
+      "web-push",
     ],
   },
 });

@@ -4,14 +4,29 @@
 	"short_name": "Kame Lends",
 	"description": "Manage loans, investors, and cashflow in one place.",
 	"start_url": "/dashboard",
+	"scope": "/",
+	"lang": "en",
+	"dir": "ltr",
 	"display": "standalone",
+	"display_override": ["standalone", "minimal-ui"],
+	"launch_handler": {
+		"client_mode": "navigate-existing"
+	},
+	"prefer_related_applications": false,
 	"background_color": "#faf8f5",
 	"theme_color": "#faf8f5",
+	"categories": ["finance", "business", "productivity"],
 	"icons": [
 		{
 			"src": "/favicon.svg",
 			"sizes": "any",
 			"type": "image/svg+xml",
+			"purpose": "any"
+		},
+		{
+			"src": "/icon-96.png",
+			"sizes": "96x96",
+			"type": "image/png",
 			"purpose": "any"
 		},
 		{
@@ -31,6 +46,42 @@
 			"sizes": "512x512",
 			"type": "image/png",
 			"purpose": "maskable"
+		}
+	],
+	"shortcuts": [
+		{
+			"name": "Dashboard",
+			"short_name": "Dashboard",
+			"url": "/dashboard",
+			"icons": [{ "src": "/shortcut-dashboard.png", "sizes": "96x96", "type": "image/png" }]
+		},
+		{
+			"name": "Loans",
+			"short_name": "Loans",
+			"url": "/loans",
+			"icons": [{ "src": "/shortcut-loans.png", "sizes": "96x96", "type": "image/png" }]
+		},
+		{
+			"name": "New loan",
+			"short_name": "New loan",
+			"url": "/loans/new",
+			"icons": [{ "src": "/shortcut-new-loan.png", "sizes": "96x96", "type": "image/png" }]
+		}
+	],
+	"screenshots": [
+		{
+			"src": "/screenshots/narrow-dashboard.png",
+			"sizes": "390x844",
+			"type": "image/png",
+			"form_factor": "narrow",
+			"label": "Dashboard on phone"
+		},
+		{
+			"src": "/screenshots/wide-dashboard.png",
+			"sizes": "1440x900",
+			"type": "image/png",
+			"form_factor": "wide",
+			"label": "Dashboard on desktop"
 		}
 	]
 }
