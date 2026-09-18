@@ -1,14 +1,14 @@
 {
   "folders": [
     {
-      "path": "."
+      "path": ".",
     },
     {
-      "path": "../kame-homes"
+      "path": "../kame-homes",
     },
     {
-      "path": "../kame-desk"
-    }
+      "path": "../kame-desk",
+    },
   ],
   "settings": {},
 }
