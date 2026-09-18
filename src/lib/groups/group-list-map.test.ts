@@ -57,6 +57,29 @@ describe("buildWizardContactOptions", () => {
       ]),
     );
   });
+
+  it("includes borrowers when only list-mode borrower fields are loaded", () => {
+    const options = buildWizardContactOptions([
+      {
+        id: 1,
+        loanName: "A",
+        status: "Active",
+        dueDate: "2026-01-01",
+        borrowerId: 10,
+        borrower: { id: 10, name: "Borrower A", email: "a@example.com" },
+        loanInvestors: [],
+      },
+    ]);
+
+    expect(options).toEqual([
+      {
+        partyType: "borrower",
+        contactId: 10,
+        name: "Borrower A",
+        loanIds: [1],
+      },
+    ]);
+  });
 });
 
 describe("resolveWizardContactLoanIds", () => {

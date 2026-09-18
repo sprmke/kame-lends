@@ -76,6 +76,13 @@ describe("planGroupNotifications", () => {
       "upcoming:due:10:2026-09-17:D-3",
     ]);
 
+    const userPush = planGroupNotifications([loan()], baseSettings, todayKey, {
+      groupId: 0,
+    });
+    expect(
+      userPush.filter((p) => p.kind === "upcoming").map((p) => p.fingerprint),
+    ).toEqual(upcoming.map((p) => p.fingerprint));
+
     const dayBeforeDue = planGroupNotifications(
       [loan()],
       baseSettings,
