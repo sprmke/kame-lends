@@ -8,6 +8,9 @@
 	import { formatCount } from '$lib/format';
 	import { toast } from '$lib/toast';
 	import { X } from 'lucide-svelte';
+	import { createIsMobileShell } from '$lib/composables/use-media-query.svelte';
+	import { mobileDockSlot } from '$lib/stores/mobile-dock-slot.svelte';
+	import { cn } from '$lib/utils';
 
 	interface Props {
 		selectedCount: number;
@@ -38,6 +41,16 @@
 	let removePreview = $state<AccessPreviewData | null>(null);
 	let removePreviewLoading = $state(false);
 	let removePreviewError = $state<string | null>(null);
+
+	const mobileShell = createIsMobileShell(false);
+	$effect(() => mobileShell.init());
+
+	$effect(() => {
+		const shouldClaim = selectedCount > 0 && mobileShell.matches;
+		if (!shouldClaim) return;
+		mobileDockSlot.claim();
+		return () => mobileDockSlot.release();
+	});
 
 	async function applySelection(ids: number[]) {
 		const groupId = ids[0];
@@ -115,42 +128,65 @@
 
 {#if selectedCount > 0}
 	<div
-		class="fixed inset-x-0 z-[45] flex flex-wrap items-center gap-2 border-t border-border/60 bg-background px-3 py-2 shadow-[var(--shadow-native-float)] max-lg:bottom-[calc(var(--mobile-dock-clearance)+var(--safe-area-bottom))] lg:sticky lg:bottom-0 lg:z-30 lg:shadow-none"
-		style="padding-left: max(0.75rem, var(--safe-area-left)); padding-right: max(0.75rem, var(--safe-area-right));"
+		class={cn(
+			'max-lg:pointer-events-none max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-40 max-lg:px-4 max-lg:pb-[max(0.75rem,var(--safe-area-bottom))]',
+			'lg:sticky lg:bottom-0 lg:z-30 lg:border-t lg:border-border/60 lg:bg-background lg:px-3 lg:py-2'
+		)}
+		style="padding-left: max(1rem, var(--safe-area-left)); padding-right: max(1rem, var(--safe-area-right));"
+		role="toolbar"
+		aria-label="Selection actions"
 	>
-		<span class="text-sm font-medium">{formatCount(selectedCount)} selected</span>
-		{#if onSummary}
-			<Button size="sm" variant="outline" class="touch-target" onclick={onSummary}>
-				Summary
-			</Button>
-		{/if}
-		{#if showAddToGroup}
-			<Button
-				size="sm"
-				class="touch-target"
-				disabled={busy}
-				onclick={() => {
-					selectedIds = [];
-					pickerOpen = true;
-				}}
-			>
-				Add to group
-			</Button>
-		{/if}
-		{#if currentGroupId}
-			<Button
-				size="sm"
-				variant="outline"
-				class="touch-target"
-				disabled={busy}
-				onclick={() => void openRemovePreview()}
-			>
-				Remove from group
-			</Button>
-		{/if}
-		<Button size="sm" variant="ghost" class="touch-target" aria-label="Clear selection" onclick={onClear}>
-			<X class="h-4 w-4" />
-		</Button>
+		<div
+			class={cn(
+				'flex min-w-0 flex-nowrap items-center gap-2',
+				'max-lg:pointer-events-auto max-lg:mx-auto max-lg:w-full max-lg:max-w-lg max-lg:rounded-[1.75rem] max-lg:border max-lg:border-border/40 max-lg:bg-background max-lg:px-3 max-lg:py-2 max-lg:ring-1 max-lg:ring-black/[0.04] max-lg:dark:ring-white/[0.08]'
+			)}
+		>
+			<span class="shrink-0 text-sm font-medium whitespace-nowrap tabular-nums">
+				{formatCount(selectedCount)} selected
+			</span>
+			<div class="ml-auto flex min-w-0 shrink-0 items-center gap-1.5">
+				{#if onSummary}
+					<Button size="sm" variant="outline" class="touch-target h-11 px-3" onclick={onSummary}>
+						Summary
+					</Button>
+				{/if}
+				{#if showAddToGroup}
+					<Button
+						size="sm"
+						class="touch-target h-11 px-3"
+						disabled={busy}
+						onclick={() => {
+							selectedIds = [];
+							pickerOpen = true;
+						}}
+					>
+						Add to group
+					</Button>
+				{/if}
+				{#if currentGroupId}
+					<Button
+						size="sm"
+						variant="outline"
+						class="touch-target h-11 px-3"
+						disabled={busy}
+						aria-label="Remove from group"
+						onclick={() => void openRemovePreview()}
+					>
+						Remove
+					</Button>
+				{/if}
+				<Button
+					size="sm"
+					variant="ghost"
+					class="touch-target h-11 w-11 shrink-0 px-0"
+					aria-label="Clear selection"
+					onclick={onClear}
+				>
+					<X class="h-4 w-4" />
+				</Button>
+			</div>
+		</div>
 	</div>
 {/if}
 

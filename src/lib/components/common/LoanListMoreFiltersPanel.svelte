@@ -5,9 +5,11 @@
 	} from '$lib/components/common/MultiSelectFilter.svelte';
 	import RangeFilter from '$lib/components/common/RangeFilter.svelte';
 	import {
+		LIST_FILTER_PANEL_TRIGGER_CLASS,
 		LOAN_STATUS_FILTER_OPTIONS,
 		LOAN_TYPE_FILTER_OPTIONS
 	} from '$lib/list-filters';
+	import { cn } from '$lib/utils';
 	import { UserCheck, UserRound, Users } from 'lucide-svelte';
 	interface Props {
 		statusFilter: string[];
@@ -82,35 +84,40 @@
 	);
 </script>
 
-{#if groupFilter}
-	<div class="border-b border-border/50 pb-3">
-		<p class="mb-2 block text-xs font-semibold">Group</p>
-		{@render groupFilter()}
+<div
+	class={cn(
+		'grid grid-cols-1 gap-3 border-b border-border/50 pb-3 sm:grid-cols-2',
+		groupFilter && 'lg:grid-cols-3'
+	)}
+>
+	{#if groupFilter}
+		<div class="min-w-0 space-y-2">
+			<p class="text-xs font-semibold">Group</p>
+			{@render groupFilter()}
+		</div>
+	{/if}
+	<div class="min-w-0 space-y-2">
+		<p class="text-xs font-semibold">Status</p>
+		<MultiSelectFilter
+			options={LOAN_STATUS_FILTER_OPTIONS}
+			selected={statusFilter}
+			onChange={onStatusChange}
+			placeholder="Select Status"
+			allLabel="All Status"
+			triggerClassName={LIST_FILTER_PANEL_TRIGGER_CLASS}
+		/>
 	</div>
-{/if}
-
-<div class="border-b border-border/50 pb-3">
-	<p class="mb-2 block text-xs font-semibold">Status</p>
-	<MultiSelectFilter
-		options={LOAN_STATUS_FILTER_OPTIONS}
-		selected={statusFilter}
-		onChange={onStatusChange}
-		placeholder="Select Status"
-		allLabel="All Status"
-		triggerClassName="w-full"
-	/>
-</div>
-
-<div class="border-b border-border/50 pb-3">
-	<p class="mb-2 block text-xs font-semibold">Type</p>
-	<MultiSelectFilter
-		options={LOAN_TYPE_FILTER_OPTIONS}
-		selected={typeFilter}
-		onChange={onTypeChange}
-		placeholder="Select Type"
-		allLabel="All Types"
-		triggerClassName="w-full"
-	/>
+	<div class="min-w-0 space-y-2">
+		<p class="text-xs font-semibold">Type</p>
+		<MultiSelectFilter
+			options={LOAN_TYPE_FILTER_OPTIONS}
+			selected={typeFilter}
+			onChange={onTypeChange}
+			placeholder="Select Type"
+			allLabel="All Types"
+			triggerClassName={LIST_FILTER_PANEL_TRIGGER_CLASS}
+		/>
+	</div>
 </div>
 
 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

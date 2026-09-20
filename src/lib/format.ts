@@ -56,6 +56,35 @@ export function formatCurrencyCompact(amount: string | number): string {
   }).format(numAmount);
 }
 
+function trimShortAmountDecimals(formatted: string): string {
+  return formatted.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
+/**
+ * Compact amount for summary principal (e.g. 2.33M, 220k). No currency symbol.
+ */
+export function formatCurrencyShortAmount(amount: string | number): string {
+  if (isSensitiveDataHidden()) return HIDDEN_CURRENCY_DISPLAY;
+
+  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (!Number.isFinite(numAmount)) return "—";
+
+  const abs = Math.abs(numAmount);
+  if (abs >= 1_000_000) {
+    const scaled = numAmount / 1_000_000;
+    const absScaled = Math.abs(scaled);
+    const digits = absScaled >= 100 ? 0 : absScaled >= 10 ? 1 : 3;
+    return `${trimShortAmountDecimals(scaled.toFixed(digits))}M`;
+  }
+  if (abs >= 1_000) {
+    const scaled = numAmount / 1_000;
+    const absScaled = Math.abs(scaled);
+    const digits = absScaled >= 100 ? 0 : absScaled >= 10 ? 1 : 2;
+    return `${trimShortAmountDecimals(scaled.toFixed(digits))}k`;
+  }
+  return String(Math.round(numAmount));
+}
+
 /** Compact PHP for chart axes (e.g. ₱1.2M). */
 export function formatChartAxis(amount: string | number): string {
   if (isSensitiveDataHidden()) return HIDDEN_CURRENCY_DISPLAY;

@@ -27,6 +27,8 @@
 		moreFilters?: Snippet;
 		/** Extra controls on the toolbar row (e.g. mobile bulk select). */
 		toolbarTrailing?: Snippet;
+		/** Phone select mode: search + Done only; hide view/filter chrome. */
+		selectMode?: boolean;
 		class?: string;
 	}
 
@@ -48,6 +50,7 @@
 		hasActiveAdvancedFilters = false,
 		moreFilters,
 		toolbarTrailing,
+		selectMode = false,
 		class: className
 	}: Props = $props();
 </script>
@@ -61,14 +64,14 @@
 			placeholder={searchPlaceholder}
 			class="min-w-0 flex-1 lg:min-w-[12rem]"
 		/>
-		{#if afterSearch}
+		{#if afterSearch && !selectMode}
 			<div class="min-w-0 shrink-0 max-w-full">
 				{@render afterSearch()}
 			</div>
 		{/if}
 	</div>
 	<div class="mobile-list-toolbar-controls">
-		{#if showViewToggle && viewMode && onViewModeChange && hasData}
+		{#if !selectMode && showViewToggle && viewMode && onViewModeChange && hasData}
 			<ViewModeToggle
 				{viewMode}
 				onViewModeChange={onViewModeChange}
@@ -77,10 +80,10 @@
 				class="shrink-0"
 			/>
 		{/if}
-		{#if filters}
+		{#if !selectMode && filters}
 			{@render filters()}
 		{/if}
-		{#if moreFilters && onToggleMoreFilters}
+		{#if !selectMode && moreFilters && onToggleMoreFilters}
 			<Button
 				variant={showMoreFilters ? 'secondary' : 'outline'}
 				size="sm"
@@ -99,7 +102,7 @@
 				{/if}
 			</Button>
 		{/if}
-		{#if hasActiveFilters && onClearFilters}
+		{#if !selectMode && hasActiveFilters && onClearFilters}
 			<Button variant="outline" size="sm" class="shrink-0" onclick={onClearFilters}>
 				<X class="h-4 w-4 xl:mr-2" />
 				<span class="hidden xl:inline">Clear All</span>
@@ -110,7 +113,7 @@
 		{/if}
 	</div>
 </div>
-{#if showMoreFilters && moreFilters}
+{#if !selectMode && showMoreFilters && moreFilters}
 	<div class="dashboard-filter-panel animate-in duration-200 slide-in-from-top-2">
 		{@render moreFilters()}
 	</div>

@@ -26,13 +26,15 @@ Borrowing summary cards use all borrowings for this investor.
 
 Borrowing cards hide when the investor has no borrowings.
 
+**Activity cards:** Same four panels as the dashboard (`DashboardActivityCards`): Maturing Soon, Past Due, Pending Disbursements, Completed. Empty panels hide unless every panel is empty, in which case all four show their empty states. Visible panels share equal width and fill the row.
+
 ### Loans tab
 
 The loans table shows this investor's **capital per loan** in the Principal column (sum of their `loan_investors` rows on that loan), with their average interest rate below. It does not show full loan principal when other investors are on the same loan. Loan filters (Total Principal, Avg. Rate, etc.) use the same investor-scoped totals.
 
-**Toolbar:** Search, then **date range** on the same row. **More Filters** holds status, type, and investor-scoped amount ranges (same panel as `/loans`, without participant multi-selects). **Date range** uses the same presets as `/loans` (`from`/`to` or `range=all`); it filters by loan **due date** and drives the four summary cards below.
+**Toolbar:** Search, then **date range** on the same row. **More Filters** holds status, type, and investor-scoped amount ranges (same panel as `/loans`, without participant multi-selects). Status and Type stack on phone and sit side by side from `sm`. **Date range** uses the same presets as `/loans` (`from`/`to` or `range=all`); it filters by loan **due date** and drives the four summary cards below.
 
-**Summary cards (Loans tab):** Principal, Interest Estimate, Interest Earned, Completed (same layout as `/loans`). Metrics use this investor's paid allocations on loans in the date range (`computeInvestorLoanListSummaryStats`), not full-loan totals.
+**Summary cards (Loans tab):** Principal (`current / invested` compact pair), Interest Estimate, Interest Earned, Completed (same layout as `/loans`). Metrics use this investor's paid allocations on loans in the due-date range (`computeInvestorLoanListSummaryStats`); reinvestment history uses all of this investor's allocations on the investor, not only loans due in the range.
 
 **Bulk select:** When groups are enabled and the viewer can manage the workspace, the table shows row checkboxes (desktop always; phone uses the same table). **Summary** opens a modal with investor-scoped totals for the selection. **Add to group** uses the shared group picker (`POST /api/groups/:id/loans`).
 
@@ -56,6 +58,7 @@ Admin workspace owners can edit. Linked party users can view the same CRM page r
 | --------------- | ----------------------------------------------------------- |
 | Page            | `src/routes/investors/[id]/+page.svelte`                    |
 | Content         | `src/lib/components/investors/InvestorDetailContent.svelte` |
+| Activity cards  | `src/lib/components/common/DashboardActivityCards.svelte`   |
 | Edit form       | `src/lib/components/party/PartyUserEditForm.svelte`         |
 | Loan capital    | `src/lib/loan-list-summary.ts`                              |
 | Borrowing stats | `src/lib/debt-calculations.ts`                              |

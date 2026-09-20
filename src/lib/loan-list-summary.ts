@@ -30,11 +30,190 @@ export function passesLoanDueDateRangeFilter(
 }
 
 export interface LoanListSummaryStats {
-  totalPrincipal: number;
+  /** Paid principal still outstanding on open loans in the visible list. */
+  currentCapital: number;
+  /**
+   * Net new capital deployed in the date range (fundings minus reinvestment from
+   * prior loan principal + interest returned to the liquidity pool).
+   */
+  totalCapitalInvested: number;
   interestEstimate: number;
   interestEarned: number;
   completedCount: number;
   totalLoanCount: number;
+}
+
+type CapitalLiquidityEvent =
+  | { kind: "deploy"; dayKey: string; amount: number }
+  | { kind: "return"; dayKey: string; amount: number };
+
+function dayKeyInCapitalRange(
+  dayKey: string,
+  from: string | null,
+  to: string | null,
+): boolean {
+  if (from && dayKey < from) return false;
+  if (to && dayKey > to) return false;
+  return true;
+}
+
+function compareCapitalLiquidityEvents(
+  a: CapitalLiquidityEvent,
+  b: CapitalLiquidityEvent,
+): number {
+  if (a.dayKey !== b.dayKey) return a.dayKey < b.dayKey ? -1 : 1;
+  if (a.kind === b.kind) return 0;
+  return a.kind === "return" ? -1 : 1;
+}
+
+function buildLoanCapitalLiquidityEvents(
+  loan: LoanWithInvestors,
+): CapitalLiquidityEvent[] {
+  const events: CapitalLiquidityEvent[] = [];
+  const paidAllocations = loan.loanInvestors.filter((li) => li.isPaid);
+
+  for (const allocation of paidAllocations) {
+    const amount = calculateTotalPrincipal([allocation]);
+    if (amount <= 0) continue;
+    events.push({
+      kind: "deploy",
+      dayKey: toCapitalDayKey(allocation.sentDate),
+      amount,
+    });
+  }
+
+  if (!isOpenLoan(loan)) {
+    const principal = calculateTotalPrincipal(paidAllocations);
+    const interest = calculateTotalInterest(paidAllocations);
+    const returned = principal + interest;
+    if (returned > 0) {
+      events.push({
+        kind: "return",
+        dayKey: toCapitalDayKey(loan.updatedAt),
+        amount: returned,
+      });
+    }
+  }
+
+  return events;
+}
+
+function buildInvestorCapitalLiquidityEvents(
+  allocation: InvestorLoanAllocation,
+): CapitalLiquidityEvent[] {
+  const events: CapitalLiquidityEvent[] = [];
+  if (!allocation.isPaid) return events;
+
+  const amount = calculateTotalPrincipal([allocation]);
+  if (amount > 0) {
+    events.push({
+      kind: "deploy",
+      dayKey: toCapitalDayKey(allocation.sentDate),
+      amount,
+    });
+  }
+
+  if (!isOpenLoan(allocation.loan)) {
+    const interest = calculateTotalInterest([allocation]);
+    const returned = amount + interest;
+    if (returned > 0) {
+      events.push({
+        kind: "return",
+        dayKey: toCapitalDayKey(allocation.loan.updatedAt),
+        amount: returned,
+      });
+    }
+  }
+
+  return events;
+}
+
+/** Outstanding paid principal on open loans. */
+export function computeCurrentCapital(loans: LoanWithInvestors[]): number {
+  let total = 0;
+  for (const loan of loans) {
+    if (!isOpenLoan(loan)) continue;
+    const paidAllocations = loan.loanInvestors.filter((li) => li.isPaid);
+    total += calculateTotalPrincipal(paidAllocations);
+  }
+  return total;
+}
+
+/** Outstanding paid principal for one investor's open allocations. */
+export function computeCurrentInvestorCapital(
+  allocations: InvestorLoanAllocation[],
+): number {
+  let total = 0;
+  for (const allocation of allocations) {
+    if (!isOpenLoan(allocation.loan)) continue;
+    if (!allocation.isPaid) continue;
+    total += calculateTotalPrincipal([allocation]);
+  }
+  return total;
+}
+
+/**
+ * Net new capital deployed in `from`/`to` (inclusive day keys). Reinvestment from
+ * completed loans (principal + scheduled interest) reduces net new on later fundings.
+ */
+export function computeNetCapitalInvested(
+  loans: LoanWithInvestors[],
+  from: string | null = null,
+  to: string | null = null,
+): number {
+  const events = loans
+    .flatMap(buildLoanCapitalLiquidityEvents)
+    .sort(compareCapitalLiquidityEvents);
+
+  let liquidPool = 0;
+  let netInvested = 0;
+
+  for (const event of events) {
+    if (event.kind === "return") {
+      liquidPool += event.amount;
+      continue;
+    }
+
+    const fromPool = Math.min(event.amount, liquidPool);
+    const netNew = event.amount - fromPool;
+    liquidPool -= fromPool;
+
+    if (dayKeyInCapitalRange(event.dayKey, from, to)) {
+      netInvested += netNew;
+    }
+  }
+
+  return netInvested;
+}
+
+export function computeNetInvestorCapitalInvested(
+  allocations: InvestorLoanAllocation[],
+  from: string | null = null,
+  to: string | null = null,
+): number {
+  const events = allocations
+    .flatMap(buildInvestorCapitalLiquidityEvents)
+    .sort(compareCapitalLiquidityEvents);
+
+  let liquidPool = 0;
+  let netInvested = 0;
+
+  for (const event of events) {
+    if (event.kind === "return") {
+      liquidPool += event.amount;
+      continue;
+    }
+
+    const fromPool = Math.min(event.amount, liquidPool);
+    const netNew = event.amount - fromPool;
+    liquidPool -= fromPool;
+
+    if (dayKeyInCapitalRange(event.dayKey, from, to)) {
+      netInvested += netNew;
+    }
+  }
+
+  return netInvested;
 }
 
 export type InvestorLoanAllocation = LoanInvestor & { loan: Loan };
@@ -221,6 +400,7 @@ export function computeLoanListSummaryStats(
   loans: LoanWithInvestors[],
   from: string | null = null,
   to: string | null = null,
+  capitalHistoryLoans?: LoanWithInvestors[],
 ): LoanListSummaryStats {
   let completedCount = 0;
 
@@ -228,12 +408,22 @@ export function computeLoanListSummaryStats(
     if (!isOpenLoan(loan)) completedCount += 1;
   }
 
-  const capital = computePortfolioCapitalStats(loans, from, to);
+  const history = capitalHistoryLoans ?? loans;
+  let interestEstimate = 0;
+  let interestEarned = 0;
+
+  for (const loan of loans) {
+    interestEstimate += calculateTotalInterest(loan.loanInvestors);
+    if (!isOpenLoan(loan)) {
+      interestEarned += calculateTotalInterest(loan.loanInvestors);
+    }
+  }
 
   return {
-    totalPrincipal: capital.totalPrincipal,
-    interestEstimate: capital.interestEstimate,
-    interestEarned: capital.interestEarned,
+    currentCapital: computeCurrentCapital(loans),
+    totalCapitalInvested: computeNetCapitalInvested(history, from, to),
+    interestEstimate,
+    interestEarned,
     completedCount,
     totalLoanCount: loans.length,
   };
@@ -244,11 +434,14 @@ export function computeInvestorLoanListSummaryStats(
   allocations: InvestorLoanAllocation[],
   from: string | null = null,
   to: string | null = null,
+  capitalHistoryAllocations?: InvestorLoanAllocation[],
 ): LoanListSummaryStats {
+  const history = capitalHistoryAllocations ?? allocations;
   const capital = computeInvestorPortfolioCapitalStats(allocations, from, to);
 
   return {
-    totalPrincipal: capital.totalCapital,
+    currentCapital: computeCurrentInvestorCapital(allocations),
+    totalCapitalInvested: computeNetInvestorCapitalInvested(history, from, to),
     interestEstimate: capital.interestEstimate,
     interestEarned: capital.interestEarned,
     completedCount: capital.completedLoansCount,

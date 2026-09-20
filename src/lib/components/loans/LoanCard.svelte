@@ -24,7 +24,13 @@
 	import { cn } from '$lib/utils';
 	import type { LoanWithInvestors } from '$lib/types';
 	import GroupBadgeList from '$lib/components/groups/GroupBadgeList.svelte';
-	import { badgesForLoan, type GroupsIndexItem } from '$lib/groups/loan-group-filter';
+	import type { GroupChipSelection } from '$lib/components/groups/types';
+	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
+	import {
+		badgesForLoan,
+		loanGroupIds,
+		type GroupsIndexItem
+	} from '$lib/groups/loan-group-filter';
 	import { page } from '$app/state';
 	import LoanPendingSignBadge from '$lib/components/loans/LoanPendingSignBadge.svelte';
 
@@ -39,7 +45,7 @@
 		onAddCommission?: (loan: LoanWithInvestors) => void;
 		onDelete?: (loan: LoanWithInvestors) => void;
 		onRemoveFromGroup?: (loan: LoanWithInvestors) => void;
-		onGroupFilter?: (groupId: number) => void;
+		onGroupFilter?: (selection: Exclude<GroupChipSelection, 'all'>) => void;
 		hideGroupBadges?: boolean;
 		/** Commissioned tab: show the viewer's commission instead of loan interest. */
 		showCommissionMetrics?: boolean;
@@ -83,9 +89,9 @@
 	const groupsIndex = $derived(
 		((page.data as { groupsIndex?: GroupsIndexItem[] }).groupsIndex ?? []) as GroupsIndexItem[]
 	);
-	const groupBadges = $derived(
-		hideGroupBadges ? [] : badgesForLoan(loan, groupsIndex)
-	);
+	const showGroupRow = $derived(SHOW_GROUPS_UI && !hideGroupBadges);
+	const groupBadges = $derived(showGroupRow ? badgesForLoan(loan, groupsIndex) : []);
+	const isUngrouped = $derived(showGroupRow && loanGroupIds(loan).length === 0);
 
 	const actionItems = $derived(
 		createLoanActionItems({
@@ -104,46 +110,25 @@
 
 <Card.Root class="flex h-full flex-col overflow-hidden transition-colors hover:border-primary/20">
 	<Card.Header class="px-4 pt-4 pb-1">
-		<div class="flex items-start justify-between gap-2">
-			<div class="flex min-w-0 items-start gap-2">
-				{#if selectable}
-					<div class="pt-0.5" onclick={(event) => event.stopPropagation()}>
-						<Checkbox
-							checked={selected}
-							onCheckedChange={(value) => onSelectedChange?.(Boolean(value))}
-							aria-label={`Select ${loan.loanName}`}
-						/>
-					</div>
-				{/if}
-				<Card.Title class="truncate text-sm sm:text-base">{formatText(loan.loanName)}</Card.Title>
-			</div>
-			<div class="flex shrink-0 flex-wrap justify-end gap-1">
-				<Badge
-					variant={getLoanTypeBadge(loan.type).variant}
-					class={cn('text-[10px]', getLoanTypeBadge(loan.type).className)}
-				>
-					{formatText(loan.type)}
-				</Badge>
-				<Badge
-					variant={getLoanStatusBadge(loan.status).variant}
-					class={cn('text-[10px]', getLoanStatusBadge(loan.status).className)}
-				>
-					{formatText(loan.status)}
-				</Badge>
-				<LoanPendingSignBadge
-					{loan}
-					class="mt-0"
-					onOpenContractDetails={onContractDetails
-						? () => onContractDetails(loan)
-						: undefined}
-				/>
-			</div>
+		<div class="flex min-w-0 items-start gap-2">
+			{#if selectable}
+				<div class="shrink-0 pt-0.5" onclick={(event) => event.stopPropagation()}>
+					<Checkbox
+						checked={selected}
+						onCheckedChange={(value) => onSelectedChange?.(Boolean(value))}
+						aria-label={`Select ${loan.loanName}`}
+					/>
+				</div>
+			{/if}
+			<Card.Title class="min-w-0 flex-1 truncate text-sm sm:text-base">
+				{formatText(loan.loanName)}
+			</Card.Title>
 		</div>
 		{#if addedByRule}
 			<Badge variant="secondary" class="mt-2 w-fit text-[10px]">Added by rule</Badge>
 		{/if}
-		{#if groupBadges.length > 0}
-			<div class="mt-2">
+		<div class="mt-2 flex min-w-0 flex-wrap items-center gap-1">
+			{#if showGroupRow && groupBadges.length > 0}
 				<GroupBadgeList
 					groups={groupBadges}
 					onBadgeClick={(group, event) => {
@@ -152,8 +137,41 @@
 						onGroupFilter?.(group.id);
 					}}
 				/>
-			</div>
-		{/if}
+			{:else if showGroupRow && isUngrouped}
+				<button
+					type="button"
+					class="inline-flex max-w-full min-w-0 shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground native-press"
+					onclick={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+						onGroupFilter?.('ungrouped');
+					}}
+				>
+					<span
+						class="size-2 shrink-0 rounded-full bg-muted-foreground/40"
+						aria-hidden="true"
+					></span>
+					<span class="truncate">Ungrouped</span>
+				</button>
+			{/if}
+			<Badge
+				variant={getLoanTypeBadge(loan.type).variant}
+				class={cn('shrink-0 text-[10px]', getLoanTypeBadge(loan.type).className)}
+			>
+				{formatText(loan.type)}
+			</Badge>
+			<Badge
+				variant={getLoanStatusBadge(loan.status).variant}
+				class={cn('shrink-0 text-[10px]', getLoanStatusBadge(loan.status).className)}
+			>
+				{formatText(loan.status)}
+			</Badge>
+			<LoanPendingSignBadge
+				{loan}
+				class="mt-0 shrink-0"
+				onOpenContractDetails={onContractDetails ? () => onContractDetails(loan) : undefined}
+			/>
+		</div>
 	</Card.Header>
 	<Card.Content class="flex-1 space-y-3 px-4 pt-0 pb-3">
 		<div class="grid grid-cols-2 gap-2">

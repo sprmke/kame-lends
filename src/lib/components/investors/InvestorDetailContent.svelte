@@ -13,10 +13,7 @@
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
 	import LoanListMoreFiltersPanel from '$lib/components/common/LoanListMoreFiltersPanel.svelte';
 	import ExportButton from '$lib/components/common/ExportButton.svelte';
-	import MaturingLoansCard from '$lib/components/common/MaturingLoansCard.svelte';
-	import PastDueLoansCard from '$lib/components/common/PastDueLoansCard.svelte';
-	import CompletedLoansCard from '$lib/components/common/CompletedLoansCard.svelte';
-	import PendingDisbursementsCard from '$lib/components/common/PendingDisbursementsCard.svelte';
+	import DashboardActivityCards from '$lib/components/common/DashboardActivityCards.svelte';
 	import LoansTable from '$lib/components/loans/LoansTable.svelte';
 	import LoanListSummaryCards from '$lib/components/loans/LoanListSummaryCards.svelte';
 	import LoanBulkActionBar from '$lib/components/loans/LoanBulkActionBar.svelte';
@@ -276,6 +273,10 @@
 		)
 	);
 
+	const allInvestorAllocations = $derived(
+		loans.flatMap((loan) => investorEntriesForLoan(loan).map((li) => ({ ...li, loan })))
+	);
+
 	const sortedFilteredLoans = $derived(
 		[...filteredLoans].sort(
 			(a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
@@ -298,10 +299,16 @@
 			return computeInvestorLoanListSummaryStats(
 				dateFilteredAllocations,
 				filterFrom,
-				filterTo
+				filterTo,
+				allInvestorAllocations
 			);
 		}
-		return computeLoanListSummaryStats(dateFilteredLoans, filterFrom, filterTo);
+		return computeLoanListSummaryStats(
+			dateFilteredLoans,
+			filterFrom,
+			filterTo,
+			loans
+		);
 	});
 
 	$effect(() => {
@@ -510,12 +517,12 @@
 				]}
 			/>
 
-			<div class="grid items-start gap-2.5 md:grid-cols-2 2xl:grid-cols-4">
-				<MaturingLoansCard loans={maturingLoans} />
-				<PastDueLoansCard loans={overdueLoans} />
-				<PendingDisbursementsCard disbursements={pendingDisbursements} />
-				<CompletedLoansCard loans={completedLoans} />
-			</div>
+			<DashboardActivityCards
+				completedLoans={completedLoans}
+				overdueLoans={overdueLoans}
+				pendingDisbursements={pendingDisbursements}
+				upcomingPaymentsDue={maturingLoans}
+			/>
 		</Tabs.Content>
 
 		<Tabs.Content value="loans" class="mt-6 space-y-4">
@@ -528,6 +535,7 @@
 				showMoreFilters={showMoreLoanFilters}
 				onToggleMoreFilters={() => (showMoreLoanFilters = !showMoreLoanFilters)}
 				hasActiveAdvancedFilters={hasActiveAdvancedLoanFilters}
+				selectMode={phoneSelectMode && isMobileShell.matches}
 			>
 				{#snippet afterSearch()}
 					<DateRangeFilter
@@ -551,24 +559,27 @@
 							onclick={() => {
 								phoneSelectMode = !phoneSelectMode;
 								if (!phoneSelectMode) selectedRowIds = new Set();
+								else showMoreLoanFilters = false;
 							}}
 						>
 							{phoneSelectMode ? 'Done' : 'Select'}
 						</Button>
 					{/if}
-					<ExportButton
-						data={loans}
-						filteredData={sortedFilteredLoans}
-						selectedData={selectedLoans}
-						sections={loanPDFSections}
-						onGeneratePDF={(data, keys) =>
-							downloadLoansPdf(data, keys, scopeToInvestor ? investor.id : undefined)}
-					/>
-					{#if canManage}
-						<Button size="sm" class="shrink-0" onclick={() => openLoanCreate()}>
-							<Plus class="h-3 w-3 xl:mr-1" />
-							<span class="hidden xl:inline">Add Loan</span>
-						</Button>
+					{#if !(phoneSelectMode && isMobileShell.matches)}
+						<ExportButton
+							data={loans}
+							filteredData={sortedFilteredLoans}
+							selectedData={selectedLoans}
+							sections={loanPDFSections}
+							onGeneratePDF={(data, keys) =>
+								downloadLoansPdf(data, keys, scopeToInvestor ? investor.id : undefined)}
+						/>
+						{#if canManage}
+							<Button size="sm" class="shrink-0" onclick={() => openLoanCreate()}>
+								<Plus class="h-3 w-3 xl:mr-1" />
+								<span class="hidden xl:inline">Add Loan</span>
+							</Button>
+						{/if}
 					{/if}
 				{/snippet}
 				{#snippet moreFilters()}
@@ -627,10 +638,6 @@
 						Clear filters
 					</Button>
 				</div>
-			{/if}
-
-			{#if canBulkSelect && selectedLoans.length > 0 && isMobileShell.matches}
-				<div class="min-h-14 shrink-0 lg:hidden" aria-hidden="true"></div>
 			{/if}
 
 			{#if canBulkSelect}

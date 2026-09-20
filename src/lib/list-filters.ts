@@ -4,6 +4,9 @@ import type { MultiSelectOption } from "$lib/components/common/MultiSelectFilter
 export const LIST_FILTER_TRIGGER_CLASS =
   "w-full shrink-0 sm:w-[10rem] xl:w-[11.25rem]";
 
+/** Full-width trigger inside More Filters grids (overrides LIST_FILTER_TRIGGER_CLASS widths). */
+export const LIST_FILTER_PANEL_TRIGGER_CLASS = "w-full sm:w-full xl:w-full";
+
 /** Inline list filters visible from `xl` up; duplicated in More Filters on smaller screens. */
 export const LIST_FILTER_DESKTOP_TRIGGER_CLASS =
   "hidden w-full shrink-0 xl:flex xl:w-[11.25rem]";

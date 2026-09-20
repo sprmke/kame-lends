@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   computeBorrowerProfitStats,
+  computeCurrentCapital,
   computeInvestorPortfolioCapitalStats,
   computeLoanListSummaryStats,
+  computeNetCapitalInvested,
   computePartyCommissionStats,
   loanHasPartyCommission,
   computePeakConcurrentInvestorPrincipal,
@@ -217,6 +219,104 @@ describe("computePortfolioCapitalStats", () => {
   });
 });
 
+describe("computeNetCapitalInvested", () => {
+  it("counts sequential reuse as one net deployment over all time", () => {
+    const net = computeNetCapitalInvested(
+      [
+        loanFixture({
+          status: "Completed",
+          amount: "100000",
+          rate: "10",
+          sentDate: "2026-08-01",
+          dueDate: "2026-08-10",
+          updatedAt: "2026-08-10",
+        }),
+        loanFixture({
+          status: "Fully Funded",
+          amount: "100000",
+          sentDate: "2026-08-11",
+          dueDate: "2026-08-20",
+        }),
+      ],
+      null,
+      null,
+    );
+
+    expect(net).toBe(100000);
+  });
+
+  it("treats principal plus interest returned as reinvestment before counting net new", () => {
+    const net = computeNetCapitalInvested(
+      [
+        loanFixture({
+          status: "Completed",
+          amount: "100000",
+          rate: "10",
+          sentDate: "2026-08-01",
+          dueDate: "2026-08-10",
+          updatedAt: "2026-08-10",
+        }),
+        loanFixture({
+          status: "Fully Funded",
+          amount: "110000",
+          sentDate: "2026-08-11",
+          dueDate: "2026-08-20",
+        }),
+      ],
+      null,
+      null,
+    );
+
+    expect(net).toBe(100000);
+  });
+
+  it("only sums net new fundings whose sent date falls in the range", () => {
+    const net = computeNetCapitalInvested(
+      [
+        loanFixture({
+          status: "Completed",
+          amount: "100000",
+          rate: "10",
+          sentDate: "2026-07-01",
+          dueDate: "2026-07-10",
+          updatedAt: "2026-07-10",
+        }),
+        loanFixture({
+          status: "Fully Funded",
+          amount: "160000",
+          sentDate: "2026-09-05",
+          dueDate: "2026-09-30",
+        }),
+      ],
+      "2026-09-01",
+      "2026-09-30",
+    );
+
+    expect(net).toBe(50000);
+  });
+});
+
+describe("computeCurrentCapital", () => {
+  it("sums paid principal on open loans only", () => {
+    const current = computeCurrentCapital([
+      loanFixture({
+        status: "Fully Funded",
+        amount: "150000",
+        sentDate: "2026-09-01",
+        dueDate: "2026-09-30",
+      }),
+      loanFixture({
+        status: "Completed",
+        amount: "100000",
+        sentDate: "2026-08-01",
+        dueDate: "2026-08-31",
+      }),
+    ]);
+
+    expect(current).toBe(150000);
+  });
+});
+
 describe("computeLoanListSummaryStats", () => {
   it("totals interest on all loans in range and splits earned on completed", () => {
     const stats = computeLoanListSummaryStats(
@@ -244,61 +344,40 @@ describe("computeLoanListSummaryStats", () => {
       "2026-09-30",
     );
 
-    expect(stats.totalPrincipal).toBe(100000);
+    expect(stats.currentCapital).toBe(150000);
+    expect(stats.totalCapitalInvested).toBe(0);
     expect(stats.interestEstimate).toBe(35000);
     expect(stats.interestEarned).toBe(20000);
     expect(stats.completedCount).toBe(1);
     expect(stats.totalLoanCount).toBe(3);
   });
 
-  it("includes completed loans when they overlap open loans in the same range", () => {
+  it("uses capital history for reinvestment while current capital stays on visible loans", () => {
+    const completed = loanFixture({
+      status: "Completed",
+      amount: "100000",
+      rate: "10",
+      sentDate: "2026-08-01",
+      dueDate: "2026-08-10",
+      updatedAt: "2026-08-10",
+    });
+    const open = loanFixture({
+      status: "Fully Funded",
+      amount: "100000",
+      sentDate: "2026-09-05",
+      dueDate: "2026-09-30",
+    });
+
     const stats = computeLoanListSummaryStats(
-      [
-        loanFixture({
-          status: "Completed",
-          amount: "100000",
-          sentDate: "2026-09-01",
-          dueDate: "2026-09-15",
-        }),
-        loanFixture({
-          status: "Fully Funded",
-          amount: "100000",
-          sentDate: "2026-09-05",
-          dueDate: "2026-09-30",
-        }),
-      ],
+      [open],
       "2026-09-01",
       "2026-09-30",
+      [completed, open],
     );
 
-    expect(stats.totalPrincipal).toBe(200000);
-  });
-
-  it("shows deduplicated capital when every loan in range is completed", () => {
-    const stats = computeLoanListSummaryStats(
-      [
-        loanFixture({
-          status: "Completed",
-          amount: "100000",
-          sentDate: "2026-08-01",
-          dueDate: "2026-08-10",
-        }),
-        loanFixture({
-          status: "Completed",
-          amount: "100000",
-          sentDate: "2026-08-11",
-          dueDate: "2026-08-20",
-        }),
-      ],
-      "2026-08-01",
-      "2026-08-31",
-    );
-
-    expect(stats.totalPrincipal).toBe(100000);
-    expect(stats.interestEstimate).toBe(20000);
-    expect(stats.interestEarned).toBe(20000);
-    expect(stats.completedCount).toBe(2);
-    expect(stats.totalLoanCount).toBe(2);
+    expect(stats.currentCapital).toBe(100000);
+    expect(stats.totalCapitalInvested).toBe(0);
+    expect(stats.totalLoanCount).toBe(1);
   });
 });
 

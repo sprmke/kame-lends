@@ -58,6 +58,7 @@
 	import LoanGroupFilter from '$lib/components/loans/LoanGroupFilter.svelte';
 	import LoanBulkActionBar from '$lib/components/loans/LoanBulkActionBar.svelte';
 	import LoanSelectionSummaryModal from '$lib/components/loans/LoanSelectionSummaryModal.svelte';
+	import { LIST_FILTER_PANEL_TRIGGER_CLASS } from '$lib/list-filters';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import { createLoanListGroupScope } from '$lib/composables/use-loan-list-group-scope.svelte';
 	import AccessPreview from '$lib/components/groups/AccessPreview.svelte';
@@ -422,13 +423,22 @@
 		scope === 'group' ? preGroupLoans : groupScope.applyGroupFilter(preGroupLoans)
 	);
 
+	const loansForCapitalHistory = $derived(
+		scope === 'group' ? scopeBaseLoans : groupScope.applyGroupFilter(scopeBaseLoans)
+	);
+
 	const showGroupFilter = $derived(
 		!variant.embedded && scope !== 'group' && groupScope.showGroupBar
 	);
 
 	const summaryStats = $derived(
 		variant.showLoanListSummary
-			? computeLoanListSummaryStats(scopedLoans, filterFrom, filterTo)
+			? computeLoanListSummaryStats(
+					scopedLoans,
+					filterFrom,
+					filterTo,
+					loansForCapitalHistory
+				)
 			: null
 	);
 
@@ -562,6 +572,18 @@
 {#snippet listChrome()}
 		{#if !variant.embedded}
 		<PageHeader title={pageTitle} description={variant.description} showPriceToggle={true}>
+			{#if variant.showDateRange && !isMobileShell.matches}
+				<DateRangeFilter
+					dateRange={dateRangeState.dateRange}
+					datePreset={dateRangeState.datePreset}
+					isActive={dateRangeState.isDateFilterActive}
+					setDatePreset={dateRangeState.setDatePreset}
+					setDateRange={dateRangeState.setDateRange}
+					navigatePeriod={dateRangeState.navigatePeriod}
+					goToToday={dateRangeState.goToToday}
+					onClear={dateRangeState.clearDateFilter}
+				/>
+			{/if}
 			<ExportButton
 				data={listLoans}
 				filteredData={sortedLoans}
@@ -580,6 +602,20 @@
 
 		{#if showScopeTabs && !variant.embedded}
 			<LoanScopeTabs />
+		{/if}
+
+		{#if !variant.embedded && variant.showDateRange && isMobileShell.matches}
+			<DateRangeFilter
+				dateRange={dateRangeState.dateRange}
+				datePreset={dateRangeState.datePreset}
+				isActive={dateRangeState.isDateFilterActive}
+				fullWidth={true}
+				setDatePreset={dateRangeState.setDatePreset}
+				setDateRange={dateRangeState.setDateRange}
+				navigatePeriod={dateRangeState.navigatePeriod}
+				goToToday={dateRangeState.goToToday}
+				onClear={dateRangeState.clearDateFilter}
+			/>
 		{/if}
 
 		{#if variant.showLoanListSummary && scopedLoans.length > 0 && summaryStats}
@@ -606,7 +642,7 @@
 				showUngrouped={groupScope.showUngrouped}
 				ungroupedCount={groupScope.ungroupedCount}
 				onChange={groupScope.setGroupSelection}
-				triggerClassName="w-full"
+				triggerClassName={LIST_FILTER_PANEL_TRIGGER_CLASS}
 			/>
 		{/snippet}
 
@@ -624,9 +660,10 @@
 			{showMoreFilters}
 			onToggleMoreFilters={() => (showMoreFilters = !showMoreFilters)}
 			{hasActiveAdvancedFilters}
+			selectMode={phoneSelectMode && isMobileShell.matches}
 		>
 			{#snippet afterSearch()}
-				{#if variant.showDateRange}
+				{#if variant.embedded && variant.showDateRange}
 					<DateRangeFilter
 						dateRange={dateRangeState.dateRange}
 						datePreset={dateRangeState.datePreset}
@@ -640,7 +677,7 @@
 				{/if}
 			{/snippet}
 			{#snippet toolbarTrailing()}
-				{#if variant.embedded}
+				{#if variant.embedded && !(phoneSelectMode && isMobileShell.matches)}
 					<ExportButton
 						data={listLoans}
 						filteredData={sortedLoans}
@@ -658,6 +695,7 @@
 						onclick={() => {
 							phoneSelectMode = !phoneSelectMode;
 							if (!phoneSelectMode) selectedRowIds = new Set();
+							else showMoreFilters = false;
 						}}
 					>
 						{phoneSelectMode ? 'Done' : 'Select'}
@@ -846,10 +884,6 @@
 				onOpenChangeComplete={handleCommissionModalOpenChangeComplete}
 				onSaved={handleCommissionSaved}
 			/>
-		{/if}
-
-		{#if canBulkSelect && selectedLoans.length > 0 && isMobileShell.matches}
-			<div class="min-h-14 shrink-0 lg:hidden" aria-hidden="true"></div>
 		{/if}
 
 		{#if canBulkSelect}
