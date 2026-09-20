@@ -57,6 +57,7 @@
 	import GroupScopedFilterInfo from '$lib/components/groups/GroupScopedFilterInfo.svelte';
 	import LoanGroupFilter from '$lib/components/loans/LoanGroupFilter.svelte';
 	import LoanBulkActionBar from '$lib/components/loans/LoanBulkActionBar.svelte';
+	import LoanSelectionSummaryModal from '$lib/components/loans/LoanSelectionSummaryModal.svelte';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import { createLoanListGroupScope } from '$lib/composables/use-loan-list-group-scope.svelte';
 	import AccessPreview from '$lib/components/groups/AccessPreview.svelte';
@@ -64,7 +65,7 @@
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 
 	import {
-		LOAN_LIST_PAGE_VARIANTS,
+		resolveLoanListPageVariant,
 		type LoanListPageScope
 	} from '$lib/components/loans/loan-list-page-config';
 	import LoanScopeTabs from '$lib/components/loans/LoanScopeTabs.svelte';
@@ -73,7 +74,7 @@
 
 	let {
 		data,
-		scope,
+		scope = 'loans',
 		groupContext = null,
 		showScopeTabs = false
 	}: {
@@ -86,16 +87,20 @@
 			canManage?: boolean;
 			[key: string]: unknown;
 		};
-		scope: LoanListPageScope;
+		scope?: LoanListPageScope;
 		groupContext?: GroupListContext | null;
 		showScopeTabs?: boolean;
 	} = $props();
 
-	const variant = $derived(LOAN_LIST_PAGE_VARIANTS[scope]);
+	const variant = $derived(resolveLoanListPageVariant(scope));
 	const pageTitle = $derived(data.pageTitle ?? variant.defaultPageTitle);
 	const emptyMessage = $derived(data.emptyMessage ?? variant.defaultEmptyMessage);
 	const canCreate = $derived(data.canCreate !== false);
 	const canManage = $derived(data.canManage !== false);
+	/** Group hub members stay view-only. Loan scope tabs still allow bulk select. */
+	const canBulkSelect = $derived(
+		variant.showBulkActions && SHOW_GROUPS_UI && (scope !== 'group' || canManage)
+	);
 	const emptyIcon = $derived(variant.emptyIcon);
 
 	let loans = $state<LoanWithInvestors[] | null>(
@@ -140,6 +145,7 @@
 	let maxTotalAmount = $state('');
 	let selectedRowIds = $state(new Set<string | number>());
 	let phoneSelectMode = $state(false);
+	let summaryOpen = $state(false);
 	let selectedLoan = $state<LoanWithInvestors | null>(null);
 	let isModalOpen = $state(false);
 	let quickPaymentLoan = $state<LoanWithInvestors | null>(null);
@@ -158,7 +164,7 @@
 	const groupScope = createLoanListGroupScope({
 		getLoans: () => loans,
 		showUngrouped: () => scope === 'loans' && canManage,
-		scopeNoun: LOAN_LIST_PAGE_VARIANTS[scope].groupScopeNoun
+		scopeNoun: variant.groupScopeNoun
 	});
 
 	onMount(() => {
@@ -181,7 +187,7 @@
 	}
 
 	async function refreshLoans(change?: LoanListChange) {
-		const depends = variant.listInvalidate;
+		const depends = resolveLoanListPageVariant(scope).listInvalidate;
 		if (!loans) {
 			loans = await refreshLoanList(depends);
 			return;
@@ -384,8 +390,8 @@
 	const dueDateFilter = $derived(page.url.searchParams.get('dueDate'));
 	const viewParam = $derived(page.url.searchParams.get('view'));
 	const dateRangeState = createLoanListDateRange(() => page, () => ({
-		enabled: LOAN_LIST_PAGE_VARIANTS[scope].showDateRange,
-		defaultPreset: LOAN_LIST_PAGE_VARIANTS[scope].defaultDatePreset
+		enabled: variant.showDateRange,
+		defaultPreset: variant.defaultDatePreset
 	}));
 	const filterFrom = $derived(dateRangeState.filterFrom);
 	const filterTo = $derived(dateRangeState.filterTo);
@@ -470,6 +476,10 @@
 	);
 
 	const selectedLoans = $derived(sortedLoans.filter((loan) => selectedRowIds.has(loan.id)));
+
+	$effect(() => {
+		if (selectedLoans.length === 0) summaryOpen = false;
+	});
 
 	const hasActiveAmountFilters = $derived(
 		hasActiveLoanAmountFilters({
@@ -659,7 +669,7 @@
 				{/if}
 			{/snippet}
 			{#snippet toolbarTrailing()}
-				{#if variant.showBulkActions && SHOW_GROUPS_UI && canManage && isMobileShell.matches}
+				{#if canBulkSelect && isMobileShell.matches}
 					<Button
 						type="button"
 						variant={phoneSelectMode ? 'default' : 'outline'}
@@ -771,7 +781,7 @@
 								onRemoveFromGroup={rowActions.onRemoveFromGroup}
 								onGroupFilter={(groupId) => groupScope.setGroupSelection(groupId)}
 								hideGroupBadges={variant.hideGroupBadges}
-								selectable={phoneSelectMode && variant.showBulkActions && SHOW_GROUPS_UI && canManage}
+								selectable={phoneSelectMode && canBulkSelect}
 								selected={selectedRowIds.has(loan.id)}
 								onSelectedChange={(checked) => {
 									const next = new Set(selectedRowIds);
@@ -857,11 +867,11 @@
 			/>
 		{/if}
 
-		{#if variant.showBulkActions && selectedLoans.length > 0 && isMobileShell.matches}
-			<div class="h-14 shrink-0 lg:hidden" aria-hidden="true"></div>
+		{#if canBulkSelect && selectedLoans.length > 0 && isMobileShell.matches}
+			<div class="min-h-14 shrink-0 lg:hidden" aria-hidden="true"></div>
 		{/if}
 
-		{#if variant.showBulkActions && SHOW_GROUPS_UI && canManage}
+		{#if canBulkSelect}
 			<LoanBulkActionBar
 				selectedCount={selectedLoans.length}
 				selectedLoanIds={selectedLoans.map((l) => l.id)}
@@ -874,12 +884,22 @@
 				currentGroupId={groupContext?.groupId ??
 					(typeof groupScope.groupSelection === 'number' ? groupScope.groupSelection : null)}
 				showAddToGroup={variant.showAddToGroup}
+				onSummary={() => (summaryOpen = true)}
 				onClear={() => (selectedRowIds = new Set())}
 				onAdded={async () => {
 					await refreshLoans();
 				}}
 			/>
 		{/if}
+
+		<LoanSelectionSummaryModal
+			open={summaryOpen}
+			onOpenChange={(open) => (summaryOpen = open)}
+			loans={selectedLoans}
+			from={filterFrom}
+			to={filterTo}
+			showCommission={variant.showCommissionSummary}
+		/>
 
 		<ConfirmDeleteDialog
 			open={loanPendingDeletion !== null}
@@ -944,7 +964,7 @@
 	<LoansTable
 		loans={rows}
 		emptyMessage={message}
-		enableRowSelection={variant.showBulkActions && SHOW_GROUPS_UI && canManage}
+		enableRowSelection={canBulkSelect}
 		{selectedRowIds}
 		onSelectedRowIdsChange={(ids) => (selectedRowIds = ids)}
 		onQuickView={handleQuickView}

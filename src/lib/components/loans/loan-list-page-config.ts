@@ -71,7 +71,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showProfitSummary: false,
     showCommissionSummary: false,
     showAddCommission: true,
-    showBulkActions: false,
+    showBulkActions: true,
     showGroupScopedInfo: true,
     groupScopeNoun: "investments",
     groupShowManageLink: false,
@@ -79,7 +79,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     defaultDatePreset: "month",
     listInvalidate: "app:loans",
     hideGroupBadges: false,
-    showAddToGroup: false,
+    showAddToGroup: true,
   },
   borrowed: {
     documentTitle: "Loans",
@@ -92,7 +92,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showProfitSummary: false,
     showCommissionSummary: false,
     showAddCommission: true,
-    showBulkActions: false,
+    showBulkActions: true,
     showGroupScopedInfo: true,
     groupScopeNoun: "borrowed loans",
     groupShowManageLink: false,
@@ -100,7 +100,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     defaultDatePreset: "month",
     listInvalidate: "app:loans",
     hideGroupBadges: false,
-    showAddToGroup: false,
+    showAddToGroup: true,
   },
   commissioned: {
     documentTitle: "Loans",
@@ -113,7 +113,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showProfitSummary: false,
     showCommissionSummary: true,
     showAddCommission: true,
-    showBulkActions: false,
+    showBulkActions: true,
     showGroupScopedInfo: true,
     groupScopeNoun: "commissioned loans",
     groupShowManageLink: false,
@@ -121,7 +121,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     defaultDatePreset: "month",
     listInvalidate: "app:loans",
     hideGroupBadges: false,
-    showAddToGroup: false,
+    showAddToGroup: true,
   },
   witnessed: {
     documentTitle: "Loans",
@@ -134,7 +134,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showProfitSummary: false,
     showCommissionSummary: false,
     showAddCommission: true,
-    showBulkActions: false,
+    showBulkActions: true,
     showGroupScopedInfo: true,
     groupScopeNoun: "witnessed loans",
     groupShowManageLink: false,
@@ -142,7 +142,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     defaultDatePreset: "month",
     listInvalidate: "app:loans",
     hideGroupBadges: false,
-    showAddToGroup: false,
+    showAddToGroup: true,
   },
   group: {
     documentTitle: "Loans",
@@ -166,3 +166,28 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     showAddToGroup: false,
   },
 };
+
+/** URL `?scope=` and list-query keys that are not `LoanListPageScope`. */
+const SCOPE_ALIASES: Record<string, LoanListPageScope> = {
+  mine: "loans",
+  investing: "investments",
+  owned: "loans",
+};
+
+export function resolveLoanListPageScope(
+  scope: string | null | undefined,
+): LoanListPageScope {
+  if (scope && Object.hasOwn(LOAN_LIST_PAGE_VARIANTS, scope)) {
+    return scope as LoanListPageScope;
+  }
+  if (scope && Object.hasOwn(SCOPE_ALIASES, scope)) {
+    return SCOPE_ALIASES[scope]!;
+  }
+  return "loans";
+}
+
+export function resolveLoanListPageVariant(
+  scope: string | null | undefined,
+): LoanListPageVariant {
+  return LOAN_LIST_PAGE_VARIANTS[resolveLoanListPageScope(scope)];
+}

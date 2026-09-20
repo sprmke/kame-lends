@@ -6,7 +6,7 @@ import { ensureLoanListDateRange } from "$lib/loan-list-date-range-server";
 import { getCachedLoansByScope } from "$lib/server/cached-data";
 import { requireWorkspaceAdminPage } from "$lib/server/workspace-admin";
 import { resolveLoanScopeTab } from "$lib/loans/loan-list-scope-nav";
-import { LOAN_LIST_PAGE_VARIANTS } from "$lib/components/loans/loan-list-page-config";
+import { resolveLoanListPageVariant } from "$lib/components/loans/loan-list-page-config";
 
 export const load: PageServerLoad = async (event) => {
   ensureLoanListDateRange(event.url);
@@ -14,7 +14,7 @@ export const load: PageServerLoad = async (event) => {
   event.depends("app:loans");
 
   const tab = resolveLoanScopeTab(event.url.searchParams.get("scope"));
-  const variant = LOAN_LIST_PAGE_VARIANTS[tab.pageScope];
+  const variant = resolveLoanListPageVariant(tab.pageScope);
   const isMine = tab.param === "mine";
 
   const loans = getCachedLoansByScope(session.user.id, tab.listScope, "list");

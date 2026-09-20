@@ -15,6 +15,7 @@
 		groups: GroupPickerItem[];
 		currentGroupId?: number | null;
 		showAddToGroup?: boolean;
+		onSummary?: () => void;
 		onClear: () => void;
 		onAdded?: () => void | Promise<void>;
 	}
@@ -25,6 +26,7 @@
 		groups,
 		currentGroupId = null,
 		showAddToGroup = true,
+		onSummary,
 		onClear,
 		onAdded
 	}: Props = $props();
@@ -117,6 +119,11 @@
 		style="padding-left: max(0.75rem, var(--safe-area-left)); padding-right: max(0.75rem, var(--safe-area-right));"
 	>
 		<span class="text-sm font-medium">{formatCount(selectedCount)} selected</span>
+		{#if onSummary}
+			<Button size="sm" variant="outline" class="touch-target" onclick={onSummary}>
+				Summary
+			</Button>
+		{/if}
 		{#if showAddToGroup}
 			<Button
 				size="sm"

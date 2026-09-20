@@ -47,7 +47,11 @@
 	);
 
 	async function handleSuccess() {
-		await onSuccess?.();
+		try {
+			await onSuccess?.();
+		} catch (error) {
+			console.error(error);
+		}
 		onOpenChange(false);
 	}
 

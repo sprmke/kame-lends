@@ -737,7 +737,11 @@
 			}
 
 			if (onSuccess) {
-				await onSuccess();
+				try {
+					await onSuccess();
+				} catch (error) {
+					console.error(error);
+				}
 			} else if (!isEditMode) {
 				await goto(`/loans/${savedLoan.id}?signing=1`);
 			}

@@ -5,7 +5,7 @@
 
 ## Behavior
 
-Lists loans where the signed-in user is an **investor**, **borrower**, or **witness** **and** has a private commission configured (`loan_user_commissions`, rate or fixed amount &gt; 0). Loans with no commission for the viewer are excluded. Read-only list and loan detail; commission is the focus.
+Lists loans where the signed-in user is an **investor**, **borrower**, or **witness** **and** has a private commission configured (`loan_user_commissions`, rate or fixed amount &gt; 0). Loans with no commission for the viewer are excluded. Loan fields stay read-only; commission is the focus. Table checkboxes and bulk add-to-group match **Managing**.
 
 **Summary cards** (`LoanCommissionSummaryCards`): Principal (peak concurrent in the selected due-date range), Commission Estimate (open loans), Commission Earned (`Completed` loans), and Completed count. Stats use each loan's `myCommission` via `computePartyCommissionStats` in [`src/lib/loan-list-summary.ts`](../../../src/lib/loan-list-summary.ts). Commission cards appear only on this tab, not on **Invested**, **Borrowed**, or **Witnessed**.
 
