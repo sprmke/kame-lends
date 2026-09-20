@@ -1,18 +1,29 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { dismissInstallPrompt, isIosSafari, shouldShowInstallPrompt } from '$lib/pwa/install';
+	import {
+		dismissInstallPrompt,
+		isIosSafari,
+		shouldShowInstallPrompt
+	} from '$lib/pwa/install';
 	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
+	import { runInstallAction } from '$lib/pwa/run-install';
+	import { PWA_CONTEXT_KEY, type PwaContextValue } from '$lib/pwa/pwa-context';
+	import InstallIosInstructionsModal from '$lib/components/pwa/InstallIosInstructionsModal.svelte';
+	import { toast } from '$lib/toast';
 	import { Download, X } from 'lucide-svelte';
 	import { APP_NAME } from '$lib/brand';
 
 	interface Props {
 		installAvailable: boolean;
-		onInstall?: () => void | Promise<void>;
 	}
 
-	let { installAvailable, onInstall }: Props = $props();
+	let { installAvailable }: Props = $props();
+
+	const pwaCtx = getContext<PwaContextValue | undefined>(PWA_CONTEXT_KEY);
 
 	let dismissed = $state(false);
+	let iosHelpOpen = $state(false);
 	const ios = $derived(isIosSafari());
 
 	const visible = $derived(
@@ -25,6 +36,21 @@
 	function close() {
 		dismissInstallPrompt();
 		dismissed = true;
+	}
+
+	async function handleInstall() {
+		const result = await runInstallAction(pwaCtx);
+		if (result === 'ios-help') {
+			iosHelpOpen = true;
+			return;
+		}
+		if (result === 'accepted') {
+			close();
+			return;
+		}
+		if (result === 'unavailable') {
+			toast.error('Install is not available in this browser yet.');
+		}
 	}
 </script>
 
@@ -45,7 +71,7 @@
 				<p class="text-sm font-semibold">Install {APP_NAME}</p>
 				{#if ios}
 					<p class="mt-1 text-sm text-muted-foreground">
-						Tap Share, then Add to Home Screen.
+						Tap Install for Add to Home Screen steps.
 					</p>
 				{:else}
 					<p class="mt-1 text-sm text-muted-foreground">Open from your home screen.</p>
@@ -60,8 +86,8 @@
 				<X class="h-4 w-4" />
 			</button>
 		</div>
-		{#if !ios && onInstall}
-			<Button type="button" class="mt-3 w-full" onclick={() => void onInstall()}>Install</Button>
-		{/if}
+		<Button type="button" class="mt-3 w-full" onclick={() => void handleInstall()}>Install</Button>
 	</div>
+
+	<InstallIosInstructionsModal open={iosHelpOpen} onOpenChange={(open) => (iosHelpOpen = open)} />
 {/if}

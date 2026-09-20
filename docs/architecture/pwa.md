@@ -2,7 +2,7 @@
 title: PWA — installable app, offline read, push
 status: active
 tags: [architecture, pwa, service-worker, offline, notifications]
-updated: 2026-09-17
+updated: 2026-09-20
 ---
 
 # PWA — installable app, offline read, push
@@ -11,15 +11,17 @@ Part of [`docs/PROJECT.md`](../PROJECT.md). Rollout tracker: [`docs/workflow/pla
 
 ## What ships
 
-| Capability    | Behavior                                                                                      |
-| ------------- | --------------------------------------------------------------------------------------------- |
-| Install       | `manifest.webmanifest`, shortcuts, screenshots; `InstallPrompt` + Settings / More sheet entry |
-| Offline read  | Cached shell + visited pages + `__data.json` + allowlisted GET APIs                           |
-| Offline write | Blocked with 503 JSON toast (`You are offline. Connect to save changes.`)                     |
-| Update        | `UpdatePrompt` on SW waiting or SvelteKit `updated` store; never auto-reload                  |
-| Push          | Web Push for due/overdue reminders, loan activity, signing requests                           |
+| Capability    | Behavior                                                                                                                                                                      |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install       | `manifest.webmanifest`, shortcuts, screenshots; `runInstallAction` from `InstallPrompt`, sidebar/More `InstallAppNavButton`, Settings `InstallAppCard` (no Settings redirect) |
+| Offline read  | Cached shell + visited pages + `__data.json` + allowlisted GET APIs                                                                                                           |
+| Offline write | Blocked with 503 JSON toast (`You are offline. Connect to save changes.`)                                                                                                     |
+| Update        | `UpdatePrompt` on SW waiting or SvelteKit `updated` store; never auto-reload                                                                                                  |
+| Push          | Web Push for due/overdue reminders, loan activity, signing requests                                                                                                           |
 
 Platform notes: desktop Chrome/Edge and Android are fully supported. iOS 16.4+ push requires Add to Home Screen first.
+
+**Install taps:** Chromium runs `beforeinstallprompt` via `promptInstall`. iOS opens `InstallIosInstructionsModal` (Share → Add to Home Screen). Install entry points never navigate to Settings.
 
 ## Build wiring
 

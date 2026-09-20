@@ -9,8 +9,10 @@
 	import SummaryCard from '$lib/components/common/SummaryCard.svelte';
 	import SearchFilter from '$lib/components/common/SearchFilter.svelte';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
-	import ExportButton from '$lib/components/common/ExportButton.svelte';
 	import RangeFilter from '$lib/components/common/RangeFilter.svelte';
+	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
+	import LoanListMoreFiltersPanel from '$lib/components/common/LoanListMoreFiltersPanel.svelte';
+	import ExportButton from '$lib/components/common/ExportButton.svelte';
 	import MaturingLoansCard from '$lib/components/common/MaturingLoansCard.svelte';
 	import PastDueLoansCard from '$lib/components/common/PastDueLoansCard.svelte';
 	import CompletedLoansCard from '$lib/components/common/CompletedLoansCard.svelte';
@@ -50,6 +52,7 @@
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 	import { createLoanFormOptions } from '$lib/composables/use-loan-form-options.svelte';
 	import { Plus, X, Filter } from 'lucide-svelte';
+	import { hasActiveLoanAmountFilters } from '$lib/loan-list-page-filters';
 	import { toast } from '$lib/toast';
 	import { cn } from '$lib/utils';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
@@ -89,19 +92,6 @@
 		scopeToInvestor = true,
 		investorUserId = null
 	}: Props = $props();
-
-	const LOAN_TYPE_OPTIONS = [
-		{ value: 'Lot Title', label: 'Lot Title' },
-		{ value: 'OR/CR', label: 'OR/CR' },
-		{ value: 'Agent', label: 'Agent' }
-	];
-
-	const LOAN_STATUS_OPTIONS = [
-		{ value: 'Fully Funded', label: 'Fully Funded' },
-		{ value: 'Partially Funded', label: 'Partially Funded' },
-		{ value: 'Completed', label: 'Completed' },
-		{ value: 'Overdue', label: 'Overdue' }
-	];
 
 	let pageTab = $state<'overview' | 'loans' | 'debts'>('overview');
 	let loanSearchQuery = $state('');
@@ -406,19 +396,25 @@
 		maxDebtAmount = '';
 	}
 
-	const hasActiveLoanFilters = $derived(
-		loanSearchQuery !== '' ||
-			loanTypeFilter.length > 0 ||
+	const hasActiveAdvancedLoanFilters = $derived(
+		loanTypeFilter.length > 0 ||
 			loanStatusFilter.length > 0 ||
 			freeLotFilter !== 'all' ||
-			minPrincipal !== '' ||
-			maxPrincipal !== '' ||
-			minAvgRate !== '' ||
-			maxAvgRate !== '' ||
-			minInterest !== '' ||
-			maxInterest !== '' ||
-			minTotalAmount !== '' ||
-			maxTotalAmount !== '' ||
+			hasActiveLoanAmountFilters({
+				minPrincipal,
+				maxPrincipal,
+				minAvgRate,
+				maxAvgRate,
+				minInterest,
+				maxInterest,
+				minTotalAmount,
+				maxTotalAmount
+			})
+	);
+
+	const hasActiveLoanFilters = $derived(
+		loanSearchQuery !== '' ||
+			hasActiveAdvancedLoanFilters ||
 			(pageTab === 'loans' && dateRangeState.isDateFilterActive)
 	);
 	const hasActiveDebtFilters = $derived(
@@ -523,58 +519,29 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="loans" class="mt-6 space-y-4">
-			{#if !isMobileShell.matches}
-				<DateRangeFilter
-					dateRange={dateRangeState.dateRange}
-					datePreset={dateRangeState.datePreset}
-					isActive={dateRangeState.isDateFilterActive}
-					setDatePreset={dateRangeState.setDatePreset}
-					setDateRange={dateRangeState.setDateRange}
-					navigatePeriod={dateRangeState.navigatePeriod}
-					goToToday={dateRangeState.goToToday}
-					onClear={dateRangeState.clearDateFilter}
-				/>
-			{/if}
-
-			<div class="mobile-list-toolbar">
-				<SearchFilter
-					value={loanSearchQuery}
-					onChange={(v) => (loanSearchQuery = v)}
-					placeholder="Search loans by name or notes..."
-					class="min-w-0 flex-1 lg:min-w-[12rem]"
-				/>
-				<div class="mobile-list-toolbar-controls">
-					<MultiSelectFilter
-						options={LOAN_TYPE_OPTIONS}
-						selected={loanTypeFilter}
-						onChange={(v) => (loanTypeFilter = v)}
-						placeholder="Select Type"
-						allLabel="All Types"
-						triggerClassName="hidden xl:flex w-full xl:w-[180px]"
+			<ListPageToolbar
+				searchValue={loanSearchQuery}
+				searchPlaceholder="Search loans by name or notes..."
+				onSearchChange={(v) => (loanSearchQuery = v)}
+				hasActiveFilters={hasActiveLoanFilters}
+				onClearFilters={clearLoanFilters}
+				showMoreFilters={showMoreLoanFilters}
+				onToggleMoreFilters={() => (showMoreLoanFilters = !showMoreLoanFilters)}
+				hasActiveAdvancedFilters={hasActiveAdvancedLoanFilters}
+			>
+				{#snippet afterSearch()}
+					<DateRangeFilter
+						dateRange={dateRangeState.dateRange}
+						datePreset={dateRangeState.datePreset}
+						isActive={dateRangeState.isDateFilterActive}
+						setDatePreset={dateRangeState.setDatePreset}
+						setDateRange={dateRangeState.setDateRange}
+						navigatePeriod={dateRangeState.navigatePeriod}
+						goToToday={dateRangeState.goToToday}
+						onClear={dateRangeState.clearDateFilter}
 					/>
-					<MultiSelectFilter
-						options={LOAN_STATUS_OPTIONS}
-						selected={loanStatusFilter}
-						onChange={(v) => (loanStatusFilter = v)}
-						placeholder="Select Status"
-						allLabel="All Status"
-						triggerClassName="hidden xl:flex w-full xl:w-[180px]"
-					/>
-					<Button
-						variant={showMoreLoanFilters ? 'secondary' : 'outline'}
-						size="sm"
-						class="shrink-0"
-						onclick={() => (showMoreLoanFilters = !showMoreLoanFilters)}
-					>
-						<Filter class="h-4 w-4 xl:mr-2" />
-						<span class="hidden xl:inline">{showMoreLoanFilters ? 'Less' : 'More'} Filters</span>
-					</Button>
-					{#if hasActiveLoanFilters}
-						<Button variant="outline" size="sm" class="shrink-0" onclick={clearLoanFilters}>
-							<X class="h-4 w-4 xl:mr-2" />
-							<span class="hidden xl:inline">Clear All</span>
-						</Button>
-					{/if}
+				{/snippet}
+				{#snippet toolbarTrailing()}
 					{#if canBulkSelect && isMobileShell.matches}
 						<Button
 							type="button"
@@ -603,68 +570,35 @@
 							<span class="hidden xl:inline">Add Loan</span>
 						</Button>
 					{/if}
-				</div>
-			</div>
-
-			{#if isMobileShell.matches}
-				<DateRangeFilter
-					dateRange={dateRangeState.dateRange}
-					datePreset={dateRangeState.datePreset}
-					isActive={dateRangeState.isDateFilterActive}
-					fullWidth={true}
-					setDatePreset={dateRangeState.setDatePreset}
-					setDateRange={dateRangeState.setDateRange}
-					navigatePeriod={dateRangeState.navigatePeriod}
-					goToToday={dateRangeState.goToToday}
-					onClear={dateRangeState.clearDateFilter}
-				/>
-			{/if}
+				{/snippet}
+				{#snippet moreFilters()}
+					<LoanListMoreFiltersPanel
+						statusFilter={loanStatusFilter}
+						typeFilter={loanTypeFilter}
+						onStatusChange={(v) => (loanStatusFilter = v)}
+						onTypeChange={(v) => (loanTypeFilter = v)}
+						{minPrincipal}
+						{maxPrincipal}
+						onMinPrincipalChange={(v) => (minPrincipal = v)}
+						onMaxPrincipalChange={(v) => (maxPrincipal = v)}
+						{minAvgRate}
+						{maxAvgRate}
+						onMinAvgRateChange={(v) => (minAvgRate = v)}
+						onMaxAvgRateChange={(v) => (maxAvgRate = v)}
+						{minInterest}
+						{maxInterest}
+						onMinInterestChange={(v) => (minInterest = v)}
+						onMaxInterestChange={(v) => (maxInterest = v)}
+						{minTotalAmount}
+						{maxTotalAmount}
+						onMinTotalAmountChange={(v) => (minTotalAmount = v)}
+						onMaxTotalAmountChange={(v) => (maxTotalAmount = v)}
+					/>
+				{/snippet}
+			</ListPageToolbar>
 
 			{#if loansTabSummaryStats}
 				<LoanListSummaryCards stats={loansTabSummaryStats} />
-			{/if}
-
-			{#if showMoreLoanFilters}
-				<div
-					class="dashboard-filter-panel grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-				>
-					<RangeFilter
-						label="Total Principal"
-						minValue={minPrincipal}
-						maxValue={maxPrincipal}
-						onMinChange={(v) => (minPrincipal = v)}
-						onMaxChange={(v) => (maxPrincipal = v)}
-						minPlaceholder="Min (₱)"
-						maxPlaceholder="Max (₱)"
-					/>
-					<RangeFilter
-						label="Avg. Rate"
-						minValue={minAvgRate}
-						maxValue={maxAvgRate}
-						onMinChange={(v) => (minAvgRate = v)}
-						onMaxChange={(v) => (maxAvgRate = v)}
-						minPlaceholder="Min (%)"
-						maxPlaceholder="Max (%)"
-					/>
-					<RangeFilter
-						label="Total Interest"
-						minValue={minInterest}
-						maxValue={maxInterest}
-						onMinChange={(v) => (minInterest = v)}
-						onMaxChange={(v) => (maxInterest = v)}
-						minPlaceholder="Min (₱)"
-						maxPlaceholder="Max (₱)"
-					/>
-					<RangeFilter
-						label="Total Amount"
-						minValue={minTotalAmount}
-						maxValue={maxTotalAmount}
-						onMinChange={(v) => (minTotalAmount = v)}
-						onMaxChange={(v) => (maxTotalAmount = v)}
-						minPlaceholder="Min (₱)"
-						maxPlaceholder="Max (₱)"
-					/>
-				</div>
 			{/if}
 
 			<LoansTable

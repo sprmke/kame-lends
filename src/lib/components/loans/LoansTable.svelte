@@ -83,6 +83,21 @@
 		else next.delete(id);
 		onSelectedRowIdsChange?.(next);
 	}
+
+	function shouldIgnoreRowQuickView(event: MouseEvent): boolean {
+		const target = event.target;
+		if (!(target instanceof Element)) return false;
+		return Boolean(
+			target.closest('[data-loan-row-signing]') ||
+				target.closest('[data-loan-row-select]') ||
+				target.closest('[data-loan-row-actions]')
+		);
+	}
+
+	function handleRowClick(event: MouseEvent, loan: LoanWithInvestors) {
+		if (shouldIgnoreRowQuickView(event)) return;
+		onQuickView?.(loan);
+	}
 </script>
 
 <div class="overflow-x-auto rounded-md border border-border/60" data-slot="table-container">
@@ -126,10 +141,10 @@
 						: calculateTransactionStats(loan.loanInvestors).averageRate}
 				<Table.Row
 					class={cn(onQuickView && TABLE_ROW_CLICKABLE)}
-					onclick={() => onQuickView?.(loan)}
+					onclick={(event) => handleRowClick(event, loan)}
 				>
 					{#if enableRowSelection}
-						<Table.Cell onclick={(e) => e.stopPropagation()}>
+						<Table.Cell data-loan-row-select onclick={(e) => e.stopPropagation()}>
 							<Checkbox
 								checked={selectedRowIds.has(loan.id)}
 								onCheckedChange={(v) => toggleOne(loan.id, !!v)}
@@ -146,7 +161,11 @@
 							{#if (loan as LoanWithInvestors & { groupSource?: string }).groupSource === 'rule'}
 								<Badge variant="secondary" class="mt-1 text-[10px]">Added by rule</Badge>
 							{/if}
-							<div class="mt-1 md:hidden" onclick={(event) => event.stopPropagation()}>
+							<div
+								class="mt-1 md:hidden"
+								data-loan-row-signing
+								onclick={(event) => event.stopPropagation()}
+							>
 								<LoanSigningProgressBadge
 									{loan}
 									class="mt-0"
@@ -174,7 +193,11 @@
 							{formatText(loan.status)}
 						</Badge>
 					</Table.Cell>
-					<Table.Cell class="hidden md:table-cell" onclick={(event) => event.stopPropagation()}>
+					<Table.Cell
+						class="hidden cursor-default md:table-cell"
+						data-loan-row-signing
+						onclick={(event) => event.stopPropagation()}
+					>
 						<LoanSigningProgressBadge
 							{loan}
 							class="mt-0"
@@ -196,7 +219,7 @@
 					<Table.Cell class="hidden md:table-cell text-right text-xs text-muted-foreground">
 						{loan.dueDate ? formatDateVeryShort(loan.dueDate) : '—'}
 					</Table.Cell>
-					<Table.Cell onclick={(e) => e.stopPropagation()}>
+					<Table.Cell data-loan-row-actions onclick={(e) => e.stopPropagation()}>
 						<ActionButtons
 							viewHref={`/loans/${loan.id}`}
 							showView={false}

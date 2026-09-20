@@ -6,6 +6,7 @@ import {
   ALL_TIME_RANGE_PARAM,
   fromIsoDate,
   isAllTimeDateRange,
+  isCurrentPeriod,
   type DatePreset,
   type DateRange,
 } from "$lib/date/navigation";
@@ -234,10 +235,21 @@ export function createLoanListDateRange(
     goToToday,
     get isDateFilterActive() {
       if (!enabled) return false;
-      if (isAllTime) return true;
-      if (urlFrom || urlTo) return true;
       if (pendingRangeActive()) return true;
-      return defaultPreset !== "all-time";
+
+      const targetDefault = defaultPreset ?? "month";
+
+      if (targetDefault === "all-time") {
+        return !isAllTime;
+      }
+
+      if (isAllTime) return true;
+
+      const preset = dateNav.datePreset;
+      if (preset === "all-time" || preset === "custom") return true;
+      if (preset !== targetDefault) return true;
+
+      return !isCurrentPeriod(dateNav.dateRange.from, preset);
     },
     get filterFrom() {
       if (!enabled) return null;

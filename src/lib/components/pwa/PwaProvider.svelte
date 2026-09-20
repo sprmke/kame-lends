@@ -24,11 +24,12 @@
 	const pwa = createPwaState();
 	let cleanup: (() => void) | null = null;
 
-	async function installApp() {
+	async function installApp(): Promise<boolean> {
 		const accepted = await promptInstall();
 		if (accepted) {
 			pwa.installAvailable = false;
 		}
+		return accepted;
 	}
 
 	setContext<PwaContextValue>(PWA_CONTEXT_KEY, {
@@ -94,7 +95,4 @@
 
 <OfflineBanner offline={pwa.offline} />
 <UpdatePrompt updateReady={pwa.updateReady} />
-<InstallPrompt
-	installAvailable={pwa.installAvailable && !pwa.updateReady}
-	onInstall={installApp}
-/>
+<InstallPrompt installAvailable={pwa.installAvailable && !pwa.updateReady} />

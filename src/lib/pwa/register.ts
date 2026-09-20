@@ -130,7 +130,12 @@ export async function promptInstall(
   deferred: BeforeInstallPromptEvent | null = getInstallPromptEvent(),
 ): Promise<boolean> {
   if (!deferred) return false;
-  await deferred.prompt();
+  try {
+    await deferred.prompt();
+  } catch {
+    installPromptEvent = null;
+    return false;
+  }
   const choice = await deferred.userChoice;
   if (choice.outcome === "accepted") {
     installPromptEvent = null;

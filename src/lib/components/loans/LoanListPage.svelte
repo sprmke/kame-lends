@@ -494,11 +494,16 @@
 		})
 	);
 
+	const hasActiveGroupFilter = $derived(
+		showGroupFilter && groupScope.groupSelection !== 'all'
+	);
+
 	const hasActiveAdvancedFilters = $derived(
 		statusFilter.length > 0 ||
 			hasActiveAmountFilters ||
 			participantFilters.hasActiveParticipantFilters ||
-			typeFilter.length > 0
+			typeFilter.length > 0 ||
+			hasActiveGroupFilter
 	);
 
 	const hasActiveFilters = $derived(
@@ -506,7 +511,9 @@
 			statusFilter.length > 0 ||
 			typeFilter.length > 0 ||
 			!!dueDateFilter ||
-			hasActiveAdvancedFilters
+			hasActiveAdvancedFilters ||
+			(variant.showDateRange && dateRangeState.isDateFilterActive) ||
+			hasActiveGroupFilter
 	);
 
 	function clearFilters() {
@@ -527,6 +534,9 @@
 			const url = new URL(page.url);
 			url.searchParams.delete('dueDate');
 			replaceState(`${url.pathname}${url.search}`, page.state);
+		}
+		if (hasActiveGroupFilter) {
+			groupScope.setGroupSelection('all');
 		}
 	}
 </script>
@@ -552,18 +562,6 @@
 {#snippet listChrome()}
 		{#if !variant.embedded}
 		<PageHeader title={pageTitle} description={variant.description} showPriceToggle={true}>
-			{#if variant.showDateRange && !isMobileShell.matches}
-				<DateRangeFilter
-					dateRange={dateRangeState.dateRange}
-					datePreset={dateRangeState.datePreset}
-					isActive={dateRangeState.isDateFilterActive}
-					setDatePreset={dateRangeState.setDatePreset}
-					setDateRange={dateRangeState.setDateRange}
-					navigatePeriod={dateRangeState.navigatePeriod}
-					goToToday={dateRangeState.goToToday}
-					onClear={dateRangeState.clearDateFilter}
-				/>
-			{/if}
 			<ExportButton
 				data={listLoans}
 				filteredData={sortedLoans}
@@ -584,47 +582,6 @@
 			<LoanScopeTabs />
 		{/if}
 
-		{#if variant.embedded && variant.showDateRange}
-			<div class="flex items-center gap-2 sm:justify-between">
-				<div class={isMobileShell.matches ? 'min-w-0 flex-1' : ''}>
-					<DateRangeFilter
-						dateRange={dateRangeState.dateRange}
-						datePreset={dateRangeState.datePreset}
-						isActive={dateRangeState.isDateFilterActive}
-						fullWidth={isMobileShell.matches}
-						setDatePreset={dateRangeState.setDatePreset}
-						setDateRange={dateRangeState.setDateRange}
-						navigatePeriod={dateRangeState.navigatePeriod}
-						goToToday={dateRangeState.goToToday}
-						onClear={dateRangeState.clearDateFilter}
-					/>
-				</div>
-				{#if !isMobileShell.matches}
-					<ExportButton
-						data={listLoans}
-						filteredData={sortedLoans}
-						selectedData={selectedLoans}
-						sections={loanPDFSections}
-						onGeneratePDF={downloadLoansPdf}
-					/>
-				{/if}
-			</div>
-		{/if}
-
-		{#if !variant.embedded && variant.showDateRange && isMobileShell.matches}
-			<DateRangeFilter
-				dateRange={dateRangeState.dateRange}
-				datePreset={dateRangeState.datePreset}
-				isActive={dateRangeState.isDateFilterActive}
-				fullWidth={true}
-				setDatePreset={dateRangeState.setDatePreset}
-				setDateRange={dateRangeState.setDateRange}
-				navigatePeriod={dateRangeState.navigatePeriod}
-				goToToday={dateRangeState.goToToday}
-				onClear={dateRangeState.clearDateFilter}
-			/>
-		{/if}
-
 		{#if variant.showLoanListSummary && scopedLoans.length > 0 && summaryStats}
 			<LoanListSummaryCards stats={summaryStats} />
 		{/if}
@@ -642,6 +599,17 @@
 			/>
 		{/if}
 
+		{#snippet loanGroupFilter()}
+			<LoanGroupFilter
+				groups={groupScope.groupChips}
+				selected={groupScope.groupSelection}
+				showUngrouped={groupScope.showUngrouped}
+				ungroupedCount={groupScope.ungroupedCount}
+				onChange={groupScope.setGroupSelection}
+				triggerClassName="w-full"
+			/>
+		{/snippet}
+
 		<ListPageToolbar
 			searchValue={searchQuery}
 			searchPlaceholder="Search loans by name or notes..."
@@ -657,18 +625,30 @@
 			onToggleMoreFilters={() => (showMoreFilters = !showMoreFilters)}
 			{hasActiveAdvancedFilters}
 		>
-			{#snippet filters()}
-				{#if showGroupFilter}
-					<LoanGroupFilter
-						groups={groupScope.groupChips}
-						selected={groupScope.groupSelection}
-						showUngrouped={groupScope.showUngrouped}
-						ungroupedCount={groupScope.ungroupedCount}
-						onChange={groupScope.setGroupSelection}
+			{#snippet afterSearch()}
+				{#if variant.showDateRange}
+					<DateRangeFilter
+						dateRange={dateRangeState.dateRange}
+						datePreset={dateRangeState.datePreset}
+						isActive={dateRangeState.isDateFilterActive}
+						setDatePreset={dateRangeState.setDatePreset}
+						setDateRange={dateRangeState.setDateRange}
+						navigatePeriod={dateRangeState.navigatePeriod}
+						goToToday={dateRangeState.goToToday}
+						onClear={dateRangeState.clearDateFilter}
 					/>
 				{/if}
 			{/snippet}
 			{#snippet toolbarTrailing()}
+				{#if variant.embedded}
+					<ExportButton
+						data={listLoans}
+						filteredData={sortedLoans}
+						selectedData={selectedLoans}
+						sections={loanPDFSections}
+						onGeneratePDF={downloadLoansPdf}
+					/>
+				{/if}
 				{#if canBulkSelect && isMobileShell.matches}
 					<Button
 						type="button"
@@ -686,6 +666,7 @@
 			{/snippet}
 			{#snippet moreFilters()}
 				<LoanListMoreFiltersPanel
+					groupFilter={showGroupFilter ? loanGroupFilter : undefined}
 					{statusFilter}
 					{typeFilter}
 					onStatusChange={(value) => (statusFilter = value)}

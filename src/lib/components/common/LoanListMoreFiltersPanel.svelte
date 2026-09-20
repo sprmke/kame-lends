@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import MultiSelectFilter, {
 		type MultiSelectOption
 	} from '$lib/components/common/MultiSelectFilter.svelte';
@@ -38,6 +39,7 @@
 		witnessFilterOptions?: MultiSelectOption[];
 		selectedWitnesses?: string[];
 		onWitnessesChange?: (value: string[]) => void;
+		groupFilter?: Snippet;
 	}
 
 	let {
@@ -69,9 +71,23 @@
 		onBorrowersChange = () => {},
 		witnessFilterOptions = [],
 		selectedWitnesses = [],
-		onWitnessesChange = () => {}
+		onWitnessesChange = () => {},
+		groupFilter
 	}: Props = $props();
+
+	const showParticipantFilters = $derived(
+		investorFilterOptions.length > 0 ||
+			borrowerFilterOptions.length > 0 ||
+			witnessFilterOptions.length > 0
+	);
 </script>
+
+{#if groupFilter}
+	<div class="border-b border-border/50 pb-3">
+		<p class="mb-2 block text-xs font-semibold">Group</p>
+		{@render groupFilter()}
+	</div>
+{/if}
 
 <div class="border-b border-border/50 pb-3">
 	<p class="mb-2 block text-xs font-semibold">Status</p>
@@ -136,6 +152,7 @@
 	/>
 </div>
 
+{#if showParticipantFilters}
 <div class="grid grid-cols-1 gap-3 border-t border-border/50 pt-3 sm:grid-cols-2 xl:grid-cols-3">
 	{#if investorFilterOptions.length > 0}
 		<div class="space-y-2">
@@ -157,39 +174,44 @@
 		</div>
 	{/if}
 
-	<div class="space-y-2">
-		<p class="flex items-center gap-1 text-xs font-semibold">
-			<UserCheck class="h-3.5 w-3.5" />
-			Borrowers
-			{#if selectedBorrowers.length > 0}({selectedBorrowers.length}){/if}
-		</p>
-		<MultiSelectFilter
-			options={borrowerFilterOptions}
-			selected={selectedBorrowers}
-			onChange={onBorrowersChange}
-			placeholder="All Borrowers"
-			allLabel="All Borrowers"
-			searchPlaceholder="Search borrowers..."
-			searchable={true}
-			triggerClassName="w-full"
-		/>
-	</div>
+	{#if borrowerFilterOptions.length > 0}
+		<div class="space-y-2">
+			<p class="flex items-center gap-1 text-xs font-semibold">
+				<UserCheck class="h-3.5 w-3.5" />
+				Borrowers
+				{#if selectedBorrowers.length > 0}({selectedBorrowers.length}){/if}
+			</p>
+			<MultiSelectFilter
+				options={borrowerFilterOptions}
+				selected={selectedBorrowers}
+				onChange={onBorrowersChange}
+				placeholder="All Borrowers"
+				allLabel="All Borrowers"
+				searchPlaceholder="Search borrowers..."
+				searchable={true}
+				triggerClassName="w-full"
+			/>
+		</div>
+	{/if}
 
-	<div class="space-y-2">
-		<p class="flex items-center gap-1 text-xs font-semibold">
-			<UserRound class="h-3.5 w-3.5" />
-			Witnesses
-			{#if selectedWitnesses.length > 0}({selectedWitnesses.length}){/if}
-		</p>
-		<MultiSelectFilter
-			options={witnessFilterOptions}
-			selected={selectedWitnesses}
-			onChange={onWitnessesChange}
-			placeholder="All Witnesses"
-			allLabel="All Witnesses"
-			searchPlaceholder="Search witnesses..."
-			searchable={true}
-			triggerClassName="w-full"
-		/>
-	</div>
+	{#if witnessFilterOptions.length > 0}
+		<div class="space-y-2">
+			<p class="flex items-center gap-1 text-xs font-semibold">
+				<UserRound class="h-3.5 w-3.5" />
+				Witnesses
+				{#if selectedWitnesses.length > 0}({selectedWitnesses.length}){/if}
+			</p>
+			<MultiSelectFilter
+				options={witnessFilterOptions}
+				selected={selectedWitnesses}
+				onChange={onWitnessesChange}
+				placeholder="All Witnesses"
+				allLabel="All Witnesses"
+				searchPlaceholder="Search witnesses..."
+				searchable={true}
+				triggerClassName="w-full"
+			/>
+		</div>
+	{/if}
 </div>
+{/if}

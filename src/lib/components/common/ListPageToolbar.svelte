@@ -19,6 +19,8 @@
 		hasActiveFilters?: boolean;
 		onClearFilters?: () => void;
 		filters?: Snippet;
+		/** Renders on the toolbar row immediately after search (e.g. date range). */
+		afterSearch?: Snippet;
 		showMoreFilters?: boolean;
 		onToggleMoreFilters?: () => void;
 		hasActiveAdvancedFilters?: boolean;
@@ -40,6 +42,7 @@
 		hasActiveFilters = false,
 		onClearFilters,
 		filters,
+		afterSearch,
 		showMoreFilters = false,
 		onToggleMoreFilters,
 		hasActiveAdvancedFilters = false,
@@ -51,12 +54,19 @@
 
 <div class={cn('flex flex-col gap-3', className)}>
 <div class="mobile-list-toolbar">
-	<SearchFilter
-		value={searchValue}
-		onChange={onSearchChange}
-		placeholder={searchPlaceholder}
-		class="min-w-0 flex-1 lg:min-w-[12rem]"
-	/>
+	<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+		<SearchFilter
+			value={searchValue}
+			onChange={onSearchChange}
+			placeholder={searchPlaceholder}
+			class="min-w-0 flex-1 lg:min-w-[12rem]"
+		/>
+		{#if afterSearch}
+			<div class="min-w-0 shrink-0 max-w-full">
+				{@render afterSearch()}
+			</div>
+		{/if}
+	</div>
 	<div class="mobile-list-toolbar-controls">
 		{#if showViewToggle && viewMode && onViewModeChange && hasData}
 			<ViewModeToggle
