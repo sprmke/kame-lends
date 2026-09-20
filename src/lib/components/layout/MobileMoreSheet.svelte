@@ -6,8 +6,8 @@
 	import { isNavActive, type AppNavGroup } from '$lib/nav/app-nav';
 	import { cn } from '$lib/utils';
 	import SignOutForm from '$lib/components/common/SignOutForm.svelte';
-	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
-	import { Download, LogOut } from 'lucide-svelte';
+	import InstallAppNavButton from '$lib/components/pwa/InstallAppNavButton.svelte';
+	import { LogOut } from 'lucide-svelte';
 
 	interface UserInfo {
 		name?: string | null;
@@ -25,8 +25,6 @@
 	}
 
 	let { open, onOpenChange, pathname, moreNavGroups, user, onNavNavigate }: Props = $props();
-
-	const standalone = $derived(isStandaloneDisplay());
 
 	const moreNavItems = $derived(moreNavGroups.flatMap((group) => group.items));
 
@@ -134,16 +132,10 @@
 						/>
 					</div>
 
-					{#if !standalone}
-						<a
-							href="/settings"
-							class="native-press flex min-h-11 w-full items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium"
-							onclick={() => onOpenChange(false)}
-						>
-							<Download class="size-4 shrink-0" />
-							Install app
-						</a>
-					{/if}
+					<InstallAppNavButton
+						variant="sheet"
+						onAction={() => onOpenChange(false)}
+					/>
 
 					<ThemeToggle variant="segmented" class="w-full shadow-none" />
 

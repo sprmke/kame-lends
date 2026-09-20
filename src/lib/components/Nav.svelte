@@ -13,6 +13,7 @@
 	import MobileHeroActions from '$lib/components/layout/MobileHeroActions.svelte';
 	import MobileMoreSheet from '$lib/components/layout/MobileMoreSheet.svelte';
 	import SignOutForm from '$lib/components/common/SignOutForm.svelte';
+	import InstallAppNavButton from '$lib/components/pwa/InstallAppNavButton.svelte';
 	import {
 		buildAppNav,
 		DEFAULT_NAV_CAPABILITIES,
@@ -22,8 +23,7 @@
 		type NavCapabilities
 	} from '$lib/nav/app-nav';
 	import { THEME_COLOR_DASHBOARD } from '$lib/theme/preferences';
-	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
-	import { ChevronLeft, ChevronRight, Download, LogOut } from 'lucide-svelte';
+	import { ChevronLeft, ChevronRight, LogOut } from 'lucide-svelte';
 
 	interface UserInfo {
 		name?: string | null;
@@ -42,7 +42,6 @@
 	let isCollapsed = $state(false);
 	let moreOpen = $state(false);
 	let pendingDockHref = $state<string | null>(null);
-	const standalone = $derived(isStandaloneDisplay());
 
 	const caps = $derived(navCapabilities ?? DEFAULT_NAV_CAPABILITIES);
 	const nav = $derived(buildAppNav(caps));
@@ -198,18 +197,9 @@
 			{/each}
 		</nav>
 		<div class="border-t border-border/50 p-4">
-			{#if !standalone}
-				<a
-					href="/settings"
-					class={cn(
-						'mb-3 flex min-h-11 items-center rounded-xl text-sm font-medium transition-all duration-200 hover:bg-accent',
-						isCollapsed ? 'justify-center px-2' : 'gap-3 px-3'
-					)}
-				>
-					<Download class="h-4 w-4 shrink-0" />
-					{#if !isCollapsed}<span>Install app</span>{/if}
-				</a>
-			{/if}
+			<div class="mb-3">
+				<InstallAppNavButton collapsed={isCollapsed} />
+			</div>
 			<div class={cn('mb-3', isCollapsed && 'flex justify-center')}>
 				<ThemeToggle variant={isCollapsed ? 'icon' : 'segmented'} class={isCollapsed ? undefined : 'w-full'} />
 			</div>

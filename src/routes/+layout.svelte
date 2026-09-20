@@ -151,21 +151,21 @@
 
 <NavigationProgress />
 
-<Nav user={data.session?.user} navCapabilities={data.navCapabilities}>
-	<PriceVisibilityShell>
-		{#if showDashboardSkeleton}
-			<div class="dashboard-page">
-				<DashboardSkeleton />
-			</div>
-		{:else if showDetailSkeleton && detailSkeletonVariant}
-			<DetailPageSkeleton variant={detailSkeletonVariant} />
-		{:else if showListSkeleton}
-			<ListPageSkeleton variant={listSkeletonVariant} />
-		{:else}
-			{@render children()}
-		{/if}
-	</PriceVisibilityShell>
-</Nav>
-
-<PwaProvider userId={data.session?.user?.id ?? null} />
+<PwaProvider userId={data.session?.user?.id ?? null}>
+	<Nav user={data.session?.user} navCapabilities={data.navCapabilities}>
+		<PriceVisibilityShell>
+			{#if showDashboardSkeleton}
+				<div class="dashboard-page">
+					<DashboardSkeleton />
+				</div>
+			{:else if showDetailSkeleton && detailSkeletonVariant}
+				<DetailPageSkeleton variant={detailSkeletonVariant} />
+			{:else if showListSkeleton}
+				<ListPageSkeleton variant={listSkeletonVariant} />
+			{:else}
+				{@render children()}
+			{/if}
+		</PriceVisibilityShell>
+	</Nav>
+</PwaProvider>
 <Toaster />

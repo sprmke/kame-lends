@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { setContext } from 'svelte';
 	import { browser } from '$app/environment';
 	import { createPwaState } from '$lib/pwa/pwa.svelte';
+	import { PWA_CONTEXT_KEY, type PwaContextValue } from '$lib/pwa/pwa-context';
 	import { initPwaRegistration, promptInstall } from '$lib/pwa/register';
 	import { purgeOfflineState } from '$lib/pwa/purge';
 	import { USER_ID_KEY } from '$lib/pwa/shared';
@@ -14,12 +16,27 @@
 
 	interface Props {
 		userId?: string | null;
+		children?: import('svelte').Snippet;
 	}
 
-	let { userId = null }: Props = $props();
+	let { userId = null, children }: Props = $props();
 
 	const pwa = createPwaState();
 	let cleanup: (() => void) | null = null;
+
+	async function installApp() {
+		const accepted = await promptInstall();
+		if (accepted) {
+			pwa.installAvailable = false;
+		}
+	}
+
+	setContext<PwaContextValue>(PWA_CONTEXT_KEY, {
+		get state() {
+			return pwa;
+		},
+		installApp
+	});
 
 	$effect(() => {
 		if (!browser) return;
@@ -69,13 +86,11 @@
 		return () => window.removeEventListener('kl:push-resync', onPushResync);
 	});
 
-	async function installApp() {
-		const accepted = await promptInstall();
-		if (accepted) {
-			pwa.installAvailable = false;
-		}
-	}
 </script>
+
+{#if children}
+	{@render children()}
+{/if}
 
 <OfflineBanner offline={pwa.offline} />
 <UpdatePrompt updateReady={pwa.updateReady} />

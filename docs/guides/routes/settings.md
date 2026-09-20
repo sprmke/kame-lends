@@ -12,7 +12,7 @@ Account summary card (title **Account**, name / email / **Roles** in a compact g
 All signed-in users get:
 
 - **Payment methods** — each user manages their own bank/QR rows.
-- **Install app** — instructions for Add to Home Screen (iOS) or browser install (Chromium). Hidden when already installed.
+- **Install app** — sidebar (desktop) and More sheet (phone) use `InstallAppNavButton`: primary styling when the browser install prompt is available; otherwise opens Settings `#install-app`. Hidden when already installed. Settings card adds an **Install** button when the prompt is ready (Chromium).
 - **Notifications** — per-device Web Push opt-in, reminder/activity/signing preferences, **Send test** when subscribed.
 - **Data & maintenance** — sync loan due dates, fix received payments, **Download my data** (`GET /api/backup?download=true`).
 

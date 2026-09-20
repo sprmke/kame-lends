@@ -2,7 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { dismissInstallPrompt, isIosSafari, shouldShowInstallPrompt } from '$lib/pwa/install';
 	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
-	import { X } from 'lucide-svelte';
+	import { Download, X } from 'lucide-svelte';
 	import { APP_NAME } from '$lib/brand';
 
 	interface Props {
@@ -30,11 +30,17 @@
 
 {#if visible}
 	<div
-		class="fixed inset-x-4 z-[45] rounded-2xl border border-border/60 bg-card p-4 shadow-lg bottom-[calc(5.5rem+var(--safe-area-bottom))] lg:inset-x-auto lg:right-4 lg:bottom-4 lg:max-w-sm"
+		class="fixed inset-x-4 z-[45] rounded-2xl border border-primary/20 bg-card p-4 shadow-lg bottom-[calc(5.5rem+var(--safe-area-bottom))] lg:inset-x-auto lg:right-4 lg:bottom-4 lg:max-w-sm"
 		role="dialog"
 		aria-label="Install app"
 	>
 		<div class="flex items-start gap-3">
+			<span
+				class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground"
+				aria-hidden="true"
+			>
+				<Download class="h-5 w-5" />
+			</span>
 			<div class="min-w-0 flex-1">
 				<p class="text-sm font-semibold">Install {APP_NAME}</p>
 				{#if ios}
