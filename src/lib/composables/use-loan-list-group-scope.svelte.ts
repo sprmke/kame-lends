@@ -1,5 +1,5 @@
 import { page } from "$app/state";
-import { replaceState } from "$app/navigation";
+import { goto } from "$app/navigation";
 import type { GroupChipSelection } from "$lib/components/groups/types";
 import { SHOW_GROUPS_UI } from "$lib/feature-flags";
 import {
@@ -66,7 +66,12 @@ export function createLoanListGroupScope(options: Options) {
     const param = groupSelectionToParam(value);
     if (param) url.searchParams.set("group", param);
     else url.searchParams.delete("group");
-    replaceState(`${url.pathname}${url.search}${url.hash}`, page.state);
+    const href = `${url.pathname}${url.search}${url.hash}`;
+    void goto(href, {
+      keepFocus: true,
+      noScroll: true,
+      replaceState: true,
+    });
   }
 
   function applyGroupFilter(loans: LoanWithInvestors[]): LoanWithInvestors[] {
