@@ -3,12 +3,15 @@
 	import * as Avatar from '$lib/components/ui/avatar';
 	import type { AppNavItem } from '$lib/nav/app-nav';
 	import { isNavActive } from '$lib/nav/app-nav';
+	import { Ellipsis } from 'lucide-svelte';
 
 	interface Props {
 		pathname: string;
 		primaryTabs: AppNavItem[];
-		/** Visual highlight when account destinations (or sheet) are active. */
+		/** Visual highlight when the More sheet is open or route is sheet-only. */
 		moreActive?: boolean;
+		/** Visual highlight on the profile control when on Settings. */
+		settingsActive?: boolean;
 		/** Sheet open state for aria-expanded only. */
 		moreOpen?: boolean;
 		userImage?: string | null;
@@ -21,12 +24,15 @@
 		pathname,
 		primaryTabs,
 		moreActive = false,
+		settingsActive = false,
 		moreOpen = false,
 		userImage = null,
 		userInitials,
 		onMoreClick,
 		onTabNavigate
 	}: Props = $props();
+
+	const settingsHref = '/settings';
 </script>
 
 <nav
@@ -37,17 +43,13 @@
 	<div
 		class={cn(
 			'mobile-floating-dock pointer-events-auto mx-auto flex items-stretch rounded-[1.75rem] border border-border/40 bg-background py-1 ring-1 ring-black/[0.04] dark:ring-white/[0.08]',
-			primaryTabs.length > 0 ? 'w-full max-w-lg' : 'w-auto min-w-[4.5rem] px-1'
+			'w-full max-w-lg'
 		)}
 	>
-		<div
-			class={cn(
-				'flex min-w-0 items-stretch gap-0.5 px-1.5',
-				primaryTabs.length > 0 ? 'w-full' : 'justify-center'
-			)}
-		>
+		<div class="flex min-w-0 w-full items-stretch gap-0.5 px-1.5">
 			{#each primaryTabs as item (item.id)}
-				{@const active = isNavActive(pathname, item.href) && !moreActive}
+				{@const active =
+					isNavActive(pathname, item.href) && !moreActive && !settingsActive}
 				<a
 					href={item.href}
 					data-sveltekit-preload-data="off"
@@ -75,39 +77,54 @@
 			<button
 				type="button"
 				class={cn(
-					'native-press relative z-[1] flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[1rem] px-1 py-1 transition-colors duration-150',
-					primaryTabs.length > 0 ? 'min-w-0 flex-1' : 'w-[3.75rem] shrink-0',
-					moreActive ? 'text-foreground' : 'text-muted-foreground'
+					'native-press relative z-[1] flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[1rem] px-1 py-1 transition-colors duration-150',
+					moreActive
+						? 'bg-primary text-primary-foreground shadow-[var(--shadow-native-primary)]'
+						: 'text-muted-foreground'
 				)}
-				aria-label="Account"
+				aria-label="More"
 				aria-haspopup="dialog"
 				aria-expanded={moreOpen}
 				onclick={onMoreClick}
 			>
-				<span
-					class={cn(
-						'flex size-[22px] items-center justify-center rounded-full transition-[box-shadow] duration-150',
-						moreActive && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-					)}
-				>
-					<Avatar.Root class="size-[22px] after:hidden">
-						<Avatar.Image src={userImage ?? undefined} alt="" />
-						<Avatar.Fallback
-							class="bg-primary text-[9px] font-semibold text-primary-foreground"
-						>
-							{userInitials}
-						</Avatar.Fallback>
-					</Avatar.Root>
-				</span>
+				<Ellipsis class="size-[18px] shrink-0" strokeWidth={1.75} />
 				<span
 					class={cn(
 						'w-full truncate px-0.5 text-center text-[10px] leading-none tracking-tight',
 						moreActive ? 'font-semibold' : 'font-medium'
 					)}
 				>
-					You
+					More
 				</span>
 			</button>
+			<a
+				href={settingsHref}
+				data-sveltekit-preload-data="off"
+				data-sveltekit-noscroll
+				aria-current={settingsActive ? 'page' : undefined}
+				aria-label="Settings"
+				class={cn(
+					'native-press relative z-[1] flex min-h-12 w-[3.5rem] shrink-0 items-center justify-center rounded-[1rem] px-1 py-1 transition-colors duration-150',
+					settingsActive ? 'text-foreground' : 'text-muted-foreground'
+				)}
+				onclick={() => onTabNavigate?.(settingsHref)}
+			>
+				<span
+					class={cn(
+						'flex size-[26px] items-center justify-center rounded-full transition-[box-shadow] duration-150',
+						settingsActive && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+					)}
+				>
+					<Avatar.Root class="size-[26px] after:hidden">
+						<Avatar.Image src={userImage ?? undefined} alt="" />
+						<Avatar.Fallback
+							class="bg-primary text-[10px] font-semibold text-primary-foreground"
+						>
+							{userInitials}
+						</Avatar.Fallback>
+					</Avatar.Root>
+				</span>
+			</a>
 		</div>
 	</div>
 </nav>

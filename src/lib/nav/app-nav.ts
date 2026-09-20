@@ -166,7 +166,7 @@ export function buildDestinationItems(
   return items;
 }
 
-/** Floating phone dock: hub routes only; People, Tools, and Settings stay under the account tab. */
+/** Floating phone dock: hub routes only; More opens the sheet; profile opens Settings. */
 export function buildMobilePrimaryTabs(
   caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES,
 ): AppNavItem[] {
@@ -208,22 +208,27 @@ export function resolveMobileDockPathname(
   return pathname;
 }
 
-/** One dock highlight at a time: primary shortcut, or the account tab when the sheet is open / route is sheet-only. */
+/** Dock highlight: hub tab, More (sheet), or profile (Settings). */
 export function resolveMobileDockHighlight(
   pathname: string,
   primaryTabs: AppNavItem[],
   moreNavItems: AppNavItem[],
   moreOpen: boolean,
-): { moreActive: boolean } {
+): { moreActive: boolean; settingsActive: boolean } {
   const activePrimaryTab = primaryTabs.find((item) =>
     isNavActive(pathname, item.href),
   );
+  const settingsActive = isNavActive(pathname, "/settings");
+  const sheetRouteActive = moreNavItems.some(
+    (item) =>
+      item.href !== "/settings" &&
+      isNavActive(pathname, item.href) &&
+      !primaryTabs.some((tab) => tab.href === item.href),
+  );
   const moreActive =
-    moreOpen ||
-    (!activePrimaryTab &&
-      moreNavItems.some((item) => isNavActive(pathname, item.href)));
+    moreOpen || (!activePrimaryTab && !settingsActive && sheetRouteActive);
 
-  return { moreActive };
+  return { moreActive, settingsActive };
 }
 
 export function resolveMobilePageTitle(pathname: string): string {

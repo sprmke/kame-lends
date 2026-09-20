@@ -7,7 +7,7 @@
 
 **Page header:** `PageHeader` title **Settings** plus subtitle from `PAGE_DESCRIPTIONS.settings` (`src/lib/page-descriptions.ts`).
 
-Account summary card (title **Account**, name / email / **Roles** in a compact grid). **Roles** lists **Owner** (owned lending data) plus party assignments (Investor, Borrower, Witness), not the single `users.role` column. Page title is Settings. On phone, Settings is in the account sheet from the dock **You** tab (not a dock shortcut).
+Account summary card (title **Account**, name / email / **Roles** in a compact grid). **Roles** lists **Owner** (owned lending data) plus party assignments (Investor, Borrower, Witness), not the single `users.role` column. Page title is Settings. On phone, open Settings from the dock profile photo; **More** opens the account sheet (Settings also appears in that nav list).
 
 All signed-in users get:
 

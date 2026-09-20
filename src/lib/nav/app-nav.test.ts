@@ -136,18 +136,19 @@ describe("resolveMobileDockPathname", () => {
 });
 
 describe("resolveMobileDockHighlight", () => {
-  it("highlights the account tab on Settings", () => {
+  it("highlights profile on Settings and not More when on /settings", () => {
     const { primaryTabs, moreNavItems } = buildAppNav({
       ...DEFAULT_NAV_CAPABILITIES,
       hasGroups: true,
     });
-    const { moreActive } = resolveMobileDockHighlight(
+    const highlight = resolveMobileDockHighlight(
       "/settings",
       primaryTabs,
       moreNavItems,
       false,
     );
-    expect(moreActive).toBe(true);
+    expect(highlight.moreActive).toBe(false);
+    expect(highlight.settingsActive).toBe(true);
   });
 
   it("highlights the account tab when route is only in the sheet", () => {

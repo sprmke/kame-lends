@@ -56,7 +56,7 @@
 	const isSignPage = $derived(pathname.startsWith('/sign/'));
 	const isPublicChromeless = $derived(isLandingPage || isSignInPage || isSignPage);
 
-	const { moreActive } = $derived(
+	const { moreActive, settingsActive } = $derived(
 		resolveMobileDockHighlight(dockPathname, nav.primaryTabs, nav.moreNavItems, moreOpen)
 	);
 
@@ -101,6 +101,7 @@
 			pathname={dockPathname}
 			primaryTabs={nav.primaryTabs}
 			{moreActive}
+			{settingsActive}
 			{moreOpen}
 			userImage={user.image}
 			{userInitials}
