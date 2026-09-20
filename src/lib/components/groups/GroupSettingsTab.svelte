@@ -96,7 +96,7 @@
 		<Card.Header class="space-y-1">
 			<Card.Title class="text-base">Auto-add loans</Card.Title>
 			<p class="text-sm font-normal text-muted-foreground">
-				When a matching investor or borrower appears on a new loan, add that loan to this group.
+				Any new loan that includes one of the investors or borrowers below is added to this group.
 			</p>
 		</Card.Header>
 		<Card.Content class="space-y-3">

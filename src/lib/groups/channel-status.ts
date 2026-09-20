@@ -2,7 +2,7 @@
 
 export const CHANNEL_STATUS = {
   notConnected: "Not connected",
-  settingUp: "Setting up",
+  notSetUp: "Not set up",
   connected: "Connected",
   needsAttention: "Needs attention",
 } as const;
@@ -15,7 +15,7 @@ export function groupChannelStatusLabel(
 ): string {
   if (kind === "calendar") {
     if (status === "active") return CHANNEL_STATUS.connected;
-    if (status === "provisioning") return CHANNEL_STATUS.settingUp;
+    if (status === "provisioning") return CHANNEL_STATUS.notSetUp;
     if (status === "error") return CHANNEL_STATUS.needsAttention;
     return CHANNEL_STATUS.notConnected;
   }

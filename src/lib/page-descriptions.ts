@@ -5,8 +5,6 @@ export const PAGE_DESCRIPTIONS = {
   dashboard: "Overview of your lending performance and upcoming activity.",
   groups:
     "Loan groups with shared access, Google Calendar, and optional Telegram for parties on those loans.",
-  dashboardGroups:
-    "Shared calendars and read-only access for investors, borrowers, and witnesses on grouped loans.",
   settings: "Account, payment methods, backups, and maintenance tools.",
   investors: "Lender contacts and their loan activity.",
   borrowers: "Borrower contacts linked to your loans.",

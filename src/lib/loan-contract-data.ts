@@ -403,7 +403,7 @@ export function buildLoanContractData(
 }
 
 export function getLoanContractFilename(loan: LoanWithInvestors): string {
-  const safeName = loan.loanName
+  const safeName = (loan.loanName ?? "")
     .trim()
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "_")

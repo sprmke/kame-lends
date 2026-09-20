@@ -14,7 +14,7 @@ describe("groupChannelStatusLabel", () => {
       CHANNEL_STATUS.notConnected,
     );
     expect(groupChannelStatusLabel("calendar", "provisioning")).toBe(
-      CHANNEL_STATUS.settingUp,
+      CHANNEL_STATUS.notSetUp,
     );
     expect(groupChannelStatusLabel("calendar", "active")).toBe(
       CHANNEL_STATUS.connected,
@@ -32,7 +32,7 @@ describe("groupChannelStatusLabel", () => {
 
   it("prefixes the channel name for icon-only labels", () => {
     expect(groupChannelStatusA11y("calendar", "provisioning")).toBe(
-      "Calendar: Setting up",
+      "Calendar: Not set up",
     );
     expect(groupChannelStatusA11y("telegram", null)).toBe(
       "Telegram: Not connected",

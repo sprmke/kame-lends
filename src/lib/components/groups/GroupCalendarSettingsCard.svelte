@@ -8,6 +8,7 @@
 		groupSettingsActionClass,
 		groupSettingsActionsLayoutClass
 	} from '$lib/groups/group-settings-actions';
+	import { CHANNEL_STATUS } from '$lib/groups/channel-status';
 
 	interface Props {
 		groupId: number;
@@ -33,8 +34,8 @@
 	const statusLabel = $derived.by(() => {
 		if (!status && !googleCalendarId) return 'Not created';
 		if (status === 'active') return 'Active';
-		if (status === 'provisioning') return 'Setting up';
-		if (status === 'error') return 'Needs attention';
+		if (status === 'provisioning') return CHANNEL_STATUS.notSetUp;
+		if (status === 'error') return CHANNEL_STATUS.needsAttention;
 		return status ?? 'Not created';
 	});
 
@@ -68,10 +69,9 @@
 			return;
 		}
 		void import('$lib/pwa/share').then(({ shareOrCopy }) =>
-			shareOrCopy({ title: 'Calendar subscribe link', url }).then((result) => {
-				if (result === 'shared') toast.success('Link shared');
-				else if (result === 'copied') toast.success('Subscribe link copied');
-				else toast.error('Could not share link');
+			shareOrCopy({ title: 'Calendar subscribe link', url, preferCopy: true }).then((result) => {
+				if (result === 'copied') toast.success('Subscribe link copied');
+				else if (result === 'failed') toast.error('Could not copy link');
 			})
 		);
 	}

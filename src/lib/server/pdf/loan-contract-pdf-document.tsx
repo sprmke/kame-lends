@@ -5,18 +5,14 @@ import {
   View,
   Text,
   StyleSheet,
-  pdf,
   Font,
   Image,
 } from "@react-pdf/renderer";
-import { downloadBlob } from "$lib/pdf-export";
 import { APP_NAME } from "$lib/brand";
 import {
-  buildLoanContractData,
   formatContractCurrency,
   formatContractDate,
   getContractDetailRows,
-  getLoanContractFilename,
   type LoanContractData,
 } from "$lib/loan-contract-data";
 import {
@@ -31,7 +27,6 @@ import {
   shouldShowValidId,
   type SignaturePartyDetails,
 } from "$lib/loan-contract-content";
-import type { LoanWithInvestors } from "$lib/types";
 import { pdfSafeImageSrc } from "./pdf-safe-image";
 
 Font.registerHyphenationCallback((word) => [word]);
@@ -119,7 +114,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: "#64748b",
     marginBottom: 10,
-    fontStyle: "italic",
+    fontFamily: "Helvetica-Oblique",
     minPresenceAhead: MIN_SIGNATURE_BLOCK,
   },
   paragraph: {
@@ -219,7 +214,7 @@ const styles = StyleSheet.create({
   validIdPlaceholder: {
     fontSize: 7,
     color: "#94a3b8",
-    fontStyle: "italic",
+    fontFamily: "Helvetica-Oblique",
     marginTop: 2,
   },
   legalNotice: {
@@ -261,7 +256,7 @@ function ContractDetailsGrid({ data }: { data: LoanContractData }) {
           }
         >
           <Text style={styles.detailLabel}>{row.label}</Text>
-          <Text style={styles.detailValue}>{row.value}</Text>
+          <Text style={styles.detailValue}>{row.value ?? ""}</Text>
         </View>
       ))}
     </View>
@@ -281,7 +276,7 @@ function SignatureBlock({ party }: { party: SignaturePartyDetails }) {
       )}
       <Text style={styles.signatureLabel}>{party.role} Signature</Text>
       <Text style={styles.signatureField}>
-        Printed Name: {party.printedName}
+        Printed Name: {party.printedName || "_________________________"}
       </Text>
       <Text style={styles.signatureField}>
         Address: {party.address?.trim() || "_________________________"}
@@ -360,15 +355,21 @@ function LoanContractPDFDocument({
         {displayData.lenders.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitleLenders}>Lender Allocation</Text>
-            {displayData.lenders.map((lender) => (
-              <View key={lender.email} style={styles.lenderBlock} wrap={false}>
-                <Text style={styles.lenderName}>{lender.name}</Text>
+            {displayData.lenders.map((lender, index) => (
+              <View
+                key={lender.email || `${lender.name}-${index}`}
+                style={styles.lenderBlock}
+                wrap={false}
+              >
+                <Text style={styles.lenderName}>{lender.name || "Lender"}</Text>
                 {lender.contactNumber ? (
                   <Text style={styles.lenderMeta}>
                     Contact: {lender.contactNumber}
                   </Text>
                 ) : null}
-                <Text style={styles.lenderMeta}>Email: {lender.email}</Text>
+                <Text style={styles.lenderMeta}>
+                  Email: {lender.email || "-"}
+                </Text>
                 <Text style={styles.lenderMeta}>
                   Principal: {formatContractCurrency(lender.principalAmount)}
                 </Text>
@@ -419,21 +420,6 @@ function LoanContractPDFDocument({
       </Page>
     </Document>
   );
-}
-
-export async function renderLoanContractPDF(
-  loan: LoanWithInvestors,
-  customization?: ContractCustomization,
-  contractDataOverride?: LoanContractData,
-): Promise<void> {
-  const contractData = contractDataOverride ?? buildLoanContractData(loan);
-  const blob = await pdf(
-    <LoanContractPDFDocument
-      data={contractData}
-      customization={customization}
-    />,
-  ).toBlob();
-  downloadBlob(blob, getLoanContractFilename(loan));
 }
 
 export { LoanContractPDFDocument };

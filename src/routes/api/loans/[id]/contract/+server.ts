@@ -33,6 +33,8 @@ import { eq } from "drizzle-orm";
 
 export const config = {
   maxDuration: 60,
+  memory: 1024,
+  split: true,
 };
 
 export const GET: RequestHandler = async (event) => {
@@ -185,6 +187,12 @@ export const POST: RequestHandler = async (event) => {
     const detail =
       error instanceof Error ? error.message : String(error ?? "unknown");
     console.error("Error generating loan contract PDF:", detail, error);
-    return new Response("Failed to generate contract PDF", { status: 500 });
+    return json(
+      {
+        error: "Failed to generate contract PDF",
+        detail,
+      },
+      { status: 500 },
+    );
   }
 };

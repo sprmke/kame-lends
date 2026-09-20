@@ -4,8 +4,6 @@
 	import { resolveGroupColor } from '$lib/groups/group-colors';
 	import { formatCount, formatText } from '$lib/format';
 	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
-	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
-	import { Folders } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 
 	interface Props {
@@ -19,12 +17,10 @@
 
 <ActivityPanelCard
 	title="Your groups"
-	description={PAGE_DESCRIPTIONS.dashboardGroups}
 	count={totalCount}
 	class={className}
-	icon={Folders}
-	accentClassName="bg-primary/10"
-	iconClassName="text-primary"
+	viewAllHref="/groups"
+	viewAllLabel="View all groups"
 	onViewAllClick={() => void goto('/groups')}
 >
 	{#if groups.length === 0}
@@ -47,12 +43,5 @@
 				</a>
 			{/each}
 		</div>
-		<a
-			href="/groups"
-			data-sveltekit-preload-data="tap"
-			class="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-		>
-			All groups
-		</a>
 	{/if}
 </ActivityPanelCard>

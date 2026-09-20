@@ -7,12 +7,12 @@
 
 **Page header:** `PageHeader` title **Settings** plus subtitle from `PAGE_DESCRIPTIONS.settings` (`src/lib/page-descriptions.ts`).
 
-Account summary card (title **Account**, name / email / **Roles** in a compact grid). **Roles** lists **Owner** (owned lending data) plus party assignments (Investor, Borrower, Witness), not the single `users.role` column. Page title is Settings. Settings is in the phone More sheet (not on the floating dock).
+Account summary card (title **Account**, name / email / **Roles** in a compact grid). **Roles** lists **Owner** (owned lending data) plus party assignments (Investor, Borrower, Witness), not the single `users.role` column. Page title is Settings. On phone, Settings is in the account sheet from the dock **You** tab (not a dock shortcut).
 
 All signed-in users get:
 
 - **Payment methods** — each user manages their own bank/QR rows.
-- **Install app** — sidebar (desktop) and More sheet (phone) use `InstallAppNavButton`. **Chromium:** tap runs the browser install dialog when `beforeinstallprompt` is available. **iOS:** tap opens an in-app sheet with Share → Add to Home Screen steps (no Settings redirect). Hidden when already installed. Settings card mirrors the same install action.
+- **Install app** — sidebar (desktop) and account sheet (phone) use `InstallAppNavButton`. **Chromium:** tap runs the browser install dialog when `beforeinstallprompt` is available. **iOS:** tap opens an in-app sheet with Share → Add to Home Screen steps (no Settings redirect). Hidden when already installed. Settings card mirrors the same install action.
 - **Notifications** — per-device Web Push opt-in, reminder/activity/signing preferences, **Send test** when subscribed.
 - **Data & maintenance** — sync loan due dates, fix received payments, **Download my data** (`GET /api/backup?download=true`).
 

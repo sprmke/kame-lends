@@ -66,14 +66,23 @@ export async function downloadLoanContractPdf(loanId: number): Promise<void> {
     method: "POST",
   });
   if (!response.ok) {
-    const detail = (await response.text()).trim();
+    const raw = (await response.text()).trim();
+    let detail = raw;
+    try {
+      const parsed = JSON.parse(raw) as { error?: string; detail?: string };
+      detail = parsed.detail || parsed.error || raw;
+    } catch {
+      /* plain text body */
+    }
     if (response.status === 401) {
       throw new Error("Sign in again to download the contract.");
     }
     if (response.status === 404) {
       throw new Error("Loan not found or you do not have access.");
     }
-    throw new Error(detail || "Failed to generate contract PDF");
+    const shortDetail =
+      detail && detail.length < 160 && !detail.includes("\n") ? detail : "";
+    throw new Error(shortDetail || "Failed to generate contract PDF");
   }
   const blob = await response.blob();
   const disposition = response.headers.get("Content-Disposition");

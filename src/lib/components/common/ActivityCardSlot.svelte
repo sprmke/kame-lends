@@ -1,15 +1,16 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { cn } from '$lib/utils';
 
 	interface Props {
-		visibleBelowLarge?: boolean;
+		visible?: boolean;
 		children: Snippet;
 	}
 
-	let { visibleBelowLarge = true, children }: Props = $props();
+	let { visible = true, children }: Props = $props();
 </script>
 
-<div class={cn(!visibleBelowLarge && 'hidden 2xl:block')}>
-	{@render children()}
-</div>
+{#if visible}
+	<div class="h-full min-w-0">
+		{@render children()}
+	</div>
+{/if}

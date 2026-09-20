@@ -60,7 +60,7 @@
 
 <Card.Root
 	class={cn(
-		'relative cursor-pointer overflow-hidden transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+		'cursor-pointer overflow-hidden transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
 		className
 	)}
 	role="link"
@@ -73,11 +73,16 @@
 		}
 	}}
 >
-	<div class={cn('absolute inset-y-0 left-0 w-1', palette.dot)} aria-hidden="true"></div>
-	<Card.Header class="gap-2 pl-4">
+	<Card.Header class="gap-2">
 		<div class="flex items-start justify-between gap-2">
 			<div class="min-w-0 space-y-1">
-				<Card.Title class="truncate text-base">{formatText(group.name)}</Card.Title>
+				<div class="flex min-w-0 items-center gap-2">
+					<span
+						class={cn('size-2.5 shrink-0 rounded-full', palette.dot)}
+						aria-hidden="true"
+					></span>
+					<Card.Title class="truncate text-base">{formatText(group.name)}</Card.Title>
+				</div>
 				{#if group.description?.trim()}
 					<p class="line-clamp-1 text-sm text-muted-foreground">
 						{formatText(group.description)}
@@ -96,7 +101,7 @@
 			</div>
 		</div>
 	</Card.Header>
-	<Card.Content class="space-y-3 pl-4 text-sm text-muted-foreground">
+	<Card.Content class="space-y-3 text-sm text-muted-foreground">
 		<p>{statParts}</p>
 		<div class="flex items-center justify-between gap-2">
 			<GroupAvatarStack initials={group.peopleInitials} size="sm" />

@@ -31,6 +31,7 @@ Agent context for **SvelteKit 2 + Svelte 5 + Neon + Drizzle + Auth.js**.
 ```bash
 bun install
 bun run setup:ai-tooling
+./dev.sh
 ```
 
 | Step | Action                                                                  |

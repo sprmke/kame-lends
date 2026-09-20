@@ -34,12 +34,6 @@
 	{#await data.summary}
 		<DashboardSummarySkeleton />
 	{:then summary}
-		{@const hasAnyActivity =
-			summary.upcomingPaymentsDue.length > 0 ||
-			summary.overdueLoansData.length > 0 ||
-			summary.upcomingPaymentsToSend.length > 0 ||
-			summary.completedLoansData.length > 0}
-
 		<PageHeader
 			title="Dashboard"
 			description={PAGE_DESCRIPTIONS.dashboard}
@@ -70,7 +64,7 @@
 			]}
 		/>
 
-		<section class={cn('dashboard-section', !hasAnyActivity && 'hidden 2xl:block')}>
+		<section class="dashboard-section">
 			<div class="dashboard-section-header">
 				<div>
 					<p class="section-eyebrow">Activity</p>

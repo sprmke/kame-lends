@@ -32,21 +32,37 @@
 			hasPendingDisbursements ||
 			hasCompletedLoans
 	);
+	const showEmptyStates = $derived(!hasAnyActivity);
+	const visibleCount = $derived(
+		showEmptyStates
+			? 4
+			: Number(hasUpcomingPayouts) +
+				Number(hasOverdueLoans) +
+				Number(hasPendingDisbursements) +
+				Number(hasCompletedLoans)
+	);
+	const gridColsClass = $derived(
+		visibleCount >= 4
+			? 'grid-cols-1 md:grid-cols-2 2xl:grid-cols-4'
+			: visibleCount === 3
+				? 'grid-cols-1 md:grid-cols-3'
+				: visibleCount === 2
+					? 'grid-cols-1 md:grid-cols-2'
+					: 'grid-cols-1'
+	);
 </script>
 
-<div
-	class={cn('grid gap-2.5 md:grid-cols-2 md:gap-5 2xl:grid-cols-4', !hasAnyActivity && 'hidden 2xl:grid')}
->
-	<ActivityCardSlot visibleBelowLarge={hasUpcomingPayouts}>
+<div class={cn('grid w-full gap-2.5 md:gap-5', gridColsClass)}>
+	<ActivityCardSlot visible={showEmptyStates || hasUpcomingPayouts}>
 		<MaturingLoansCard loans={upcomingPaymentsDue} />
 	</ActivityCardSlot>
-	<ActivityCardSlot visibleBelowLarge={hasOverdueLoans}>
+	<ActivityCardSlot visible={showEmptyStates || hasOverdueLoans}>
 		<PastDueLoansCard loans={overdueLoans} />
 	</ActivityCardSlot>
-	<ActivityCardSlot visibleBelowLarge={hasPendingDisbursements}>
+	<ActivityCardSlot visible={showEmptyStates || hasPendingDisbursements}>
 		<PendingDisbursementsCard disbursements={pendingDisbursements} />
 	</ActivityCardSlot>
-	<ActivityCardSlot visibleBelowLarge={hasCompletedLoans}>
+	<ActivityCardSlot visible={showEmptyStates || hasCompletedLoans}>
 		<CompletedLoansCard loans={completedLoans} />
 	</ActivityCardSlot>
 </div>

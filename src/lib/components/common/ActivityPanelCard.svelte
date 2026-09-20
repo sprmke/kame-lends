@@ -9,9 +9,11 @@
 		description?: string;
 		count?: number;
 		// Lucide icon components (legacy constructor shape)
-		icon: any;
-		accentClassName: string;
-		iconClassName: string;
+		icon?: any;
+		accentClassName?: string;
+		iconClassName?: string;
+		viewAllHref?: string;
+		viewAllLabel?: string;
 		onViewAllClick?: () => void;
 		children: Snippet;
 		class?: string;
@@ -24,6 +26,8 @@
 		icon: Icon,
 		accentClassName,
 		iconClassName,
+		viewAllHref,
+		viewAllLabel,
 		onViewAllClick,
 		children,
 		class: className
@@ -54,9 +58,19 @@
 					<p class="mt-1 text-xs leading-snug text-muted-foreground">{description}</p>
 				{/if}
 			</div>
-			<div class={cn('icon-well-xs', accentClassName)}>
-				<Icon class={cn('h-3 w-3', iconClassName)} />
-			</div>
+			{#if viewAllHref && viewAllLabel}
+				<a
+					href={viewAllHref}
+					data-sveltekit-preload-data="tap"
+					class="shrink-0 text-sm font-medium text-primary hover:underline"
+				>
+					{viewAllLabel}
+				</a>
+			{:else if Icon}
+				<div class={cn('icon-well-xs', accentClassName)}>
+					<Icon class={cn('h-3 w-3', iconClassName)} />
+				</div>
+			{/if}
 		</div>
 	</Card.Header>
 	<Card.Content class="min-w-0 flex-1">
