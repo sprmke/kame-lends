@@ -34,7 +34,7 @@ The loans table shows this investor's **capital per loan** in the Principal colu
 
 **Toolbar:** Search, then **date range** on the same row. **More Filters** holds status, type, and investor-scoped amount ranges (same panel as `/loans`, without participant multi-selects). Status and Type stack on phone and sit side by side from `sm`. **Date range** uses the same presets as `/loans` (`from`/`to` or `range=all`); it filters by loan **due date** and drives the four summary cards below.
 
-**Summary cards (Loans tab):** Principal (`current / invested` compact pair), Interest Estimate, Interest Earned, Completed (same layout as `/loans`). Metrics use this investor's paid allocations on loans in the due-date range (`computeInvestorLoanListSummaryStats`); reinvestment history uses all of this investor's allocations on the investor, not only loans due in the range.
+**Summary cards (Loans tab):** Principal, Total, Interest (`earned / estimate`), Completed (same layout as `/loans`). Metrics use this investor's paid allocations (`computeInvestorLoanListSummaryStats`).
 
 **Bulk select:** When groups are enabled and the viewer can manage the workspace, the table shows row checkboxes (desktop always; phone uses the same table). **Summary** opens a modal with investor-scoped totals for the selection. **Add to group** uses the shared group picker (`POST /api/groups/:id/loans`).
 

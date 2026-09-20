@@ -9,7 +9,7 @@ Lists loans where the signed-in user is a contract witness — either via a sign
 
 Read-only list and detail (create, edit, and payments stay off). Table checkboxes and bulk add-to-group match **Managing**. On desktop, table rows and calendar event cards open `LoanDetailModal`; on phone, navigation goes to `/loans/[id]`. Month-view **+N more** stacks loan detail on top of the day events overlay. Row/card ⋯ menu: **Add Commission** → `LoanCommissionModal` and **Contract Details** → `LoanContractDetailsModal`. List modal and Contract Details use the same instant-row + background refresh, in-memory list patch, and overlay paint defer as `/loans`. Sign via `/loans/[id]/sign` when their witness slot is unsigned.
 
-**Summary cards** match **Invested** and **Borrowed**: Principal, Interest Estimate, Interest Earned, and Completed for the selected due-date range (`LoanListSummaryCards` via `computeLoanListSummaryStats` on date-filtered `scopedLoans` in `LoanListPage`).
+**Summary cards** match **Invested** and **Borrowed**: Principal, Total, Interest (`earned / estimate`), and Completed for the selected due-date range (`LoanListSummaryCards` via `computeLoanListSummaryStats` on date-filtered `scopedLoans` in `LoanListPage`).
 
 **Commission** on loan detail: **Your Commission** (`LoanMyCommissionCard`, `GET` / `PATCH /api/loans/[id]/my-commission`) for the signed-in witness only. The **Witnesses** section lists names only; commission is not shown there. Commission totals live on the **Commissioned** tab. Assigning or removing witnesses is owner-only.
 

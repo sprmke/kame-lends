@@ -1,6 +1,6 @@
 <script lang="ts">
 	import SummaryCard from '$lib/components/common/SummaryCard.svelte';
-	import { formatCount, formatCurrencyShortAmount } from '$lib/format';
+	import { formatCount, formatCurrencyShortAmountPhp } from '$lib/format';
 	import type { LoanListSummaryStats } from '$lib/loan-list-summary';
 
 	interface Props {
@@ -9,25 +9,26 @@
 
 	let { stats }: Props = $props();
 
-	function formatPrincipalPair(current: number, invested: number): string {
-		return `${formatCurrencyShortAmount(current)} / ${formatCurrencyShortAmount(invested)}`;
+	function formatInterestPair(earned: number, estimate: number): string {
+		return `${formatCurrencyShortAmountPhp(earned)} / ${formatCurrencyShortAmountPhp(estimate)}`;
 	}
+
+	const totalExposure = $derived(stats.currentCapital + stats.interestEstimate);
 </script>
 
 <SummaryCard
 	metrics={[
 		{
 			label: 'Principal',
-			value: formatPrincipalPair(stats.currentCapital, stats.totalCapitalInvested)
+			amount: stats.currentCapital
 		},
 		{
-			label: 'Interest Estimate',
-			amount: stats.interestEstimate
+			label: 'Total',
+			amount: totalExposure
 		},
 		{
-			label: 'Interest Earned',
-			amount: stats.interestEarned,
-			valueClassName: 'text-chart-2'
+			label: 'Interest',
+			value: formatInterestPair(stats.interestEarned, stats.interestEstimate)
 		},
 		{
 			label: 'Completed',

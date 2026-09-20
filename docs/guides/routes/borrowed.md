@@ -11,7 +11,7 @@ Read-only list and loan detail (create, edit, and payments stay off). Table chec
 
 Loan detail shows the loan owner’s **payment methods** (bank name, account number, QR) when the owner has configured them in Settings. Owners, investors, and witnesses do not see this section.
 
-**Summary cards** match Invested: Principal, Interest Estimate, Interest Earned, and Completed for the selected due-date range (`LoanListSummaryCards`).
+**Summary cards** match Invested: Principal, Total, Interest (`earned / estimate`), and Completed for the selected due-date range (`LoanListSummaryCards`).
 
 **Commission** lives on the **Commissioned** tab (`?scope=commissioned`) and on loan detail. On detail, the borrower sees **Your Commission** only (`LoanMyCommissionCard`, `GET` / `PATCH /api/loans/[id]/my-commission`). The loan owner and other parties never see it. Everything else on the page stays read-only.
 

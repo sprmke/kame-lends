@@ -85,6 +85,13 @@ export function formatCurrencyShortAmount(amount: string | number): string {
   return String(Math.round(numAmount));
 }
 
+/** Like `formatCurrencyShortAmount` with a leading ₱ (e.g. ₱85.12k). */
+export function formatCurrencyShortAmountPhp(amount: string | number): string {
+  const short = formatCurrencyShortAmount(amount);
+  if (short === HIDDEN_CURRENCY_DISPLAY || short === "—") return short;
+  return `₱${short}`;
+}
+
 /** Compact PHP for chart axes (e.g. ₱1.2M). */
 export function formatChartAxis(amount: string | number): string {
   if (isSensitiveDataHidden()) return HIDDEN_CURRENCY_DISPLAY;
