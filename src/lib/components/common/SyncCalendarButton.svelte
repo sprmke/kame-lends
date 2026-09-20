@@ -128,14 +128,12 @@
 		statusLine = 'Clearing calendar';
 		currentDates = [];
 		currentLoanName = '';
-		let offset = 0;
 		while (!cancelled) {
-			const data = await postJson(syncEndpoint, { action: 'wipe', offset });
+			const data = await postJson(syncEndpoint, { action: 'wipe' });
 			clearedCount += Number(data.deleted ?? 0);
 			statusLine = `Cleared ${clearedCount} events`;
 			percent = Math.min(12, 4 + Math.floor(clearedCount / 8));
-			offset = Number(data.nextOffset ?? offset);
-			if (!data.remaining) break;
+			if (data.done || !data.remaining) break;
 		}
 	}
 

@@ -425,6 +425,30 @@ export async function findEventsByLoanId(
   loanId: number,
   kameKey?: string,
 ): Promise<calendar_v3.Schema$Event[]> {
+  const all: calendar_v3.Schema$Event[] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await findEventsByLoanIdPage(
+      calendarId,
+      loanId,
+      kameKey,
+      pageToken,
+    );
+    all.push(...page.items);
+    pageToken = page.nextPageToken;
+  } while (pageToken);
+  return all;
+}
+
+async function findEventsByLoanIdPage(
+  calendarId: string,
+  loanId: number,
+  kameKey?: string,
+  pageToken?: string,
+): Promise<{
+  items: calendar_v3.Schema$Event[];
+  nextPageToken?: string;
+}> {
   const { calendar } = getGroupCalendarApi();
   const privateKey = kameKey ? `kameKey=${kameKey}` : `kameLoanId=${loanId}`;
   try {
@@ -432,29 +456,58 @@ export async function findEventsByLoanId(
       calendar.events.list({
         calendarId,
         privateExtendedProperty: [privateKey],
-        maxResults: 50,
+        maxResults: 250,
         singleEvents: true,
+        pageToken,
       }),
     );
-    return res.data.items ?? [];
+    return {
+      items: res.data.items ?? [],
+      nextPageToken: res.data.nextPageToken ?? undefined,
+    };
   } catch (error) {
-    if (isGoogleCalendarNotFoundError(error)) return [];
+    if (isGoogleCalendarNotFoundError(error)) {
+      return { items: [] };
+    }
     throw error;
   }
+}
+
+/** Delete the next batch of events on a dedicated group calendar (full clear / wipe). */
+export async function purgeGroupCalendarBatch(
+  calendarId: string,
+  maxEvents = 25,
+): Promise<{ deleted: number; done: boolean }> {
+  const { calendar } = getGroupCalendarApi();
+  const res = await mutate(() =>
+    calendar.events.list({
+      calendarId,
+      maxResults: maxEvents,
+      singleEvents: true,
+    }),
+  );
+  const items = res.data.items ?? [];
+  let deleted = 0;
+  for (const event of items) {
+    if (!event.id) continue;
+    await mutate(() =>
+      calendar.events.delete({ calendarId, eventId: event.id! }),
+    );
+    deleted += 1;
+  }
+  return { deleted, done: items.length === 0 };
 }
 
 export async function removeGroupLoanEvents(
   calendarId: string,
   loanId: number,
-): Promise<void> {
-  const { calendar } = getGroupCalendarApi();
+): Promise<number> {
   const events = await findEventsByLoanId(calendarId, loanId);
-  for (const event of events) {
-    if (!event.id) continue;
-    await mutate(() =>
-      calendar.events.delete({ calendarId, eventId: event.id! }),
-    );
-  }
+  const ids = events
+    .map((event) => event.id)
+    .filter((id): id is string => Boolean(id));
+  await deleteCalendarEvents(calendarId, ids);
+  return ids.length;
 }
 
 export async function syncGroupSummaries(

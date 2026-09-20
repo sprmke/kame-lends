@@ -15,9 +15,9 @@ Read at runtime via `$env/dynamic/private` (`src/lib/server/google-calendar-conf
 
 ## Calendar surface
 
-| Surface   | Module                             | Sync                                                                                                                                                             |
-| --------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Per group | `src/lib/server/group-calendar.ts` | Automatic via `integration_jobs` (`waitUntil` + daily `/api/cron/groups`). ACL readers = group member emails. Full resync: `POST /api/groups/[id]/calendar/sync` |
+| Surface   | Module                             | Sync                                                                                                                                                                                                                                                                                                                                |
+| --------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Per group | `src/lib/server/group-calendar.ts` | Automatic via `integration_jobs` (`waitUntil` + daily `/api/cron/groups`). ACL readers = group member emails. Full resync: `POST /api/groups/[id]/calendar/sync`. **Clear / wipe** (`action: "wipe"`) calls `purgeGroupCalendarBatch` and removes all events on that group calendar until empty (not per-loan `kameLoanId` lookup). |
 
 Shared pure helpers: `src/lib/calendar-summaries.ts`, `src/lib/calendar-events.ts`, `src/lib/calendar-sync-plan.ts`, `src/lib/calendar-google-dedupe.ts`.
 

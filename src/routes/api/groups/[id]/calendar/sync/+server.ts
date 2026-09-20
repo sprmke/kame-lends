@@ -14,7 +14,7 @@ import {
 } from "$lib/calendar-sync-plan";
 import {
   provisionGroupCalendar,
-  removeGroupLoanEvents,
+  purgeGroupCalendarBatch,
   syncGroupLoanEvents,
   syncGroupSummaries,
 } from "$lib/server/group-calendar";
@@ -26,6 +26,7 @@ export const config = {
 
 const LOAN_BATCH = 1;
 const SUMMARY_BATCH = 6;
+const WIPE_BATCH = 25;
 
 function parseScope(value: unknown): CalendarSyncScope {
   if (value === "upcoming" || value === "open") return value;
@@ -126,25 +127,16 @@ export const POST: RequestHandler = async (event) => {
           { status: 503 },
         );
       }
-      const offset =
-        typeof body.offset === "number" ? Math.max(0, body.offset) : 0;
-      const groupLoans = await loadGroupLoans(groupId);
-      const slice = groupLoans.slice(offset, offset + LOAN_BATCH);
-      let deleted = 0;
-      for (const loan of slice) {
-        await removeGroupLoanEvents(calendarId, loan.id);
-        deleted += 1;
-      }
-      const remaining = Math.max(
-        0,
-        groupLoans.length - (offset + slice.length),
+      const { deleted, done } = await purgeGroupCalendarBatch(
+        calendarId,
+        WIPE_BATCH,
       );
       return json({
         success: true,
         action: "wipe",
         deleted,
-        remaining,
-        nextOffset: offset + slice.length,
+        done,
+        remaining: done ? 0 : 1,
       });
     }
 
