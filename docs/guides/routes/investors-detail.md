@@ -1,7 +1,7 @@
 # Investor detail (`/investors/[id]`)
 
 **Status:** Documented  
-**Updated:** 2026-09-15
+**Updated:** 2026-09-20
 
 ## Behavior
 
@@ -13,17 +13,16 @@ Borrowing summary cards use all borrowings for this investor.
 
 **Loan capital and interest** use `computeInvestorPortfolioCapitalStats` on this investor's rows from the `loans` load (includes `interestPeriods` for multi-period loans). Peak concurrent paid allocation: sequential non-overlapping periods count once; overlapping periods add together.
 
-| Card                    | Meaning                                                                                                                                |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Total Capital**       | Peak paid allocation capital (loan count subtitle)                                                                                     |
-| **Active**              | Peak on open-loan allocations (open loan count subtitle)                                                                               |
-| **Active Borrowings**   | Peak concurrent principal on borrowings still being repaid                                                                             |
-| **Borrowing Cost Paid** | Interest and fees already paid on borrowings                                                                                           |
-| **Upcoming Earnings**   | Scheduled interest on open loan allocations                                                                                            |
-| **Interest Earned**     | Scheduled interest on completed loan allocations                                                                                       |
-| **Total Loan Interest** | Upcoming earnings plus interest earned (sub: `Upcoming - Earned`)                                                                      |
-| **Net Earnings**        | Total loan interest minus borrowing cost paid (sub: `Loan interest - Borrowing cost`, or `Loan interest scheduled` when no borrowings) |
-| **Total Lot**           | Lot sqm from Lot Title loans for this investor                                                                                         |
+| Card                    | Meaning                                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Total Capital**       | Peak paid allocation capital (loan count subtitle)                                                                                               |
+| **Active**              | Peak on open-loan allocations (open loan count subtitle)                                                                                         |
+| **Active Borrowings**   | Peak concurrent principal on borrowings still being repaid                                                                                       |
+| **Borrowing Cost Paid** | Interest and fees already paid on borrowings                                                                                                     |
+| **Interest Estimate**   | Scheduled interest on all loan allocations (open and completed)                                                                                  |
+| **Interest Earned**     | Scheduled interest on completed loan allocations                                                                                                 |
+| **Net Earnings**        | Total scheduled loan interest minus borrowing cost paid (sub: `Loan interest - Borrowing cost`, or `Loan interest scheduled` when no borrowings) |
+| **Total Lot**           | Lot sqm from Lot Title loans for this investor                                                                                                   |
 
 Borrowing cards hide when the investor has no borrowings.
 

@@ -8,7 +8,7 @@ Status: **Documented**
 
 Signed-in overview of lending performance: summary metrics, activity panels, analytics charts, and portfolio distribution. Unauthenticated users redirect to `/signin`.
 
-**Summary cards (all-time, all loans):** Same metrics as `/loans` summary cards, plus **Active** principal. Peak concurrent paid capital (`computePortfolioCapitalStats` in `src/lib/loan-list-summary.ts`), no date-range clip. **Total Principal** = busiest day across full loan history. **Active** = peak on open loans only. **Interest Estimate** = scheduled interest on open loans. **Interest Earned** = scheduled interest on completed loans. Reused capital counts once when loan periods do not overlap. No completed-principal or total-earnings cards (completed capital is often redeployed into new loans).
+**Summary cards (all-time, all loans):** Same metrics as `/loans` summary cards, plus **Active** principal. Peak concurrent paid capital (`computePortfolioCapitalStats` in `src/lib/loan-list-summary.ts`), no date-range clip. **Total Principal** = busiest day across full loan history. **Active** = peak on open loans only. **Interest Estimate** = scheduled interest on all loans. **Interest Earned** = scheduled interest on completed loans. Reused capital counts once when loan periods do not overlap. No completed-principal or total-earnings cards (completed capital is often redeployed into new loans).
 
 Load is split into two streamed promises:
 

@@ -168,7 +168,7 @@
 		const filteredLoanIds = new Set(investorLoanInvestors.map((li) => li.loan.id));
 		const filteredUniqueLoans = uniqueInvestorLoans.filter((loan) => filteredLoanIds.has(loan.id));
 		const { totalLot, totalLotWithDepacto } = computeTotalLot(filteredUniqueLoans);
-		const totalLoanInterest = capital.interestEstimate + capital.interestEarned;
+		const totalLoanInterest = capital.totalInterestScheduled;
 		const netEarnings = totalLoanInterest - debtStats.interestPaid;
 
 		return {
@@ -414,20 +414,14 @@
 							]
 						: []),
 					{
-						label: 'Upcoming Earnings',
-						amount: overviewStats.interestEstimate,
-						subValue: 'Open loans'
+						label: 'Interest Estimate',
+						amount: overviewStats.interestEstimate
 					},
 					{
 						label: 'Interest Earned',
 						amount: overviewStats.interestEarned,
 						subValue: 'Completed loans',
 						valueClassName: 'text-chart-2'
-					},
-					{
-						label: 'Total Loan Interest',
-						amount: overviewStats.totalLoanInterest,
-						subValue: 'Upcoming - Earned'
 					},
 					{
 						label: 'Net Earnings',
