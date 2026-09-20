@@ -1,0 +1,10 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "files.associations": {
+    "*.mdc": "markdown"
+  },
+  "npm.packageManager": "bun",
+  "npm.scriptRunner": "bun",
+  "npm.autoDetect": "off"
+}

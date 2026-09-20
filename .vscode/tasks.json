@@ -1,0 +1,179 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start dev server",
+      "type": "shell",
+      "command": "./dev.sh",
+      "detail": "Docker Postgres :5433 + schema if empty + Vite :3200",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "kame-lends",
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Local:\\s+http://localhost:3200/"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Dev: Local Docker (full stack)",
+      "type": "shell",
+      "command": "./dev.sh",
+      "detail": "Same as Start dev server",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "kame-lends-stack",
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Local:\\s+http://localhost:3200/"
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Dev: Vite only (hosted Neon)",
+      "type": "shell",
+      "command": "./dev.sh --ui-only",
+      "detail": "Vite :3200 using DATABASE_URL from .env.local (no Docker)",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "kame-lends-ui",
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Local:\\s+http://localhost:3200/"
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Open: web app",
+      "type": "shell",
+      "command": "open http://localhost:3200",
+      "detail": "Kame Lends (local Vite)",
+      "group": "none"
+    },
+    {
+      "label": "Docker: up",
+      "type": "shell",
+      "command": "bun run db:local:start",
+      "detail": "Start local Postgres on :5433",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "Docker: down",
+      "type": "shell",
+      "command": "bun run db:local:stop",
+      "detail": "Stop local Postgres (keeps volume)",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "DB: push local schema",
+      "type": "shell",
+      "command": "bun run db:local:push",
+      "detail": "drizzle-kit push → 127.0.0.1:5433 only",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "DB: migrate pending (local Docker)",
+      "type": "shell",
+      "command": "DATABASE_URL=postgresql://kame_lends:kame_lends@127.0.0.1:5433/kame_lends bun run db:migrate:pending --yes",
+      "detail": "Apply db/migrations/*.sql to local Postgres only",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "DB: sync prod → local",
+      "type": "shell",
+      "command": "bun run db:local:sync-prod",
+      "detail": "Read-only pg_dump from Neon → restore into Docker",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "DB: studio (local)",
+      "type": "shell",
+      "command": "bun run db:local:studio",
+      "detail": "Drizzle Studio against 127.0.0.1:5433",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Quality: CI",
+      "type": "shell",
+      "command": "bun run ci:quality",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "test",
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

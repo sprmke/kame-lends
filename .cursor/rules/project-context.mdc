@@ -29,7 +29,7 @@ Stale if a skill mentions Supabase, tRPC, Next.js App Router, or React Router fo
 
 ## Local dev
 
-- Web: **http://localhost:3200** (`strictPort`; ports in `scripts/dev/local-dev-port.mjs`). E2E webServer: **:4174**. `bun run dev:free-ports` clears stale listeners.
+- Web: **http://localhost:3200** (`strictPort`; ports in `scripts/dev/local-dev-port.mjs`). E2E webServer: **:4174**. Full local stack: **`./dev.sh`** (Docker Postgres + schema if empty + Vite). Vite only: `bun run dev` / `./dev.sh --ui-only`. `bun run dev:free-ports` clears stale listeners. Cursor: **Run Task → Start dev server**.
 
 ## Layout
 

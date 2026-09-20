@@ -2,11 +2,27 @@
 
 Optional **Docker Postgres** for fast iteration. It is completely separate from Neon production.
 
+## One command
+
+```bash
+./dev.sh
+```
+
+Starts Docker Desktop if needed, brings up Postgres on `127.0.0.1:5433`, pushes `schema.ts` when the Auth.js `session` table is missing, applies pending `db/migrations/*.sql`, then runs Vite at **http://localhost:3200**. For that process only, `DATABASE_URL` is the local Docker URL (`.env.local` is unchanged).
+
+Vite against whatever is already in `.env.local` (hosted Neon, or Docker you started yourself):
+
+```bash
+./dev.sh --ui-only
+```
+
+Cursor/VS Code: **Terminal → Run Task → Start dev server** (`.vscode/tasks.json`).
+
 ## What is safe
 
 | Action                                            | Touches prod?                                              |
 | ------------------------------------------------- | ---------------------------------------------------------- |
-| `bun run db:local:start` / `db:local:stop`        | No — runs Docker on your machine only                      |
+| `./dev.sh` / `bun run db:local:start` / `stop`    | No — Docker + Vite on your machine only                    |
 | `bun run db:local:push` / `db:local:migrate`      | No — `scripts/db/local-db-push.sh` → `127.0.0.1:5433` only |
 | `bun run db:local:studio`                         | No — same hardcoded local URL                              |
 | Pointing `.env.local` at `127.0.0.1:5433`         | No — app reads/writes local DB only                        |

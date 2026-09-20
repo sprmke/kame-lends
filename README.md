@@ -186,30 +186,44 @@ If you upgrade an older database and see missing column errors, run `db/migratio
 
 ### 4. Run locally
 
+Full stack (starts Docker Postgres, pushes schema if the local DB is empty, applies pending SQL, then Vite):
+
 ```bash
-bun run dev
+./dev.sh
 ```
 
-Open [http://localhost:3200](http://localhost:3200). Sign in with Google to access the dashboard. If the port is busy, run `bun run dev:free-ports` first (`strictPort` is on).
+Vite only, using `DATABASE_URL` from `.env.local` (Neon or already-running Docker):
+
+```bash
+./dev.sh --ui-only
+# or: bun run dev
+```
+
+Open [http://localhost:3200](http://localhost:3200). Sign in with Google to access the dashboard.
+
+**VS Code / Cursor:** **Terminal → Run Task → Start dev server** (default build task). That runs `./dev.sh`. Other tasks cover Docker up/down, local schema push, prod→local sync, and quality. Tasks live in `.vscode/tasks.json`. `npm.autoDetect` is off so the package.json `dev` script is not listed as a second Start-dev-server.
 
 ---
 
 ## Scripts
 
-| Command                      | Description                               |
-| ---------------------------- | ----------------------------------------- |
-| `bun run dev`                | Vite / SvelteKit dev server (`:3200`)     |
-| `bun run dev:free-ports`     | Stop stale listeners on `:3200` / `:4174` |
-| `bun run build`              | Production build                          |
-| `bun run preview`            | Preview the production build              |
-| `bun run check`              | svelte-check                              |
-| `bun run test`               | Vitest unit tests                         |
-| `bun run db:local:start`     | Start Docker Postgres                     |
-| `bun run db:local:push`      | Push schema to local Postgres only        |
-| `bun run db:generate`        | Generate Drizzle migrations               |
-| `bun run db:migrate:pending` | Apply pending `db/migrations/*.sql`       |
-| `bun run deploy:prod`        | Manual Vercel prod (prefer CD on `main`)  |
-| `bun run db:studio`          | Open Drizzle Studio                       |
+| Command                                 | Description                                         |
+| --------------------------------------- | --------------------------------------------------- |
+| `./dev.sh` / `bun run dev:stack`        | Docker Postgres + schema bootstrap + Vite (`:3200`) |
+| `./dev.sh --ui-only` / `bun run dev:ui` | Vite only (uses `.env.local`)                       |
+| `bun run dev`                           | Vite only (frees `:3200` / `:4174` first)           |
+| `bun run dev:free-ports`                | Stop stale listeners on `:3200` / `:4174`           |
+| `bun run build`                         | Production build                                    |
+| `bun run preview`                       | Preview the production build                        |
+| `bun run check`                         | svelte-check                                        |
+| `bun run test`                          | Vitest unit tests                                   |
+| `bun run db:local:start`                | Start Docker Postgres                               |
+| `bun run db:local:stop`                 | Stop Docker Postgres (keeps volume)                 |
+| `bun run db:local:push`                 | Push schema to local Postgres only                  |
+| `bun run db:generate`                   | Generate Drizzle migrations                         |
+| `bun run db:migrate:pending`            | Apply pending `db/migrations/*.sql`                 |
+| `bun run deploy:prod`                   | Manual Vercel prod (prefer CD on `main`)            |
+| `bun run db:studio`                     | Open Drizzle Studio                                 |
 
 ---
 

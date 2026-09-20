@@ -15,7 +15,9 @@ bun install
 bun run setup:ai-tooling      # once after clone
 bun run check:ai-tooling-sync
 
-bun run dev                 # http://localhost:3200 (strictPort; dev:free-ports if busy)
+./dev.sh                    # Docker Postgres :5433 + schema bootstrap + Vite :3200
+./dev.sh --ui-only          # Vite only (DATABASE_URL from .env.local)
+bun run dev                 # Vite only; http://localhost:3200 (strictPort; frees ports first)
 bun run check
 bun run test
 bun run build

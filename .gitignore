@@ -56,3 +56,9 @@ drizzle/
 .svelte-kit
 .neon
 .env*
+
+# Editor
+.vscode/*
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/extensions.json
