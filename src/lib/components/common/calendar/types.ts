@@ -74,6 +74,8 @@ export interface CalendarConfig {
   formatCurrency: (amount: number) => string;
   onEventClick: (event: CalendarEvent) => void;
   eventCard?: Snippet<[event: CalendarEvent, eventIndex: number]>;
+  /** Day events modal; falls back to `eventCard` when omitted. */
+  eventCardModal?: Snippet<[event: CalendarEvent, eventIndex: number]>;
   alwaysShowSummary?: boolean;
   legendGroups?: LegendGroup[];
 }

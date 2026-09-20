@@ -19,6 +19,8 @@
 		linkWhenViewerPending?: boolean;
 		/** Opens Contract Details (e.g. after the viewer signed or for admin progress). */
 		onOpenContractDetails?: () => void;
+		/** Match loan type/status pill height (event cards, grid meta row). */
+		compact?: boolean;
 	}
 
 	let {
@@ -26,7 +28,8 @@
 		class: className,
 		showEmpty = false,
 		linkWhenViewerPending = false,
-		onOpenContractDetails
+		onOpenContractDetails,
+		compact = false
 	}: Props = $props();
 
 	const progress = $derived(loanSigningProgressFromLoan(loan));
@@ -50,15 +53,23 @@
 		Boolean(onOpenContractDetails) && !viewerPending
 	);
 
+	const shellClass = $derived(
+		compact
+			? 'inline-flex h-3.5 items-center gap-0.5 px-1 py-0 text-[8px] leading-none [&>svg]:size-2.5'
+			: 'gap-1 text-[10px]'
+	);
+
 	const pendingBadgeClass = $derived(
 		cn(
-			'gap-1 border-destructive/45 text-[10px] text-destructive dark:text-red-400',
+			shellClass,
+			'border-destructive/45 text-destructive dark:text-red-400',
 			className
 		)
 	);
 	const progressBadgeClass = $derived(
 		cn(
-			'text-[10px] tabular-nums',
+			shellClass,
+			'tabular-nums',
 			complete
 				? 'border-emerald-500/45 text-emerald-800 dark:text-emerald-300'
 				: 'border-amber-500/45 text-amber-800 dark:text-amber-300',
@@ -89,7 +100,7 @@
 					variant="outline"
 					class={cn(pendingBadgeClass, 'transition-colors hover:bg-destructive/10')}
 				>
-					<PenLine class="size-3 shrink-0" aria-hidden="true" />
+					<PenLine class="shrink-0" aria-hidden="true" />
 					Pending sign
 				</Badge>
 			</a>

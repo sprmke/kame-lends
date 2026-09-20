@@ -29,7 +29,7 @@
 		});
 		if (result === 'shared') toast.success('Link shared');
 		else if (result === 'copied') toast.success('Signing link copied');
-		else toast.error('Could not share link');
+		else if (result === 'failed') toast.error('Could not share link');
 	}
 </script>
 

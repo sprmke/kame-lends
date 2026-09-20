@@ -1,10 +1,7 @@
 <script lang="ts">
-	import { Badge } from '$lib/components/ui/badge';
-	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
 	import { formatText } from '$lib/format';
-	import { cn } from '$lib/utils';
 	import type { LoanWithInvestors } from '$lib/types';
-	import LoanPendingSignBadge from '$lib/components/loans/LoanPendingSignBadge.svelte';
+	import LoanEventCardMetaBadges from '$lib/components/loans/LoanEventCardMetaBadges.svelte';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -15,6 +12,8 @@
 		interest: number;
 		totalAmount: number;
 		size?: 'sm' | 'md' | 'lg';
+		showHeaderBadges?: boolean;
+		onOpenContractDetails?: () => void;
 	}
 
 	let {
@@ -25,7 +24,9 @@
 		principal,
 		interest,
 		totalAmount,
-		size = 'md'
+		size = 'md',
+		showHeaderBadges = true,
+		onOpenContractDetails
 	}: Props = $props();
 
 	const sizeClasses = {
@@ -70,21 +71,14 @@
 	<div class="min-w-0 space-y-2">
 		<div class="flex items-center gap-2">
 			<div class="min-w-0 flex-1 space-y-1">
-				<div class="flex flex-wrap gap-1">
-					<Badge
-						variant={getLoanTypeBadge(loan.type).variant}
-						class={cn(classes.badge, 'leading-none', getLoanTypeBadge(loan.type).className)}
-					>
-						{formatText(loan.type)}
-					</Badge>
-					<Badge
-						variant={getLoanStatusBadge(loan.status).variant}
-						class={cn(classes.badge, 'leading-none', getLoanStatusBadge(loan.status).className)}
-					>
-						{formatText(loan.status)}
-					</Badge>
-					<LoanPendingSignBadge {loan} class="mt-0 text-[8px]" />
-				</div>
+				{#if showHeaderBadges}
+					<LoanEventCardMetaBadges
+						{loan}
+						badgeClass={classes.badge}
+						showGroupBadges={showHeaderBadges}
+						{onOpenContractDetails}
+					/>
+				{/if}
 				<div class="truncate font-bold text-foreground {classes.title}">
 					{formatText(loan.loanName)}
 				</div>

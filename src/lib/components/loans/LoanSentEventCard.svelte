@@ -1,10 +1,7 @@
 <script lang="ts">
-	import { Badge } from '$lib/components/ui/badge';
-	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
 	import { formatText } from '$lib/format';
-	import { cn } from '$lib/utils';
 	import type { LoanWithInvestors } from '$lib/types';
-	import LoanPendingSignBadge from '$lib/components/loans/LoanPendingSignBadge.svelte';
+	import LoanEventCardMetaBadges from '$lib/components/loans/LoanEventCardMetaBadges.svelte';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -14,6 +11,8 @@
 		totalAmount: number;
 		size?: 'sm' | 'md' | 'lg';
 		isFuture?: boolean;
+		showHeaderBadges?: boolean;
+		onOpenContractDetails?: () => void;
 	}
 
 	let {
@@ -23,7 +22,9 @@
 		investors,
 		totalAmount,
 		size = 'md',
-		isFuture = false
+		isFuture = false,
+		showHeaderBadges = true,
+		onOpenContractDetails
 	}: Props = $props();
 
 	const sizeClasses = {
@@ -69,21 +70,14 @@
 	class="w-full min-w-0 cursor-pointer rounded-md border border-border/60 bg-muted/30 text-left transition-colors hover:border-primary/25 hover:bg-background {classes.container} {colorClasses}"
 >
 	<div class="flex min-w-0 flex-col space-y-2">
-		<div class="flex flex-wrap gap-1">
-			<Badge
-				variant={getLoanTypeBadge(loan.type).variant}
-				class={cn(classes.badge, 'leading-none', getLoanTypeBadge(loan.type).className)}
-			>
-				{formatText(loan.type)}
-			</Badge>
-			<Badge
-				variant={getLoanStatusBadge(loan.status).variant}
-				class={cn(classes.badge, 'leading-none', getLoanStatusBadge(loan.status).className)}
-			>
-				{formatText(loan.status)}
-			</Badge>
-			<LoanPendingSignBadge {loan} class="mt-0 text-[8px]" />
-		</div>
+		{#if showHeaderBadges}
+			<LoanEventCardMetaBadges
+				{loan}
+				badgeClass={classes.badge}
+				showGroupBadges={showHeaderBadges}
+				{onOpenContractDetails}
+			/>
+		{/if}
 		<p class="truncate font-bold text-foreground {classes.title}">{formatText(loan.loanName)}</p>
 		<div class={size === 'sm' ? 'space-y-1' : 'space-y-1 pl-8'}>
 			<div class="space-y-0.5 text-muted-foreground {classes.investor}">

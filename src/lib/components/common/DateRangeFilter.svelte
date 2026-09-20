@@ -55,9 +55,7 @@
 	let localTo = $state('');
 
 	const isCurrent = $derived(isCurrentPeriod(dateRange.from, datePreset));
-	const canNavigate = $derived(
-		datePreset !== 'custom' && datePreset !== 'all-time' && isActive
-	);
+	const canNavigate = $derived(datePreset !== 'custom' && datePreset !== 'all-time');
 	const isCustomMode = $derived(datePreset === 'custom');
 	const triggerLabel = $derived(formatDateRangeDisplay(dateRange.from, dateRange.to, datePreset));
 	const triggerActive = $derived(isActive || presetOpen || customOpen);

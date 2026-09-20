@@ -6,14 +6,16 @@
 		loan: LoanWithInvestors;
 		class?: string;
 		onOpenContractDetails?: () => void;
+		compact?: boolean;
 	}
 
-	let { loan, class: className, onOpenContractDetails }: Props = $props();
+	let { loan, class: className, onOpenContractDetails, compact = false }: Props = $props();
 </script>
 
 <LoanSigningProgressBadge
 	{loan}
 	class={className}
+	{compact}
 	linkWhenViewerPending
 	{onOpenContractDetails}
 />

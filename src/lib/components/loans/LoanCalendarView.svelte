@@ -72,7 +72,7 @@
 	};
 </script>
 
-{#snippet eventCard(event: CalendarEvent, eventIndex: number)}
+{#snippet loanCalendarEventCard(event: CalendarEvent, forModal: boolean)}
 	{#if event.type === 'sent'}
 		{@const sentEvent = event as CalendarEventSent}
 		<LoanSentEventCard
@@ -81,8 +81,9 @@
 			formatCurrency={formatCurrencyCompact}
 			investors={sentEvent.investors}
 			totalAmount={sentEvent.totalAmount}
-			size="sm"
+			size={forModal ? 'md' : 'sm'}
 			isFuture={sentEvent.hasUnpaidTransactions}
+			showHeaderBadges={forModal}
 		/>
 	{:else if event.type === 'due'}
 		{@const dueEvent = event as CalendarEventDue}
@@ -93,7 +94,8 @@
 			totalPrincipal={dueEvent.totalPrincipal}
 			totalInterest={dueEvent.totalInterest}
 			totalAmount={dueEvent.totalAmount}
-			size="sm"
+			size={forModal ? 'md' : 'sm'}
+			showHeaderBadges={forModal}
 		/>
 	{:else if event.type === 'interest_due'}
 		{@const interestDueEvent = event as CalendarEventInterestDue}
@@ -105,16 +107,26 @@
 			principal={interestDueEvent.principal}
 			interest={interestDueEvent.interest}
 			totalAmount={interestDueEvent.totalAmount}
-			size="sm"
+			size={forModal ? 'md' : 'sm'}
+			showHeaderBadges={forModal}
 		/>
 	{/if}
+{/snippet}
+
+{#snippet eventCard(event: CalendarEvent, eventIndex: number)}
+	{@render loanCalendarEventCard(event, false)}
+{/snippet}
+
+{#snippet eventCardModal(event: CalendarEvent, eventIndex: number)}
+	{@render loanCalendarEventCard(event, true)}
 {/snippet}
 
 <Calendar
 	events={calendarEvents}
 	config={{
 		...calendarConfig,
-		eventCard
+		eventCard,
+		eventCardModal
 	}}
 />
 

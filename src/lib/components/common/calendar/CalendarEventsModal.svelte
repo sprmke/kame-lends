@@ -43,7 +43,11 @@
 			{#if events.length > 0}
 				<div class="min-h-0 overflow-y-auto pr-1">
 					<div class="space-y-2">
-						{#if config.eventCard}
+						{#if config.eventCardModal}
+							{#each events as event, eventIndex (eventIndex)}
+								{@render config.eventCardModal(event, eventIndex)}
+							{/each}
+						{:else if config.eventCard}
 							{#each events as event, eventIndex (eventIndex)}
 								{@render config.eventCard(event, eventIndex)}
 							{/each}
