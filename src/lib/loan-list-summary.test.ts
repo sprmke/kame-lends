@@ -211,14 +211,14 @@ describe("computePortfolioCapitalStats", () => {
     expect(stats.totalPrincipal).toBe(150000);
     expect(stats.activePrincipal).toBe(150000);
     expect(stats.completedPrincipal).toBe(100000);
-    expect(stats.interestEstimate).toBe(15000);
+    expect(stats.interestEstimate).toBe(35000);
     expect(stats.interestEarned).toBe(20000);
     expect(stats.totalInterestScheduled).toBe(35000);
   });
 });
 
 describe("computeLoanListSummaryStats", () => {
-  it("splits open vs completed interest and dedupes open principal", () => {
+  it("totals interest on all loans in range and splits earned on completed", () => {
     const stats = computeLoanListSummaryStats(
       [
         loanFixture({
@@ -245,7 +245,7 @@ describe("computeLoanListSummaryStats", () => {
     );
 
     expect(stats.totalPrincipal).toBe(100000);
-    expect(stats.interestEstimate).toBe(15000);
+    expect(stats.interestEstimate).toBe(35000);
     expect(stats.interestEarned).toBe(20000);
     expect(stats.completedCount).toBe(1);
     expect(stats.totalLoanCount).toBe(3);
@@ -295,7 +295,7 @@ describe("computeLoanListSummaryStats", () => {
     );
 
     expect(stats.totalPrincipal).toBe(100000);
-    expect(stats.interestEstimate).toBe(0);
+    expect(stats.interestEstimate).toBe(20000);
     expect(stats.interestEarned).toBe(20000);
     expect(stats.completedCount).toBe(2);
     expect(stats.totalLoanCount).toBe(2);

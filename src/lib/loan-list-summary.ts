@@ -138,7 +138,7 @@ export function computePortfolioCapitalStats(
   let interestEstimate = 0;
   let interestEarned = 0;
 
-  for (const loan of openLoans) {
+  for (const loan of loans) {
     interestEstimate += calculateTotalInterest(loan.loanInvestors);
   }
   for (const loan of completedLoans) {
@@ -155,7 +155,7 @@ export function computePortfolioCapitalStats(
     ),
     interestEstimate,
     interestEarned,
-    totalInterestScheduled: interestEstimate + interestEarned,
+    totalInterestScheduled: interestEstimate,
   };
 }
 
@@ -193,7 +193,7 @@ export function computeInvestorPortfolioCapitalStats(
     allocations.map((allocation) => allocation.loanId),
   );
 
-  const interestEstimate = sumAllocationInterest(openAllocations);
+  const interestEstimate = sumAllocationInterest(allocations);
   const interestEarned = sumAllocationInterest(completedAllocations);
 
   return {
@@ -210,7 +210,7 @@ export function computeInvestorPortfolioCapitalStats(
     ),
     interestEstimate,
     interestEarned,
-    totalInterestScheduled: interestEstimate + interestEarned,
+    totalInterestScheduled: interestEstimate,
     totalLoanCount: totalLoanIds.size,
     activeLoansCount: activeLoanIds.size,
     completedLoansCount: completedLoanIds.size,
