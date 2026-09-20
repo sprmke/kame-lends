@@ -67,11 +67,19 @@ export function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
+export function isLoanContractApi(pathname: string): boolean {
+  return /^\/api\/loans\/[^/]+\/contract(?:\/|$)/.test(pathname);
+}
+
 export function isNeverCached(pathname: string): boolean {
-  return NEVER_CACHE_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
+  return (
+    NEVER_CACHE_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix)) ||
+    isLoanContractApi(pathname)
+  );
 }
 
 export function isOfflineApiRead(pathname: string): boolean {
+  if (isLoanContractApi(pathname)) return false;
   return OFFLINE_API_READS.some((prefix) => matchesPrefix(pathname, prefix));
 }
 

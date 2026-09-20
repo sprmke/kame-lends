@@ -11,13 +11,13 @@ Part of [`docs/PROJECT.md`](../PROJECT.md). Rollout tracker: [`docs/workflow/pla
 
 ## What ships
 
-| Capability    | Behavior                                                                                                                                                                      |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Install       | `manifest.webmanifest`, shortcuts, screenshots; `runInstallAction` from `InstallPrompt`, sidebar/More `InstallAppNavButton`, Settings `InstallAppCard` (no Settings redirect) |
-| Offline read  | Cached shell + visited pages + `__data.json` + allowlisted GET APIs                                                                                                           |
-| Offline write | Blocked with 503 JSON toast (`You are offline. Connect to save changes.`)                                                                                                     |
-| Update        | `UpdatePrompt` on SW waiting or SvelteKit `updated` store; never auto-reload                                                                                                  |
-| Push          | Web Push for due/overdue reminders, loan activity, signing requests                                                                                                           |
+| Capability    | Behavior                                                                                                                                                                               |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install       | `manifest.webmanifest`, shortcuts, screenshots; `runInstallAction` from `InstallPrompt`, sidebar/account sheet `InstallAppNavButton`, Settings `InstallAppCard` (no Settings redirect) |
+| Offline read  | Cached shell + visited pages + `__data.json` + allowlisted GET APIs                                                                                                                    |
+| Offline write | Blocked with 503 JSON toast (`You are offline. Connect to save changes.`)                                                                                                              |
+| Update        | `UpdatePrompt` on SW waiting or SvelteKit `updated` store; never auto-reload                                                                                                           |
+| Push          | Web Push for due/overdue reminders, loan activity, signing requests                                                                                                                    |
 
 Platform notes: desktop Chrome/Edge and Android are fully supported. iOS 16.4+ push requires Add to Home Screen first.
 
@@ -26,7 +26,7 @@ Platform notes: desktop Chrome/Edge and Android are fully supported. iOS 16.4+ p
 ## Build wiring
 
 - **`svelte.config.js`:** `serviceWorker.register: false`, deterministic `version.name` (`VERCEL_GIT_COMMIT_SHA` or `dev-local`; never `Date.now()` in one build), `pollInterval: 300_000`.
-- **`src/service-worker.ts`:** hand-rolled fetch routing; `$service-worker` precache list (install uses per-URL `cache.add` so one 404 does not brick the worker). Non-GET offline: 503 JSON when `navigator.onLine` is false or network fails.
+- **`src/service-worker.ts`:** hand-rolled fetch routing; `$service-worker` precache list (install uses per-URL `cache.add` so one 404 does not brick the worker). Non-GET: 503 JSON only when offline. Online POST/PUT/DELETE pass through to the network (needed for contract PDF download).
 - **`src/lib/pwa/shared.ts`:** cache policy (worker-safe).
 - **`src/hooks.client.ts` + `src/lib/pwa/offline-fetch.ts`:** patches `fetch`; dispatches `kl:offline-mutation` on blocked writes.
 - **`src/lib/pwa/register.ts`:** registers SW when `import.meta.env.PROD` (preview + production; skipped in `bun dev`).
@@ -43,7 +43,7 @@ Platform notes: desktop Chrome/Edge and Android are fully supported. iOS 16.4+ p
 | `kl-data`          | `__data.json` (normalized keys) + allowlisted GET APIs |
 | `kl-fonts`         | Google Fonts CSS/files                                 |
 
-**Never cached:** `/auth`, `/signin`, `/api/push`, `/api/storage`, `/api/export`, `/api/cron`, `/api/webhooks`, `/api/pwa`, `/api/e2e`, `/api/health`, `/api/ai`, `/api/backup`.
+**Never cached:** `/auth`, `/signin`, `/api/push`, `/api/storage`, `/api/export`, `/api/cron`, `/api/webhooks`, `/api/pwa`, `/api/e2e`, `/api/health`, `/api/ai`, `/api/backup`, `/api/loans/:id/contract`.
 
 **Offline API allowlist (start):** `/api/loans`, `/api/party-profile/me`, `/api/payment-methods`.
 

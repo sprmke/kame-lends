@@ -159,18 +159,11 @@ sw.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (request.method !== "GET") {
-    event.respondWith(
-      (async () => {
-        if (!sw.navigator.onLine) {
-          return offlineJsonResponse();
-        }
-        try {
-          return await fetch(request);
-        } catch {
-          return offlineJsonResponse();
-        }
-      })(),
-    );
+    // Online mutations must pass through. Wrapping fetch() here can fail
+    // long contract PDF POSTs (timeout / opaque 500).
+    if (!sw.navigator.onLine) {
+      event.respondWith(offlineJsonResponse());
+    }
     return;
   }
 

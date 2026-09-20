@@ -1,12 +1,16 @@
 import { downloadBlob } from "$lib/pdf-export";
 import { supportsWebShare } from "$lib/pwa/capabilities";
 
+export type ShareOrCopyResult = "shared" | "copied" | "cancelled" | "failed";
+
 export async function shareOrCopy(input: {
   title?: string;
   text?: string;
   url: string;
-}): Promise<"shared" | "copied" | "failed"> {
-  if (supportsWebShare()) {
+  /** When true, copy to clipboard only (no native share sheet). Use for Copy actions. */
+  preferCopy?: boolean;
+}): Promise<ShareOrCopyResult> {
+  if (!input.preferCopy && supportsWebShare()) {
     try {
       await navigator.share({
         title: input.title,
@@ -15,7 +19,7 @@ export async function shareOrCopy(input: {
       });
       return "shared";
     } catch (err) {
-      if ((err as DOMException).name === "AbortError") return "failed";
+      if ((err as DOMException).name === "AbortError") return "cancelled";
     }
   }
 
@@ -31,7 +35,7 @@ export async function shareOrDownloadFile(input: {
   blob: Blob;
   filename: string;
   title?: string;
-}): Promise<"shared" | "downloaded" | "failed"> {
+}): Promise<"shared" | "downloaded" | "cancelled" | "failed"> {
   const file = new File([input.blob], input.filename, {
     type: input.blob.type || "application/octet-stream",
   });
@@ -48,7 +52,7 @@ export async function shareOrDownloadFile(input: {
       });
       return "shared";
     } catch (err) {
-      if ((err as DOMException).name === "AbortError") return "failed";
+      if ((err as DOMException).name === "AbortError") return "cancelled";
     }
   }
 

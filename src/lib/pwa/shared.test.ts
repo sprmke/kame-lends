@@ -21,12 +21,14 @@ describe("cache policy helpers", () => {
   it("blocks auth and mutating API paths", () => {
     expect(isNeverCached("/auth/signin")).toBe(true);
     expect(isNeverCached("/api/storage/upload")).toBe(true);
+    expect(isNeverCached("/api/loans/12/contract")).toBe(true);
     expect(isNeverCached("/dashboard")).toBe(false);
   });
 
   it("allows only offline read API roots", () => {
     expect(isOfflineApiRead("/api/loans")).toBe(true);
     expect(isOfflineApiRead("/api/loans/1")).toBe(true);
+    expect(isOfflineApiRead("/api/loans/1/contract")).toBe(false);
     expect(isOfflineApiRead("/api/transactions")).toBe(false);
   });
 });
