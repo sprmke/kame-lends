@@ -30,6 +30,11 @@ import {
   googleCalendarColorIdForKind,
   type GoogleCalendarLoanEventKind,
 } from "$lib/calendar-event-colors";
+import {
+  duplicateIdsForSameKey,
+  planLoanCalendarEventDeletions,
+  planSummaryCalendarEventDeletions,
+} from "$lib/calendar-google-dedupe";
 
 function creds() {
   return readGoogleServiceAccountCredentials({
@@ -76,6 +81,17 @@ function getGroupCalendarApi(): {
 
 async function mutate<T>(op: () => Promise<T>): Promise<T> {
   return withGoogleCalendarRetry(op);
+}
+
+async function deleteCalendarEvents(
+  calendarId: string,
+  eventIds: string[],
+): Promise<void> {
+  if (eventIds.length === 0) return;
+  const { calendar } = getGroupCalendarApi();
+  for (const eventId of eventIds) {
+    await mutate(() => calendar.events.delete({ calendarId, eventId }));
+  }
 }
 
 export function groupCalendarSubscribeUrl(googleCalendarId: string): string {
@@ -368,32 +384,40 @@ async function syncLoanEventsToCalendar(
       },
     };
 
-    if (existing[0]?.id) {
+    let keepEventId = existing[0]?.id ?? undefined;
+    if (keepEventId) {
       await mutate(() =>
         calendar.events.patch({
           calendarId,
-          eventId: existing[0]!.id!,
+          eventId: keepEventId!,
           requestBody: body,
         }),
       );
     } else {
-      await mutate(() =>
+      const created = await mutate(() =>
         calendar.events.insert({
           calendarId,
           requestBody: body,
         }),
       );
+      keepEventId = created.data.id ?? undefined;
     }
+    await deleteCalendarEvents(
+      calendarId,
+      duplicateIdsForSameKey(existing, keepEventId),
+    );
   }
 
   const existingForLoan = await findEventsByLoanId(calendarId, loan.id);
-  for (const event of existingForLoan) {
-    const key = event.extendedProperties?.private?.kameKey;
-    if (!key || currentKeys.has(key) || !event.id) continue;
-    await mutate(() =>
-      calendar.events.delete({ calendarId, eventId: event.id! }),
-    );
-  }
+  await deleteCalendarEvents(
+    calendarId,
+    planLoanCalendarEventDeletions(
+      existingForLoan,
+      currentKeys,
+      loan.id,
+      drafts,
+    ),
+  );
 }
 
 export async function findEventsByLoanId(
@@ -534,19 +558,25 @@ export async function syncGroupSummaries(
     };
 
     const existing = await findEventsByPrivateKey(calendarId, key);
-    if (existing[0]?.id) {
+    let keepEventId = existing[0]?.id ?? undefined;
+    if (keepEventId) {
       await mutate(() =>
         calendar.events.patch({
           calendarId,
-          eventId: existing[0]!.id!,
+          eventId: keepEventId!,
           requestBody: body,
         }),
       );
     } else {
-      await mutate(() =>
+      const created = await mutate(() =>
         calendar.events.insert({ calendarId, requestBody: body }),
       );
+      keepEventId = created.data.id ?? undefined;
     }
+    await deleteCalendarEvents(
+      calendarId,
+      planSummaryCalendarEventDeletions(existing, keepEventId),
+    );
   }
 
   await db

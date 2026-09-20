@@ -660,10 +660,10 @@ export const integrationJobs = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
-    pendingDedupeUnique: uniqueIndex("integration_jobs_pending_dedupe_unique")
+    activeDedupeUnique: uniqueIndex("integration_jobs_active_dedupe_unique")
       .on(table.dedupeKey)
       .where(
-        sql`${table.status} = 'pending' AND ${table.dedupeKey} IS NOT NULL`,
+        sql`${table.status} IN ('pending', 'running') AND ${table.dedupeKey} IS NOT NULL`,
       ),
     statusRunAfterIdx: index("integration_jobs_status_run_after_idx").on(
       table.status,
