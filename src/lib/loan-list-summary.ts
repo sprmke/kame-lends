@@ -239,6 +239,23 @@ export function computeLoanListSummaryStats(
   };
 }
 
+/** Same card shape as `computeLoanListSummaryStats`, scoped to one investor's allocations. */
+export function computeInvestorLoanListSummaryStats(
+  allocations: InvestorLoanAllocation[],
+  from: string | null = null,
+  to: string | null = null,
+): LoanListSummaryStats {
+  const capital = computeInvestorPortfolioCapitalStats(allocations, from, to);
+
+  return {
+    totalPrincipal: capital.totalCapital,
+    interestEstimate: capital.interestEstimate,
+    interestEarned: capital.interestEarned,
+    completedCount: capital.completedLoansCount,
+    totalLoanCount: capital.totalLoanCount,
+  };
+}
+
 export interface ProfitStats {
   totalPrincipal: number;
   profitEstimate: number;

@@ -3,12 +3,13 @@
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import LoanDetailClient from '$lib/components/loans/LoanDetailClient.svelte';
 	import { loadPartyOptions } from '$lib/composables/party-options';
+	import { EMPTY_LOAN_ACCESS } from '$lib/loan-access';
 	import type { Borrower, Investor, LoanWithInvestors } from '$lib/types';
 
 	let { data } = $props();
 
 	const loan = $derived(data.entity as LoanWithInvestors);
-	const access = $derived(data.access);
+	const access = $derived(data.access ?? EMPTY_LOAN_ACCESS);
 	const canSignContract = $derived(data.canSignContract ?? false);
 	const paymentMethods = $derived(data.paymentMethods ?? []);
 	const title = $derived(loan?.loanName ?? 'Loan');

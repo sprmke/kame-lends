@@ -19,7 +19,7 @@
 	import { toast } from '$lib/toast';
 	import { formatText } from '$lib/format';
 	import type { Borrower, Investor, LoanWithInvestors, PaymentMethod } from '$lib/types';
-	import type { LoanAccessContext } from '$lib/loan-access';
+	import { EMPTY_LOAN_ACCESS, type LoanAccessContext } from '$lib/loan-access';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 
 	interface Props {
@@ -27,16 +27,26 @@
 		investors: Investor[];
 		borrowers: Borrower[];
 		loadingFormData: boolean;
-		access: LoanAccessContext;
+		access?: LoanAccessContext;
 		canSignContract?: boolean;
 		paymentMethods?: PaymentMethod[];
 	}
 
-	let { loan, investors, borrowers, loadingFormData, access, canSignContract = false, paymentMethods = [] }: Props =
-		$props();
+	let {
+		loan,
+		investors,
+		borrowers,
+		loadingFormData,
+		access: accessProp,
+		canSignContract = false,
+		paymentMethods = []
+	}: Props = $props();
+
+	const access = $derived(accessProp ?? EMPTY_LOAN_ACCESS);
 
 	let isEditing = $state(
-		page.url.searchParams.get('edit') === '1' && access.canAdminEdit
+		page.url.searchParams.get('edit') === '1' &&
+			(accessProp?.canAdminEdit ?? false)
 	);
 	let showContractDetailsModal = $state(false);
 	let showCommissionModal = $state(false);

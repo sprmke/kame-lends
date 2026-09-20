@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import {
 		isMaturingFundedLoan,
 		isOverdueLoanForDashboard
@@ -15,6 +16,10 @@
 	import CompletedLoansCard from '$lib/components/common/CompletedLoansCard.svelte';
 	import PendingDisbursementsCard from '$lib/components/common/PendingDisbursementsCard.svelte';
 	import LoansTable from '$lib/components/loans/LoansTable.svelte';
+	import LoanListSummaryCards from '$lib/components/loans/LoanListSummaryCards.svelte';
+	import LoanBulkActionBar from '$lib/components/loans/LoanBulkActionBar.svelte';
+	import LoanSelectionSummaryModal from '$lib/components/loans/LoanSelectionSummaryModal.svelte';
+	import DateRangeFilter from '$lib/components/common/DateRangeFilter.svelte';
 	import LoanDetailModal from '$lib/components/loans/LoanDetailModal.svelte';
 	import LoanCreateModal from '$lib/components/loans/LoanCreateModal.svelte';
 	import DebtsTable from '$lib/components/debts/DebtsTable.svelte';
@@ -25,10 +30,18 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import * as Tabs from '$lib/components/ui/tabs';
-	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
+	import { isMobileShellViewport, createIsMobileShell } from '$lib/composables/use-media-query.svelte';
+	import { createLoanListDateRange } from '$lib/composables/use-loan-list-date-range.svelte';
 	import { calculateAverageRate, calculateTotalInterest } from '$lib/calculations';
 	import { calculateInvestorDebtStats, isFullyPaidDebt } from '$lib/debt-calculations';
-	import { computeInvestorPortfolioCapitalStats } from '$lib/loan-list-summary';
+	import {
+		computeInvestorPortfolioCapitalStats,
+		computeInvestorLoanListSummaryStats,
+		computeLoanListSummaryStats,
+		passesLoanDueDateRangeFilter
+	} from '$lib/loan-list-summary';
+	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
+	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
 	import { computeTotalLot, buildTotalLotMetric } from '$lib/lot-utils';
 	import { INVESTOR_DETAIL_SUMMARY_GRID } from '$lib/summary-grid';
 	import { formatCurrency } from '$lib/format';
@@ -115,8 +128,27 @@
 	let showLoanDetailModal = $state(false);
 	let showLoanCreateModal = $state(false);
 	let createModalDuplicateData = $state<DuplicateLoanData | null>(null);
+	let selectedRowIds = $state(new Set<string | number>());
+	let phoneSelectMode = $state(false);
+	let summaryOpen = $state(false);
+	const isMobileShell = createIsMobileShell(false);
 	const debtsViewMode = createResponsiveViewMode();
 	const loanFormOptions = createLoanFormOptions();
+
+	const canBulkSelect = $derived(canManage && SHOW_GROUPS_UI);
+
+	const dateRangeState = createLoanListDateRange(() => page, () => ({
+		enabled: pageTab === 'loans',
+		defaultPreset: 'month'
+	}));
+	const filterFrom = $derived(dateRangeState.filterFrom);
+	const filterTo = $derived(dateRangeState.filterTo);
+
+	const groupsIndex = $derived(
+		((page.data as { groupsIndex?: GroupsIndexItem[] }).groupsIndex ?? []) as GroupsIndexItem[]
+	);
+
+	$effect(() => isMobileShell.init());
 
 	$effect(() => {
 		if (canManage) loanFormOptions.prefetch();
@@ -210,8 +242,12 @@
 		})
 	);
 
+	const dateFilteredLoans = $derived(
+		loans.filter((loan) => passesLoanDueDateRangeFilter(loan, filterFrom, filterTo))
+	);
+
 	const filteredLoans = $derived(
-		loans.filter((loan) => {
+		dateFilteredLoans.filter((loan) => {
 			if (loanSearchQuery) {
 				const q = loanSearchQuery.toLowerCase();
 				if (
@@ -243,6 +279,44 @@
 			return true;
 		})
 	);
+
+	const dateFilteredAllocations = $derived(
+		dateFilteredLoans.flatMap((loan) =>
+			investorEntriesForLoan(loan).map((li) => ({ ...li, loan }))
+		)
+	);
+
+	const sortedFilteredLoans = $derived(
+		[...filteredLoans].sort(
+			(a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
+		)
+	);
+
+	const selectedLoans = $derived(
+		sortedFilteredLoans.filter((loan) => selectedRowIds.has(loan.id))
+	);
+
+	const selectedInvestorAllocations = $derived(
+		selectedLoans.flatMap((loan) =>
+			investorEntriesForLoan(loan).map((li) => ({ ...li, loan }))
+		)
+	);
+
+	const loansTabSummaryStats = $derived.by(() => {
+		if (dateFilteredLoans.length === 0) return null;
+		if (scopeToInvestor) {
+			return computeInvestorLoanListSummaryStats(
+				dateFilteredAllocations,
+				filterFrom,
+				filterTo
+			);
+		}
+		return computeLoanListSummaryStats(dateFilteredLoans, filterFrom, filterTo);
+	});
+
+	$effect(() => {
+		if (selectedLoans.length === 0) summaryOpen = false;
+	});
 
 	const overdueLoans = $derived(
 		loans
@@ -319,6 +393,9 @@
 		maxInterest = '';
 		minTotalAmount = '';
 		maxTotalAmount = '';
+		if (pageTab === 'loans') {
+			dateRangeState.clearDateFilter();
+		}
 	}
 
 	function clearDebtFilters() {
@@ -341,7 +418,8 @@
 			minInterest !== '' ||
 			maxInterest !== '' ||
 			minTotalAmount !== '' ||
-			maxTotalAmount !== ''
+			maxTotalAmount !== '' ||
+			(pageTab === 'loans' && dateRangeState.isDateFilterActive)
 	);
 	const hasActiveDebtFilters = $derived(
 		debtSearchQuery !== '' ||
@@ -445,6 +523,19 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="loans" class="mt-6 space-y-4">
+			{#if !isMobileShell.matches}
+				<DateRangeFilter
+					dateRange={dateRangeState.dateRange}
+					datePreset={dateRangeState.datePreset}
+					isActive={dateRangeState.isDateFilterActive}
+					setDatePreset={dateRangeState.setDatePreset}
+					setDateRange={dateRangeState.setDateRange}
+					navigatePeriod={dateRangeState.navigatePeriod}
+					goToToday={dateRangeState.goToToday}
+					onClear={dateRangeState.clearDateFilter}
+				/>
+			{/if}
+
 			<div class="mobile-list-toolbar">
 				<SearchFilter
 					value={loanSearchQuery}
@@ -484,9 +575,24 @@
 							<span class="hidden xl:inline">Clear All</span>
 						</Button>
 					{/if}
+					{#if canBulkSelect && isMobileShell.matches}
+						<Button
+							type="button"
+							variant={phoneSelectMode ? 'default' : 'outline'}
+							size="sm"
+							class="shrink-0 whitespace-nowrap"
+							onclick={() => {
+								phoneSelectMode = !phoneSelectMode;
+								if (!phoneSelectMode) selectedRowIds = new Set();
+							}}
+						>
+							{phoneSelectMode ? 'Done' : 'Select'}
+						</Button>
+					{/if}
 					<ExportButton
 						data={loans}
-						filteredData={filteredLoans}
+						filteredData={sortedFilteredLoans}
+						selectedData={selectedLoans}
 						sections={loanPDFSections}
 						onGeneratePDF={(data, keys) =>
 							downloadLoansPdf(data, keys, scopeToInvestor ? investor.id : undefined)}
@@ -499,6 +605,24 @@
 					{/if}
 				</div>
 			</div>
+
+			{#if isMobileShell.matches}
+				<DateRangeFilter
+					dateRange={dateRangeState.dateRange}
+					datePreset={dateRangeState.datePreset}
+					isActive={dateRangeState.isDateFilterActive}
+					fullWidth={true}
+					setDatePreset={dateRangeState.setDatePreset}
+					setDateRange={dateRangeState.setDateRange}
+					navigatePeriod={dateRangeState.navigatePeriod}
+					goToToday={dateRangeState.goToToday}
+					onClear={dateRangeState.clearDateFilter}
+				/>
+			{/if}
+
+			{#if loansTabSummaryStats}
+				<LoanListSummaryCards stats={loansTabSummaryStats} />
+			{/if}
 
 			{#if showMoreLoanFilters}
 				<div
@@ -544,7 +668,10 @@
 			{/if}
 
 			<LoansTable
-				loans={filteredLoans}
+				loans={sortedFilteredLoans}
+				enableRowSelection={canBulkSelect}
+				selectedRowIds={selectedRowIds}
+				onSelectedRowIdsChange={(ids) => (selectedRowIds = ids)}
 				investorId={scopeToInvestor && !investorUserId ? investor.id : undefined}
 				investorUserId={scopeToInvestor ? investorUserId : undefined}
 				emptyMessage={uniqueLoanCount === 0
@@ -567,6 +694,36 @@
 					</Button>
 				</div>
 			{/if}
+
+			{#if canBulkSelect && selectedLoans.length > 0 && isMobileShell.matches}
+				<div class="min-h-14 shrink-0 lg:hidden" aria-hidden="true"></div>
+			{/if}
+
+			{#if canBulkSelect}
+				<LoanBulkActionBar
+					selectedCount={selectedLoans.length}
+					selectedLoanIds={selectedLoans.map((l) => l.id)}
+					groups={groupsIndex.map((g) => ({
+						id: g.id,
+						name: g.name,
+						color: g.color,
+						loanCount: g.loanCount
+					}))}
+					showAddToGroup={canManage}
+					onSummary={() => (summaryOpen = true)}
+					onClear={() => (selectedRowIds = new Set())}
+					onAdded={refresh}
+				/>
+			{/if}
+
+			<LoanSelectionSummaryModal
+				open={summaryOpen}
+				onOpenChange={(open) => (summaryOpen = open)}
+				loans={selectedLoans}
+				from={filterFrom}
+				to={filterTo}
+				investorAllocations={scopeToInvestor ? selectedInvestorAllocations : null}
+			/>
 		</Tabs.Content>
 
 		{#if showBorrowings}

@@ -3,8 +3,10 @@
 	import LoanCommissionSummaryCards from '$lib/components/loans/LoanCommissionSummaryCards.svelte';
 	import LoanListSummaryCards from '$lib/components/loans/LoanListSummaryCards.svelte';
 	import {
+		computeInvestorLoanListSummaryStats,
 		computeLoanListSummaryStats,
-		computePartyCommissionStats
+		computePartyCommissionStats,
+		type InvestorLoanAllocation
 	} from '$lib/loan-list-summary';
 	import type { LoanWithInvestors } from '$lib/types';
 
@@ -15,6 +17,8 @@
 		from?: string | null;
 		to?: string | null;
 		showCommission?: boolean;
+		/** When set, summary cards use this investor's allocations instead of full loan totals. */
+		investorAllocations?: InvestorLoanAllocation[] | null;
 	}
 
 	let {
@@ -23,10 +27,15 @@
 		loans,
 		from = null,
 		to = null,
-		showCommission = false
+		showCommission = false,
+		investorAllocations = null
 	}: Props = $props();
 
-	const summaryStats = $derived(computeLoanListSummaryStats(loans, from, to));
+	const summaryStats = $derived(
+		investorAllocations
+			? computeInvestorLoanListSummaryStats(investorAllocations, from, to)
+			: computeLoanListSummaryStats(loans, from, to)
+	);
 	const commissionStats = $derived(computePartyCommissionStats(loans, from, to));
 </script>
 

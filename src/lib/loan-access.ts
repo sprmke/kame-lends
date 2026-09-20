@@ -16,3 +16,16 @@ export type LoanAccessContext = {
   /** True when canView is only via group membership (not a party). */
   isGroupViewer: boolean;
 };
+
+/** Safe fallback when access is missing from client payload (stale cache, partial data). */
+export const EMPTY_LOAN_ACCESS: LoanAccessContext = {
+  memberships: [],
+  canView: false,
+  canAdminEdit: false,
+  editableInvestorIds: [],
+  signingPartyRoles: [],
+  linkedInvestorId: null,
+  linkedLoanWitnessId: null,
+  viaGroupIds: [],
+  isGroupViewer: false,
+};

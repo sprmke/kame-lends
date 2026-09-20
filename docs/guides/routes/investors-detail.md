@@ -30,7 +30,13 @@ Borrowing cards hide when the investor has no borrowings.
 
 The loans table shows this investor's **capital per loan** in the Principal column (sum of their `loan_investors` rows on that loan), with their average interest rate below. It does not show full loan principal when other investors are on the same loan. Loan filters (Total Principal, Avg. Rate, etc.) use the same investor-scoped totals.
 
-`InvestorDetailContent` also embeds on the group People tab (`embedded`, no Borrowings tab) with loans limited to that group. Investor rows stay allocation-scoped; owner/borrower/witness rows use full loan principal.
+**Date range:** Same control as `/loans` (month/week/year/all-time/custom via URL `from`/`to` or `range=all`). Filters rows by loan **due date** and drives the four summary cards below.
+
+**Summary cards (Loans tab):** Principal, Interest Estimate, Interest Earned, Completed (same layout as `/loans`). Metrics use this investor's paid allocations on loans in the date range (`computeInvestorLoanListSummaryStats`), not full-loan totals.
+
+**Bulk select:** When groups are enabled and the viewer can manage the workspace, the table shows row checkboxes (desktop always; phone uses the same table). **Summary** opens a modal with investor-scoped totals for the selection. **Add to group** uses the shared group picker (`POST /api/groups/:id/loans`).
+
+`InvestorDetailContent` also embeds on the group People tab (`embedded`, no Borrowings tab) with loans limited to that group. Investor rows stay allocation-scoped; owner/borrower/witness rows use full loan principal for summary cards when `scopeToInvestor` is false.
 
 ## Load
 

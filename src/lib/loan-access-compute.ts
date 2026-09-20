@@ -1,6 +1,10 @@
 import type { SigningPartyRole } from "$lib/loan-signing";
 import { emailsMatch, normalizeEmail } from "$lib/loan-signing";
-import type { LoanAccessContext, LoanMembership } from "$lib/loan-access";
+import {
+  EMPTY_LOAN_ACCESS,
+  type LoanAccessContext,
+  type LoanMembership,
+} from "$lib/loan-access";
 
 export type LoanAccessGraph = {
   id: number;
@@ -34,17 +38,7 @@ export type LoanAccessGraph = {
   }>;
 };
 
-export const emptyLoanAccess: LoanAccessContext = {
-  memberships: [],
-  canView: false,
-  canAdminEdit: false,
-  editableInvestorIds: [],
-  signingPartyRoles: [],
-  linkedInvestorId: null,
-  linkedLoanWitnessId: null,
-  viaGroupIds: [],
-  isGroupViewer: false,
-};
+export const emptyLoanAccess: LoanAccessContext = EMPTY_LOAN_ACCESS;
 
 /** Membership from an already-loaded loan graph. Avoids a second access query. */
 export function computeLoanAccessContext(
