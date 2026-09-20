@@ -28,10 +28,12 @@ Use for schema, queries, and migrations.
 ## Commands
 
 ```bash
+./dev.sh                     # Docker Postgres + schema if empty + pending SQL + Vite
 bun run db:generate          # drizzle-kit generate (kit output; hand SQL still required)
 bun run db:migrate:pending   # apply pending db/migrations/*.sql (journal: schema_migrations)
 bun run db:studio
 bun run db:local:start
+bun run db:local:stop
 bun run db:local:push        # always 127.0.0.1:5433 — never Neon
 bun run db:local:sync-prod   # read-only pg_dump from DATABASE_URL_PROD → local restore
 ```
