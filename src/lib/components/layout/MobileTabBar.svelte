@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import { Ellipsis } from 'lucide-svelte';
+	import * as Avatar from '$lib/components/ui/avatar';
 	import type { AppNavItem } from '$lib/nav/app-nav';
 	import { isNavActive } from '$lib/nav/app-nav';
 
 	interface Props {
 		pathname: string;
 		primaryTabs: AppNavItem[];
-		/** Visual highlight when More destinations (or sheet) are active. */
+		/** Visual highlight when account destinations (or sheet) are active. */
 		moreActive?: boolean;
 		/** Sheet open state for aria-expanded only. */
 		moreOpen?: boolean;
+		userImage?: string | null;
+		userInitials: string;
 		onMoreClick: () => void;
 		onTabNavigate?: (href: string) => void;
 	}
@@ -20,6 +22,8 @@
 		primaryTabs,
 		moreActive = false,
 		moreOpen = false,
+		userImage = null,
+		userInitials,
 		onMoreClick,
 		onTabNavigate
 	}: Props = $props();
@@ -73,23 +77,35 @@
 				class={cn(
 					'native-press relative z-[1] flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[1rem] px-1 py-1 transition-colors duration-150',
 					primaryTabs.length > 0 ? 'min-w-0 flex-1' : 'w-[3.75rem] shrink-0',
-					moreActive
-						? 'bg-primary text-primary-foreground shadow-[var(--shadow-native-primary)]'
-						: 'text-muted-foreground'
+					moreActive ? 'text-foreground' : 'text-muted-foreground'
 				)}
-				aria-label="More"
+				aria-label="Account"
 				aria-haspopup="dialog"
 				aria-expanded={moreOpen}
 				onclick={onMoreClick}
 			>
-				<Ellipsis class="size-[18px] shrink-0" strokeWidth={1.75} />
+				<span
+					class={cn(
+						'flex size-[22px] items-center justify-center rounded-full transition-[box-shadow] duration-150',
+						moreActive && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+					)}
+				>
+					<Avatar.Root class="size-[22px] after:hidden">
+						<Avatar.Image src={userImage ?? undefined} alt="" />
+						<Avatar.Fallback
+							class="bg-primary text-[9px] font-semibold text-primary-foreground"
+						>
+							{userInitials}
+						</Avatar.Fallback>
+					</Avatar.Root>
+				</span>
 				<span
 					class={cn(
 						'w-full truncate px-0.5 text-center text-[10px] leading-none tracking-tight',
 						moreActive ? 'font-semibold' : 'font-medium'
 					)}
 				>
-					More
+					You
 				</span>
 			</button>
 		</div>

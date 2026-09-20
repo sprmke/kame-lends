@@ -166,7 +166,7 @@ export function buildDestinationItems(
   return items;
 }
 
-/** Floating phone dock: hub routes only; People / Tools stay under More. */
+/** Floating phone dock: hub routes only; People, Tools, and Settings stay under the account tab. */
 export function buildMobilePrimaryTabs(
   caps: NavCapabilities = DEFAULT_NAV_CAPABILITIES,
 ): AppNavItem[] {
@@ -175,7 +175,6 @@ export function buildMobilePrimaryTabs(
     tabs.push(GROUPS_ITEM);
   }
   tabs.push(LOANS_ITEM);
-  tabs.push(settingsItem());
   return tabs;
 }
 
@@ -209,7 +208,7 @@ export function resolveMobileDockPathname(
   return pathname;
 }
 
-/** One dock highlight at a time: primary shortcut, or More when the sheet is open / route is sheet-only. */
+/** One dock highlight at a time: primary shortcut, or the account tab when the sheet is open / route is sheet-only. */
 export function resolveMobileDockHighlight(
   pathname: string,
   primaryTabs: AppNavItem[],

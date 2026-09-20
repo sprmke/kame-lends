@@ -46,14 +46,14 @@
 		class="gap-0 overflow-hidden p-0 pb-0!"
 	>
 		<Sheet.Header class="sr-only">
-			<Sheet.Title>More</Sheet.Title>
+		<Sheet.Title>Account</Sheet.Title>
 		</Sheet.Header>
 
 		<div class="flex min-h-0 flex-col">
 			{#if moreNavItems.length > 0}
 				<nav
 					class="min-h-0 overflow-y-auto overscroll-contain pb-2 [-webkit-overflow-scrolling:touch]"
-					aria-label="More"
+					aria-label="Account"
 				>
 					{#each moreNavGroups as group, groupIndex (group.id)}
 						{#if groupIndex > 0}

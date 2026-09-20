@@ -93,7 +93,7 @@ describe("buildAppNav", () => {
     expect(ids).toContain("debts");
   });
 
-  it("uses Dashboard, Groups, Loans, Settings on the phone dock when groups are on", () => {
+  it("uses Dashboard, Groups, Loans on the phone dock when groups are on", () => {
     const { primaryTabs } = buildAppNav({
       ...DEFAULT_NAV_CAPABILITIES,
       hasGroups: true,
@@ -102,17 +102,12 @@ describe("buildAppNav", () => {
       "dashboard",
       "groups",
       "loans",
-      "settings",
     ]);
   });
 
   it("omits Groups on the phone dock when SHOW_GROUPS_UI is off", () => {
     const { primaryTabs } = buildAppNav(DEFAULT_NAV_CAPABILITIES);
-    expect(primaryTabs.map((item) => item.id)).toEqual([
-      "dashboard",
-      "loans",
-      "settings",
-    ]);
+    expect(primaryTabs.map((item) => item.id)).toEqual(["dashboard", "loans"]);
   });
 });
 
@@ -141,7 +136,7 @@ describe("resolveMobileDockPathname", () => {
 });
 
 describe("resolveMobileDockHighlight", () => {
-  it("highlights Settings on the dock, not More", () => {
+  it("highlights the account tab on Settings", () => {
     const { primaryTabs, moreNavItems } = buildAppNav({
       ...DEFAULT_NAV_CAPABILITIES,
       hasGroups: true,
@@ -152,10 +147,10 @@ describe("resolveMobileDockHighlight", () => {
       moreNavItems,
       false,
     );
-    expect(moreActive).toBe(false);
+    expect(moreActive).toBe(true);
   });
 
-  it("highlights More when route is only in the sheet", () => {
+  it("highlights the account tab when route is only in the sheet", () => {
     const { primaryTabs, moreNavItems } = buildAppNav(DEFAULT_NAV_CAPABILITIES);
     const { moreActive } = resolveMobileDockHighlight(
       "/investors",

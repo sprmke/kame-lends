@@ -24,6 +24,7 @@
 	} from '$lib/nav/app-nav';
 	import { THEME_COLOR_DASHBOARD } from '$lib/theme/preferences';
 	import { ChevronLeft, ChevronRight, LogOut } from 'lucide-svelte';
+	import { mobileDockSlot } from '$lib/stores/mobile-dock-slot.svelte';
 
 	interface UserInfo {
 		name?: string | null;
@@ -95,14 +96,18 @@
 		{/snippet}
 	</MobileTopBar>
 
-	<MobileTabBar
-		pathname={dockPathname}
-		primaryTabs={nav.primaryTabs}
-		{moreActive}
-		{moreOpen}
-		onMoreClick={() => (moreOpen = true)}
-		onTabNavigate={handleDockNavigate}
-	/>
+	{#if !mobileDockSlot.claimed}
+		<MobileTabBar
+			pathname={dockPathname}
+			primaryTabs={nav.primaryTabs}
+			{moreActive}
+			{moreOpen}
+			userImage={user.image}
+			{userInitials}
+			onMoreClick={() => (moreOpen = true)}
+			onTabNavigate={handleDockNavigate}
+		/>
+	{/if}
 
 	<MobileMoreSheet
 		open={moreOpen}
