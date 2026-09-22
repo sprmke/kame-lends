@@ -18,6 +18,7 @@ Opening a dialog/sheet must stay cheap. This class of lag has shipped more than 
 | `$effect` on open that re-runs from `prop ?? []` | `$derived` for fallbacks; `untrack()` for one-shot init |
 | `{#await import()}` in an overlay body | `$effect` + `$state` component (LoanCreateModal). A new Promise every parent render remounts the child and can loop with child→parent writes, leaving the 3-bar skeleton up forever |
 | `isolate` on full-viewport overlay wrappers | `z-index` already creates a stacking context |
+| `content-visibility: hidden` (or `visibility`/`display`) on `.app-shell` while `overlay-open` | Keep painting the page under the solid scrim on desktop and mobile |
 
 Light dialogs (New group, pickers, confirms) mount the real form on open. The 3-bar skeleton in `ResponsiveModal` means `deferBody` is on; do not leave it on for a name field.
 

@@ -108,13 +108,8 @@ html.dashboard-shell [data-slot="sheet-content"] {
   background-color: var(--popover);
 }
 
-/* Desktop dialogs only: skip painting the list while open so the table cannot show through a janky fade. Mobile sheets keep page content visible under the solid scrim. */
-@media (width >= 1024px) {
-  html.dashboard-shell.overlay-open .app-shell {
-    content-visibility: hidden;
-  }
-}
-
+/* Keep painting .app-shell under the scrim. Hiding it (content-visibility,
+   visibility, or display) leaves dialogs and sheets on an empty gray wash. */
 html.dashboard-shell.overlay-open aside,
 html.dashboard-shell.overlay-open .mobile-floating-dock {
   -webkit-backdrop-filter: none !important;

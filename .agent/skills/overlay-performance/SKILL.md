@@ -23,7 +23,7 @@ Dashboard overlays have frozen the UI more than once:
 4. If you use `createOverlayContentReady`, call `armWhenOpen` as a rising edge. The helper must ignore re-entry while still open.
 5. Open-init `$effect` must `untrack()` writes. Do not let `usedColorKeys={x ?? []}` (new `[]` every render) retrigger init.
 6. Do not add `isolate` on full-viewport overlay frames. `z-index` is enough.
-7. `html.overlay-open .app-shell { content-visibility: hidden }` applies at **`lg+` only** so mobile sheets show dimmed page content under the scrim. Do not also hide the portaled overlay. Dialog content portals to `body`.
+7. Never hide `.app-shell` with `content-visibility: hidden` (or `visibility` / `display`) while an overlay is open. Desktop dialogs and mobile sheets must show dimmed page content under the solid scrim. Dialog content portals to `body`; do not hide the portaled overlay.
 8. Never `{#await import()}` in an overlay template. `import()` is a new Promise on every parent render, so the await block remounts the child. Combined with a child `$effect` that writes back (`onRegisterSave`, stats, dirty), this infinite-loops and freezes the UI on the 3-bar skeleton. Store the module on `$state` from an `$effect` after `armWhenOpen` (see `LoanCreateModal`, `LoanContractDetailsModal`).
 9. Bits UI scroll-lock can leave `body { overflow: hidden; pointer-events: none }` if the dialog unmounts before close finishes. `Dialog.Root` / `Sheet.Root` wrappers implement `onOpenChangeComplete` (~320ms after `open` goes false) and call `releaseStaleBodyScrollLock()`. Parents that `{#if}` the modal must clear loan/state in `onOpenChangeComplete`, not in the same tick as `onOpenChange(false)`.
 
@@ -37,4 +37,4 @@ Lazy-load the heavy child **inside** the modal (`import()` from `$effect` into `
 
 ## Verify
 
-Open the overlay and confirm: title, fields, and footer paint in the first frames (no muted 3-bar placeholder), typing is smooth, close is smooth. Check a second overlay on `/loans` so the heavy path still defers internally.
+Open the overlay and confirm: title, fields, and footer paint in the first frames (no muted 3-bar placeholder), the page stays visible and dimmed under the scrim on desktop and phone, typing is smooth, close is smooth. Check a second overlay on `/loans` so the heavy path still defers internally.
