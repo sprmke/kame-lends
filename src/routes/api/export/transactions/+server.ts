@@ -1,5 +1,7 @@
+import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { getSession } from "$lib/server/session";
+import { MAX_PDF_EXPORT_ROWS } from "$lib/server/pdf/export-limits";
 import {
   pdfResponse,
   renderTransactionsPdfBuffer,
@@ -7,10 +9,17 @@ import {
 } from "$lib/server/pdf/render";
 import type { TransactionWithInvestor } from "$lib/types";
 
+/** Isolated from the main app bundle: heavy @react-pdf/renderer + react deps, longer timeout for large exports. */
+export const config = {
+  maxDuration: 60,
+  memory: 1024,
+  split: true,
+};
+
 export const POST: RequestHandler = async (event) => {
   const session = await getSession(event);
   if (!session?.user?.id) {
-    return new Response("Unauthorized", { status: 401 });
+    return json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
@@ -19,13 +28,23 @@ export const POST: RequestHandler = async (event) => {
     const enabledSectionKeys = body.enabledSectionKeys as string[];
 
     if (!Array.isArray(data) || !Array.isArray(enabledSectionKeys)) {
-      return new Response("Invalid request", { status: 400 });
+      return json({ error: "Invalid request" }, { status: 400 });
+    }
+    if (data.length > MAX_PDF_EXPORT_ROWS) {
+      return json(
+        {
+          error: `Too many rows for a single export (max ${MAX_PDF_EXPORT_ROWS}). Narrow the filters first.`,
+        },
+        { status: 413 },
+      );
     }
 
     const buffer = await renderTransactionsPdfBuffer(data, enabledSectionKeys);
     return pdfResponse(buffer, transactionsPdfFilename());
   } catch (error) {
-    console.error("Transactions PDF export error:", error);
-    return new Response("Failed to generate PDF", { status: 500 });
+    const detail =
+      error instanceof Error ? error.message : String(error ?? "unknown");
+    console.error("Transactions PDF export error:", detail, error);
+    return json({ error: "Failed to generate PDF", detail }, { status: 500 });
   }
 };

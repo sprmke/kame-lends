@@ -8,7 +8,7 @@
     "dev:stack": "bash ./dev.sh",
     "dev:ui": "bash ./dev.sh --ui-only",
     "dev:free-ports": "bash scripts/dev/free-local-ports.sh",
-    "build": "vite build",
+    "build": "vite build && node scripts/deploy/copy-pdfkit-standard-fonts.mjs",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

@@ -135,7 +135,11 @@ export async function renderLoanContractPdfBuffer(
 }
 
 export function pdfResponse(buffer: Uint8Array, filename: string): Response {
-  const bytes = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  // Buffer's backing ArrayBufferLike isn't structurally assignable to
+  // BodyInit's Uint8Array<ArrayBuffer>. Normalize to a plain, ArrayBuffer-backed
+  // Uint8Array (Response also streams this without buffering it all in memory
+  // again, unlike re-wrapping in a Blob).
+  const bytes = new Uint8Array(buffer);
   const safeName = filename.replace(/["\r\n]/g, "_");
   return new Response(bytes, {
     headers: {

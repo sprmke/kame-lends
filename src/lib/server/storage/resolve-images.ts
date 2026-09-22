@@ -2,10 +2,37 @@ import { isStorageRef, parseStorageKey } from "$lib/storage-reference";
 import { getObjectAsDataUrl, isR2Configured } from "$lib/server/storage/r2";
 import { pdfSafeImageSrc } from "$lib/server/pdf/pdf-safe-image";
 
+/**
+ * A contract can reference up to ~10 party images (borrower + lenders +
+ * witnesses), all fetched from R2 in parallel. Bound each fetch so one slow
+ * or hung object can't silently consume the whole PDF route's request
+ * budget (`maxDuration`) — the caller still gets a PDF, just without that
+ * one image, instead of the whole download timing out.
+ */
+const R2_IMAGE_FETCH_TIMEOUT_MS = 8_000;
+
 function coerceImageRef(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`Timed out after ${timeoutMs}ms`)),
+      timeoutMs,
+    );
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
 }
 
 async function resolveImageForPdf(
@@ -19,9 +46,13 @@ async function resolveImageForPdf(
     const key = parseStorageKey(trimmed);
     if (!key) return null;
     try {
-      const dataUrl = await getObjectAsDataUrl(key);
+      const dataUrl = await withTimeout(
+        getObjectAsDataUrl(key),
+        R2_IMAGE_FETCH_TIMEOUT_MS,
+      );
       return pdfSafeImageSrc(dataUrl);
-    } catch {
+    } catch (error) {
+      console.warn(`resolveImageForPdf: failed to fetch "${key}":`, error);
       return null;
     }
   }

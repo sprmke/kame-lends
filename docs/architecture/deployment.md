@@ -91,6 +91,18 @@ The CD workflow’s `migrate` and `deploy` jobs use `environment: production` so
 4. Framework: SvelteKit. Install: `bun install`. Build: `bun run build` (CD uses `vercel build --prod` with project settings).
 5. Functions run in Singapore (`sin1`), pinned in `svelte.config.js` and `vercel.json`, next to the Singapore Neon `DATABASE_URL`. Hobby: one region. Confirm with `x-vercel-id` (`sin1::sin1::…`).
 
+### PDF generation: pdfkit standard fonts
+
+`@react-pdf/renderer`'s core fonts (Helvetica, Helvetica-Bold, ...) load metrics via `pdfkit`'s `#standard-fonts/*.cjs` internal import. `@vercel/nft` (the tracer `@sveltejs/adapter-vercel` uses to decide which `node_modules` files ship with each function) only follows static `.mjs`/`.js` requires and misses this dynamic subpath, so the `.cjs` files are silently dropped from the deployed bundle. Symptom in production: `POST /api/loans/[id]/contract` (or any `/api/export/*` PDF route) returns 500 with `Cannot find module '.../pdfkit/js/standard-fonts/Helvetica.cjs'` — **even though `bun run test` and local dev never hit this**, because they run against the real `node_modules` on disk, not a traced serverless bundle.
+
+Fix: `scripts/deploy/copy-pdfkit-standard-fonts.mjs` runs as part of `bun run build` (`"build": "vite build && node scripts/deploy/copy-pdfkit-standard-fonts.mjs"`), after `@sveltejs/adapter-vercel` has written `.vercel/output/functions/**/*.func`. It recursively finds every traced `node_modules/pdfkit` directory and copies the missing `.cjs` files in, then **re-verifies** every one of those directories has all the files and exits non-zero if any are still missing — the build fails instead of shipping a broken PDF route.
+
+This has shipped broken more than once because the fix lived only in an **uncommitted** working tree while CD kept deploying the last-committed (broken) code. If contract/export PDF downloads 500 in production with this error:
+
+1. Confirm `scripts/deploy/copy-pdfkit-standard-fonts.mjs` and the `"build"` script in `package.json` are committed on `main` (`git log -- scripts/deploy/copy-pdfkit-standard-fonts.mjs`).
+2. Confirm CD's `deploy` job actually ran (`bash scripts/deploy/vercel-prod.sh` → `vercel build --prod` invokes `bun run build`, which includes this script).
+3. Rebuild locally (`rm -rf .vercel/output && bun run build`) — the script logs `verified N font file(s) in M pdfkit bundle(s)` on success, or exits 1 with the exact missing paths.
+
 ## Local emergency deploy
 
 Prefer fixing via a push to `main`. If you must deploy by hand:
