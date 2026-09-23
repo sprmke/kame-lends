@@ -12,8 +12,15 @@ async function fetchOne(id: number) {
     where: eq(investors.id, id),
     with: {
       loanInvestors: {
+        columns: {
+          id: true,
+          loanId: true,
+          amount: true,
+          interestRate: true,
+          interestType: true,
+          isPaid: true,
+        },
         with: {
-          loan: true,
           interestPeriods: true,
         },
       },

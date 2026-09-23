@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  CACHE_MAX_ENTRIES,
   memoryCacheClear,
   memoryCacheGet,
   memoryCacheInvalidatePrefix,
@@ -36,5 +37,14 @@ describe("memory-cache", () => {
     resolveFetch("stale");
     await expect(first).resolves.toBe("stale");
     expect(memoryCacheGet("loans:u1")).toBeUndefined();
+  });
+
+  it("evicts the oldest entry when full", () => {
+    for (let i = 0; i < CACHE_MAX_ENTRIES; i += 1) {
+      memoryCacheSet(`k:${i}`, i, 60_000);
+    }
+    memoryCacheSet("k:new", "ok", 60_000);
+    expect(memoryCacheGet("k:0")).toBeUndefined();
+    expect(memoryCacheGet("k:new")).toBe("ok");
   });
 });

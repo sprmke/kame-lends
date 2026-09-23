@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   invalidateLoanData,
   invalidateInvestorData,
+  invalidateWitnessData,
 } from "./cache-invalidation";
 import {
   memoryCacheClear,
@@ -32,5 +33,15 @@ describe("cache-invalidation", () => {
     expect(memoryCacheGet("investors:u1:full")).toBeUndefined();
     expect(memoryCacheGet("loans:u1")).toBeUndefined();
     expect(memoryCacheGet("debts:u1:all")).toBeUndefined();
+  });
+
+  it("clears loan lists when witnesses change", () => {
+    memoryCacheSet("witnesses:u1:list", ["w"]);
+    memoryCacheSet("loans:u1", ["a"]);
+    memoryCacheSet("dashboard:u1", { n: 1 });
+    invalidateWitnessData();
+    expect(memoryCacheGet("witnesses:u1:list")).toBeUndefined();
+    expect(memoryCacheGet("loans:u1")).toBeUndefined();
+    expect(memoryCacheGet("dashboard:u1")).toBeUndefined();
   });
 });

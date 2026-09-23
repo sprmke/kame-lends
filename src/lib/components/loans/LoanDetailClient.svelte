@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import DetailHeader from '$lib/components/common/DetailHeader.svelte';
 	import LoanDetailContent from './LoanDetailContent.svelte';
@@ -127,16 +127,16 @@
 		});
 		if (!response.ok) throw new Error('Failed to complete loan');
 		toast.success('Loan marked completed');
-		await invalidateAll();
+		await invalidate('app:loans');
 	}
 
 	async function handleRefresh() {
-		await invalidateAll();
+		await invalidate('app:loans');
 	}
 
 	async function handleEditSuccess() {
 		isEditing = false;
-		await invalidateAll();
+		await invalidate('app:loans');
 	}
 </script>
 

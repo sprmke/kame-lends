@@ -1,5 +1,6 @@
 /** Process-local TTL cache. Per Vercel isolate; not shared across instances. */
 export const CACHE_TTL_MS = 45_000;
+export const CACHE_MAX_ENTRIES = 500;
 
 type Entry = { value: unknown; expires: number };
 
@@ -30,6 +31,10 @@ export function memoryCacheSet<T>(
   value: T,
   ttlMs = CACHE_TTL_MS,
 ): void {
+  if (!store.has(key) && store.size >= CACHE_MAX_ENTRIES) {
+    const oldest = store.keys().next().value;
+    if (typeof oldest === "string") store.delete(oldest);
+  }
   store.set(key, { value, expires: Date.now() + ttlMs });
 }
 

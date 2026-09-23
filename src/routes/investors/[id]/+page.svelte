@@ -4,8 +4,8 @@
 	import InvestorDetailContent from '$lib/components/investors/InvestorDetailContent.svelte';
 	import InvestorFormModal from '$lib/components/investors/InvestorFormModal.svelte';
 	import { createIsMobileOverlay } from '$lib/composables/use-media-query.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import type { InvestorWithLoans, LoanWithInvestors } from '$lib/types';
+	import { invalidate } from '$app/navigation';
+	import type { InvestorDetailEntity, LoanWithInvestors } from '$lib/types';
 
 	let { data } = $props();
 
@@ -16,14 +16,14 @@
 
 	$effect(() => mobile.init());
 
-	const investor = $derived(data.entity as InvestorWithLoans);
+	const investor = $derived(data.entity as InvestorDetailEntity);
 	const title = $derived(investor?.name ?? 'Investor');
 	const loans = $derived((data.loans ?? []) as LoanWithInvestors[]);
 	const canManage = $derived(Boolean(data.canManage));
 
 	async function handleEditSuccess() {
 		isEditing = false;
-		await invalidateAll();
+		await invalidate('app:investors');
 	}
 </script>
 

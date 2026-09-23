@@ -17,14 +17,8 @@
 
 	let { options, value, onChange, class: className }: Props = $props();
 
-	let selectValue = $state(value);
-
-	$effect(() => {
-		selectValue = value;
-	});
-
 	const selectedLabel = $derived(
-		options.find((option) => option.value === selectValue)?.label ??
+		options.find((option) => option.value === value)?.label ??
 			options[0]?.label ??
 			''
 	);
@@ -33,7 +27,7 @@
 <div class={cn(LIST_FILTER_TRIGGER_CLASS, className)}>
 	<Select.Root
 		type="single"
-		bind:value={selectValue}
+		{value}
 		onValueChange={(next) => {
 			if (next) onChange(next);
 		}}

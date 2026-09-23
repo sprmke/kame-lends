@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import {
 		isMaturingFundedLoan,
@@ -57,12 +57,12 @@
 	import type {
 		DebtWithInvestor,
 		Investor,
-		InvestorWithLoans,
+		InvestorDetailEntity,
 		LoanWithInvestors
 	} from '$lib/types';
 
 	interface Props {
-		investor: InvestorWithLoans;
+		investor: InvestorDetailEntity;
 		loans: LoanWithInvestors[];
 		onEdit?: () => void;
 		canManage?: boolean;
@@ -368,7 +368,7 @@
 	}
 
 	async function refresh() {
-		await invalidateAll();
+		await invalidate('app:investors');
 	}
 
 	function openLoanCreate(duplicateData: DuplicateLoanData | null = null) {

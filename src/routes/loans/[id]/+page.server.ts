@@ -9,7 +9,7 @@ export const load: PageServerLoad = async (event) => {
   const id = Number(event.params.id);
   if (Number.isNaN(id)) throw error(400, "Invalid id");
   const result = await loadLoanDetail(id, session.user.id, {
-    includeContract: true,
+    includeContract: event.url.searchParams.get("edit") === "1",
   });
   if (!result) throw error(404, "Not found");
 

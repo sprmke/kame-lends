@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import GroupPickerSheet from '$lib/components/groups/GroupPickerSheet.svelte';
 	import AccessPreview from '$lib/components/groups/AccessPreview.svelte';
@@ -217,7 +217,7 @@
 			throw new Error((body as { error?: string }).error ?? 'Failed to create group');
 		}
 		const created = (await res.json()) as { id: number; name: string; color: string };
-		await invalidateAll();
+		await invalidate('app:groups');
 		return { id: created.id, name: created.name, color: created.color };
 	}}
 />

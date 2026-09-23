@@ -36,7 +36,7 @@ export function invalidateBorrowerData() {
 }
 
 export function invalidateWitnessData() {
-  drop(["witnesses:"]);
+  drop(["witnesses:", "loans:", "dashboard:", "groups:"]);
 }
 
 export function invalidateDebtData() {

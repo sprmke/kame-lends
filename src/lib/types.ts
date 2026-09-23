@@ -281,6 +281,18 @@ export interface InvestorWithLoans extends Investor {
   debts?: DebtWithPeriods[];
 }
 
+/** Investor detail load: full loans live on `loans`, not nested under `loanInvestors`. */
+export type InvestorDetailEntity = Investor & {
+  loanInvestors: Array<
+    Pick<
+      LoanInvestor,
+      "id" | "loanId" | "amount" | "interestRate" | "interestType" | "isPaid"
+    > & { interestPeriods?: InterestPeriod[] }
+  >;
+  transactions: Transaction[];
+  debts?: DebtWithPeriods[];
+};
+
 export type DebtWithPeriods = Debt & {
   interestPeriods?: DebtInterestPeriodWithPayments[];
 };

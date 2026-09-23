@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import LoanSummarySection from './LoanSummarySection.svelte';
@@ -360,7 +360,7 @@
 				throw new Error((body as { error?: string }).error ?? 'Failed to create group');
 			}
 			const created = (await res.json()) as { id: number; name: string; color: string };
-			await invalidateAll();
+			await invalidate('app:groups');
 			return { id: created.id, name: created.name, color: created.color };
 		}}
 	/>
