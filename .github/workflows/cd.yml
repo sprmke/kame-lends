@@ -45,6 +45,10 @@ jobs:
         run: bun run check:ai-tooling-sync
       - name: Build
         run: bun run build
+      - name: Precache budget
+        run: node scripts/pwa/check-precache-budget.mjs
+      - name: Dependency audit
+        run: bun audit --audit-level=high
 
   migrate:
     name: Migrate
@@ -100,6 +104,18 @@ jobs:
           done
           echo "::error title=Production smoke test failed::${BASE}/api/health did not return ok:true. DB migrations may be missing or deploy is unhealthy."
           exit 1
+      - name: Smoke public shell
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: |
+          BASE="${PRODUCTION_URL:-https://pawn-tracker.vercel.app}"
+          curl -fsS -o /dev/null -w "%{http_code}" "${BASE}/signin" | grep -qE '200|304'
+          curl -fsS "${BASE}/api/pwa/version" | grep -q 'version\|disabled'
+          code="$(curl -s -o /dev/null -w "%{http_code}" -X POST "${BASE}/api/e2e/session")"
+          test "$code" = "404"
+          headers="$(curl -sI "${BASE}/signin")"
+          echo "$headers" | grep -qi "x-content-type-options: nosniff"
+          echo "$headers" | grep -qi "strict-transport-security"
 
   notify-failure:
     name: Notify on failure
