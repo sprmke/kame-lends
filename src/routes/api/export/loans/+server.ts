@@ -1,12 +1,19 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { getSession } from "$lib/server/session";
+import { getCachedLoans } from "$lib/server/cached-data";
 import { MAX_PDF_EXPORT_ROWS } from "$lib/server/pdf/export-limits";
 import {
   loansPdfFilename,
   pdfResponse,
   renderLoansPdfBuffer,
 } from "$lib/server/pdf/render";
+import {
+  parseEnabledSectionKeys,
+  requestedExportIds,
+  selectOwnedExportRows,
+} from "$lib/server/export-owned";
+import { publicJsonError } from "$lib/server/http-error";
 import type { LoanWithInvestors } from "$lib/types";
 
 /** Isolated from the main app bundle: heavy @react-pdf/renderer + react deps, longer timeout for large exports. */
@@ -24,13 +31,16 @@ export const POST: RequestHandler = async (event) => {
 
   try {
     const body = await event.request.json();
-    const data = body.data as LoanWithInvestors[];
-    const enabledSectionKeys = body.enabledSectionKeys as string[];
-    const investorId = body.investorId as number | undefined;
-
-    if (!Array.isArray(data) || !Array.isArray(enabledSectionKeys)) {
+    const enabledSectionKeys = parseEnabledSectionKeys(body);
+    if (!enabledSectionKeys) {
       return json({ error: "Invalid request" }, { status: 400 });
     }
+
+    const owned = (await getCachedLoans(
+      session.user.id,
+      "list",
+    )) as LoanWithInvestors[];
+    const data = selectOwnedExportRows(owned, requestedExportIds(body));
     if (data.length > MAX_PDF_EXPORT_ROWS) {
       return json(
         {
@@ -40,16 +50,21 @@ export const POST: RequestHandler = async (event) => {
       );
     }
 
+    const investorId =
+      body && typeof body === "object" && "investorId" in body
+        ? Number((body as { investorId?: unknown }).investorId)
+        : undefined;
+
     const buffer = await renderLoansPdfBuffer(
       data,
       enabledSectionKeys,
-      investorId,
+      Number.isFinite(investorId) ? investorId : undefined,
     );
     return pdfResponse(buffer, loansPdfFilename());
   } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : String(error ?? "unknown");
-    console.error("Loans PDF export error:", detail, error);
-    return json({ error: "Failed to generate PDF", detail }, { status: 500 });
+    console.error("Loans PDF export error:", error);
+    return json(publicJsonError("Failed to generate PDF", error), {
+      status: 500,
+    });
   }
 };
