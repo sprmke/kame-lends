@@ -127,7 +127,7 @@ A `DATABASE_URL` **exported in the shell overrides `.env.local`** (`$env/dynamic
 - `/investors/[id]` loads only the loans tied to that investor (`inArray(loans.id, investorLoanIds)`) with nested relations, instead of filtering the user's entire loan cache; this prevents timeouts for investors associated with many loans. Overview summary cards use per-investor peak concurrent paid allocation capital (`computeInvestorPortfolioCapitalStats`). See [`guides/routes/investors-detail.md`](./guides/routes/investors-detail.md).
 - Overdue status checks run from the dashboard only, deferred 3s after mount so they do not compete with the initial load. `POST /api/loans/check-overdue` sets a loan to `Completed` when received payments cover principal + interest, and does not mark those loans Overdue. Opening a loan (`loadLoanDetail` / `GET /api/loans/[id]`) heals the same stale Overdue row.
 - List/dashboard queries use a process-local TTL cache (`src/lib/server/memory-cache.ts`, 45s). `getCached*`, `queryDashboardSummary`, and `queryDashboardCharts` read through it.
-- Mutations call `invalidateLoanData` / `invalidateInvestorData` / etc. in `src/lib/server/cache-invalidation.ts`, which drop matching cache prefixes. In-flight fetches that finish after invalidation are not stored.
+- Mutations call `invalidateLoanData` / `invalidateInvestorData` / etc. in `src/lib/server/cache-invalidation.ts`, which drop matching cache prefixes. Witness updates also drop `loans:` / `dashboard:` / `groups:`. In-flight fetches that finish after invalidation are not stored. The process cache evicts the oldest entry after 500 keys.
 - Cache is per Node isolate (local `vite dev` is one process; Vercel instances do not share it). Tap preload is enabled on `body` and sidebar links.
 - Local `bun dev` against the Singapore Neon project (`ap-southeast-1`, linked as **Kame Lends**) is the hosted QA target. Vercel Production `DATABASE_URL` uses the same Singapore project. Functions are pinned to `sin1` in `svelte.config.js` (`adapter({ regions: ["sin1"] })`) and `vercel.json`. Confirm with `x-vercel-id` (`sin1::sin1::…`, not `iad1`). Hobby allows one region. For zero-network local work, use Docker Postgres (`bun run db:local:*`).
 
@@ -147,7 +147,7 @@ SvelteKit `src/routes/api/**/+server.ts` mirrors legacy `/api/*` paths (loans, i
 
 ## Auth & roles
 
-- Google sign-in via Auth.js. Any normalized Google email may sign in; Auth.js creates a `users` row on first login. Party contacts linked by email reuse the same row (`allowDangerousEmailAccountLinking`). New users get `users.role = NULL` unless they are the sitewide platform owner email.
+- Google sign-in via Auth.js. Any normalized Google email may sign in (open workspace signup; see `src/lib/server/auth-sign-in.ts`). Auth.js creates a `users` row on first login. Party contacts linked by email reuse the same row (`allowDangerousEmailAccountLinking`: inbox control of an invited party email can attach that Google user to existing loan membership). New users get `users.role = NULL` unless they are the sitewide platform owner email.
 - Custom UI: `/signin` (`src/routes/signin/`). Auth.js endpoints stay at `/auth/*` (callback, session, csrf). Auth errors return to `/signin?error=…`. Do not host the custom page at `/auth/signin` (Auth.js owns that path).
 - **Sitewide `admin`:** only `michaeldmanlulu@gmail.com` (`src/lib/server/workspace-owner.ts`). The `admin` role is not a workspace-operator flag.
 - **Owned lending data** (`isAdminWorkspace` in nav caps): true when the user owns loans, CRM contacts, or borrowings. Used for Settings **Owner** role label only, not for route gates.
@@ -189,7 +189,8 @@ See **[`architecture/deployment.md`](./architecture/deployment.md)** for the ful
 - Vercel project: PawnTracker / kame-lends
 - CD: `.github/workflows/cd.yml` on `main`
 - Health: `GET /api/health` (public, no auth) returns **200** when Postgres is reachable and `schema_migrations` matches on-disk SQL plus required columns for the running build; **503** when migrations or columns are behind (CD smoke test and ops). See `docs/architecture/deployment.md`.
-- Cron: `/api/cron/backup` at 06:00 UTC; `/api/cron/groups` at 00:00 UTC (08:00 Manila) for membership/ACL reconcile, Telegram reminders, and job drain; `/api/cron/reminders` at 01:00 UTC for Web Push due/overdue reminders (`vercel.json`). Groups and reminders crons **require** `Authorization: Bearer CRON_SECRET` (fails closed). Telegram webhook: `POST /api/webhooks/telegram` (set with `bun run telegram:set-webhook`).
+- Cron: `/api/cron/backup` at 06:00 UTC; `/api/cron/groups` at 00:00 UTC (08:00 Manila) for membership/ACL reconcile, Telegram reminders, and job drain; `/api/cron/reminders` at 01:00 UTC for Web Push due/overdue reminders (`vercel.json`). All three crons **require** `Authorization: Bearer CRON_SECRET` (fail closed if the secret is missing). Telegram webhook: `POST /api/webhooks/telegram` (set with `bun run telegram:set-webhook`).
+- API default-deny: `/api/*` except health, PWA version, crons, webhooks, legacy `/api/sign/[token]`, and E2E session require a session (`src/hooks.server.ts`). Mutating session APIs require same-origin. High-cost routes are rate-limited (Postgres `rate_limit_buckets`, migration `0027`). Responses set `Cache-Control: private, no-store` plus baseline security headers (CSP report-only).
 - Function region: `sin1` (`svelte.config.js` adapter `regions` and `vercel.json` `"regions": ["sin1"]`)
 - Backups: `bun run backup:neon`
 

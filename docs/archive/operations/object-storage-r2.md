@@ -80,3 +80,11 @@ bun run db:backfill:storage -- --dry-run
 - Neon Postgres region does not need to match R2; objects are fetched over HTTPS from SvelteKit server routes and Vercel functions.
 - Do not make the bucket public. All reads go through `/api/storage/object` after RBAC.
 - Contract PDF generation resolves `storage:` refs server-side before `@react-pdf/renderer` embeds JPEG/PNG.
+
+## Disaster recovery
+
+Postgres dumps do not include R2 objects. If `PUBLIC_R2_ENABLED` is on:
+
+- Enable R2 bucket versioning or a second replica bucket.
+- After a Postgres restore, object keys in `storage:` columns must still exist (or images 404).
+- Treat R2 and Neon as one restore unit: restore DB first, then confirm a sample ID/receipt/signature loads via `/api/storage/object`.

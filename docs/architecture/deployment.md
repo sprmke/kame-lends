@@ -45,7 +45,7 @@ If CD is red, **do not** hand-deploy app code until quality passes and migration
 
 ### Post-deploy smoke test
 
-After Vercel promote, CD polls `GET /api/health` on production (default `https://pawn-tracker.vercel.app`, override with GitHub secret `PRODUCTION_URL`). The endpoint is public and returns **200** only when the DB is reachable and migrations/columns match the running build.
+After Vercel promote, CD polls `GET /api/health` on production (default `https://pawn-tracker.vercel.app`, override with GitHub secret `PRODUCTION_URL`). The endpoint is public on purpose (CD + ops). It returns **200** only when the DB is reachable and migrations/columns match the running build. It lists pending file names and missing columns; treat that as deploy-state metadata, not a secret.
 
 ## Migrations
 
@@ -123,8 +123,9 @@ bun run deploy:prod
 
 ## Related
 
-- Cron backup: `/api/cron/backup` at 06:00 UTC (`vercel.json`)
+- Cron backup: `/api/cron/backup` at 06:00 UTC (`vercel.json`). Requires `Authorization: Bearer CRON_SECRET` (fail closed).
 - Groups cron: `/api/cron/groups` at 00:00 UTC (membership, ACL, Telegram, job drain). Requires `CRON_SECRET`.
+- Decision tree: app-only bug → Vercel rollback. Bad additive SQL → fix-forward new migration. Data corruption → Neon PITR/branch or `pg_restore` onto an isolated target, never edit shipped SQL.
 - Telegram webhook: after deploy, `bun run telegram:set-webhook` (needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `PUBLIC_APP_URL`)
 - Manual Neon backup: `bun run backup:neon` (uses `DATABASE_URL_PROD` when `DATABASE_URL` is local Docker)
 - Agent rule: `.cursor/rules/deployment.mdc`

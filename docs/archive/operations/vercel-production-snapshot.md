@@ -52,3 +52,22 @@ Must remain available after cutover (values unchanged unless noted):
 ## Rollback
 
 Redeploy the last successful **Next.js** production deployment from Vercel dashboard. Neon prod is unchanged if migration used dev branch only.
+
+## Current Production env inventory (SvelteKit)
+
+Mark each as Present / N/A / Intentionally unset on the Vercel Production dashboard. Names only; no values.
+
+| Variable                                                                 | Required                                 |
+| ------------------------------------------------------------------------ | ---------------------------------------- |
+| `DATABASE_URL`                                                           | Present (must match GitHub `production`) |
+| `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`                    | Present                                  |
+| `PUBLIC_APP_URL`, `PUBLIC_CONTRACT_DISPUTE_VENUE`                        | Present                                  |
+| `CRON_SECRET`                                                            | Present (all crons fail closed)          |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`     | If calendar                              |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `BACKUP_EMAIL`                    | If email/backup                          |
+| `R2_*`, `PUBLIC_R2_ENABLED`                                              | If object storage                        |
+| `VAPID_*`, `PUBLIC_VAPID_PUBLIC_KEY`                                     | If Web Push                              |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET` | If Telegram                              |
+| `GEMINI_API_KEYS` / `GEMINI_API_KEY`, `GROQ_API_KEY`                     | Optional AI                              |
+| `PWA_DISABLED`, `PWA_MIN_VERSION`                                        | Optional kill-switch                     |
+| `E2E_AUTH_SECRET`, `E2E_USER_EMAIL`, `DATABASE_URL_LOCAL`                | Must be unset on Production              |

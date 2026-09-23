@@ -34,6 +34,7 @@ Access failures render `+error.svelte`, not a bare 404: no signature slot for th
 | -------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET/POST | `/api/loans/[id]/sign`    | Session + party email match                                                                                                                                                                                    |
 | GET      | `/api/loans/[id]/signing` | Any loan party with view access. Admin syncs missing invitations; parties read existing rows only. Response includes `viewerInvitationId` for the logged-in party's slot (used for Contract Details **Open**). |
+| GET/POST | `/api/sign/[token]`       | Token only (no session). Kept for existing links. Rate-limited. Prefer authenticated `/loans/[id]/sign`.                                                                                                       |
 
 ## Implementation
 

@@ -19,11 +19,11 @@ Per-page specs mirror `src/routes/` under **`guides/routes/`**. Index: [`guides/
 
 ## Workflow
 
-| Folder                  | Purpose                           |
-| ----------------------- | --------------------------------- |
-| `workflow/in-progress/` | Active migration and feature work |
-| `workflow/planned/`     | Future plans                      |
-| `archive/`              | Historical ops and reference      |
+| Folder                  | Purpose                                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| `workflow/in-progress/` | Active migration and feature work                                                                        |
+| `workflow/planned/`     | Future plans (incl. [production readiness](./workflow/planned/production-readiness-and-optimization.md)) |
+| `archive/`              | Historical ops and reference                                                                             |
 
 ## AI tooling
 
