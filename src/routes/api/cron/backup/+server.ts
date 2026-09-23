@@ -11,6 +11,8 @@ import {
   isTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "$lib/server/email/send-email";
+import { isCronAuthorized } from "$lib/server/cron-auth";
+import { publicJsonError } from "$lib/server/http-error";
 
 interface BackupSummary {
   totalInvestors: number;
@@ -37,15 +39,8 @@ interface BackupSummary {
 export const GET: RequestHandler = async (event) => {
   const request = event.request;
   try {
-    // Verify cron secret (Vercel sets this automatically for cron jobs)
-    const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
-
-    // In production, verify the cron secret
-    if (process.env.NODE_ENV === "production" && cronSecret) {
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        return json({ error: "Unauthorized" }, { status: 401 });
-      }
+    if (!isCronAuthorized(request)) {
+      return json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const adminUsers = await loadWorkspaceDataOwnerUsers();
@@ -152,12 +147,8 @@ export const GET: RequestHandler = async (event) => {
     });
   } catch (error) {
     console.error("Error in cron backup:", error);
-    return json(
-      {
-        error: "Failed to run backup cron",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    );
+    return json(publicJsonError("Failed to run backup cron", error), {
+      status: 500,
+    });
   }
 };

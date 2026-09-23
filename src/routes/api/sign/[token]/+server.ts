@@ -10,6 +10,8 @@ import {
 } from "$lib/server/loan-signing-server";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 
+/** Retained for existing token links (P0-3). Rate-limited in hooks. Prefer `/api/loans/[id]/sign`. */
+
 interface RouteParams {
   params: Promise<{ token: string }>;
 }

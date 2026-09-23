@@ -15,7 +15,7 @@ import {
 } from "$lib/server/db/schema";
 import { hasLoanViewAccess } from "$lib/server/access-control";
 
-function uploadOwnerUserId(objectKey: string): string | null {
+export function uploadOwnerUserId(objectKey: string): string | null {
   const match = /^uploads\/([^/]+)\//.exec(objectKey);
   return match?.[1] ?? null;
 }

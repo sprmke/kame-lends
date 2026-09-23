@@ -10,6 +10,7 @@ import {
   calculateTotalReceived,
   isLoanFullyReceived,
 } from "$lib/calculations";
+import { publicJsonError } from "$lib/server/http-error";
 
 /**
  * Checks owned loans and marks overdue interest periods / loan statuses.
@@ -171,12 +172,8 @@ export const POST: RequestHandler = async (event) => {
     });
   } catch (error) {
     console.error("Error checking overdue statuses:", error);
-    return json(
-      {
-        error: "Failed to check overdue statuses",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    );
+    return json(publicJsonError("Failed to check overdue statuses", error), {
+      status: 500,
+    });
   }
 };

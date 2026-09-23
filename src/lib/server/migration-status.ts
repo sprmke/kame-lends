@@ -48,11 +48,18 @@ export async function getMigrationStatus(): Promise<MigrationStatus> {
     );
     applied = queryRows(rows).map((row) => row.filename);
 
-    if (!(await columnExists("loan_investors", "profit_type"))) {
-      missingColumns.push("loan_investors.profit_type");
-    }
-    if (!(await columnExists("loan_investors", "profit_value"))) {
-      missingColumns.push("loan_investors.profit_value");
+    const requiredColumns: Array<[string, string]> = [
+      ["loan_investors", "profit_type"],
+      ["loan_investors", "profit_value"],
+      ["loan_groups", "id"],
+      ["push_subscriptions", "endpoint"],
+      ["loan_user_commissions", "loan_id"],
+      ["rate_limit_buckets", "key"],
+    ];
+    for (const [table, column] of requiredColumns) {
+      if (!(await columnExists(table, column))) {
+        missingColumns.push(`${table}.${column}`);
+      }
     }
     dbConnected = true;
   } catch {

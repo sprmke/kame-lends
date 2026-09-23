@@ -1,6 +1,23 @@
 import { sequence } from "@sveltejs/kit/hooks";
-import { redirect, type Handle } from "@sveltejs/kit";
+import {
+  json,
+  redirect,
+  type Handle,
+  type HandleServerError,
+} from "@sveltejs/kit";
 import { handle as authHandle } from "$lib/server/auth";
+import {
+  isSameOriginRequest,
+  requiresApiSession,
+  requiresOriginCheck,
+} from "$lib/server/api-access";
+import { warnMissingProductionEnv } from "$lib/server/env-production";
+import { isRateLimitedApiPath, rateLimitKey } from "$lib/server/rate-limit";
+import { consumeRateLimit } from "$lib/server/rate-limit-store";
+import {
+  applyApiCacheHeaders,
+  applySecurityHeaders,
+} from "$lib/server/security-headers";
 
 /** Auth.js and Drizzle both wrap errors; the connection failure is at the bottom. */
 function rootCauseMessage(error: unknown): string {
@@ -57,4 +74,58 @@ const protectRoutes: Handle = async ({ event, resolve }) => {
   return resolve(event);
 };
 
-export const handle = sequence(authHandle, resolveSession, protectRoutes);
+const apiGuardAndHeaders: Handle = async ({ event, resolve }) => {
+  warnMissingProductionEnv();
+  const { pathname } = event.url;
+  const method = event.request.method;
+
+  if (pathname.startsWith("/api/")) {
+    if (requiresApiSession(pathname) && !event.locals.session?.user?.id) {
+      return json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (requiresOriginCheck(method, pathname) && !isSameOriginRequest(event)) {
+      return json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (isRateLimitedApiPath(pathname)) {
+      const identity =
+        event.locals.session?.user?.id ?? event.getClientAddress();
+      const decision = await consumeRateLimit(rateLimitKey(pathname, identity));
+      if (!decision.allowed) {
+        return json(
+          { error: "Too many requests" },
+          {
+            status: 429,
+            headers: { "Retry-After": String(decision.retryAfterSec) },
+          },
+        );
+      }
+    }
+  }
+
+  const response = await resolve(event);
+  applySecurityHeaders(response.headers);
+  if (pathname.startsWith("/api/")) {
+    applyApiCacheHeaders(response.headers);
+  }
+  return response;
+};
+
+export const handle = sequence(
+  authHandle,
+  resolveSession,
+  apiGuardAndHeaders,
+  protectRoutes,
+);
+
+export const handleError: HandleServerError = ({ error, event, status }) => {
+  console.error(
+    JSON.stringify({
+      level: "error",
+      route: event.route.id ?? event.url.pathname,
+      status,
+      sha: process.env.VERCEL_GIT_COMMIT_SHA ?? "dev-local",
+    }),
+  );
+  void error;
+  return { message: "Something went wrong" };
+};

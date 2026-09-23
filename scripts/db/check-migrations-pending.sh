@@ -47,7 +47,17 @@ query_psql() {
   fi
 }
 
+file_checksum() {
+  local file="$1"
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+  else
+    sha256sum "$file" | awk '{print $1}'
+  fi
+}
+
 PENDING=0
+DRIFT=0
 for path in db/migrations/*.sql; do
   [[ -f "$path" ]] || continue
   file="$(basename "$path")"
@@ -55,11 +65,25 @@ for path in db/migrations/*.sql; do
   if [[ "$exists" != "1" ]]; then
     echo "  pending: $file"
     PENDING=$((PENDING + 1))
+    continue
+  fi
+  recorded="$(query_psql "SELECT COALESCE(checksum, '') FROM schema_migrations WHERE filename = '${file//\'/\'\'}' LIMIT 1;" | tr -d '[:space:]')"
+  actual="$(file_checksum "$path")"
+  if [[ -n "$recorded" && "$recorded" != "$actual" ]]; then
+    echo "  checksum drift: $file (recorded $recorded, disk $actual)"
+    DRIFT=$((DRIFT + 1))
   fi
 done
 
 MISSING=0
-for spec in "loan_investors:profit_type" "loan_investors:profit_value"; do
+for spec in \
+  "loan_investors:profit_type" \
+  "loan_investors:profit_value" \
+  "loan_groups:id" \
+  "push_subscriptions:endpoint" \
+  "loan_user_commissions:loan_id" \
+  "rate_limit_buckets:key"
+do
   table="${spec%%:*}"
   column="${spec##*:}"
   has="$(query_psql "
@@ -76,8 +100,8 @@ for spec in "loan_investors:profit_type" "loan_investors:profit_value"; do
   fi
 done
 
-if [[ "$PENDING" -gt 0 || "$MISSING" -gt 0 ]]; then
-  echo "Migration check failed ($PENDING pending file(s), $MISSING missing column(s))."
+if [[ "$PENDING" -gt 0 || "$MISSING" -gt 0 || "$DRIFT" -gt 0 ]]; then
+  echo "Migration check failed ($PENDING pending file(s), $MISSING missing column(s), $DRIFT checksum drift)."
   exit 1
 fi
 

@@ -1,13 +1,9 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { env } from "$env/dynamic/private";
+import { isCronAuthorized } from "$lib/server/cron-auth";
 import { db } from "$lib/server/db";
-import {
-  loanGroups,
-  groupNotificationLog,
-  integrationJobs,
-} from "$lib/server/db/schema";
-import { and, eq, inArray, lt, sql } from "drizzle-orm";
+import { loanGroups, groupNotificationLog } from "$lib/server/db/schema";
+import { lt } from "drizzle-orm";
 import { recomputeGroupMembers } from "$lib/server/group-access";
 import {
   enqueueJob,
@@ -18,15 +14,8 @@ import { drainJobs } from "$lib/server/jobs/runner";
 
 export const config = { maxDuration: 60 };
 
-function authorize(request: Request): boolean {
-  const secret = env.CRON_SECRET ?? process.env.CRON_SECRET;
-  if (!secret) return false;
-  const header = request.headers.get("authorization");
-  return header === `Bearer ${secret}`;
-}
-
 export const GET: RequestHandler = async ({ request }) => {
-  if (!authorize(request)) {
+  if (!isCronAuthorized(request)) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
