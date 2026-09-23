@@ -60,7 +60,7 @@
     "deploy:prod": "bash scripts/deploy/vercel-prod.sh"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.7.1",
+    "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^19.7.1",
     "@eslint/js": "^10.0.1",
     "@internationalized/date": "^3.12.0",
