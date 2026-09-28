@@ -116,7 +116,7 @@
 			{#if footer}
 				<div
 					data-slot="responsive-modal-footer"
-					class="sheet-modal-footer flex shrink-0 flex-col-reverse gap-3 border-t border-border/60 bg-background px-5 pt-4 pb-safe"
+					class="sheet-modal-footer flex shrink-0 flex-col-reverse gap-3 border-t border-border/60 bg-background px-5 pt-4 pb-safe-gutter"
 				>
 					{@render footer()}
 				</div>

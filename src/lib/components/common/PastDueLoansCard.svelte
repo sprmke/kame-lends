@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte';
 	import ActivityPanelCard from './ActivityPanelCard.svelte';
+	import ActivityPanelPaginatedList from './ActivityPanelPaginatedList.svelte';
 	import { formatCurrency, formatText, formatDateShort } from '$lib/format';
 	import { getLoanTypeBadge } from '$lib/badge-config';
 	import { Badge } from '$lib/components/ui/badge';
@@ -29,8 +30,8 @@
 	{#if displayLoans.length === 0}
 		<p class="py-2 text-center text-sm text-muted-foreground">No overdue loans</p>
 	{:else}
-		<div class="dashboard-activity-list">
-			{#each displayLoans as loan (loan.id)}
+		<ActivityPanelPaginatedList items={displayLoans} itemKey={(loan) => loan.id}>
+			{#snippet row(loan)}
 				<a href="/loans/{loan.id}" class="dashboard-activity-item">
 					<div class="flex items-start justify-between gap-2">
 						<p class="truncate text-sm font-medium">{formatText(loan.loanName)}</p>
@@ -48,8 +49,8 @@
 						</span>
 					</div>
 				</a>
-			{/each}
-		</div>
+			{/snippet}
+		</ActivityPanelPaginatedList>
 	{/if}
 {/snippet}
 

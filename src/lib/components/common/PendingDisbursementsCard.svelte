@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ActivityPanelCard from './ActivityPanelCard.svelte';
+	import ActivityPanelPaginatedList from './ActivityPanelPaginatedList.svelte';
 	import { formatCurrency, formatText, formatDateShort } from '$lib/format';
 	import { getLoanTypeBadge } from '$lib/badge-config';
 	import { Badge } from '$lib/components/ui/badge';
@@ -32,8 +33,8 @@
 	{#if displayItems.length === 0}
 		<p class="py-2 text-center text-sm text-muted-foreground">No pending disbursements</p>
 	{:else}
-		<div class="dashboard-activity-list">
-			{#each displayItems as item (item.id)}
+		<ActivityPanelPaginatedList items={displayItems} itemKey={(item) => item.id}>
+			{#snippet row(item)}
 				<a href="/loans/{item.loanId}" class="dashboard-activity-item">
 					<div class="flex items-start justify-between gap-2">
 						<p class="truncate text-sm font-medium">{formatText(item.loanName)}</p>
@@ -53,7 +54,7 @@
 					</div>
 					<p class="text-[10px] text-muted-foreground">Sent {formatDateShort(item.sentDate)}</p>
 				</a>
-			{/each}
-		</div>
+			{/snippet}
+		</ActivityPanelPaginatedList>
 	{/if}
 </ActivityPanelCard>

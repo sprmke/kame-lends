@@ -59,6 +59,11 @@
     padding-bottom: var(--safe-area-bottom);
   }
 
+  /** Sheet footers and bottom chrome: at least 1rem, or home-indicator inset when larger. */
+  .pb-safe-gutter {
+    padding-bottom: max(1rem, var(--safe-area-bottom));
+  }
+
   .pl-safe {
     padding-left: var(--safe-area-left);
   }
@@ -93,6 +98,7 @@
     content: "";
     position: absolute;
     inset: -8px;
+    pointer-events: none;
   }
 }
 
@@ -285,6 +291,12 @@
     height: 2rem;
     width: 2rem;
     border-radius: 0.75rem;
+  }
+
+  html.dashboard-shell .dashboard-activity-list {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
   }
 
   html.dashboard-shell .dashboard-activity-item {

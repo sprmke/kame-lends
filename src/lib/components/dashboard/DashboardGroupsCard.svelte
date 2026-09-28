@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import ActivityPanelCard from '$lib/components/common/ActivityPanelCard.svelte';
+	import ActivityPanelPaginatedList from '$lib/components/common/ActivityPanelPaginatedList.svelte';
 	import { resolveGroupColor } from '$lib/groups/group-colors';
 	import { formatCount, formatText } from '$lib/format';
 	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
@@ -26,8 +27,8 @@
 	{#if groups.length === 0}
 		<p class="py-2 text-center text-sm text-muted-foreground">No groups</p>
 	{:else}
-		<div class="dashboard-activity-list">
-			{#each groups as group (group.id)}
+		<ActivityPanelPaginatedList items={groups} itemKey={(group) => group.id}>
+			{#snippet row(group)}
 				{@const palette = resolveGroupColor(group.color)}
 				<a href="/groups/{group.id}" class="dashboard-activity-item" data-sveltekit-preload-data="tap">
 					<div class="flex min-w-0 items-center gap-2">
@@ -41,7 +42,7 @@
 						</p>
 					{/if}
 				</a>
-			{/each}
-		</div>
+			{/snippet}
+		</ActivityPanelPaginatedList>
 	{/if}
 </ActivityPanelCard>
