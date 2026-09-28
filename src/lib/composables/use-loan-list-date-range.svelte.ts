@@ -4,6 +4,7 @@ import { createDateNavigation } from "$lib/composables/use-date-navigation.svelt
 import { shouldSkipUrlToDateNavSync } from "$lib/loan-list-date-range-sync";
 import {
   ALL_TIME_RANGE_PARAM,
+  DEFAULT_DATE_PRESET,
   fromIsoDate,
   isAllTimeDateRange,
   isCurrentPeriod,
@@ -29,7 +30,9 @@ export function createLoanListDateRange(
 ) {
   const getOptions = () => resolveOptions(optionsInput);
   const enabled = $derived(getOptions().enabled !== false);
-  const defaultPreset = $derived(getOptions().defaultPreset ?? "month");
+  const defaultPreset = $derived(
+    getOptions().defaultPreset ?? DEFAULT_DATE_PRESET,
+  );
 
   const initialUrl = getPage().url;
   const initialOpts = getOptions();
@@ -40,7 +43,7 @@ export function createLoanListDateRange(
   const dateNav = createDateNavigation({
     initialPreset: initialAllTime
       ? "all-time"
-      : (initialOpts.defaultPreset ?? "month"),
+      : (initialOpts.defaultPreset ?? DEFAULT_DATE_PRESET),
     initialRange:
       initialAllTime || !initialFrom || !initialTo
         ? null
@@ -141,11 +144,11 @@ export function createLoanListDateRange(
   }
 
   function clearDateFilter() {
-    dateNav.setDatePreset(getOptions().defaultPreset ?? "month");
+    dateNav.setDatePreset(getOptions().defaultPreset ?? DEFAULT_DATE_PRESET);
     applyDateRangeToUrl();
   }
 
-  // Default month range when params are missing (Managing / Invested lists).
+  // Default year range when params are missing (Managing / Invested lists).
   $effect(() => {
     if (!enabled) return;
     if (isAllTimeDateRange(getPage().url)) return;
@@ -237,10 +240,11 @@ export function createLoanListDateRange(
       if (!enabled) return false;
       if (pendingRangeActive()) return true;
 
-      const targetDefault = defaultPreset ?? "month";
+      const targetDefault = defaultPreset ?? DEFAULT_DATE_PRESET;
 
       if (targetDefault === "all-time") {
-        return !isAllTime;
+        if (dateNav.datePreset === "all-time") return false;
+        return true;
       }
 
       if (isAllTime) return true;

@@ -1,4 +1,5 @@
 import {
+  DEFAULT_DATE_PRESET,
   type DatePreset,
   type DateRange,
   detectPresetFromRange,
@@ -15,7 +16,7 @@ type CreateDateNavigationOptions = {
 export function createDateNavigation(
   options: CreateDateNavigationOptions = {},
 ) {
-  const { initialPreset = "month", initialRange = null } = options;
+  const { initialPreset = DEFAULT_DATE_PRESET, initialRange = null } = options;
 
   let datePreset = $state<DatePreset>(
     initialRange

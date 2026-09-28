@@ -6,7 +6,7 @@ import {
   PiggyBank,
 } from "lucide-svelte";
 import type { IconComponent } from "$lib/types/icon";
-import type { DatePreset } from "$lib/date/navigation";
+import { DEFAULT_DATE_PRESET, type DatePreset } from "$lib/date/navigation";
 import { PAGE_DESCRIPTIONS } from "$lib/page-descriptions";
 
 export type LoanListPageScope =
@@ -55,7 +55,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     groupScopeNoun: "loans",
     groupShowManageLink: true,
     embedded: false,
-    defaultDatePreset: "month",
+    defaultDatePreset: DEFAULT_DATE_PRESET,
     listInvalidate: "app:loans",
     hideGroupBadges: false,
     showAddToGroup: true,
@@ -76,7 +76,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     groupScopeNoun: "investments",
     groupShowManageLink: false,
     embedded: false,
-    defaultDatePreset: "month",
+    defaultDatePreset: DEFAULT_DATE_PRESET,
     listInvalidate: "app:loans",
     hideGroupBadges: false,
     showAddToGroup: true,
@@ -97,7 +97,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     groupScopeNoun: "borrowed loans",
     groupShowManageLink: false,
     embedded: false,
-    defaultDatePreset: "month",
+    defaultDatePreset: DEFAULT_DATE_PRESET,
     listInvalidate: "app:loans",
     hideGroupBadges: false,
     showAddToGroup: true,
@@ -118,7 +118,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     groupScopeNoun: "commissioned loans",
     groupShowManageLink: false,
     embedded: false,
-    defaultDatePreset: "month",
+    defaultDatePreset: DEFAULT_DATE_PRESET,
     listInvalidate: "app:loans",
     hideGroupBadges: false,
     showAddToGroup: true,
@@ -139,7 +139,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     groupScopeNoun: "witnessed loans",
     groupShowManageLink: false,
     embedded: false,
-    defaultDatePreset: "month",
+    defaultDatePreset: DEFAULT_DATE_PRESET,
     listInvalidate: "app:loans",
     hideGroupBadges: false,
     showAddToGroup: true,
