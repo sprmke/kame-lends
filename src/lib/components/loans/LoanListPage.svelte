@@ -7,6 +7,7 @@
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
 	import LoanListMoreFiltersPanel from '$lib/components/common/LoanListMoreFiltersPanel.svelte';
 	import ExportButton from '$lib/components/common/ExportButton.svelte';
+	import RegisterGroupHubLoanExport from '$lib/components/groups/RegisterGroupHubLoanExport.svelte';
 	import CardPagination from '$lib/components/common/CardPagination.svelte';
 	import ListPageSkeleton from '$lib/components/common/ListPageSkeleton.svelte';
 	import ListEmptyState from '$lib/components/common/ListEmptyState.svelte';
@@ -570,6 +571,21 @@
 {/if}
 
 {#snippet listChrome()}
+		{#if variant.embedded && scope === 'group'}
+			<RegisterGroupHubLoanExport>
+				{#snippet actions()}
+					<ExportButton
+						data={listLoans}
+						filteredData={sortedLoans}
+						selectedData={selectedLoans}
+						sections={loanPDFSections}
+						onGeneratePDF={downloadLoansPdf}
+						size="sm"
+						class="shrink-0"
+					/>
+				{/snippet}
+			</RegisterGroupHubLoanExport>
+		{/if}
 		{#if !variant.embedded}
 		<PageHeader title={pageTitle} description={variant.description} showPriceToggle={true}>
 			{#if variant.showDateRange && !isMobileShell.matches}
@@ -604,7 +620,7 @@
 			<LoanScopeTabs />
 		{/if}
 
-		{#if !variant.embedded && variant.showDateRange && isMobileShell.matches}
+		{#if variant.showDateRange && isMobileShell.matches && (!variant.embedded || scope === 'group')}
 			<DateRangeFilter
 				dateRange={dateRangeState.dateRange}
 				datePreset={dateRangeState.datePreset}
@@ -660,10 +676,10 @@
 			{showMoreFilters}
 			onToggleMoreFilters={() => (showMoreFilters = !showMoreFilters)}
 			{hasActiveAdvancedFilters}
-			selectMode={phoneSelectMode && isMobileShell.matches}
+			class={variant.embedded ? 'embedded-loan-list-toolbar' : undefined}
 		>
 			{#snippet afterSearch()}
-				{#if variant.embedded && variant.showDateRange}
+				{#if variant.embedded && variant.showDateRange && !isMobileShell.matches}
 					<DateRangeFilter
 						dateRange={dateRangeState.dateRange}
 						datePreset={dateRangeState.datePreset}
@@ -677,15 +693,6 @@
 				{/if}
 			{/snippet}
 			{#snippet toolbarTrailing()}
-				{#if variant.embedded && !(phoneSelectMode && isMobileShell.matches)}
-					<ExportButton
-						data={listLoans}
-						filteredData={sortedLoans}
-						selectedData={selectedLoans}
-						sections={loanPDFSections}
-						onGeneratePDF={downloadLoansPdf}
-					/>
-				{/if}
 				{#if canBulkSelect && isMobileShell.matches}
 					<Button
 						type="button"

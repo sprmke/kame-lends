@@ -27,11 +27,12 @@
 	];
 </script>
 
-<div class={cn('pill-segment h-11 shrink-0 gap-0.5 p-0.5', className)}>
+<div class={cn('pill-segment inline-flex h-11 shrink-0 gap-0.5 p-0.5', className)}>
 	{#each modes as { id, icon: Icon, label, hidden }}
 		<Button
+			type="button"
 			variant={viewMode === id ? 'secondary' : 'ghost'}
-			onclick={() => hasData && onViewModeChange(id)}
+			onclick={() => onViewModeChange(id)}
 			class={cn(
 				'touch-hit h-10 min-h-0 w-10 shrink-0 rounded-lg p-0 shadow-none',
 				hidden && 'hidden lg:inline-flex',

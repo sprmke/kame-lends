@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy, onMount } from 'svelte';
 	import { invalidate } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import GroupPickerSheet from '$lib/components/groups/GroupPickerSheet.svelte';
@@ -43,13 +44,27 @@
 	let removePreviewError = $state<string | null>(null);
 
 	const mobileShell = createIsMobileShell(false);
-	$effect(() => mobileShell.init());
+	onMount(() => mobileShell.init());
+
+	/** Hold the dock once while selection is active; avoid release+claim on each count change. */
+	let dockHeld = false;
 
 	$effect(() => {
-		const shouldClaim = selectedCount > 0 && mobileShell.matches;
-		if (!shouldClaim) return;
-		mobileDockSlot.claim();
-		return () => mobileDockSlot.release();
+		const wantDock = selectedCount > 0 && mobileShell.matches;
+		if (wantDock && !dockHeld) {
+			mobileDockSlot.claim();
+			dockHeld = true;
+		} else if (!wantDock && dockHeld) {
+			mobileDockSlot.release();
+			dockHeld = false;
+		}
+	});
+
+	onDestroy(() => {
+		if (dockHeld) {
+			mobileDockSlot.release();
+			dockHeld = false;
+		}
 	});
 
 	async function applySelection(ids: number[]) {

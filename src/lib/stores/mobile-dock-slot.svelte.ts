@@ -10,11 +10,15 @@ class MobileDockSlotStore {
   }
 
   claim() {
-    this.claims += 1;
+    const next = this.claims + 1;
+    if (next === this.claims) return;
+    this.claims = next;
   }
 
   release() {
-    this.claims = Math.max(0, this.claims - 1);
+    const next = Math.max(0, this.claims - 1);
+    if (next === this.claims) return;
+    this.claims = next;
   }
 }
 

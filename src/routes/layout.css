@@ -376,17 +376,38 @@
   }
 
   .mobile-list-toolbar {
-    @apply flex flex-row flex-nowrap items-center gap-2;
+    @apply flex min-w-0 flex-row flex-wrap items-center gap-2;
   }
 
   @media (min-width: 1024px) {
     .mobile-list-toolbar {
-      @apply flex-wrap;
+      @apply flex-nowrap;
     }
   }
 
   .mobile-list-toolbar-controls {
-    @apply flex shrink-0 flex-nowrap items-center gap-2;
+    @apply flex min-w-0 shrink flex-wrap items-center gap-2;
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-list-toolbar-controls {
+      @apply flex-nowrap;
+    }
+  }
+
+  /* Phone: full-width search, action row left-aligned under search (all ListPageToolbar usages). */
+  @media (max-width: 1023px) {
+    .mobile-list-toolbar {
+      @apply flex-col items-stretch gap-2.5;
+    }
+
+    .mobile-list-toolbar > :first-child {
+      @apply w-full max-w-full flex-none basis-auto;
+    }
+
+    .mobile-list-toolbar-controls {
+      @apply w-full flex-wrap justify-start gap-2;
+    }
   }
 
   .page-header-actions {

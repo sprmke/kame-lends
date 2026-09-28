@@ -19,9 +19,17 @@ export function createResponsiveViewMode(
   let isMobile = $state(false);
   let viewMode = $state<ViewMode>(defaultDesktopMode);
 
+  function coerceViewModeForMobileShell() {
+    if (!isMobile) return;
+    // Table is desktop-only in the UI; calendar and cards work on phone.
+    if (viewMode === "table") {
+      viewMode = defaultMobileMode;
+    }
+  }
+
   function setViewMode(mode: ViewMode) {
     if (isMobile && mode === "table") {
-      viewMode = "cards";
+      viewMode = defaultMobileMode;
     } else {
       viewMode = mode;
     }
@@ -31,17 +39,13 @@ export function createResponsiveViewMode(
     if (typeof window === "undefined") return;
     const mobile = window.innerWidth < mobileBreakpoint;
     isMobile = mobile;
-    if (mobile && viewMode === "table") {
-      viewMode = defaultMobileMode;
-    }
+    coerceViewModeForMobileShell();
     isReady = true;
 
     const handleResize = () => {
       const nowMobile = window.innerWidth < mobileBreakpoint;
       isMobile = nowMobile;
-      if (nowMobile && viewMode === "table") {
-        viewMode = defaultMobileMode;
-      }
+      coerceViewModeForMobileShell();
     };
 
     window.addEventListener("resize", handleResize);
