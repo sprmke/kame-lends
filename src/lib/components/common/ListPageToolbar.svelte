@@ -6,6 +6,7 @@
 	import { Filter, X } from 'lucide-svelte';
 	import type { ViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 	import { cn } from '$lib/utils';
+	import MoreFiltersSurface from '$lib/components/common/MoreFiltersSurface.svelte';
 
 	interface Props {
 		searchValue: string;
@@ -27,8 +28,6 @@
 		moreFilters?: Snippet;
 		/** Extra controls on the toolbar row (e.g. mobile bulk select). */
 		toolbarTrailing?: Snippet;
-		/** Phone select mode: search + Done only; hide view/filter chrome. */
-		selectMode?: boolean;
 		class?: string;
 	}
 
@@ -50,28 +49,27 @@
 		hasActiveAdvancedFilters = false,
 		moreFilters,
 		toolbarTrailing,
-		selectMode = false,
 		class: className
 	}: Props = $props();
 </script>
 
 <div class={cn('flex flex-col gap-3', className)}>
-<div class="mobile-list-toolbar">
-	<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+<div class="mobile-list-toolbar min-w-0 max-w-full">
+	<div class="flex min-w-0 flex-1 basis-[min(100%,14rem)] flex-wrap items-center gap-2">
 		<SearchFilter
 			value={searchValue}
 			onChange={onSearchChange}
 			placeholder={searchPlaceholder}
 			class="min-w-0 flex-1 lg:min-w-[12rem]"
 		/>
-		{#if afterSearch && !selectMode}
+		{#if afterSearch}
 			<div class="min-w-0 shrink-0 max-w-full">
 				{@render afterSearch()}
 			</div>
 		{/if}
 	</div>
 	<div class="mobile-list-toolbar-controls">
-		{#if !selectMode && showViewToggle && viewMode && onViewModeChange && hasData}
+		{#if showViewToggle && viewMode && onViewModeChange && hasData}
 			<ViewModeToggle
 				{viewMode}
 				onViewModeChange={onViewModeChange}
@@ -80,10 +78,12 @@
 				class="shrink-0"
 			/>
 		{/if}
-		{#if !selectMode && filters}
-			{@render filters()}
+		{#if filters}
+			<div class="flex min-w-0 shrink flex-wrap items-center gap-2 max-lg:max-w-full">
+				{@render filters()}
+			</div>
 		{/if}
-		{#if !selectMode && moreFilters && onToggleMoreFilters}
+		{#if moreFilters && onToggleMoreFilters}
 			<Button
 				variant={showMoreFilters ? 'secondary' : 'outline'}
 				size="sm"
@@ -102,7 +102,7 @@
 				{/if}
 			</Button>
 		{/if}
-		{#if !selectMode && hasActiveFilters && onClearFilters}
+		{#if hasActiveFilters && onClearFilters}
 			<Button variant="outline" size="sm" class="shrink-0" onclick={onClearFilters}>
 				<X class="h-4 w-4 xl:mr-2" />
 				<span class="hidden xl:inline">Clear All</span>
@@ -113,9 +113,16 @@
 		{/if}
 	</div>
 </div>
-{#if !selectMode && showMoreFilters && moreFilters}
-	<div class="dashboard-filter-panel animate-in duration-200 slide-in-from-top-2">
-		{@render moreFilters()}
-	</div>
+{#if moreFilters && onToggleMoreFilters}
+	<MoreFiltersSurface
+		open={showMoreFilters}
+		onOpenChange={(next) => {
+			if (next !== showMoreFilters) onToggleMoreFilters();
+		}}
+	>
+		{#snippet children()}
+			{@render moreFilters()}
+		{/snippet}
+	</MoreFiltersSurface>
 {/if}
 </div>

@@ -42,7 +42,7 @@
 
 <div class="grid grid-cols-2 gap-3 border-b border-border/50 pb-3 xl:hidden">
 	<div class="space-y-2">
-		<p class="text-xs font-semibold">Repaid Borrowings</p>
+		<p class="text-xs font-semibold">Repaid Bank Loans</p>
 		<SingleSelectFilter
 			options={REPAYMENT_FILTER_OPTIONS}
 			value={showPastDebts ? 'show' : 'hide'}

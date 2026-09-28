@@ -11,6 +11,7 @@
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
 	import RangeFilter from '$lib/components/common/RangeFilter.svelte';
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
+	import MoreFiltersSurface from '$lib/components/common/MoreFiltersSurface.svelte';
 	import LoanListMoreFiltersPanel from '$lib/components/common/LoanListMoreFiltersPanel.svelte';
 	import ExportButton from '$lib/components/common/ExportButton.svelte';
 	import DashboardActivityCards from '$lib/components/common/DashboardActivityCards.svelte';
@@ -68,7 +69,7 @@
 		canManage?: boolean;
 		/** Hide back/edit/delete chrome (group people, nested views). */
 		embedded?: boolean;
-		/** Borrowings tab and debt metrics. Off for group-scoped loan views. */
+		/** Bank Loans tab and debt metrics. Off for group-scoped loan views. */
 		showBorrowings?: boolean;
 		/**
 		 * When true, capital/filters/table use this investor's allocations.
@@ -125,8 +126,7 @@
 	const canBulkSelect = $derived(canManage && SHOW_GROUPS_UI);
 
 	const dateRangeState = createLoanListDateRange(() => page, () => ({
-		enabled: pageTab === 'loans',
-		defaultPreset: 'month'
+		enabled: pageTab === 'loans'
 	}));
 	const filterFrom = $derived(dateRangeState.filterFrom);
 	const filterTo = $derived(dateRangeState.filterTo);
@@ -136,6 +136,7 @@
 	);
 
 	$effect(() => isMobileShell.init());
+	$effect(() => debtsViewMode.init());
 
 	$effect(() => {
 		if (canManage) loanFormOptions.prefetch();
@@ -446,7 +447,7 @@
 			deleteTitle="Delete Investor"
 			deleteDescription={`Are you sure you want to delete ${investor.name}? This action cannot be undone.`}
 			{canDelete}
-			deleteWarning={`Cannot delete this investor because they have ${investorLoanInvestors.length} active loan(s) and ${investorDebts.length} borrowing(s). Remove those first.`}
+			deleteWarning={`Cannot delete this investor because they have ${investorLoanInvestors.length} active loan(s) and ${investorDebts.length} bank loan(s). Remove those first.`}
 		/>
 	{/if}
 
@@ -457,7 +458,7 @@
 			<Tabs.Trigger value="overview">Overview</Tabs.Trigger>
 			<Tabs.Trigger value="loans">Loans ({uniqueLoanCount})</Tabs.Trigger>
 			{#if showBorrowings}
-				<Tabs.Trigger value="debts">Borrowings ({investorDebts.length})</Tabs.Trigger>
+				<Tabs.Trigger value="debts">Bank Loans ({investorDebts.length})</Tabs.Trigger>
 			{/if}
 		</Tabs.List>
 
@@ -480,14 +481,14 @@
 					...(showBorrowings
 						? [
 								{
-									label: 'Active Borrowings',
+									label: 'Active Bank Loans',
 									amount: debtStats.activePrincipal,
 									subCount: debtStats.activeCount,
-									subCountSuffix: ' borrowings',
+									subCountSuffix: ' bank loans',
 									empty: debtStats.totalCount === 0
 								},
 								{
-									label: 'Borrowing Cost Paid',
+									label: 'Bank Loan Cost Paid',
 									amount: debtStats.interestPaid,
 									subValue: 'Interest and fees paid',
 									empty: debtStats.totalCount === 0
@@ -509,7 +510,7 @@
 						amount: overviewStats.netEarnings,
 						subValue:
 							debtStats.totalCount > 0
-								? 'Loan interest - Borrowing cost'
+								? 'Loan interest - Bank loan cost'
 								: 'Loan interest scheduled',
 						valueClassName: overviewStats.netEarnings >= 0 ? undefined : 'text-chart-3'
 					},
@@ -535,7 +536,6 @@
 				showMoreFilters={showMoreLoanFilters}
 				onToggleMoreFilters={() => (showMoreLoanFilters = !showMoreLoanFilters)}
 				hasActiveAdvancedFilters={hasActiveAdvancedLoanFilters}
-				selectMode={phoneSelectMode && isMobileShell.matches}
 			>
 				{#snippet afterSearch()}
 					<DateRangeFilter
@@ -565,21 +565,19 @@
 							{phoneSelectMode ? 'Done' : 'Select'}
 						</Button>
 					{/if}
-					{#if !(phoneSelectMode && isMobileShell.matches)}
-						<ExportButton
-							data={loans}
-							filteredData={sortedFilteredLoans}
-							selectedData={selectedLoans}
-							sections={loanPDFSections}
-							onGeneratePDF={(data, keys) =>
-								downloadLoansPdf(data, keys, scopeToInvestor ? investor.id : undefined)}
-						/>
-						{#if canManage}
-							<Button size="sm" class="shrink-0" onclick={() => openLoanCreate()}>
-								<Plus class="h-3 w-3 xl:mr-1" />
-								<span class="hidden xl:inline">Add Loan</span>
-							</Button>
-						{/if}
+					<ExportButton
+						data={loans}
+						filteredData={sortedFilteredLoans}
+						selectedData={selectedLoans}
+						sections={loanPDFSections}
+						onGeneratePDF={(data, keys) =>
+							downloadLoansPdf(data, keys, scopeToInvestor ? investor.id : undefined)}
+					/>
+					{#if canManage}
+						<Button size="sm" class="shrink-0" onclick={() => openLoanCreate()}>
+							<Plus class="h-3 w-3 xl:mr-1" />
+							<span class="hidden xl:inline">Add Loan</span>
+						</Button>
 					{/if}
 				{/snippet}
 				{#snippet moreFilters()}
@@ -673,7 +671,7 @@
 				<SearchFilter
 					value={debtSearchQuery}
 					onChange={(v) => (debtSearchQuery = v)}
-					placeholder="Search borrowings..."
+					placeholder="Search bank loans..."
 					class="min-w-0 flex-1 lg:min-w-[12rem]"
 				/>
 				<div class="mobile-list-toolbar-controls">
@@ -701,14 +699,17 @@
 					{#if canManage}
 						<Button size="sm" class="shrink-0" onclick={() => (showDebtModal = true)}>
 							<Plus class="h-3 w-3 xl:mr-1" />
-							<span class="hidden xl:inline">Add Borrowing</span>
+							<span class="hidden xl:inline">Add Bank Loan</span>
 						</Button>
 					{/if}
 				</div>
 			</div>
 
-			{#if showMoreDebtFilters}
-				<div class="dashboard-filter-panel">
+			<MoreFiltersSurface
+				open={showMoreDebtFilters}
+				onOpenChange={(next) => (showMoreDebtFilters = next)}
+			>
+				{#snippet children()}
 					<RangeFilter
 						label="Principal Amount"
 						minValue={minDebtAmount}
@@ -718,16 +719,16 @@
 						minPlaceholder="Min (₱)"
 						maxPlaceholder="Max (₱)"
 					/>
-				</div>
-			{/if}
+				{/snippet}
+			</MoreFiltersSurface>
 
 			{#if debtsViewMode.viewMode === 'table'}
 				<DebtsTable
 					debts={filteredDebts}
 					itemsPerPage={10}
 					emptyMessage={investorDebts.length === 0
-						? 'No borrowings yet.'
-						: 'No borrowings match your filters.'}
+						? 'No bank loans yet.'
+						: 'No bank loans match your filters.'}
 					onQuickView={(debt) => goto(`/debts/${debt.id}`)}
 				/>
 				{#if investorDebts.length === 0}
@@ -735,7 +736,7 @@
 					<div class="mt-4 flex justify-center">
 						<Button size="sm" onclick={() => (showDebtModal = true)}>
 							<Plus class="mr-2 h-4 w-4" />
-							Add Borrowing
+							Add Bank Loan
 						</Button>
 					</div>
 					{/if}
@@ -750,11 +751,11 @@
 			{:else if investorDebts.length === 0}
 				<Card.Root>
 					<Card.Content class="dashboard-empty gap-3">
-						<p class="text-muted-foreground">No borrowings yet</p>
+						<p class="text-muted-foreground">No bank loans yet</p>
 						{#if canManage}
 						<Button size="sm" onclick={() => (showDebtModal = true)}>
 							<Plus class="mr-2 h-4 w-4" />
-							Add Borrowing
+							Add Bank Loan
 						</Button>
 						{/if}
 					</Card.Content>
@@ -762,7 +763,7 @@
 			{:else if filteredDebts.length === 0}
 				<Card.Root>
 					<Card.Content class="dashboard-empty">
-						<p class="mb-4 text-muted-foreground">No borrowings match your filters</p>
+						<p class="mb-4 text-muted-foreground">No bank loans match your filters</p>
 						<Button variant="outline" onclick={clearDebtFilters}>
 							<X class="mr-2 h-4 w-4" />
 							Clear filters
@@ -773,7 +774,7 @@
 				<CardPagination
 					items={filteredDebts}
 					itemsPerPage={10}
-					itemName="borrowings"
+					itemName="bank loans"
 					scrollToTop={false}
 				>
 					{#snippet children(paginatedDebts)}

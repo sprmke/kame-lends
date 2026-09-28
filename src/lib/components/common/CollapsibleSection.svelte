@@ -3,6 +3,7 @@
 	import { ChevronDown, Filter } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 	import type { IconComponent } from '$lib/types/icon';
+	import MoreFiltersSurface from '$lib/components/common/MoreFiltersSurface.svelte';
 
 	interface Props {
 		isOpen: boolean;
@@ -32,9 +33,14 @@
 		{/if}
 		<ChevronDown class={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
 	</button>
-	{#if isOpen}
-		<div class="dashboard-filter-panel">
+	<MoreFiltersSurface
+		open={isOpen}
+		onOpenChange={(next) => {
+			if (next !== isOpen) onToggle();
+		}}
+	>
+		{#snippet children()}
 			{@render children()}
-		</div>
-	{/if}
+		{/snippet}
+	</MoreFiltersSurface>
 </div>
