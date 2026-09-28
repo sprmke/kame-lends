@@ -2,12 +2,14 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Checkbox } from '$lib/components/ui/checkbox';
-	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
+	import ResponsiveOverflowMenu from '$lib/components/common/ResponsiveOverflowMenu.svelte';
+	import { Button } from '$lib/components/ui/button';
+	import { createLoanActionItems } from '$lib/components/common/action-buttons';
 	import {
-		createCardQuickViewHandler,
-		createLoanActionItems,
-		GRID_CARD_ACTION_PROPS
-	} from '$lib/components/common/action-buttons';
+		activateGridCard,
+		handleGridCardKeydown
+	} from '$lib/components/common/grid-list-card-mobile';
+	import { MoreVertical } from 'lucide-svelte';
 	import {
 		formatCurrency,
 		formatDateVeryShort,
@@ -106,13 +108,73 @@
 			onRemoveFromGroup: onRemoveFromGroup ? () => onRemoveFromGroup(loan) : undefined
 		})
 	);
+
+	const loanCardIgnoreSelectors = ['[data-loan-card-select]'];
+
+	function handleCardActivate(event: MouseEvent | KeyboardEvent) {
+		activateGridCard(
+			event,
+			() => {
+				if (selectable) {
+					onSelectedChange?.(!selected);
+					return;
+				}
+				onQuickView?.(loan);
+			},
+			loanCardIgnoreSelectors
+		);
+	}
+
+	const cardInteractive = $derived(Boolean(onQuickView || selectable));
 </script>
 
-<Card.Root class="flex h-full flex-col overflow-hidden transition-colors hover:border-primary/20">
-	<Card.Header class="px-4 pt-4 pb-1">
-		<div class="flex min-w-0 items-start gap-2">
+<Card.Root
+	class={cn(
+		'flex h-full flex-col overflow-hidden transition-colors hover:border-primary/20',
+		cardInteractive && 'cursor-pointer native-press'
+	)}
+	role={cardInteractive ? 'button' : undefined}
+	tabindex={cardInteractive ? 0 : undefined}
+	onclick={handleCardActivate}
+	onkeydown={(event) => handleGridCardKeydown(event, handleCardActivate)}
+>
+	<Card.Header class="relative px-4 pt-4 pb-1">
+		{#if actionItems.length > 0}
+			<div
+				class="absolute top-3 right-3 z-10"
+				data-grid-card-actions
+				onclick={(event) => event.stopPropagation()}
+				onkeydown={(event) => event.stopPropagation()}
+				role="presentation"
+			>
+				<ResponsiveOverflowMenu items={actionItems} ariaLabel="More actions" sheetTitle="Actions">
+					{#snippet trigger({ props })}
+						<Button
+							{...props}
+							variant="outline"
+							size="sm"
+							title="More actions"
+							aria-label="More actions"
+							class="touch-target min-h-11 min-w-11 shrink-0 rounded-full border-border/60 px-0 shadow-none"
+						>
+							<MoreVertical />
+						</Button>
+					{/snippet}
+				</ResponsiveOverflowMenu>
+			</div>
+		{/if}
+		<div
+			class={cn(
+				'flex min-w-0 items-start gap-2',
+				actionItems.length > 0 && 'pr-11'
+			)}
+		>
 			{#if selectable}
-				<div class="shrink-0 pt-0.5" onclick={(event) => event.stopPropagation()}>
+				<div
+					class="shrink-0 pt-0.5"
+					data-loan-card-select
+					onclick={(event) => event.stopPropagation()}
+				>
 					<Checkbox
 						checked={selected}
 						onCheckedChange={(value) => onSelectedChange?.(Boolean(value))}
@@ -205,14 +267,4 @@
 			</div>
 		</div>
 	</Card.Content>
-	<Card.Footer class="border-t px-0 py-0">
-		<ActionButtons
-			viewHref={`/loans/${loan.id}`}
-			{...GRID_CARD_ACTION_PROPS}
-			{actionItems}
-			onQuickView={createCardQuickViewHandler(
-				onQuickView ? () => onQuickView(loan) : undefined
-			)}
-		/>
-	</Card.Footer>
 </Card.Root>

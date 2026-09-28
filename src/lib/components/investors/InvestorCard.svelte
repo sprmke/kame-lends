@@ -1,11 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
-	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
-	import {
-		createCardQuickViewHandler,
-		createRowActionItems,
-		GRID_CARD_ACTION_PROPS
-	} from '$lib/components/common/action-buttons';
+	import GridListCardShell from '$lib/components/common/GridListCardShell.svelte';
+	import { createRowActionItems } from '$lib/components/common/action-buttons';
 	import { formatCurrencyCompact, formatPercentage, formatText } from '$lib/format';
 	import { calculateAverageRate, calculateInvestorStats } from '$lib/calculations';
 	import type { InvestorWithLoans } from '$lib/types';
@@ -37,11 +33,15 @@
 	);
 </script>
 
-<Card.Root class="flex h-full flex-col overflow-hidden transition-colors hover:border-primary/20">
-	<Card.Header class="px-3 pt-3 pb-0">
+<GridListCardShell
+	{viewHref}
+	{actionItems}
+	onQuickView={onQuickView ? () => onQuickView(investor) : undefined}
+>
+	{#snippet header()}
 		<Card.Title class="mb-2 truncate text-sm sm:text-base">{formatText(investor.name)}</Card.Title>
-	</Card.Header>
-	<Card.Content class="flex-1 space-y-2 px-3 pt-0 pb-2.5">
+	{/snippet}
+	{#snippet children()}
 		<p class="truncate text-xs text-muted-foreground">{formatText(investor.email)}</p>
 		<div class="grid grid-cols-2 gap-1.5">
 			<div class="dashboard-metric-cell p-2">
@@ -55,15 +55,5 @@
 				<p class="text-xs font-semibold tabular-nums">{formatPercentage(avgRate)}</p>
 			</div>
 		</div>
-	</Card.Content>
-	<Card.Footer class="border-t px-0 py-0">
-		<ActionButtons
-			{viewHref}
-			{...GRID_CARD_ACTION_PROPS}
-			{actionItems}
-			onQuickView={createCardQuickViewHandler(
-				onQuickView ? () => onQuickView(investor) : undefined
-			)}
-		/>
-	</Card.Footer>
-</Card.Root>
+	{/snippet}
+</GridListCardShell>

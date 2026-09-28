@@ -1,12 +1,8 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
-	import {
-		createCardQuickViewHandler,
-		createRowActionItems,
-		GRID_CARD_ACTION_PROPS
-	} from '$lib/components/common/action-buttons';
+	import GridListCardShell from '$lib/components/common/GridListCardShell.svelte';
+	import { createRowActionItems } from '$lib/components/common/action-buttons';
 	import { formatCurrency, formatDateShort, formatText } from '$lib/format';
 	import { calculateDebtSummary, calculatePerPeriodInterest } from '$lib/debt-calculations';
 	import type { DebtWithInvestor } from '$lib/types';
@@ -52,14 +48,20 @@
 	);
 </script>
 
-<Card.Root class="flex h-full flex-col overflow-hidden transition-colors hover:border-primary/20">
-	<Card.Header class="px-3 pt-3 pb-0">
-		<div class="flex items-start justify-between gap-2">
-			<Card.Title class="mb-2 truncate text-sm sm:text-base">{formatText(debt.name)}</Card.Title>
+<GridListCardShell
+	{viewHref}
+	{actionItems}
+	onQuickView={onQuickView ? () => onQuickView(debt) : undefined}
+>
+	{#snippet header()}
+		<div class="flex items-start justify-between gap-2 max-lg:pr-0">
+			<Card.Title class="mb-2 min-w-0 flex-1 truncate text-sm sm:text-base">
+				{formatText(debt.name)}
+			</Card.Title>
 			<Badge variant="secondary" class="shrink-0 text-[10px]">{debt.interestInterval}</Badge>
 		</div>
-	</Card.Header>
-	<Card.Content class="flex-1 space-y-2 px-3 pt-0 pb-2.5">
+	{/snippet}
+	{#snippet children()}
 		<div class="grid grid-cols-2 gap-1.5">
 			<div class="dashboard-metric-cell p-2">
 				<p class="mb-1 text-[10px] text-muted-foreground">Start Date</p>
@@ -79,15 +81,5 @@
 			</div>
 		</div>
 		<p class="truncate text-xs text-muted-foreground">{formatText(debt.investor.name)}</p>
-	</Card.Content>
-	<Card.Footer class="border-t px-0 py-0">
-		<ActionButtons
-			{viewHref}
-			{...GRID_CARD_ACTION_PROPS}
-			{actionItems}
-			onQuickView={createCardQuickViewHandler(
-				onQuickView ? () => onQuickView(debt) : undefined
-			)}
-		/>
-	</Card.Footer>
-</Card.Root>
+	{/snippet}
+</GridListCardShell>

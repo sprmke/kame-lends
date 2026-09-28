@@ -2,11 +2,7 @@
 	import { goto } from '$app/navigation';
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
-	import {
-		createCardQuickViewHandler,
-		GRID_CARD_ACTION_PROPS
-	} from '$lib/components/common/action-buttons';
+	import GridListCardShell from '$lib/components/common/GridListCardShell.svelte';
 	import { cn } from '$lib/utils';
 	import { formatCurrency, formatDateShort, formatText } from '$lib/format';
 	import { getTransactionDirectionBadge, getTransactionTypeBadge } from '$lib/badge-config';
@@ -25,13 +21,18 @@
 	let { transaction, viewHref = `/transactions/${transaction.id}` }: Props = $props();
 </script>
 
-<Card.Root class="flex h-full flex-col overflow-hidden transition-colors hover:border-primary/20">
-	<Card.Header class="px-4 pt-4 pb-1">
+<GridListCardShell
+	{viewHref}
+	onQuickView={() => goto(viewHref)}
+	contentClass="flex-1 space-y-3 px-4 pt-0 pb-3"
+	headerClass="px-4 pt-4 pb-1"
+>
+	{#snippet header()}
 		<div class="flex items-start justify-between gap-2">
-			<Card.Title class="mb-2 truncate text-sm sm:text-base"
-				>{formatText(transaction.name)}</Card.Title
-			>
-			<div class="flex shrink-0 gap-1">
+			<Card.Title class="mb-2 min-w-0 flex-1 truncate text-sm sm:text-base">
+				{formatText(transaction.name)}
+			</Card.Title>
+			<div class="flex shrink-0 flex-wrap justify-end gap-1">
 				<Badge
 					variant={getTransactionTypeBadge(transaction.type).variant}
 					class={cn('text-[10px]', getTransactionTypeBadge(transaction.type).className)}
@@ -46,8 +47,8 @@
 				</Badge>
 			</div>
 		</div>
-	</Card.Header>
-	<Card.Content class="flex-1 space-y-3 px-4 pt-0 pb-3">
+	{/snippet}
+	{#snippet children()}
 		<div class="grid grid-cols-3 gap-2">
 			<div class="rounded-lg bg-muted/50 p-2">
 				<p class="mb-1 text-[10px] text-muted-foreground">Date</p>
@@ -70,12 +71,5 @@
 				<p class="truncate text-xs font-medium">{formatText(transaction.investor.name)}</p>
 			</div>
 		</div>
-	</Card.Content>
-	<Card.Footer class="border-t px-0 py-0">
-		<ActionButtons
-			{viewHref}
-			{...GRID_CARD_ACTION_PROPS}
-			onQuickView={createCardQuickViewHandler(() => goto(viewHref))}
-		/>
-	</Card.Footer>
-</Card.Root>
+	{/snippet}
+</GridListCardShell>
