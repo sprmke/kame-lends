@@ -14,6 +14,7 @@
 		formatText
 	} from '$lib/format';
 	import { createIsMobileShell } from '$lib/composables/use-media-query.svelte';
+	import { groupHubLoanExportActions } from '$lib/stores/group-hub-loan-export.svelte';
 	import { ArrowLeft, MoreHorizontal, PlusCircle } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 
@@ -78,8 +79,10 @@
 		return `You're ${formatPartyRoles(roles).toLowerCase()} here`;
 	});
 
-	const showDesktopActions = $derived(
-		Boolean(onAddLoans || onOpenSettings || onDelete)
+	const showOwnerActions = $derived(Boolean(onAddLoans || onOpenSettings || onDelete));
+
+	const showHubHeaderActions = $derived(
+		showOwnerActions || groupHubLoanExportActions.snippet != null
 	);
 
 	const moreMenuItems = $derived.by((): RowActionItem[] => {
@@ -124,6 +127,9 @@
 
 {#snippet heroActions()}
 	<div class="flex items-center justify-end gap-1.5">
+		{#if groupHubLoanExportActions.snippet}
+			{@render groupHubLoanExportActions.snippet()}
+		{/if}
 		{#if isOwner && onAddLoans}
 			<Button
 				type="button"
@@ -199,8 +205,11 @@
 				{/if}
 			</div>
 
-			{#if showDesktopActions}
+			{#if showHubHeaderActions}
 				<div class="flex shrink-0 items-center justify-end gap-2">
+					{#if groupHubLoanExportActions.snippet}
+						{@render groupHubLoanExportActions.snippet()}
+					{/if}
 					{#if isOwner && onAddLoans}
 						<Button type="button" onclick={onAddLoans}>
 							<PlusCircle class="mr-2 size-4" />
@@ -213,7 +222,7 @@
 		</div>
 	</div>
 
-	{#if showDesktopActions}
+	{#if showHubHeaderActions}
 		<RegisterMobileHeroActions snippet={heroActions} active={mobileShell.matches} />
 	{/if}
 </div>

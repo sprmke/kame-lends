@@ -290,7 +290,7 @@
 	<Tabs.Root value={activeTab} onValueChange={(value) => setTab(value as HubTab)}>
 		<Tabs.List
 			class={cn(
-				'mb-4 grid h-auto w-full gap-1 overflow-hidden p-1',
+				'mb-1 sm:mb-2 grid h-auto w-full gap-1 overflow-hidden p-1',
 				data.canManage ? 'grid-cols-4' : 'grid-cols-3'
 			)}
 		>
