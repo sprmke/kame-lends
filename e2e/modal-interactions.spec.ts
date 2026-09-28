@@ -60,14 +60,14 @@ test("loan create modal opens and closes", async ({ page }) => {
   await expect(dialog).not.toBeVisible();
 });
 
-test("borrowing quick-view modal opens", async ({ page, request }) => {
+test("bank loan quick-view modal opens", async ({ page, request }) => {
   const debts = await fetchJson<Array<{ id: number }>>(request, "/api/debts");
-  test.skip(!debts?.length, "No borrowings in database");
+  test.skip(!debts?.length, "No bank loans in database");
 
   const response = await gotoApp(page, "/debts");
   expect(response?.status()).toBe(200);
   await expect(
-    page.getByRole("heading", { name: "Borrowings", exact: true }),
+    page.getByRole("heading", { name: "Bank Loans", exact: true }),
   ).toBeVisible();
 
   await page.locator("table tbody tr").first().click();

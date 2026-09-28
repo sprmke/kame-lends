@@ -21,7 +21,7 @@ export function buildDashboardQuickActions(): DashboardQuickAction[] {
   const actions: DashboardQuickAction[] = [
     { id: "loan", label: "Loan", href: "/loans/new", icon: FileText },
     {
-      id: "borrowing",
+      id: "bank-loan",
       label: "Bank loan",
       href: "/debts/new",
       icon: HandCoins,

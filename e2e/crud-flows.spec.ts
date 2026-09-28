@@ -151,7 +151,7 @@ test("create and delete a transaction", async ({ page, request }) => {
   expect(del.ok(), await del.text()).toBeTruthy();
 });
 
-test("create and delete a borrowing", async ({ page, request }) => {
+test("create and delete a bank loan", async ({ page, request }) => {
   const stamp = Date.now();
 
   const investors = await fetchJson<Array<Investor>>(
@@ -164,7 +164,7 @@ test("create and delete a borrowing", async ({ page, request }) => {
   const response = await gotoApp(page, "/debts/new");
   expect(response?.status()).toBe(200);
   await expect(
-    page.getByRole("heading", { name: "Create Borrowing" }),
+    page.getByRole("heading", { name: "Create Bank Loan" }),
   ).toBeVisible({
     timeout: 20_000,
   });
@@ -176,7 +176,7 @@ test("create and delete a borrowing", async ({ page, request }) => {
 
   await page
     .locator('input[placeholder*="Personal loan" i]')
-    .fill(`E2E Borrowing ${stamp}`);
+    .fill(`E2E Bank Loan ${stamp}`);
   await page.locator('input[placeholder="0.00"]').first().fill("25000");
   await page
     .locator('input[type="date"]')
@@ -189,14 +189,14 @@ test("create and delete a borrowing", async ({ page, request }) => {
     res.url().includes("/api/debts"),
   );
   await page
-    .getByRole("button", { name: /Create Borrowing/ })
+    .getByRole("button", { name: /Create Bank Loan/ })
     .last()
     .click();
   const createResponse = await createResponsePromise;
   expect(createResponse.status()).toBe(201);
 
   await expect(page).toHaveURL(/\/debts\/?$/);
-  await expect(page.getByText(`E2E Borrowing ${stamp}`)).toBeVisible({
+  await expect(page.getByText(`E2E Bank Loan ${stamp}`)).toBeVisible({
     timeout: 30_000,
   });
 
@@ -204,7 +204,7 @@ test("create and delete a borrowing", async ({ page, request }) => {
     request,
     "/api/debts",
   );
-  const created = debts?.find((d) => d.name === `E2E Borrowing ${stamp}`);
+  const created = debts?.find((d) => d.name === `E2E Bank Loan ${stamp}`);
   expect(created).toBeDefined();
   const del = await request.delete(`/api/debts/${created!.id}`);
   expect(del.ok(), await del.text()).toBeTruthy();

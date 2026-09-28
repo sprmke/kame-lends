@@ -34,7 +34,7 @@
 				<ScrollReveal delay={200}>
 					<p class="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
 						{APP_NAME} unifies loans, investors, and
-						{SHOW_TRANSACTIONS_UI ? 'transactions' : 'borrowings'} in one beautiful system, so always
+						{SHOW_TRANSACTIONS_UI ? 'transactions' : 'bank loans'} in one beautiful system, so always
 						know what's due, what's collected, and what's next.
 					</p>
 				</ScrollReveal>

@@ -1,8 +1,9 @@
 import { isOpenLoan } from "$lib/calculations";
 import type { MultiSelectOption } from "$lib/components/common/MultiSelectFilter.svelte";
 
+/** Inline toolbar selects: compact on phone so search + filter fit one row. */
 export const LIST_FILTER_TRIGGER_CLASS =
-  "w-full shrink-0 sm:w-[10rem] xl:w-[11.25rem]";
+  "min-w-0 w-[5.75rem] max-w-[34vw] shrink sm:w-[10rem] sm:max-w-none xl:w-[11.25rem]";
 
 /** Full-width trigger inside More Filters grids (overrides LIST_FILTER_TRIGGER_CLASS widths). */
 export const LIST_FILTER_PANEL_TRIGGER_CLASS = "w-full sm:w-full xl:w-full";

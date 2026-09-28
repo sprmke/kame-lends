@@ -20,7 +20,7 @@
 				<Logo size="lg" showIcon={true} />
 				<p class="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
 					Professional lending management. Track loans, investors, and
-					{SHOW_TRANSACTIONS_UI ? 'transactions' : 'borrowings'} in one modern platform.
+					{SHOW_TRANSACTIONS_UI ? 'transactions' : 'bank loans'} in one modern platform.
 				</p>
 				<Button href="/signin" class="group mt-6 rounded-2xl shadow-[var(--shadow-soft)]">
 					Get Started

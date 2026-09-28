@@ -20,7 +20,7 @@
 					</h2>
 					<p class="mx-auto mt-6 max-w-lg text-lg text-white/85">
 						Join operators who run smarter with loans, investors, and
-						{SHOW_TRANSACTIONS_UI ? 'transactions' : 'borrowings'} in one place.
+						{SHOW_TRANSACTIONS_UI ? 'transactions' : 'bank loans'} in one place.
 					</p>
 					<div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
 						<Button

@@ -108,9 +108,9 @@ Desktop visual chrome is restored to the last Next.js tree: floating sidebar, 1r
 | Area                                | Legacy                     | New                              | Status |
 | ----------------------------------- | -------------------------- | -------------------------------- | ------ |
 | Contact + summary                   | Yes                        | Yes                              | ✅     |
-| Tabs: Overview / Loans / Borrowings | Full filters + modals each | `InvestorDetailContent.svelte`   | ✅     |
+| Tabs: Overview / Loans / Bank Loans | Full filters + modals each | `InvestorDetailContent.svelte`   | ✅     |
 | Activity cards                      | Past due, maturing, etc.   | On Overview tab                  | ✅     |
-| Add loan / borrowing modals         | Yes                        | Loan create modal + debt modal   | ✅     |
+| Add loan / bank loan modals         | Yes                        | Loan create modal + debt modal   | ✅     |
 | Export per tab                      | PDF scoped to investor     | Loans tab export wired           | ✅     |
 | Transactions tab                    | Full                       | Omitted (`SHOW_TRANSACTIONS_UI`) | ⚠️ N/A |
 
@@ -128,7 +128,7 @@ Desktop visual chrome is restored to the last Next.js tree: floating sidebar, 1r
 | Linked loans           | Count only     | Loan cards with badges               | ✅     |
 | Valid ID / e-signature | On edit form   | `ValidIdUpload` + `ESignatureUpload` | ✅     |
 
-### `/debts` (borrowings list)
+### `/debts` (bank loans list)
 
 | Area                  | Legacy              | New                             | Status |
 | --------------------- | ------------------- | ------------------------------- | ------ |
@@ -188,11 +188,11 @@ Desktop visual chrome is restored to the last Next.js tree: floating sidebar, 1r
 | `LoanCreateModal`                    | Inline create + duplicate       | ✅                   |
 | `LoanQuickPaymentDialog`             | Fund / received payment         | ✅                   |
 | `MultipleInterestManager`            | Interest periods on loan form   | ✅                   |
-| `DebtDetailModal`                    | Borrowing quick view + schedule | ✅                   |
+| `DebtDetailModal`                    | Bank loan quick view + schedule | ✅                   |
 | `DebtDetailClient`                   | Full page view/edit             | ✅                   |
 | `DebtPaymentSchedule`                | Payment record/consolidate      | ✅                   |
 | `DebtSummaryPreview`                 | Interest overview + schedule    | ✅                   |
-| `DebtCreateModal`                    | Create borrowing in modal       | ✅ (investor detail) |
+| `DebtCreateModal`                    | Create bank loan in modal       | ✅ (investor detail) |
 | `BorrowerFormModal`                  | Inline borrower on loan form    | ✅                   |
 | `ValidIdUpload` / `ESignatureUpload` | Borrower docs                   | ✅                   |
 | `ConfirmDeleteDialog`                | Delete confirm                  | ✅                   |
@@ -225,7 +225,7 @@ Desktop visual chrome is restored to the last Next.js tree: floating sidebar, 1r
 ## Files changed in parity pass (2026-09-09, session 7)
 
 - `src/lib/components/debts/debt-form-types.ts` — shared entry/fee types + factories
-- `src/lib/components/debts/DebtEntryCard.svelte` — per-entry borrowing card + preview
+- `src/lib/components/debts/DebtEntryCard.svelte` — per-entry bank loan card + preview
 - `src/lib/components/debts/DebtForm.svelte` — multi-investor select, batch create, inline add investor
 - `src/lib/components/debts/DebtDetailModal.svelte` — `DetailModalHeader`, additional fees list
 
@@ -243,7 +243,7 @@ Desktop visual chrome is restored to the last Next.js tree: floating sidebar, 1r
 - `src/lib/components/investors/InvestorFormModal.svelte` — inline investor create from loan form
 - `src/lib/components/investors/InvestorForm.svelte` — `onSuccess` / `onCancel` for modal use
 - `src/lib/components/loans/LoanForm.svelte` — FormHeader, legacy field labels/layout, inline add investor
-- `src/lib/components/debts/DebtForm.svelte` — FormHeader + Borrowing Details card title
+- `src/lib/components/debts/DebtForm.svelte` — FormHeader + Bank Loan Details card title
 - `src/routes/loans/new/+page.svelte` — legacy layout (form only, no duplicate PageHeader)
 - `src/routes/debts/new/+page.svelte` — legacy layout (form only)
 - `src/lib/components/loans/LoanDetailClient.svelte` — remove duplicate back button in edit mode

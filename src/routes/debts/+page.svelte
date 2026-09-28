@@ -115,10 +115,10 @@
 	async function handleRowDelete(debt: DebtWithInvestor) {
 		const response = await fetch(`/api/debts/${debt.id}`, { method: 'DELETE' });
 		if (!response.ok) {
-			toast.error('Failed to delete borrowing');
-			throw new Error('Failed to delete borrowing');
+			toast.error('Failed to delete bank loan');
+			throw new Error('Failed to delete bank loan');
 		}
-		toast.success('Borrowing deleted');
+		toast.success('Bank loan deleted');
 		await refreshDebts();
 	}
 
@@ -191,16 +191,16 @@
 			showPriceToggle={true}
 		>
 			{#if canCreate}
-				<Button size="sm" adaptToMobileHero aria-label="Add Borrowing" onclick={openCreateModal}>
+				<Button size="sm" adaptToMobileHero aria-label="Add Bank Loan" onclick={openCreateModal}>
 					<PlusCircle class="h-4 w-4 lg:mr-2" />
-					<span class="hidden lg:inline">Add Borrowing</span>
+					<span class="hidden lg:inline">Add Bank Loan</span>
 				</Button>
 			{/if}
 		</PageHeader>
 
 		<ListPageToolbar
 			searchValue={searchQuery}
-			searchPlaceholder="Search borrowings..."
+			searchPlaceholder="Search bank loans..."
 			onSearchChange={(value) => (searchQuery = value)}
 			viewMode={viewModeState.viewMode}
 			onViewModeChange={(mode) => viewModeState.setViewMode(mode)}
@@ -252,8 +252,8 @@
 			<DebtsTable
 				debts={sortedDebts}
 				emptyMessage={(items?.length ?? 0) === 0
-					? 'No borrowings yet.'
-					: 'No borrowings match your filters.'}
+					? 'No bank loans yet.'
+					: 'No bank loans match your filters.'}
 				onQuickView={handleQuickView}
 				onEdit={canManage ? handleRowEdit : undefined}
 				onDelete={canManage ? (debt) => (debtPendingDeletion = debt) : undefined}
@@ -261,8 +261,8 @@
 		{:else if sortedDebts.length === 0}
 			<ListEmptyState
 				message={(items?.length ?? 0) === 0
-					? 'No borrowings yet'
-					: 'No borrowings match your filters.'}
+					? 'No bank loans yet'
+					: 'No bank loans match your filters.'}
 				icon={HandCoins}
 			>
 				{#if hasActiveFilters}
@@ -275,7 +275,7 @@
 				{/if}
 			</ListEmptyState>
 		{:else}
-			<CardPagination items={sortedDebts} itemsPerPage={9} itemName="borrowings">
+			<CardPagination items={sortedDebts} itemsPerPage={9} itemName="bank loans">
 				{#snippet children(cardDebts)}
 					<div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
 						{#each cardDebts as debt (debt.id)}
@@ -314,7 +314,7 @@
 		onOpenChange={(open) => {
 			if (!open) editingDebt = null;
 		}}
-		title={editingDebt?.name ?? 'Borrowing'}
+		title={editingDebt?.name ?? 'Bank loan'}
 		formId="debt-list-edit-form"
 		isSubmitting={editSubmitting}
 		isEditMode={true}
@@ -341,7 +341,7 @@
 		onOpenChange={(open) => {
 			if (!open) debtPendingDeletion = null;
 		}}
-		title="Delete borrowing?"
+		title="Delete bank loan?"
 		description={debtPendingDeletion
 			? `This will permanently delete "${debtPendingDeletion.name}".`
 			: ''}

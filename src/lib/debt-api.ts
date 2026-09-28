@@ -28,7 +28,7 @@ export function parseDebtBody(body: Record<string, unknown>) {
   }
 
   if (!investorId || !name || !amount || !body.date || !interestRate) {
-    throw new Error("Missing required borrowing fields");
+    throw new Error("Missing required bank loan fields");
   }
 
   return {

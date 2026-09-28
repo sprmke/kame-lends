@@ -25,7 +25,7 @@ export const GET: RequestHandler = async (event) => {
     return json(await getCachedDebts(userId, investorId));
   } catch (error) {
     console.error("Error fetching debts:", error);
-    return json({ error: "Failed to fetch borrowings" }, { status: 500 });
+    return json({ error: "Failed to fetch bank loans" }, { status: 500 });
   }
 };
 
@@ -55,7 +55,7 @@ export const POST: RequestHandler = async (event) => {
   } catch (error) {
     console.error("Error creating debt:", error);
     const message =
-      error instanceof Error ? error.message : "Failed to create borrowing";
+      error instanceof Error ? error.message : "Failed to create bank loan";
     return json({ error: message }, { status: 500 });
   }
 };

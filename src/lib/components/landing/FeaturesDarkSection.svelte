@@ -16,7 +16,7 @@
 		{
 			icon: Zap,
 			title: 'Speed',
-			description: 'Record loans and borrowings in seconds. Spend time growing, not typing.'
+			description: 'Record loans and bank loans in seconds. Spend time growing, not typing.'
 		}
 	];
 </script>

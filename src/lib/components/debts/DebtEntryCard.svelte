@@ -53,7 +53,7 @@
 		<Card.Header>
 			<div class="flex items-center justify-between">
 				<Card.Title>
-					Borrowing Details
+					Bank Loan Details
 					{#if total > 1}
 						<span class="ml-2 text-sm font-normal text-muted-foreground">#{index + 1}</span>
 					{/if}
@@ -74,7 +74,7 @@
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-2">
-				<Label>Borrowing Name *</Label>
+				<Label>Bank Loan Name *</Label>
 				<Input
 					value={entry.name}
 					placeholder="e.g., Personal loan to Juan, Equipment financing"

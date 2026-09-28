@@ -28,7 +28,7 @@
 	let {
 		debts,
 		itemsPerPage: initialItemsPerPage = 10,
-		emptyMessage = 'No borrowings found.',
+		emptyMessage = 'No bank loans found.',
 		onQuickView,
 		onEdit,
 		onDelete
@@ -169,7 +169,7 @@
 			startIndex={(currentPage - 1) * itemsPerPage}
 			endIndex={Math.min(currentPage * itemsPerPage, sortedDebts.length)}
 			totalItems={sortedDebts.length}
-			itemName="borrowings"
+			itemName="bank loans"
 			{itemsPerPage}
 			onItemsPerPageChange={(value) => {
 				itemsPerPage = value;

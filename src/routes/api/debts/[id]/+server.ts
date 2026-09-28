@@ -25,7 +25,7 @@ export const GET: RequestHandler = async (event) => {
 
     const hasAccess = await hasDebtAccess(id, session.user.id);
     if (!hasAccess) {
-      return json({ error: "Borrowing not found" }, { status: 404 });
+      return json({ error: "Bank loan not found" }, { status: 404 });
     }
 
     const debt = await db.query.debts.findFirst({
@@ -40,7 +40,7 @@ export const GET: RequestHandler = async (event) => {
     });
 
     if (!debt) {
-      return json({ error: "Borrowing not found" }, { status: 404 });
+      return json({ error: "Bank loan not found" }, { status: 404 });
     }
 
     if (!debt.interestPeriods?.length) {
@@ -63,7 +63,7 @@ export const GET: RequestHandler = async (event) => {
     return json(debtWithPeriods);
   } catch (error) {
     console.error("Error fetching debt:", error);
-    return json({ error: "Failed to fetch borrowing" }, { status: 500 });
+    return json({ error: "Failed to fetch bank loan" }, { status: 500 });
   }
 };
 
@@ -81,7 +81,7 @@ export const PUT: RequestHandler = async (event) => {
 
     const hasAccess = await hasDebtAccess(id, session.user.id);
     if (!hasAccess) {
-      return json({ error: "Borrowing not found" }, { status: 404 });
+      return json({ error: "Bank loan not found" }, { status: 404 });
     }
 
     const existingDebt = await db.query.debts.findFirst({
@@ -89,7 +89,7 @@ export const PUT: RequestHandler = async (event) => {
     });
 
     if (!existingDebt) {
-      return json({ error: "Borrowing not found" }, { status: 404 });
+      return json({ error: "Bank loan not found" }, { status: 404 });
     }
 
     const debtData = {
@@ -104,7 +104,7 @@ export const PUT: RequestHandler = async (event) => {
       .returning();
 
     if (updatedDebt.length === 0) {
-      return json({ error: "Borrowing not found" }, { status: 404 });
+      return json({ error: "Bank loan not found" }, { status: 404 });
     }
 
     await syncDebtInterestPeriods(id);
@@ -124,7 +124,7 @@ export const PUT: RequestHandler = async (event) => {
     return json(debtWithPeriods);
   } catch (error) {
     console.error("Error updating debt:", error);
-    return json({ error: "Failed to update borrowing" }, { status: 500 });
+    return json({ error: "Failed to update bank loan" }, { status: 500 });
   }
 };
 
@@ -141,7 +141,7 @@ export const DELETE: RequestHandler = async (event) => {
 
     const hasAccess = await hasDebtAccess(id, session.user.id);
     if (!hasAccess) {
-      return json({ error: "Borrowing not found" }, { status: 404 });
+      return json({ error: "Bank loan not found" }, { status: 404 });
     }
 
     const deletedDebt = await db
@@ -150,13 +150,13 @@ export const DELETE: RequestHandler = async (event) => {
       .returning();
 
     if (deletedDebt.length === 0) {
-      return json({ error: "Borrowing not found" }, { status: 404 });
+      return json({ error: "Bank loan not found" }, { status: 404 });
     }
 
     invalidateDebtData();
     return json({ success: true });
   } catch (error) {
     console.error("Error deleting debt:", error);
-    return json({ error: "Failed to delete borrowing" }, { status: 500 });
+    return json({ error: "Failed to delete bank loan" }, { status: 500 });
   }
 };

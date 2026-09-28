@@ -20,7 +20,7 @@
 
 	const formId = 'debt-create-form';
 
-	const submitLabel = $derived(isSubmitting ? 'Creating...' : 'Create Borrowing');
+	const submitLabel = $derived(isSubmitting ? 'Creating...' : 'Create Bank Loan');
 
 	$effect(() => {
 		if (!open) return;
@@ -54,8 +54,8 @@
 >
 	{#snippet header()}
 		<FormHeader
-			title="Create Borrowing"
-			description="Record a borrowing and preview expected interest costs"
+			title="Create Bank Loan"
+			description="Record a bank loan and preview expected interest costs"
 			{formId}
 			onCancel={() => onOpenChange(false)}
 			{isSubmitting}

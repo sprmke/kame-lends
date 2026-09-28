@@ -170,7 +170,7 @@ Investor detail of **own** allocation: full payment/interest visibility for thei
 | Borrowed           | Users with ≥1 borrower membership                 | `/borrowed`                                         |
 | Witnessed          | Users with ≥1 witness membership                  | `/witnessed`                                        |
 | Transactions       | Admin only (existing feature flag)                | `/transactions`                                     |
-| Borrowings (debts) | Admin only                                        | `/debts`                                            |
+| Bank Loans (debts) | Admin only                                        | `/debts`                                            |
 | Investors          | Admin only                                        | `/investors`                                        |
 | Settings           | Admin: full tools. Parties: account/sign-out only | `/settings`                                         |
 

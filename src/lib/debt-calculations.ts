@@ -382,7 +382,7 @@ export function calculateDebtInterestPaid(
   return calculateDebtPaymentsTotal(periods);
 }
 
-/** Interest and fees portion of payments made so far (borrowing cost, not income). */
+/** Interest and fees portion of payments made so far (bank loan cost, not income). */
 export function calculateDebtInterestCostPaid(
   debt: DebtLike & { interestPeriods?: DebtInterestPeriodWithPayments[] },
 ): number {
@@ -463,11 +463,11 @@ export interface InvestorDebtStats {
   completedCount: number;
   /** Total interest + fees you would pay over the full term. */
   totalExpectedInterest: number;
-  /** Principal + interest + fees owed over the full borrowing term. */
+  /** Principal + interest + fees owed over the full bank loan term. */
   totalRepayment: number;
-  /** Interest and fees already paid (borrowing cost). */
+  /** Interest and fees already paid (bank loan cost). */
   interestPaid: number;
-  /** Total amount repaid across fully paid borrowings. */
+  /** Total amount repaid across fully paid bank loans. */
   totalRepaid: number;
 }
 

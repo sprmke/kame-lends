@@ -7,7 +7,7 @@
 	let { data } = $props();
 
 	const debt = $derived(data.entity as DebtWithInvestorAndPeriods);
-	const title = $derived(debt?.name ?? 'Borrowing');
+	const title = $derived(debt?.name ?? 'Bank loan');
 
 	let investors = $state<Investor[]>([]);
 

@@ -21,7 +21,7 @@
 	});
 </script>
 
-<svelte:head><title>Create Borrowing</title></svelte:head>
+<svelte:head><title>Create Bank Loan</title></svelte:head>
 
 <DashboardPage class="max-w-4xl">
 	{#if loading}

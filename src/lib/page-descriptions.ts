@@ -10,7 +10,7 @@ export const PAGE_DESCRIPTIONS = {
   borrowers: "Borrower contacts linked to your loans.",
   witnesses: "Witness contacts for contracts and signing.",
   bankLoans:
-    "Borrowings from your lender contacts, separate from loans you issue.",
+    "Bank loans from your lender contacts, separate from loans you issue.",
   transactions: "Money in and out across your lending activity.",
   transactionDetail: "Details for this transaction.",
   newTransaction: "Record money in or out.",

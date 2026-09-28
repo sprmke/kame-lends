@@ -173,7 +173,7 @@ test("create loan page header keeps actions on the right", async ({ page }) => {
   await expect(page.getByText("Summary", { exact: true })).toBeVisible();
 });
 
-test("investors, borrowings, and settings pages keep legacy titles", async ({
+test("investors, bank loans, and settings pages keep legacy titles", async ({
   page,
 }) => {
   let response = await gotoApp(page, "/investors");
@@ -193,10 +193,12 @@ test("investors, borrowings, and settings pages keep legacy titles", async ({
   response = await gotoApp(page, "/debts");
   expect(response?.status()).toBe(200);
   await expect(
-    page.getByRole("heading", { name: "Borrowings", exact: true }),
+    page.getByRole("heading", { name: "Bank Loans", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Track borrowings and projected interest costs"),
+    page.getByText(
+      "Bank loans from your lender contacts, separate from loans you issue.",
+    ),
   ).toBeVisible();
   await expect(page).toHaveScreenshot("debts.png", {
     fullPage: true,
@@ -229,7 +231,7 @@ test("remaining dashboard routes keep floating sidebar chrome", async ({
     { path: "/borrowers", heading: "Borrowers" },
     { path: "/witnesses", heading: "Witnesses" },
     { path: "/transactions", heading: "Transactions" },
-    { path: "/debts/new", heading: "Create Borrowing" },
+    { path: "/debts/new", heading: "Create Bank Loan" },
     { path: "/investors/new", heading: "Create Investor" },
     { path: "/borrowers/new", heading: "Create Borrower" },
     { path: "/witnesses/new", heading: "Create Witness" },

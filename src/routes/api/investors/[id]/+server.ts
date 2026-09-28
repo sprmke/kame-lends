@@ -148,8 +148,8 @@ export const DELETE: RequestHandler = async (event) => {
       return json(
         {
           error:
-            "Cannot delete investor with existing loans, transactions, or borrowings",
-          details: `This investor has ${investor.loanInvestors.length} loan(s), ${investor.transactions.length} transaction(s), and ${debtCount} borrowing(s)`,
+            "Cannot delete investor with existing loans, transactions, or bank loans",
+          details: `This investor has ${investor.loanInvestors.length} loan(s), ${investor.transactions.length} transaction(s), and ${debtCount} bank loan(s)`,
         },
         { status: 400 },
       );

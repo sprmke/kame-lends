@@ -1,13 +1,13 @@
 # Investor detail (`/investors/[id]`)
 
 **Status:** Documented  
-**Updated:** 2026-09-20
+**Updated:** 2026-09-23
 
 ## Behavior
 
-CRM-style investor profile: contact header, tabs (Overview, Loans, Borrowings), and summary metrics on Overview.
+CRM-style investor profile: contact header, tabs (Overview, Loans, Bank Loans), and summary metrics on Overview.
 
-Borrowing summary cards use all borrowings for this investor.
+Bank loan summary cards use all bank loans for this investor.
 
 ### Summary cards (all-time)
 
@@ -17,28 +17,28 @@ Borrowing summary cards use all borrowings for this investor.
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Total Capital**       | Peak paid allocation capital (loan count subtitle)                                                                                               |
 | **Active**              | Peak on open-loan allocations (open loan count subtitle)                                                                                         |
-| **Active Borrowings**   | Peak concurrent principal on borrowings still being repaid                                                                                       |
-| **Borrowing Cost Paid** | Interest and fees already paid on borrowings                                                                                                     |
+| **Active Bank Loans**   | Peak concurrent principal on bank loans still being repaid                                                                                       |
+| **Bank Loan Cost Paid** | Interest and fees already paid on bank loans                                                                                                     |
 | **Interest Estimate**   | Scheduled interest on all loan allocations (open and completed)                                                                                  |
 | **Interest Earned**     | Scheduled interest on completed loan allocations                                                                                                 |
-| **Net Earnings**        | Total scheduled loan interest minus borrowing cost paid (sub: `Loan interest - Borrowing cost`, or `Loan interest scheduled` when no borrowings) |
+| **Net Earnings**        | Total scheduled loan interest minus bank loan cost paid (sub: `Loan interest - Bank loan cost`, or `Loan interest scheduled` when no bank loans) |
 | **Total Lot**           | Lot sqm from Lot Title loans for this investor                                                                                                   |
 
-Borrowing cards hide when the investor has no borrowings.
+Bank loan cards hide when the investor has no bank loans.
 
-**Activity cards:** Same four panels as the dashboard (`DashboardActivityCards`): Maturing Soon, Past Due, Pending Disbursements, Completed. Empty panels hide unless every panel is empty, in which case all four show their empty states. Visible panels share equal width and fill the row.
+**Activity cards:** Same four panels as the dashboard (`DashboardActivityCards`): Maturing Soon, Past Due, Pending Disbursements, Completed. Empty panels hide unless every panel is empty, in which case all four show their empty states. Visible panels share equal width and fill the row. On phone, each panel paginates four rows at a time (prev/next); desktop keeps the scrollable list.
 
 ### Loans tab
 
 The loans table shows this investor's **capital per loan** in the Principal column (sum of their `loan_investors` rows on that loan), with their average interest rate below. It does not show full loan principal when other investors are on the same loan. Loan filters (Total Principal, Avg. Rate, etc.) use the same investor-scoped totals.
 
-**Toolbar:** Search, then **date range** on the same row. **More Filters** holds status, type, and investor-scoped amount ranges (same panel as `/loans`, without participant multi-selects). Status and Type stack on phone and sit side by side from `sm`. **Date range** uses the same presets as `/loans` (`from`/`to` or `range=all`); it filters by loan **due date** and drives the four summary cards below.
+**Toolbar:** Search, then **date range** on the same row. **More Filters** holds status, type, and investor-scoped amount ranges (same fields as `/loans`, without participant multi-selects). On phone, **More Filters** opens a bottom sheet; on `lg+` the panel is inline. Status and Type stack in the sheet on phone and sit side by side from `sm`. **Date range** uses the same presets as `/loans` (`from`/`to` or `range=all`); it filters by loan **due date** and drives the four summary cards below.
 
 **Summary cards (Loans tab):** Principal, Total, Interest (`earned / estimate`), Completed (same layout as `/loans`). Metrics use this investor's paid allocations (`computeInvestorLoanListSummaryStats`).
 
 **Bulk select:** When groups are enabled and the viewer can manage the workspace, the table shows row checkboxes (desktop always; phone uses the same table). **Summary** opens a modal with investor-scoped totals for the selection. **Add to group** uses the shared group picker (`POST /api/groups/:id/loans`).
 
-`InvestorDetailContent` also embeds on the group People tab (`embedded`, no Borrowings tab) with loans limited to that group. Investor rows stay allocation-scoped; owner/borrower/witness rows use full loan principal for summary cards when `scopeToInvestor` is false.
+`InvestorDetailContent` also embeds on the group People tab (`embedded`, no Bank Loans tab) with loans limited to that group. Investor rows stay allocation-scoped; owner/borrower/witness rows use full loan principal for summary cards when `scopeToInvestor` is false.
 
 ## Load
 
@@ -61,4 +61,4 @@ Admin workspace owners can edit. Linked party users can view the same CRM page r
 | Activity cards  | `src/lib/components/common/DashboardActivityCards.svelte`   |
 | Edit form       | `src/lib/components/party/PartyUserEditForm.svelte`         |
 | Loan capital    | `src/lib/loan-list-summary.ts`                              |
-| Borrowing stats | `src/lib/debt-calculations.ts`                              |
+| Bank loan stats | `src/lib/debt-calculations.ts`                              |

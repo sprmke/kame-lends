@@ -136,7 +136,7 @@ export const PATCH: RequestHandler = async (event) => {
   } catch (error) {
     console.error("Error updating debt interest period:", error);
     return json(
-      { error: "Failed to update borrowing payment period" },
+      { error: "Failed to update bank loan payment period" },
       { status: 500 },
     );
   }

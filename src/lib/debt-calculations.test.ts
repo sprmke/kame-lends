@@ -20,7 +20,7 @@ describe("debt-calculations", () => {
     expect(calculateAmortizedPayment("12000", "0", 12)).toBe(1000);
   });
 
-  it("builds debt summary totals for monthly borrowing", () => {
+  it("builds debt summary totals for monthly bank loan", () => {
     const summary = calculateDebtSummary({
       principal: "100000",
       interestRate: "2",

@@ -49,7 +49,7 @@ describe("ListPageSkeleton", () => {
 describe("DetailPageSkeleton", () => {
   it("renders debt detail placeholders", () => {
     const { body } = render(DetailPageSkeleton, { props: { variant: "debt" } });
-    expect(body).toContain('aria-label="Loading borrowing details"');
+    expect(body).toContain('aria-label="Loading bank loan details"');
   });
 
   it("renders investor detail placeholders", () => {
@@ -64,7 +64,7 @@ describe("DetailPageSkeleton", () => {
 describe("DebtDetailSkeleton", () => {
   it("renders interest overview and schedule placeholders", () => {
     const { body } = render(DebtDetailSkeleton);
-    expect(body).toContain('aria-label="Loading borrowing details"');
+    expect(body).toContain('aria-label="Loading bank loan details"');
     expect(body).toContain("md:grid-cols-3");
   });
 });

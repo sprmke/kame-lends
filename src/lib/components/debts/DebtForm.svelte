@@ -181,7 +181,7 @@
 		for (const entry of entries) {
 			const fieldErrors: Record<string, string> = {};
 			if (!entry.name.trim()) {
-				fieldErrors.name = 'Borrowing name is required';
+				fieldErrors.name = 'Bank loan name is required';
 				valid = false;
 			}
 			if (!entry.amount || Number.parseFloat(entry.amount) <= 0) {
@@ -248,12 +248,12 @@
 
 				if (!response.ok) {
 					const data = await response.json().catch(() => ({}));
-					throw new Error(data.error || 'Failed to update borrowing');
+					throw new Error(data.error || 'Failed to update bank loan');
 				}
 
 				const updated = await response.json();
 				interestPeriods = (updated.interestPeriods ?? []) as DebtInterestPeriodWithPayments[];
-				toast.success('Borrowing updated');
+				toast.success('Bank loan updated');
 			} else {
 				const debtsToCreate: Record<string, unknown>[] = [];
 
@@ -287,11 +287,11 @@
 				const failedResponse = results.find((response) => !response.ok);
 				if (failedResponse) {
 					const data = await failedResponse.json().catch(() => ({}));
-					throw new Error(data.error || 'One or more borrowings failed to create');
+					throw new Error(data.error || 'One or more bank loans failed to create');
 				}
 
 				toast.success(
-					`Successfully created ${debtsToCreate.length} borrowing${debtsToCreate.length !== 1 ? 's' : ''}`
+					`Successfully created ${debtsToCreate.length} bank loan${debtsToCreate.length !== 1 ? 's' : ''}`
 				);
 			}
 
@@ -331,10 +331,10 @@
 	>
 	{#if showFormHeader}
 		<FormHeader
-			title={isEditMode ? 'Edit Borrowing' : 'Create Borrowing'}
+			title={isEditMode ? 'Edit Bank Loan' : 'Create Bank Loan'}
 			description={isEditMode
-				? 'Update borrowing details and preview expected interest costs'
-				: 'Record a borrowing and preview expected interest costs'}
+				? 'Update bank loan details and preview expected interest costs'
+				: 'Record a bank loan and preview expected interest costs'}
 			onCancel={handleCancel}
 			onSubmit={handleFormSubmit}
 			{formId}
@@ -346,7 +346,7 @@
 					: 'Creating...'
 				: isEditMode
 					? 'Save Changes'
-					: `Create Borrowing${entries.length > 1 ? 's' : ''}`}
+					: `Create Bank Loan${entries.length > 1 ? 's' : ''}`}
 			variant={isModalMode ? 'embedded' : 'page'}
 		/>
 	{/if}
@@ -407,7 +407,7 @@
 
 			{#if !isEditMode && selectedInvestorIds.length > 1}
 				<p class="text-xs text-muted-foreground">
-					Each borrowing entry below will be created for all {selectedInvestorIds.length} selected investors.
+					Each bank loan entry below will be created for all {selectedInvestorIds.length} selected investors.
 				</p>
 			{/if}
 		</Card.Content>
@@ -439,7 +439,7 @@
 			onclick={handleAddEntry}
 		>
 			<Plus class="mr-2 h-4 w-4" />
-			Add another borrowing
+			Add another bank loan
 		</Button>
 	{/if}
 
@@ -453,7 +453,7 @@
 				: 'Creating...'
 			: isEditMode
 				? 'Save Changes'
-				: `Create ${totalDebtCount > 1 ? `${totalDebtCount} ` : ''}Borrowing${totalDebtCount !== 1 ? 's' : ''}`}
+				: `Create ${totalDebtCount > 1 ? `${totalDebtCount} ` : ''}Bank Loan${totalDebtCount !== 1 ? 's' : ''}`}
 		layout={isModalMode ? 'stacked' : 'responsive'}
 		class={isModalMode ? 'md:hidden' : 'lg:hidden'}
 	/>

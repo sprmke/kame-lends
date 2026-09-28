@@ -101,19 +101,19 @@ test("investor detail renders", async ({ page, request }) => {
   await expect(page.getByRole("tab", { name: /loans/i })).toBeVisible();
 });
 
-test("borrowings list renders", async ({ page }) => {
+test("bank loans list renders", async ({ page }) => {
   const response = await gotoApp(page, "/debts");
   expect(response?.status()).toBe(200);
   await expect(
-    page.getByRole("heading", { name: "Borrowings", exact: true }),
+    page.getByRole("heading", { name: "Bank Loans", exact: true }),
   ).toBeVisible();
 });
 
-test("borrowing create form renders", async ({ page }) => {
+test("bank loan create form renders", async ({ page }) => {
   const response = await gotoApp(page, "/debts/new");
   expect(response?.status()).toBe(200);
   await expect(
-    page.getByRole("heading", { name: "Create Borrowing" }),
+    page.getByRole("heading", { name: "Create Bank Loan" }),
   ).toBeVisible({
     timeout: 20_000,
   });
@@ -158,10 +158,10 @@ test("borrower detail renders", async ({ page, request }) => {
   });
 });
 
-test("borrowing detail page renders", async ({ page, request }) => {
+test("bank loan detail page renders", async ({ page, request }) => {
   const debts = await fetchJson<Array<{ id: number }>>(request, "/api/debts");
   const debtId = debts?.[0]?.id ?? null;
-  test.skip(!debtId, "No borrowings in database");
+  test.skip(!debtId, "No bank loans in database");
 
   const response = await gotoApp(page, `/debts/${debtId}`);
   expect(response?.status()).toBe(200);

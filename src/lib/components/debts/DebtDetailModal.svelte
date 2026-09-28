@@ -38,7 +38,7 @@
 		isLoading = true;
 		fetch(`/api/debts/${initialDebt.id}`)
 			.then((response) => {
-				if (!response.ok) throw new Error('Failed to fetch borrowing');
+				if (!response.ok) throw new Error('Failed to fetch bank loan');
 				return response.json();
 			})
 			.then((data) => {
@@ -46,7 +46,7 @@
 			})
 			.catch((error) => {
 				console.error(error);
-				toast.error('Failed to load borrowing details');
+				toast.error('Failed to load bank loan details');
 			})
 			.finally(() => {
 				if (active) isLoading = false;
@@ -69,13 +69,13 @@
 		try {
 			const response = await fetch(`/api/debts/${debt.id}`, { method: 'DELETE' });
 			if (!response.ok) throw new Error('Failed to delete');
-			toast.success('Borrowing deleted');
+			toast.success('Bank loan deleted');
 			showDeleteDialog = false;
 			onOpenChange(false);
 			await onUpdate?.();
 		} catch (error) {
 			console.error(error);
-			toast.error('Failed to delete borrowing');
+			toast.error('Failed to delete bank loan');
 		} finally {
 			isDeleting = false;
 		}
@@ -187,7 +187,7 @@
 	<AlertDialog.Root open={showDeleteDialog} onOpenChange={(v) => (showDeleteDialog = v)}>
 		<AlertDialog.Content>
 			<AlertDialog.Header>
-				<AlertDialog.Title>Delete borrowing?</AlertDialog.Title>
+				<AlertDialog.Title>Delete bank loan?</AlertDialog.Title>
 				<AlertDialog.Description>
 					This will permanently delete "{formatText(debt.name)}". This action cannot be undone.
 				</AlertDialog.Description>

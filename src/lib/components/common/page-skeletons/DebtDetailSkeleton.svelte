@@ -13,7 +13,7 @@
 	let { metricCount = 5, showTopMetrics = true, scheduleRows = 3 }: Props = $props();
 </script>
 
-<div aria-busy="true" aria-label="Loading borrowing details" class="space-y-4" role="status">
+<div aria-busy="true" aria-label="Loading bank loan details" class="space-y-4" role="status">
 	{#if showTopMetrics}
 		<SkeletonMetricGrid count={metricCount} />
 	{/if}

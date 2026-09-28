@@ -44,7 +44,7 @@
 	async function refreshDebt() {
 		try {
 			const response = await fetch(`/api/debts/${debt.id}`);
-			if (!response.ok) throw new Error('Failed to fetch borrowing');
+			if (!response.ok) throw new Error('Failed to fetch bank loan');
 			debt = (await response.json()) as DebtWithInvestorAndPeriods;
 		} catch (error) {
 			console.error('Error refreshing debt:', error);
@@ -54,7 +54,7 @@
 	async function handleDelete() {
 		const response = await fetch(`/api/debts/${debt.id}`, { method: 'DELETE' });
 		if (!response.ok) throw new Error('Failed to delete');
-		toast.success('Borrowing deleted');
+		toast.success('Bank loan deleted');
 		await goto('/debts');
 	}
 </script>
@@ -84,20 +84,20 @@
 		<DetailHeader
 			title={debt.name}
 			description={`Investor: ${formatText(debt.investor.name)}`}
-			backLabel="Back to Borrowings"
+			backLabel="Back to Bank Loans"
 			onBack={() => goto('/debts')}
 			onEdit={canManage ? () => (isEditing = true) : undefined}
 			onDelete={handleDelete}
 			canEdit={canManage}
 			canDelete={canManage}
-			deleteTitle="Delete borrowing?"
+			deleteTitle="Delete bank loan?"
 			deleteDescription={`This will permanently delete "${debt.name}".`}
 			showPriceToggle={false}
 		/>
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Borrowing Summary</Card.Title>
+				<Card.Title>Bank Loan Summary</Card.Title>
 			</Card.Header>
 			<Card.Content>
 				<div
