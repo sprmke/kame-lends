@@ -55,6 +55,8 @@ export async function getMigrationStatus(): Promise<MigrationStatus> {
       ["push_subscriptions", "endpoint"],
       ["loan_user_commissions", "loan_id"],
       ["rate_limit_buckets", "key"],
+      ["group_telegram_settings", "notify_unsigned"],
+      ["loan_group_default_witnesses", "witness_id"],
     ];
     for (const [table, column] of requiredColumns) {
       if (!(await columnExists(table, column))) {

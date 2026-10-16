@@ -464,6 +464,31 @@ export const loanGroupRules = pgTable(
   }),
 );
 
+/** Default contract witnesses for loans in this group. A contract holds two. */
+export const loanGroupDefaultWitnesses = pgTable(
+  "loan_group_default_witnesses",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .references(() => loanGroups.id, { onDelete: "cascade" })
+      .notNull(),
+    witnessId: integer("witness_id")
+      .references(() => witnesses.id, { onDelete: "cascade" })
+      .notNull(),
+    autoSign: boolean("auto_sign").notNull().default(false),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    groupIdIdx: index("loan_group_default_witnesses_group_idx").on(
+      table.groupId,
+    ),
+    groupWitnessUnique: unique(
+      "loan_group_default_witnesses_group_witness_unique",
+    ).on(table.groupId, table.witnessId),
+  }),
+);
+
 export const groupCalendars = pgTable("group_calendars", {
   groupId: integer("group_id")
     .primaryKey()
@@ -501,6 +526,19 @@ export const groupTelegramSettings = pgTable(
     notifyDailyDigest: boolean("notify_daily_digest").notNull().default(false),
     notifyActivity: boolean("notify_activity").notNull().default(true),
     includeAmounts: boolean("include_amounts").notNull().default(true),
+    notifyUnsigned: boolean("notify_unsigned").notNull().default(true),
+    signingReminderIntervalHours: integer("signing_reminder_interval_hours")
+      .notNull()
+      .default(1),
+    requireBorrowerSignature: boolean("require_borrower_signature")
+      .notNull()
+      .default(true),
+    requireInvestorSignature: boolean("require_investor_signature")
+      .notNull()
+      .default(true),
+    requireWitnessSignature: boolean("require_witness_signature")
+      .notNull()
+      .default(false),
     botToken: text("bot_token"),
     templates: jsonb("templates")
       .$type<Record<string, string>>()
@@ -1090,6 +1128,7 @@ export const loanGroupsRelations = relations(loanGroups, ({ one, many }) => ({
   groupLoans: many(loanGroupLoans),
   members: many(loanGroupMembers),
   rules: many(loanGroupRules),
+  defaultWitnesses: many(loanGroupDefaultWitnesses),
   calendar: one(groupCalendars, {
     fields: [loanGroups.id],
     references: [groupCalendars.groupId],
@@ -1125,6 +1164,20 @@ export const loanGroupMembersRelations = relations(
     user: one(users, {
       fields: [loanGroupMembers.userId],
       references: [users.id],
+    }),
+  }),
+);
+
+export const loanGroupDefaultWitnessesRelations = relations(
+  loanGroupDefaultWitnesses,
+  ({ one }) => ({
+    group: one(loanGroups, {
+      fields: [loanGroupDefaultWitnesses.groupId],
+      references: [loanGroups.id],
+    }),
+    witness: one(witnesses, {
+      fields: [loanGroupDefaultWitnesses.witnessId],
+      references: [witnesses.id],
     }),
   }),
 );
@@ -1263,3 +1316,55 @@ export const rateLimitBuckets = pgTable("rate_limit_buckets", {
   count: integer("count").notNull(),
   windowStart: timestamp("window_start", { mode: "date" }).notNull(),
 });
+
+/** Append-only AI call log (one row per model call or cache hit). No prompt or response bodies. */
+export const aiUsageEvents = pgTable(
+  "ai_usage_events",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    feature: text("feature").notNull(),
+    provider: text("provider"),
+    model: text("model"),
+    promptId: text("prompt_id"),
+    promptVersion: text("prompt_version"),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    estCostUsd: decimal("est_cost_usd", { precision: 10, scale: 6 })
+      .notNull()
+      .default("0"),
+    latencyMs: integer("latency_ms"),
+    status: text("status").notNull(),
+    errorCode: text("error_code"),
+    fallbackUsed: boolean("fallback_used").notNull().default(false),
+    cacheHit: boolean("cache_hit").notNull().default(false),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userCreatedIdx: index("ai_usage_events_user_created_idx").on(
+      table.userId,
+      table.createdAt,
+    ),
+    createdIdx: index("ai_usage_events_created_idx").on(table.createdAt),
+  }),
+);
+
+/** Per-user structured AI results keyed by sha256(prompt@version + model + input). */
+export const aiResponseCache = pgTable(
+  "ai_response_cache",
+  {
+    cacheKey: text("cache_key").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    feature: text("feature").notNull(),
+    result: jsonb("result").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+  },
+  (table) => ({
+    expiresIdx: index("ai_response_cache_expires_idx").on(table.expiresAt),
+  }),
+);
