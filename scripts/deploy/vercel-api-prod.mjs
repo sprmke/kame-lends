@@ -17,14 +17,19 @@ const orgId = process.env.VERCEL_ORG_ID;
 const projectId = process.env.VERCEL_PROJECT_ID;
 
 if (!token || !orgId || !projectId) {
-  console.error("VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID are required.");
+  console.error(
+    "VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID are required.",
+  );
   process.exit(1);
 }
 
 const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
   encoding: "utf8",
 }).trim();
-const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+const sha = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: root,
+  encoding: "utf8",
+}).trim();
 const message = execFileSync("git", ["log", "-1", "--format=%s"], {
   cwd: root,
   encoding: "utf8",
@@ -58,20 +63,27 @@ async function vercel(pathname, { method = "GET", body, headers } = {}) {
     const error = payload?.error;
     const detail =
       (error && `${error.code || ""} ${error.message || ""}`.trim()) ||
-      (typeof payload === "string" ? payload.slice(0, 400) : JSON.stringify(payload));
-    throw new Error(`${method} ${pathname} failed (${response.status}): ${detail}`);
+      (typeof payload === "string"
+        ? payload.slice(0, 400)
+        : JSON.stringify(payload));
+    throw new Error(
+      `${method} ${pathname} failed (${response.status}): ${detail}`,
+    );
   }
   return payload;
 }
 
 async function mapPool(items, limit, worker) {
   const queue = items.slice();
-  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (queue.length) {
-      const item = queue.shift();
-      await worker(item);
-    }
-  });
+  const runners = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (queue.length) {
+        const item = queue.shift();
+        await worker(item);
+      }
+    },
+  );
   await Promise.all(runners);
 }
 
