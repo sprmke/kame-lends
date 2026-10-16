@@ -39,8 +39,6 @@
 			if (next !== isOpen) onToggle();
 		}}
 	>
-		{#snippet children()}
-			{@render children()}
-		{/snippet}
+		{@render children()}
 	</MoreFiltersSurface>
 </div>

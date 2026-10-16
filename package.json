@@ -2,6 +2,11 @@
   "name": "kame-lends",
   "private": true,
   "version": "0.2.0",
+  "overrides": {
+    "brace-expansion": "5.0.12",
+    "devalue": "5.9.4",
+    "source-map-js": "1.2.2"
+  },
   "type": "module",
   "scripts": {
     "dev": "bash scripts/dev/free-local-ports.sh && vite dev --strictPort",

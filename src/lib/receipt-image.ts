@@ -62,6 +62,7 @@ async function compressReceiptImage(file: File): Promise<string> {
     if (isHeicFile(file)) {
       throw new Error(
         "This browser can't open HEIC photos. Use a screenshot or export it as JPEG.",
+        { cause: error },
       );
     }
     throw error;

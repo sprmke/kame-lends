@@ -39,7 +39,6 @@
 	{#snippet header()}
 		<Card.Title class="mb-2 truncate text-sm sm:text-base">{formatText(borrower.name)}</Card.Title>
 	{/snippet}
-	{#snippet children()}
 		<div class="grid grid-cols-2 gap-1.5">
 			<div class="dashboard-metric-cell p-2">
 				<p class="mb-1 text-[10px] text-muted-foreground">Email</p>
@@ -58,5 +57,4 @@
 				<p class="text-xs font-semibold tabular-nums">{loanCount}</p>
 			</div>
 		</div>
-	{/snippet}
 </GridListCardShell>

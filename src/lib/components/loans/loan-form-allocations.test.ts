@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildAllocationsFromExistingLoan } from "$lib/components/loans/loan-form-allocations";
-import type { LoanWithInvestors } from "$lib/types";
+import type { InterestPeriod, LoanWithInvestors } from "$lib/types";
 
 function minimalLoan(
   overrides: Partial<LoanWithInvestors> = {},
@@ -59,7 +59,7 @@ describe("buildAllocationsFromExistingLoan", () => {
           investor: {
             id: 1,
             name: "Investor",
-            email: null,
+            email: "investor@example.com",
             contactNumber: null,
             address: null,
             validIdUrl: null,
@@ -78,7 +78,7 @@ describe("buildAllocationsFromExistingLoan", () => {
               interestRate: "10",
               interestType: "rate",
             },
-          ],
+          ] as InterestPeriod[],
           receivedPayments: [],
         },
       ],
@@ -110,7 +110,7 @@ describe("buildAllocationsFromExistingLoan", () => {
           investor: {
             id: 1,
             name: "Investor",
-            email: null,
+            email: "investor@example.com",
             contactNumber: null,
             address: null,
             validIdUrl: null,
@@ -151,7 +151,7 @@ describe("buildAllocationsFromExistingLoan", () => {
           investor: {
             id: 1,
             name: "Investor",
-            email: null,
+            email: "investor@example.com",
             contactNumber: null,
             address: null,
             validIdUrl: null,

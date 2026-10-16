@@ -50,7 +50,8 @@ jobs:
       - name: Precache budget
         run: node scripts/pwa/check-precache-budget.mjs
       - name: Dependency audit
-        run: bun audit --audit-level=high
+        # braces@3.0.3 via lint-staged has no patched release (GHSA-vfj7-8cjw-p6xm).
+        run: bun audit --audit-level=high --ignore GHSA-vfj7-8cjw-p6xm
 
   migrate:
     name: Migrate

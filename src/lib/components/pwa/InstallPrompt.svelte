@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { getContext } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import {
@@ -23,14 +24,11 @@
 
 	let dismissed = $state(false);
 	let iosHelpOpen = $state(false);
-	let clientReady = $state(false);
 	const ios = $derived(isIosSafari());
 
-	$effect(() => {
-		clientReady = true;
-	});
-
-	const visible = $derived(clientReady && !dismissed && shouldShowInstallPrompt(installAvailable));
+	const visible = $derived(
+		browser && !dismissed && shouldShowInstallPrompt(installAvailable)
+	);
 
 	function close() {
 		dismissInstallPrompt();

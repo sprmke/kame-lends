@@ -18,14 +18,17 @@ push / merge → main
 
 ### Quality gate (CI and CD)
 
-| Step            | Command                                       |
-| --------------- | --------------------------------------------- |
-| Typecheck       | `bun run check` (`svelte-check` + TypeScript) |
-| Format          | `bun run format:check` (Prettier)             |
-| Lint            | `bun run lint:js` (ESLint)                    |
-| Unit tests      | `bun run test:unit` (Vitest)                  |
-| AI tooling sync | `bun run check:ai-tooling-sync`               |
-| Build           | `bun run build`                               |
+| Step             | Command                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| Typecheck        | `bun run check` (`svelte-check` + TypeScript)                                                           |
+| Format           | `bun run format:check` (Prettier)                                                                       |
+| Lint             | `bun run lint:js` (ESLint)                                                                              |
+| Unit tests       | `bun run test:unit` (Vitest)                                                                            |
+| AI tooling sync  | `bun run check:ai-tooling-sync`                                                                         |
+| AI gateway guard | `bun run check:ai-gateway`                                                                              |
+| Build            | `bun run build`                                                                                         |
+| Precache budget  | `node scripts/pwa/check-precache-budget.mjs`                                                            |
+| Dependency audit | `bun audit --audit-level=high` (ignores `GHSA-vfj7-8cjw-p6xm` until braces publishes a patched release) |
 
 Locally: `bun run ci:quality`.
 

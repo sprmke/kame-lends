@@ -55,8 +55,9 @@
 	}
 
 	$effect(() => {
+		// Read the template so the textarea resizes when the text changes.
+		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 		value;
-		tab;
 		if (tab !== 'edit') return;
 		syncTextareaHeight();
 	});
@@ -233,6 +234,7 @@
 							{#if part.kind === 'token'}
 								<mark class="rounded-sm bg-primary/15 font-mono text-primary">{part.text}</mark>
 							{:else}
+								<!-- eslint-disable-next-line svelte/no-at-html-tags -- preview escapes text, then restores only b and i -->
 								{@html formatTelegramPreviewText(part.text)}
 							{/if}
 						{/each}

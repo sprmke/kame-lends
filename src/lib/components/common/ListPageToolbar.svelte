@@ -123,9 +123,7 @@
 			if (next !== showMoreFilters) onToggleMoreFilters();
 		}}
 	>
-		{#snippet children()}
-			{@render moreFilters()}
-		{/snippet}
+		{@render moreFilters()}
 	</MoreFiltersSurface>
 {/if}
 </div>

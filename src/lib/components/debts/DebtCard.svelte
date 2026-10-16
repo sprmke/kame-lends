@@ -61,7 +61,6 @@
 			<Badge variant="secondary" class="shrink-0 text-[10px]">{debt.interestInterval}</Badge>
 		</div>
 	{/snippet}
-	{#snippet children()}
 		<div class="grid grid-cols-2 gap-1.5">
 			<div class="dashboard-metric-cell p-2">
 				<p class="mb-1 text-[10px] text-muted-foreground">Start Date</p>
@@ -81,5 +80,4 @@
 			</div>
 		</div>
 		<p class="truncate text-xs text-muted-foreground">{formatText(debt.investor.name)}</p>
-	{/snippet}
 </GridListCardShell>

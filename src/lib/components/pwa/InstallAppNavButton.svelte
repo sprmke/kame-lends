@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { getContext } from 'svelte';
 	import { cn } from '$lib/utils';
 	import { APP_NAME } from '$lib/brand';
@@ -24,13 +25,8 @@
 	const ios = $derived(isIosBrowser());
 
 	let iosHelpOpen = $state(false);
-	let clientReady = $state(false);
 
-	$effect(() => {
-		clientReady = true;
-	});
-
-	const offerInstall = $derived(clientReady && installUiAvailable(pwaCtx));
+	const offerInstall = $derived(browser && installUiAvailable(pwaCtx));
 
 	const hint = $derived(
 		ios ? 'Share, then Add to Home Screen' : 'Opens from your home screen'

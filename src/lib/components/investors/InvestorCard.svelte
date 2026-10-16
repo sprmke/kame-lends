@@ -41,7 +41,6 @@
 	{#snippet header()}
 		<Card.Title class="mb-2 truncate text-sm sm:text-base">{formatText(investor.name)}</Card.Title>
 	{/snippet}
-	{#snippet children()}
 		<p class="truncate text-xs text-muted-foreground">{formatText(investor.email)}</p>
 		<div class="grid grid-cols-2 gap-1.5">
 			<div class="dashboard-metric-cell p-2">
@@ -55,5 +54,4 @@
 				<p class="text-xs font-semibold tabular-nums">{formatPercentage(avgRate)}</p>
 			</div>
 		</div>
-	{/snippet}
 </GridListCardShell>

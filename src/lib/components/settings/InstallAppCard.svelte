@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { getContext } from 'svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
@@ -13,14 +14,9 @@
 	const pwaCtx = getContext<PwaContextValue | undefined>(PWA_CONTEXT_KEY);
 	const ios = $derived(isIosBrowser());
 
-	let clientReady = $state(false);
 	let iosHelpOpen = $state(false);
 
-	$effect(() => {
-		clientReady = true;
-	});
-
-	const offerInstall = $derived(clientReady && installUiAvailable(pwaCtx));
+	const offerInstall = $derived(browser && installUiAvailable(pwaCtx));
 
 	async function install() {
 		const result = await runInstallAction(pwaCtx);

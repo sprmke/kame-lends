@@ -48,7 +48,6 @@
 			</div>
 		</div>
 	{/snippet}
-	{#snippet children()}
 		<div class="grid grid-cols-3 gap-2">
 			<div class="rounded-lg bg-muted/50 p-2">
 				<p class="mb-1 text-[10px] text-muted-foreground">Date</p>
@@ -71,5 +70,4 @@
 				<p class="truncate text-xs font-medium">{formatText(transaction.investor.name)}</p>
 			</div>
 		</div>
-	{/snippet}
 </GridListCardShell>

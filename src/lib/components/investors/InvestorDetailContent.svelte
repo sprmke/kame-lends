@@ -709,7 +709,6 @@
 				open={showMoreDebtFilters}
 				onOpenChange={(next) => (showMoreDebtFilters = next)}
 			>
-				{#snippet children()}
 					<RangeFilter
 						label="Principal Amount"
 						minValue={minDebtAmount}
@@ -719,7 +718,6 @@
 						minPlaceholder="Min (₱)"
 						maxPlaceholder="Max (₱)"
 					/>
-				{/snippet}
 			</MoreFiltersSurface>
 
 			{#if debtsViewMode.viewMode === 'table'}
