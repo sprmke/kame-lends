@@ -43,6 +43,8 @@ jobs:
         run: bun run test:unit
       - name: AI tooling sync
         run: bun run check:ai-tooling-sync
+      - name: AI gateway guard
+        run: bun run check:ai-gateway
       - name: Build
         run: bun run build
       - name: Precache budget

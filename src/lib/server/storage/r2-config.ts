@@ -1,4 +1,4 @@
-import { env } from "$env/dynamic/private";
+import { readEnv } from "$lib/server/read-env";
 
 export type R2Config = {
   accountId: string;
@@ -7,14 +7,6 @@ export type R2Config = {
   bucket: string;
   endpoint: string;
 };
-
-function readEnv(name: string): string | undefined {
-  const fromKit = env[name as keyof typeof env];
-  const value =
-    (typeof fromKit === "string" ? fromKit : undefined) ?? process.env[name];
-  const trimmed = value?.trim();
-  return trimmed || undefined;
-}
 
 export function readR2Config(): R2Config | null {
   const accountId = readEnv("R2_ACCOUNT_ID");
