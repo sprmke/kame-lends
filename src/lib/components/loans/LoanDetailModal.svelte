@@ -68,6 +68,8 @@
 	let LoanDetailContentComponent = $state<typeof LoanDetailContent | null>(null);
 	let loadingDetailContentModule = $state(false);
 	let groupPickerOpen = $state(false);
+	/** Plain counter — must not be $state or the fetch $effect loops on increment. */
+	let loanDetailFetchGeneration = 0;
 	const editOverlayContent = createOverlayContentReady();
 	const viewOverlayContent = createOverlayContentReady();
 
@@ -97,8 +99,10 @@
 		}
 		const loanId = initialLoan.id;
 		const includeContract = Boolean(startInEditMode && !initialLoan.loanContract);
-		isLoadingLoan = false;
-		void fetchLoanData(loanId, includeContract);
+		loanDetailFetchGeneration += 1;
+		const generation = loanDetailFetchGeneration;
+		isLoadingLoan = true;
+		void fetchLoanData(loanId, includeContract, generation);
 	});
 
 	$effect(() => {
@@ -134,10 +138,17 @@
 	const editFormId = $derived(loan ? `loan-edit-form-${loan.id}` : undefined);
 	const editSubmitLabel = $derived(isSubmitting ? 'Updating...' : 'Update Loan');
 
-	async function fetchLoanData(loanId: number, includeContract = false) {
+	async function fetchLoanData(
+		loanId: number,
+		includeContract = false,
+		fetchGeneration?: number
+	) {
 		try {
 			const payload = await fetchLoanDetailClient(loanId, { includeContract });
 			if (!payload) throw new Error('Failed to fetch loan');
+			if (fetchGeneration != null && fetchGeneration !== loanDetailFetchGeneration) {
+				return null;
+			}
 			const { paymentMethods: nextMethods, access: nextAccess, ...rest } = payload;
 			loan = rest;
 			paymentMethods = Array.isArray(nextMethods) ? nextMethods : [];
@@ -147,7 +158,9 @@
 			console.error('Error fetching loan:', error);
 			return null;
 		} finally {
-			isLoadingLoan = false;
+			if (fetchGeneration == null || fetchGeneration === loanDetailFetchGeneration) {
+				isLoadingLoan = false;
+			}
 		}
 	}
 
@@ -181,7 +194,10 @@
 	function enterEditMode() {
 		isEditing = true;
 		if (loan?.id && !loan.loanContract) {
-			void fetchLoanData(loan.id, true);
+			loanDetailFetchGeneration += 1;
+			const generation = loanDetailFetchGeneration;
+			isLoadingLoan = true;
+			void fetchLoanData(loan.id, true, generation);
 		}
 	}
 
@@ -213,7 +229,11 @@
 	});
 
 	const showEditFormSkeleton = $derived(
-		loadingFormData || !editOverlayContent.ready || loadingLoanFormModule || !LoanFormComponent
+		isLoadingLoan ||
+			loadingFormData ||
+			!editOverlayContent.ready ||
+			loadingLoanFormModule ||
+			!LoanFormComponent
 	);
 
 	function handlePayBalance() {
