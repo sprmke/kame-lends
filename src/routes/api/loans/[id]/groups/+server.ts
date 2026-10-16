@@ -107,6 +107,13 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     await recomputeGroupsForLoans([loanId]);
+    try {
+      const { applyGroupDefaultWitnessesToLoan } =
+        await import("$lib/server/groups/apply-default-witnesses");
+      await applyGroupDefaultWitnessesToLoan(loanId);
+    } catch (witnessErr) {
+      console.error("[groups] default witnesses failed", witnessErr);
+    }
     invalidateGroupData();
     invalidateLoanData();
     scheduleDrain(event);

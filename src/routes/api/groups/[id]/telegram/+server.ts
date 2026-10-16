@@ -27,6 +27,11 @@ const defaultDisconnectedSettings = {
   notifyDailyDigest: false,
   notifyActivity: true,
   includeAmounts: true,
+  notifyUnsigned: true,
+  signingReminderIntervalHours: 1,
+  requireBorrowerSignature: true,
+  requireInvestorSignature: true,
+  requireWitnessSignature: false,
   botTokenConfigured: false,
 };
 
@@ -85,6 +90,28 @@ export const PUT: RequestHandler = async (event) => {
     const parsed = parseJsonBody(updateTelegramBodySchema, body);
     if ("error" in parsed) {
       return json({ error: parsed.error }, { status: 400 });
+    }
+
+    const touchesSigners =
+      parsed.data.requireBorrowerSignature !== undefined ||
+      parsed.data.requireInvestorSignature !== undefined ||
+      parsed.data.requireWitnessSignature !== undefined;
+    if (touchesSigners) {
+      const borrower =
+        parsed.data.requireBorrowerSignature ??
+        existing?.requireBorrowerSignature ??
+        true;
+      const investor =
+        parsed.data.requireInvestorSignature ??
+        existing?.requireInvestorSignature ??
+        true;
+      const witness =
+        parsed.data.requireWitnessSignature ??
+        existing?.requireWitnessSignature ??
+        false;
+      if (!borrower && !investor && !witness) {
+        return json({ error: "Pick at least one" }, { status: 400 });
+      }
     }
 
     const { templates: templatePatch, ...rest } = parsed.data;

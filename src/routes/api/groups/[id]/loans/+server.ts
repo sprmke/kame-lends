@@ -64,6 +64,16 @@ export const POST: RequestHandler = async (event) => {
 
     await recomputeGroupMembers(groupId);
 
+    try {
+      const { applyGroupDefaultWitnessesToLoan } =
+        await import("$lib/server/groups/apply-default-witnesses");
+      for (const loanId of loanIds) {
+        await applyGroupDefaultWitnessesToLoan(loanId);
+      }
+    } catch (witnessErr) {
+      console.error("[groups] default witnesses failed", witnessErr);
+    }
+
     for (const loanId of loanIds) {
       await enqueueJob({
         kind: "group.calendar.syncLoan",

@@ -5,6 +5,8 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { toast } from '$lib/toast';
+	import { Badge } from '$lib/components/ui/badge';
+	import { cn } from '$lib/utils';
 	import { MessageCircle } from 'lucide-svelte';
 	import TelegramTemplateEditor from '$lib/components/groups/TelegramTemplateEditor.svelte';
 	import {
@@ -27,6 +29,11 @@
 		notifyDailyDigest?: boolean;
 		notifyActivity?: boolean;
 		includeAmounts?: boolean;
+		notifyUnsigned?: boolean;
+		signingReminderIntervalHours?: number;
+		requireBorrowerSignature?: boolean;
+		requireInvestorSignature?: boolean;
+		requireWitnessSignature?: boolean;
 		chatTitle?: string | null;
 		lastSentAt?: string | Date | null;
 		lastError?: string | null;
@@ -69,6 +76,28 @@
 
 	const status = $derived(settings.status ?? 'disconnected');
 	const connected = $derived(status === 'connected');
+	const telegramEnabled = $derived(settings.enabled !== false);
+	const notificationsLocked = $derived(busy || !telegramEnabled);
+	const reminderLeadOptions = [
+		{ days: 7, label: '7 days' },
+		{ days: 3, label: '3 days' },
+		{ days: 1, label: '1 day' }
+	] as const;
+	const signingIntervalOptions = [
+		{ hours: 1, label: '1 hour' },
+		{ hours: 2, label: '2 hours' },
+		{ hours: 4, label: '4 hours' },
+		{ hours: 6, label: '6 hours' },
+		{ hours: 12, label: '12 hours' },
+		{ hours: 24, label: 'Daily' }
+	] as const;
+	const signingRoleOptions = [
+		{ key: 'requireBorrowerSignature', label: 'Borrower' },
+		{ key: 'requireInvestorSignature', label: 'Investor' },
+		{ key: 'requireWitnessSignature', label: 'Witness' }
+	] as const;
+	const settingRowClass =
+		'flex min-h-11 w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left text-sm';
 
 	async function refreshSettings() {
 		const res = await fetch(`/api/groups/${groupId}/telegram`);
@@ -219,6 +248,37 @@
 		}
 	}
 
+	function signingRoleOn(
+		key: (typeof signingRoleOptions)[number]['key']
+	): boolean {
+		if (key === 'requireWitnessSignature') {
+			return settings.requireWitnessSignature === true;
+		}
+		return settings[key] !== false;
+	}
+
+	function toggleSigningRole(
+		key: (typeof signingRoleOptions)[number]['key'],
+		on: boolean
+	) {
+		const next = {
+			requireBorrowerSignature: signingRoleOn('requireBorrowerSignature'),
+			requireInvestorSignature: signingRoleOn('requireInvestorSignature'),
+			requireWitnessSignature: signingRoleOn('requireWitnessSignature'),
+			[key]: on
+		};
+		if (
+			!next.requireBorrowerSignature &&
+			!next.requireInvestorSignature &&
+			!next.requireWitnessSignature
+		) {
+			toast.error('Pick at least one');
+			return;
+		}
+		settings = { ...settings, [key]: on };
+		void savePatch({ [key]: on });
+	}
+
 	function toggleReminderDay(day: number, on: boolean) {
 		const current = [...(settings.reminderDays ?? [3, 1])];
 		const next = on
@@ -288,103 +348,219 @@
 				</div>
 			{/if}
 		{:else}
-			<p class="text-sm">
-				Connected to
-				<span class="font-medium">{settings.chatTitle?.trim() || 'Telegram group'}</span>
-			</p>
+			<div
+				class="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-3"
+			>
+				<div class="min-w-0 flex-1">
+					<p class="text-xs font-medium text-muted-foreground">Connected</p>
+					<p class="truncate text-sm font-medium">
+						{settings.chatTitle?.trim() || 'Telegram group'}
+					</p>
+				</div>
+				<Badge
+					variant="secondary"
+					class="shrink-0 border-0 bg-emerald-500/15 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200"
+				>
+					Live
+				</Badge>
+			</div>
 
-			<label class="flex min-h-11 items-center gap-3">
+			<label
+				class="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-xl border border-border/60 bg-card px-3 py-2.5"
+			>
+				<span class="text-sm font-medium">Notifications</span>
 				<Checkbox
-					checked={settings.enabled !== false}
+					checked={telegramEnabled}
 					disabled={busy}
 					onCheckedChange={(checked) => {
 						settings = { ...settings, enabled: Boolean(checked) };
 						void savePatch({ enabled: Boolean(checked) });
 					}}
 				/>
-				<span class="text-sm">Enabled</span>
 			</label>
 
-			<div class="space-y-2">
-				<p class="text-sm font-medium">Reminders</p>
-				<label class="flex min-h-11 items-center gap-3">
-					<Checkbox
-						checked={settings.notifyUpcoming !== false}
-						disabled={busy}
-						onCheckedChange={(checked) => {
-							settings = { ...settings, notifyUpcoming: Boolean(checked) };
-							void savePatch({ notifyUpcoming: Boolean(checked) });
-						}}
-					/>
-					<span class="text-sm">Upcoming</span>
-				</label>
-				<div class="flex flex-wrap gap-2 pl-8">
-					{#each [7, 3, 1] as day (day)}
-						<label class="flex items-center gap-2 text-sm">
+			<div
+				class={cn(
+					'space-y-4 transition-opacity',
+					!telegramEnabled && 'pointer-events-none opacity-45'
+				)}
+			>
+				<section class="space-y-2" aria-labelledby="tg-notify-reminders">
+					<h3 id="tg-notify-reminders" class="text-sm font-medium">Reminders</h3>
+					<div
+						class="overflow-hidden rounded-xl border border-border/60 bg-card divide-y divide-border/60"
+					>
+						<label class={settingRowClass}>
 							<Checkbox
-								checked={(settings.reminderDays ?? [3, 1]).includes(day)}
-								disabled={busy || settings.notifyUpcoming === false}
-								onCheckedChange={(checked) => toggleReminderDay(day, Boolean(checked))}
+								checked={settings.notifyUpcoming !== false}
+								disabled={notificationsLocked}
+								onCheckedChange={(checked) => {
+									settings = { ...settings, notifyUpcoming: Boolean(checked) };
+									void savePatch({ notifyUpcoming: Boolean(checked) });
+								}}
 							/>
-							D-{day}
+							<span class="flex-1 font-medium">Upcoming due dates</span>
 						</label>
-					{/each}
-				</div>
-				<label class="flex min-h-11 items-center gap-3">
-					<Checkbox
-						checked={settings.notifyDueToday !== false}
-						disabled={busy}
-						onCheckedChange={(checked) => {
-							settings = { ...settings, notifyDueToday: Boolean(checked) };
-							void savePatch({ notifyDueToday: Boolean(checked) });
-						}}
-					/>
-					<span class="text-sm">Due today</span>
-				</label>
-				<label class="flex min-h-11 items-center gap-3">
-					<Checkbox
-						checked={settings.notifyOverdue !== false}
-						disabled={busy}
-						onCheckedChange={(checked) => {
-							settings = { ...settings, notifyOverdue: Boolean(checked) };
-							void savePatch({ notifyOverdue: Boolean(checked) });
-						}}
-					/>
-					<span class="text-sm">Overdue</span>
-				</label>
-				<label class="flex min-h-11 items-center gap-3">
-					<Checkbox
-						checked={Boolean(settings.notifyDailyDigest)}
-						disabled={busy}
-						onCheckedChange={(checked) => {
-							settings = { ...settings, notifyDailyDigest: Boolean(checked) };
-							void savePatch({ notifyDailyDigest: Boolean(checked) });
-						}}
-					/>
-					<span class="text-sm">Daily digest</span>
-				</label>
-				<label class="flex min-h-11 items-center gap-3">
-					<Checkbox
-						checked={settings.notifyActivity !== false}
-						disabled={busy}
-						onCheckedChange={(checked) => {
-							settings = { ...settings, notifyActivity: Boolean(checked) };
-							void savePatch({ notifyActivity: Boolean(checked) });
-						}}
-					/>
-					<span class="text-sm">Activity</span>
-				</label>
-				<label class="flex min-h-11 items-center gap-3">
-					<Checkbox
-						checked={settings.includeAmounts !== false}
-						disabled={busy}
-						onCheckedChange={(checked) => {
-							settings = { ...settings, includeAmounts: Boolean(checked) };
-							void savePatch({ includeAmounts: Boolean(checked) });
-						}}
-					/>
-					<span class="text-sm">Include amounts</span>
-				</label>
+						{#if settings.notifyUpcoming !== false}
+							<div class="space-y-2 bg-muted/15 px-3 py-3">
+								<p class="text-xs text-muted-foreground">Notify before due</p>
+								<div class="grid grid-cols-3 gap-2">
+									{#each reminderLeadOptions as option (option.days)}
+										{@const selected = (settings.reminderDays ?? [3, 1]).includes(
+											option.days
+										)}
+										<button
+											type="button"
+											class={cn(
+												'touch-target min-h-11 rounded-xl border px-2 text-sm font-medium transition-colors',
+												selected
+													? 'border-primary bg-primary/10 text-foreground'
+													: 'border-border/60 bg-card text-muted-foreground hover:bg-muted/40'
+											)}
+											aria-pressed={selected}
+											aria-label="{option.label} before due"
+											disabled={notificationsLocked}
+											onclick={() => toggleReminderDay(option.days, !selected)}
+										>
+											{option.label}
+										</button>
+									{/each}
+								</div>
+							</div>
+						{/if}
+						<label class={settingRowClass}>
+							<Checkbox
+								checked={settings.notifyDueToday !== false}
+								disabled={notificationsLocked}
+								onCheckedChange={(checked) => {
+									settings = { ...settings, notifyDueToday: Boolean(checked) };
+									void savePatch({ notifyDueToday: Boolean(checked) });
+								}}
+							/>
+							<span class="flex-1">Due today</span>
+						</label>
+						<label class={settingRowClass}>
+							<Checkbox
+								checked={settings.notifyOverdue !== false}
+								disabled={notificationsLocked}
+								onCheckedChange={(checked) => {
+									settings = { ...settings, notifyOverdue: Boolean(checked) };
+									void savePatch({ notifyOverdue: Boolean(checked) });
+								}}
+							/>
+							<span class="flex-1">Overdue</span>
+						</label>
+						<label class={settingRowClass}>
+							<Checkbox
+								checked={settings.notifyUnsigned !== false}
+								disabled={notificationsLocked}
+								onCheckedChange={(checked) => {
+									settings = { ...settings, notifyUnsigned: Boolean(checked) };
+									void savePatch({ notifyUnsigned: Boolean(checked) });
+								}}
+							/>
+							<span class="flex-1 font-medium">Unsigned contracts</span>
+						</label>
+						{#if settings.notifyUnsigned !== false}
+							<div class="space-y-3 bg-muted/15 px-3 py-3">
+								<div class="space-y-2">
+									<p class="text-xs text-muted-foreground">How often</p>
+									<div class="grid grid-cols-3 gap-2">
+										{#each signingIntervalOptions as option (option.hours)}
+											{@const selected =
+												(settings.signingReminderIntervalHours ?? 1) === option.hours}
+											<button
+												type="button"
+												class={cn(
+													'touch-target min-h-11 rounded-xl border px-2 text-sm font-medium transition-colors',
+													selected
+														? 'border-primary bg-primary/10 text-foreground'
+														: 'border-border/60 bg-card text-muted-foreground hover:bg-muted/40'
+												)}
+												aria-pressed={selected}
+												disabled={notificationsLocked}
+												onclick={() => {
+													settings = {
+														...settings,
+														signingReminderIntervalHours: option.hours
+													};
+													void savePatch({
+														signingReminderIntervalHours: option.hours
+													});
+												}}
+											>
+												{option.label}
+											</button>
+										{/each}
+									</div>
+								</div>
+								<div class="space-y-2">
+									<p class="text-xs text-muted-foreground">Must sign</p>
+									<div class="grid grid-cols-3 gap-2">
+										{#each signingRoleOptions as option (option.key)}
+											{@const selected = signingRoleOn(option.key)}
+											<button
+												type="button"
+												class={cn(
+													'touch-target min-h-11 rounded-xl border px-2 text-sm font-medium transition-colors',
+													selected
+														? 'border-primary bg-primary/10 text-foreground'
+														: 'border-border/60 bg-card text-muted-foreground hover:bg-muted/40'
+												)}
+												aria-pressed={selected}
+												disabled={notificationsLocked}
+												onclick={() => toggleSigningRole(option.key, !selected)}
+											>
+												{option.label}
+											</button>
+										{/each}
+									</div>
+								</div>
+							</div>
+						{/if}
+					</div>
+				</section>
+
+				<section class="space-y-2" aria-labelledby="tg-notify-other">
+					<h3 id="tg-notify-other" class="text-sm font-medium">Updates</h3>
+					<div
+						class="overflow-hidden rounded-xl border border-border/60 bg-card divide-y divide-border/60"
+					>
+						<label class={settingRowClass}>
+							<Checkbox
+								checked={Boolean(settings.notifyDailyDigest)}
+								disabled={notificationsLocked}
+								onCheckedChange={(checked) => {
+									settings = { ...settings, notifyDailyDigest: Boolean(checked) };
+									void savePatch({ notifyDailyDigest: Boolean(checked) });
+								}}
+							/>
+							<span class="flex-1">Daily digest</span>
+						</label>
+						<label class={settingRowClass}>
+							<Checkbox
+								checked={settings.notifyActivity !== false}
+								disabled={notificationsLocked}
+								onCheckedChange={(checked) => {
+									settings = { ...settings, notifyActivity: Boolean(checked) };
+									void savePatch({ notifyActivity: Boolean(checked) });
+								}}
+							/>
+							<span class="flex-1">Loan activity</span>
+						</label>
+						<label class={settingRowClass}>
+							<Checkbox
+								checked={settings.includeAmounts !== false}
+								disabled={notificationsLocked}
+								onCheckedChange={(checked) => {
+									settings = { ...settings, includeAmounts: Boolean(checked) };
+									void savePatch({ includeAmounts: Boolean(checked) });
+								}}
+							/>
+							<span class="flex-1">Show amounts</span>
+						</label>
+					</div>
+				</section>
 			</div>
 
 			<div class="space-y-3 border-t border-border pt-4">

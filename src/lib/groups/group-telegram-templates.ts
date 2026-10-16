@@ -7,6 +7,7 @@ export const GROUP_TELEGRAM_TEMPLATE_KINDS = [
   "upcoming",
   "due_today",
   "overdue",
+  "unsigned",
   "digest",
   "activity",
   "test",
@@ -22,6 +23,7 @@ export const GROUP_TELEGRAM_TEMPLATE_LABELS: Record<
   upcoming: "Upcoming reminder",
   due_today: "Due today",
   overdue: "Overdue",
+  unsigned: "Unsigned",
   digest: "Daily digest",
   activity: "Activity",
   test: "Test message",
@@ -64,9 +66,14 @@ export const GROUP_TELEGRAM_PLACEHOLDERS: {
     kinds: ["upcoming", "due_today", "overdue", "activity"],
   },
   {
+    key: "pending_body",
+    label: "Waiting list",
+    kinds: ["unsigned"],
+  },
+  {
     key: "group_link",
     label: "Group URL",
-    kinds: ["digest", "activity", "test"],
+    kinds: ["unsigned", "digest", "activity", "test"],
   },
   {
     key: "digest_body",
@@ -93,6 +100,8 @@ export const GROUP_TELEGRAM_PREVIEW_SAMPLES: Record<string, string> = {
   date: "Oct 16, 2026",
   amount: "₱12,000",
   loan_link: "View loan",
+  pending_body:
+    "<b>Lot A</b>\n• Maria Cruz, Borrower\n• Juan Reyes, Investor\n\n<b>OR/CR 4412</b>\n• Ana Lim, Witness",
   group_link: "Open group",
   digest_body: "Due today\n• Lot A · Interest · ₱12,000",
   today: "Oct 16, 2026",
@@ -113,6 +122,8 @@ export const DEFAULT_GROUP_TELEGRAM_TEMPLATES: Record<
     "<b>{{heading}}</b>\n{{loan_name}} · {{event_type}} · {{date}} · {{amount}}\n\n{{loan_link}}",
   overdue:
     "<b>{{heading}}</b>\n{{loan_name}} · {{event_type}} · {{date}} · {{amount}}\n\n{{loan_link}}",
+  unsigned:
+    "<b>Signatures still needed</b>\n{{pending_body}}\n\n{{group_link}}",
   digest: "<b>Daily digest · {{today}}</b>\n{{digest_body}}\n\n{{group_link}}",
   activity: "<b>Activity</b>\n{{summary}}\n\n{{loan_link}}",
   test: "<b>Test</b>\nTelegram notifications are working.\n\n{{group_link}}",

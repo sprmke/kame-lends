@@ -37,6 +37,27 @@ export const bulkLoanIdsBodySchema = z.object({
   loanIds: z.array(z.number().int().positive()).min(1),
 });
 
+export const defaultWitnessesBodySchema = z
+  .object({
+    witnesses: z
+      .array(
+        z.object({
+          witnessId: z.number().int().positive(),
+          autoSign: z.boolean(),
+        }),
+      )
+      .max(2, "A contract holds two witnesses."),
+  })
+  .superRefine((body, ctx) => {
+    const ids = body.witnesses.map((row) => row.witnessId);
+    if (new Set(ids).size !== ids.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Witnesses must be unique",
+      });
+    }
+  });
+
 export const setLoanGroupsBodySchema = z.object({
   groupIds: z.array(z.number().int().positive()),
 });
@@ -49,6 +70,15 @@ export const reminderDaysSchema = z
   .array(z.number().int().min(0).max(30))
   .max(5)
   .transform((days) => [...new Set(days)].sort((a, b) => b - a));
+
+export const signingReminderIntervalSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(4),
+  z.literal(6),
+  z.literal(12),
+  z.literal(24),
+]);
 
 const telegramTemplatesSchema = z.record(z.string(), z.string()).optional();
 
@@ -67,6 +97,11 @@ export const updateTelegramBodySchema = z.object({
   notifyDailyDigest: z.boolean().optional(),
   notifyActivity: z.boolean().optional(),
   includeAmounts: z.boolean().optional(),
+  notifyUnsigned: z.boolean().optional(),
+  signingReminderIntervalHours: signingReminderIntervalSchema.optional(),
+  requireBorrowerSignature: z.boolean().optional(),
+  requireInvestorSignature: z.boolean().optional(),
+  requireWitnessSignature: z.boolean().optional(),
   botToken: z.string().trim().min(1).optional().nullable(),
   chatId: z.string().trim().min(1).optional().nullable(),
   templates: telegramTemplatesSchema,

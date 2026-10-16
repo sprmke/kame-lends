@@ -8,6 +8,7 @@
 	import GroupSettingsTab from '$lib/components/groups/GroupSettingsTab.svelte';
 	import GroupCalendarSettingsCard from '$lib/components/groups/GroupCalendarSettingsCard.svelte';
 	import GroupTelegramSettingsCard from '$lib/components/groups/GroupTelegramSettingsCard.svelte';
+	import GroupDefaultWitnessesCard from '$lib/components/groups/GroupDefaultWitnessesCard.svelte';
 	import AddGroupLoansSheet from '$lib/components/groups/AddGroupLoansSheet.svelte';
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import type { WizardContactOption } from '$lib/components/groups/types';
@@ -446,6 +447,9 @@
 					onAddRule={() => (showAddRule = true)}
 					onRemoveRule={removeRule}
 				>
+					{#snippet defaultWitnessesCard()}
+						<GroupDefaultWitnessesCard groupId={data.group.id} />
+					{/snippet}
 					{#snippet calendarCard()}
 						<GroupCalendarSettingsCard
 							groupId={data.group.id}

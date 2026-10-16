@@ -3,6 +3,7 @@ import {
   groupNotificationLog,
   groupTelegramSettings,
   loanGroupLoans,
+  loanSigningInvitations,
   loans,
 } from "$lib/server/db/schema";
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
@@ -13,6 +14,12 @@ import {
   planGroupNotifications,
   type GroupNotificationSettings,
 } from "$lib/group-notification-plan";
+import {
+  planUnsignedSigningReminder,
+  signingReminderSlot,
+  type UnsignedLoanInput,
+  type UnsignedSigningSettings,
+} from "$lib/groups/unsigned-signing-reminder";
 import type { ActivityEvent } from "$lib/server/jobs/queue";
 import {
   sendMessage,
@@ -357,6 +364,159 @@ export async function runGroupTelegramDailyReminders(
   }
 
   console.info("[telegram] daily reminders", result);
+  return result;
+}
+
+function unsignedSettingsFromRow(
+  row: typeof groupTelegramSettings.$inferSelect,
+): UnsignedSigningSettings {
+  return {
+    notifyUnsigned: row.notifyUnsigned,
+    intervalHours: row.signingReminderIntervalHours,
+    requireBorrower: row.requireBorrowerSignature,
+    requireInvestor: row.requireInvestorSignature,
+    requireWitness: row.requireWitnessSignature,
+  };
+}
+
+async function loadGroupLoansForSigningReminders(
+  groupId: number,
+): Promise<UnsignedLoanInput[]> {
+  const links = await db
+    .select({ loanId: loanGroupLoans.loanId })
+    .from(loanGroupLoans)
+    .where(eq(loanGroupLoans.groupId, groupId));
+  if (links.length === 0) return [];
+
+  const loanIds = links.map((row) => row.loanId);
+  const [loanRows, invitations] = await Promise.all([
+    db
+      .select({
+        id: loans.id,
+        loanName: loans.loanName,
+        status: loans.status,
+      })
+      .from(loans)
+      .where(inArray(loans.id, loanIds)),
+    db
+      .select({
+        loanId: loanSigningInvitations.loanId,
+        partyRole: loanSigningInvitations.partyRole,
+        partyName: loanSigningInvitations.partyName,
+        signedAt: loanSigningInvitations.signedAt,
+      })
+      .from(loanSigningInvitations)
+      .where(inArray(loanSigningInvitations.loanId, loanIds)),
+  ]);
+
+  return loanRows.map((loan) => ({
+    id: loan.id,
+    loanName: loan.loanName,
+    status: loan.status,
+    invitations: invitations
+      .filter((invitation) => invitation.loanId === loan.id)
+      .map((invitation) => ({
+        partyRole: invitation.partyRole,
+        partyName: invitation.partyName,
+        signedAt: invitation.signedAt,
+      })),
+  }));
+}
+
+export type SigningReminderResult = {
+  groups: number;
+  planned: number;
+  sent: number;
+  skipped: number;
+  failed: number;
+};
+
+/** Hourly cron entry: one digest per group for contracts still waiting on signatures. */
+export async function runGroupTelegramSigningReminders(
+  now: Date = new Date(),
+): Promise<SigningReminderResult> {
+  const result: SigningReminderResult = {
+    groups: 0,
+    planned: 0,
+    sent: 0,
+    skipped: 0,
+    failed: 0,
+  };
+
+  const connected = await db.query.groupTelegramSettings.findMany({
+    where: and(
+      eq(groupTelegramSettings.status, "connected"),
+      eq(groupTelegramSettings.enabled, true),
+      eq(groupTelegramSettings.notifyUnsigned, true),
+    ),
+  });
+
+  const appUrl = readAppUrl();
+
+  for (const settings of connected) {
+    if (!settings.chatId) continue;
+    const botToken = resolveGroupBotToken(settings.botToken);
+    if (!botToken) continue;
+    if (!signingReminderSlot(now, settings.signingReminderIntervalHours)) {
+      continue;
+    }
+
+    const groupLoans = await loadGroupLoansForSigningReminders(
+      settings.groupId,
+    );
+    const notification = planUnsignedSigningReminder(
+      groupLoans,
+      unsignedSettingsFromRow(settings),
+      now,
+      {
+        appUrl,
+        groupId: settings.groupId,
+        templates: settings.templates,
+      },
+    );
+    if (!notification) continue;
+
+    result.groups += 1;
+    result.planned += 1;
+
+    let outcome = await sendGroupNotification({
+      groupId: settings.groupId,
+      chatId: settings.chatId,
+      fingerprint: notification.fingerprint,
+      kind: notification.kind,
+      html: notification.html,
+      botToken,
+    });
+
+    if (outcome.skipped) {
+      const existing = await db.query.groupNotificationLog.findFirst({
+        where: and(
+          eq(groupNotificationLog.groupId, settings.groupId),
+          eq(groupNotificationLog.fingerprint, notification.fingerprint),
+        ),
+      });
+      if (
+        existing?.status === "failed" &&
+        existing.attempts < MAX_FAILED_ATTEMPTS
+      ) {
+        outcome = await sendGroupNotification({
+          groupId: settings.groupId,
+          chatId: settings.chatId,
+          fingerprint: notification.fingerprint,
+          kind: notification.kind,
+          html: notification.html,
+          botToken,
+          logId: existing.id,
+        });
+      }
+    }
+
+    if (outcome.skipped) result.skipped += 1;
+    else if (outcome.sent) result.sent += 1;
+    else result.failed += 1;
+  }
+
+  console.info("[telegram] signing reminders", result);
   return result;
 }
 

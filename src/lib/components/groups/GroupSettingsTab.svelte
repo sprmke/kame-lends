@@ -21,6 +21,7 @@
 		onAddRule?: () => void;
 		onRemoveRule?: (ruleId: number) => void;
 		canManageRules?: boolean;
+		defaultWitnessesCard?: Snippet;
 		calendarCard?: Snippet;
 		telegramCard?: Snippet;
 		dangerZone?: Snippet;
@@ -36,6 +37,7 @@
 		onAddRule,
 		onRemoveRule,
 		canManageRules = true,
+		defaultWitnessesCard,
 		calendarCard,
 		telegramCard,
 		dangerZone,
@@ -137,6 +139,10 @@
 			{/if}
 		</Card.Content>
 	</Card.Root>
+
+	{#if defaultWitnessesCard}
+		{@render defaultWitnessesCard()}
+	{/if}
 
 	{#if calendarCard}
 		{@render calendarCard()}
