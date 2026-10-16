@@ -8,7 +8,7 @@ Production releases are automated on every push to **`main`**.
 push / merge → main
   → quality (check, test, build)
   → migrate (pending db/migrations/*.sql against prod Neon)
-  → deploy (Vercel production via CLI --prebuilt)
+  → deploy (Vercel production via the deployments API)
 ```
 
 | Workflow                                                     | Trigger                          | Role                                                    |
@@ -89,9 +89,9 @@ The CD workflow’s `migrate` and `deploy` jobs use `environment: production` so
 ## Vercel project settings
 
 1. Keep Production env vars (Auth, `DATABASE_URL`, calendar, Resend, etc.).
-2. **Git must not deploy Production before migrations.** Repo ships `vercel.json` → `ignoreCommand`: `scripts/deploy/vercel-ignore-git-production-build.sh` skips Git builds when `VERCEL_ENV=production` and branch is `main`. Only [`.github/workflows/cd.yml`](../../.github/workflows/cd.yml) should promote Production (`migrate` → `vercel deploy --prebuilt --prod`). Preview deploys for PRs still build.
+2. **Git must not deploy Production before migrations.** Repo ships `vercel.json` → `ignoreCommand`: `scripts/deploy/vercel-ignore-git-production-build.sh` skips Git builds when `VERCEL_ENV=production` and branch is `main`. Only [`.github/workflows/cd.yml`](../../.github/workflows/cd.yml) should promote Production (`migrate` → `scripts/deploy/vercel-api-prod.mjs`). Preview deploys for PRs still build. The script uploads the git tree and creates the deployment through the API. `vercel pull` stops on a team lookup this token cannot make.
 3. After merging CD fixes, run **Actions → CD → Run workflow** on `main` once (or push) so pending SQL (`0020`, `0021`, …) applies before the next app deploy.
-4. Framework: SvelteKit. Install: `bun install`. Build: `bun run build` (CD uses `vercel build --prod` with project settings).
+4. Framework: SvelteKit. Install: `bun install`. Build: `bun run build`. CD uploads the git tree; Vercel runs that build with Production env.
 5. Functions run in Singapore (`sin1`), pinned in `svelte.config.js` and `vercel.json`, next to the Singapore Neon `DATABASE_URL`. Hobby: one region. Confirm with `x-vercel-id` (`sin1::sin1::…`).
 
 ### PDF generation: pdfkit standard fonts
@@ -103,7 +103,7 @@ Fix: `scripts/deploy/copy-pdfkit-standard-fonts.mjs` runs as part of `bun run bu
 This has shipped broken more than once because the fix lived only in an **uncommitted** working tree while CD kept deploying the last-committed (broken) code. If contract/export PDF downloads 500 in production with this error:
 
 1. Confirm `scripts/deploy/copy-pdfkit-standard-fonts.mjs` and the `"build"` script in `package.json` are committed on `main` (`git log -- scripts/deploy/copy-pdfkit-standard-fonts.mjs`).
-2. Confirm CD's `deploy` job actually ran (`bash scripts/deploy/vercel-prod.sh` → `vercel build --prod` invokes `bun run build`, which includes this script).
+2. Confirm CD's `deploy` job actually ran (`bash scripts/deploy/vercel-prod.sh`). Vercel runs `bun run build`, which includes this script.
 3. Rebuild locally (`rm -rf .vercel/output && bun run build`) — the script logs `verified N font file(s) in M pdfkit bundle(s)` on success, or exits 1 with the exact missing paths.
 
 ## Local emergency deploy
