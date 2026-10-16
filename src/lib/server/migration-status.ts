@@ -14,10 +14,24 @@ export type MigrationStatus = {
   missingColumns: string[];
 };
 
-function listMigrationFiles(): string[] {
-  return readdirSync(MIGRATIONS_DIR)
-    .filter((name) => name.endsWith(".sql"))
-    .sort();
+function listMigrationFiles(): { files: string[]; readable: boolean } {
+  try {
+    return {
+      files: readdirSync(MIGRATIONS_DIR)
+        .filter((name) => name.endsWith(".sql"))
+        .sort(),
+      readable: true,
+    };
+  } catch (error) {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String(error.code)
+        : "";
+    if (code === "ENOENT" || code === "ENOTDIR") {
+      return { files: [], readable: false };
+    }
+    throw error;
+  }
 }
 
 function queryRows<T>(result: { rows: T[] } | T[]): T[] {
@@ -37,7 +51,8 @@ async function columnExists(table: string, column: string): Promise<boolean> {
 }
 
 export async function getMigrationStatus(): Promise<MigrationStatus> {
-  const onDisk = listMigrationFiles();
+  const onDiskResult = listMigrationFiles();
+  const onDisk = onDiskResult.files;
   let applied: string[] = [];
   const missingColumns: string[] = [];
   let dbConnected: boolean;
@@ -73,7 +88,10 @@ export async function getMigrationStatus(): Promise<MigrationStatus> {
   const latestApplied =
     applied.length > 0 ? applied[applied.length - 1]! : null;
   const ok =
-    dbConnected && pendingFiles.length === 0 && missingColumns.length === 0;
+    onDiskResult.readable &&
+    dbConnected &&
+    pendingFiles.length === 0 &&
+    missingColumns.length === 0;
 
   return {
     ok,

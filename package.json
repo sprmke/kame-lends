@@ -13,7 +13,7 @@
     "dev:stack": "bash ./dev.sh",
     "dev:ui": "bash ./dev.sh --ui-only",
     "dev:free-ports": "bash scripts/dev/free-local-ports.sh",
-    "build": "vite build && node scripts/deploy/copy-pdfkit-standard-fonts.mjs",
+    "build": "vite build && node scripts/deploy/copy-pdfkit-standard-fonts.mjs && node scripts/deploy/copy-health-migrations.mjs",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",

@@ -48,7 +48,7 @@ If CD is red, **do not** hand-deploy app code until quality passes and migration
 
 ### Post-deploy smoke test
 
-After Vercel promote, CD polls `GET /api/health` on production (default `https://pawn-tracker.vercel.app`, override with GitHub secret `PRODUCTION_URL`). The endpoint is public on purpose (CD + ops). It returns **200** only when the DB is reachable and migrations/columns match the running build. It lists pending file names and missing columns; treat that as deploy-state metadata, not a secret.
+After Vercel promote, CD polls `GET /api/health` on production (default `https://pawn-tracker.vercel.app`, override with GitHub secret `PRODUCTION_URL`). The endpoint is public on purpose (CD + ops). It returns **200** only when the DB is reachable and migrations/columns match the running build. It lists pending file names and missing columns; treat that as deploy-state metadata, not a secret. The health function reads `db/migrations` from disk, so `scripts/deploy/copy-health-migrations.mjs` copies those SQL files into the function during `bun run build`.
 
 ## Migrations
 
