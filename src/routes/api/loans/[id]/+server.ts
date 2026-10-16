@@ -17,7 +17,11 @@ import {
   upsertLoanContractCustomization,
 } from "$lib/server/loan-contract-persistence";
 import type { ContractCustomization } from "$lib/loan-contract-customization";
-import { receiptColumnsFromInput } from "$lib/payment-receipts";
+import {
+  disbursementReceiptError,
+  receiptColumnsFromInput,
+  receivedPaymentReceiptError,
+} from "$lib/payment-receipts";
 import { validateLoanCrmOwnership } from "$lib/server/loan-crm-ownership";
 
 export const GET: RequestHandler = async (event) => {
@@ -78,6 +82,17 @@ export const PUT: RequestHandler = async (event) => {
     });
     if (!crmCheck.ok) {
       return json({ error: crmCheck.message }, { status: crmCheck.status });
+    }
+
+    const disbursementReceiptMessage = disbursementReceiptError(investorData);
+    if (disbursementReceiptMessage) {
+      return json({ error: disbursementReceiptMessage }, { status: 400 });
+    }
+    const receivedReceiptMessage = receivedPaymentReceiptError(
+      receivedPaymentsByInvestor,
+    );
+    if (receivedReceiptMessage) {
+      return json({ error: receivedReceiptMessage }, { status: 400 });
     }
 
     const existingLoan = await db.query.loans.findFirst({
@@ -287,6 +302,13 @@ export const PUT: RequestHandler = async (event) => {
         );
       }
       await syncSigningInvitationsForLoan(updatedLoan);
+      try {
+        const { applyGroupDefaultWitnessesToLoan } =
+          await import("$lib/server/groups/apply-default-witnesses");
+        await applyGroupDefaultWitnessesToLoan(loanId);
+      } catch (witnessErr) {
+        console.error("[groups] default witnesses failed", witnessErr);
+      }
     }
 
     invalidateLoanData();

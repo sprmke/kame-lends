@@ -1,13 +1,16 @@
 <script lang="ts">
-	import { CalendarDays, Plus, Trash2 } from 'lucide-svelte';
+	import { CalendarDays } from 'lucide-svelte';
 	import * as Alert from '$lib/components/ui/alert';
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import SearchableSelect from '$lib/components/common/SearchableSelect.svelte';
 	import * as Tabs from '$lib/components/ui/tabs';
+	import PaymentEntryFields from '$lib/components/payments/PaymentEntryFields.svelte';
+	import ReceiptIntake from '$lib/components/receipt-scan/ReceiptIntake.svelte';
+	import ScanRowActions from '$lib/components/receipt-scan/ScanRowActions.svelte';
+	import ScanRowNotes from '$lib/components/receipt-scan/ScanRowNotes.svelte';
 	import { calculateTotalAmount } from '$lib/calculations';
 	import { toLocalDateString } from '$lib/date-utils';
 	import { formatCurrency, formatDate } from '$lib/format';
@@ -15,7 +18,22 @@
 	import type { LoanWithInvestors } from '$lib/types';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
-	import type { PaymentReceipt } from '$lib/payment-receipts';
+	import { hasPaymentReceipt, type PaymentReceipt } from '$lib/payment-receipts';
+	import type { ReceiptScanContext } from '$lib/receipt-extraction-client';
+	import {
+		groupScannedReceipts,
+		type ProposedTransaction,
+		type ScannedReceipt
+	} from '$lib/receipt-scan/group-transactions';
+	import {
+		addProposalsToRows,
+		mergeRowWithPrevious,
+		splitRowAt,
+		type RowAdapter,
+		type RowScanMeta
+	} from '$lib/receipt-scan/rows';
+	import { findMatchingParty } from '$lib/receipt-scan/match-party';
+	import { suggestInterestPeriodId } from '$lib/receipt-scan/suggest-period';
 
 	export type LoanQuickPaymentKind = 'payment' | 'received';
 
@@ -30,6 +48,8 @@
 		isPaid: boolean;
 		interestPeriodId: string;
 		receipts: PaymentReceipt[];
+		/** AI notes when the row was created from receipts. */
+		scan: RowScanMeta | null;
 	}
 
 	interface Props {
@@ -64,23 +84,9 @@
 			interestValue: '10',
 			isPaid: true,
 			interestPeriodId: 'general',
-			receipts: []
+			receipts: [],
+			scan: null
 		};
-	}
-
-	/** Matches an extracted sender name against a single lender, ignoring case/spacing. */
-	function findMatchingLender(
-		senderName: string | null,
-		candidates: { id: number; name: string }[]
-	) {
-		if (!senderName) return null;
-		const normalize = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
-		const sender = normalize(senderName);
-		const matches = candidates.filter((candidate) => {
-			const name = normalize(candidate.name);
-			return name === sender || name.includes(sender) || sender.includes(name);
-		});
-		return matches.length === 1 ? matches[0] : null;
 	}
 
 	function handleReceiptExtracted(entryId: string, extracted: ReceiptExtractedData | null) {
@@ -95,8 +101,12 @@
 		if (!entry.dateTouched && extracted.transactionDate) {
 			changes.date = extracted.transactionDate;
 		}
-		if (!isReceived && !entry.investorId) {
-			const match = findMatchingLender(extracted.senderName, lenders);
+		if (!entry.investorId) {
+			// Lender sends principal; for repayments the lender is the receiver.
+			const match = findMatchingParty(
+				isReceived ? extracted.receiverName : extracted.senderName,
+				lenders
+			);
 			if (match) {
 				changes.investorId = String(match.id);
 			}
@@ -105,6 +115,106 @@
 		if (Object.keys(changes).length > 0) {
 			updateEntry(entryId, changes);
 		}
+	}
+
+	const scanContext = $derived<ReceiptScanContext>({
+		purpose: kind === 'received' ? 'received_payment' : 'fund_transfer',
+		loanId: loan?.id
+	});
+
+	function periodOptionsFor(investorId: string) {
+		if (!isReceived) return null;
+		const context = getEntryContext({ ...createPaymentEntry(), investorId });
+		if (context.periods.length === 0) return null;
+		return [
+			{ value: 'general', label: 'General loan balance' },
+			...context.periods.map((period) => ({
+				value: String(period.id),
+				label: `Interest due ${formatDate(period.dueDate)}`
+			}))
+		];
+	}
+
+	function suggestPeriod(investorId: number, amount: number | null) {
+		if (!loan || !isReceived) return 'general';
+		const payments = loan.loanInvestors.filter((payment) => payment.investor.id === investorId);
+		const capital = payments.reduce(
+			(sum, payment) => sum + (Number.parseFloat(payment.amount) || 0),
+			0
+		);
+		return suggestInterestPeriodId(
+			amount,
+			payments.flatMap((payment) => payment.interestPeriods ?? []),
+			capital
+		);
+	}
+
+	/** A new row for a lender, with interest copied from that lender's latest disbursement. */
+	function newEntryFor(investorId: number | null): PaymentEntry {
+		const entry = createPaymentEntry(investorId !== null ? String(investorId) : '');
+		const latest = loan?.loanInvestors
+			.filter((payment) => payment.investor.id === investorId)
+			.sort((a, b) => new Date(b.sentDate).getTime() - new Date(a.sentDate).getTime())[0];
+		if (!latest) return entry;
+		return {
+			...entry,
+			interestType: latest.interestType === 'fixed' ? 'fixed' : 'rate',
+			interestValue: latest.interestRate
+		};
+	}
+
+	const rowAdapter: RowAdapter<PaymentEntry> = {
+		getId: (entry) => entry.id,
+		read: (entry) => ({
+			investorId: entry.investorId ? Number(entry.investorId) : null,
+			amount: entry.amount,
+			date: entry.date,
+			receipts: entry.receipts,
+			interestPeriodId: entry.interestPeriodId,
+			scan: entry.scan
+		}),
+		write: (base, fields) => ({
+			...(base ?? newEntryFor(fields.investorId)),
+			investorId: fields.investorId !== null ? String(fields.investorId) : '',
+			amount: fields.amount,
+			date: fields.date || base?.date || toLocalDateString(new Date()),
+			dateTouched: true,
+			interestPeriodId: fields.interestPeriodId ?? base?.interestPeriodId ?? 'general',
+			receipts: fields.receipts,
+			scan: fields.scan
+		})
+	};
+
+	function withSuggestedPeriods(proposals: ProposedTransaction[]) {
+		if (!isReceived) return proposals;
+		return proposals.map((proposal) => ({
+			...proposal,
+			interestPeriodId:
+				proposal.investorId !== null
+					? suggestPeriod(proposal.investorId, proposal.amount ? Number(proposal.amount) : null)
+					: 'general'
+		}));
+	}
+
+	/** Receipts → one row per transaction, receipts attached. */
+	function addFromReceipts(proposals: ProposedTransaction[]) {
+		entries = addProposalsToRows(entries, proposals, rowAdapter);
+	}
+
+	/** A row's own upload turned out to hold several transfers: split it in place. */
+	function splitEntryFromScan(entry: PaymentEntry, scanned: ScannedReceipt[]) {
+		const { proposals } = groupScannedReceipts(scanned, {
+			purpose: scanContext.purpose,
+			lenders,
+			defaultInvestorId: entry.investorId ? Number(entry.investorId) : null,
+			currentLoanId: loan?.id ?? null
+		});
+		entries = addProposalsToRows(entries, withSuggestedPeriods(proposals), rowAdapter, {
+			sourceId: entry.id,
+			scannedImageUrls: scanned
+				.map((item) => item.receipt?.imageUrl)
+				.filter((url): url is string => Boolean(url))
+		});
 	}
 
 	const lenders = $derived.by(() => {
@@ -120,12 +230,13 @@
 		return list;
 	});
 
-	let entries = $state<PaymentEntry[]>([createPaymentEntry()]);
+	/** Empty until receipts are uploaded — each receipt group becomes a row. */
+	let entries = $state<PaymentEntry[]>([]);
 	let isSubmitting = $state(false);
 
 	$effect(() => {
 		if (!open) return;
-		entries = [createPaymentEntry(lenders.length === 1 ? String(lenders[0].id) : '')];
+		entries = [];
 	});
 
 	function getEntryContext(entry: PaymentEntry) {
@@ -167,23 +278,20 @@
 	const canSubmit = $derived(
 		loan &&
 			kind &&
+			entries.length > 0 &&
 			entries.every((entry) => {
 				const context = getEntryContext(entry);
 				return (
 					Boolean(entry.investorId) &&
 					Number.parseFloat(entry.amount) > 0 &&
 					Boolean(entry.date) &&
+					hasPaymentReceipt(entry) &&
 					(isReceived ||
 						context.usesInterestSchedule ||
 						Number.parseFloat(entry.interestValue) >= 0)
 				);
 			})
 	);
-
-	const unusedLenders = $derived.by(() => {
-		const selectedLenderIds = new Set(entries.map((entry) => entry.investorId).filter(Boolean));
-		return lenders.filter((lender) => !selectedLenderIds.has(String(lender.id)));
-	});
 
 	const lenderOptions = $derived(
 		lenders.map((lender) => ({ value: String(lender.id), label: lender.name }))
@@ -300,217 +408,141 @@
 					: `${title}${entries.length > 1 ? `s (${entries.length})` : ''}`}
 			</Button>
 		{/snippet}
-		<form bind:this={formEl} class="space-y-5" onsubmit={handleSubmit}>
-				<div class="space-y-4">
-					{#each entries as entry, index (entry.id)}
-						{@const context = getEntryContext(entry)}
-						<div class="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
-							<div class="flex items-center justify-between gap-3">
-								<p class="text-sm font-semibold">
-									{isReceived ? 'Receipt' : 'Payment'}
-									{index + 1}
-								</p>
-								{#if entries.length > 1}
-									<Button
-										type="button"
-										variant="ghost"
-										size="icon"
-										class="h-8 w-8 text-muted-foreground hover:text-destructive"
-										disabled={isSubmitting}
-										aria-label={`Remove entry ${index + 1}`}
-										onclick={() => {
-											entries = entries.filter((item) => item.id !== entry.id);
-										}}
-									>
-										<Trash2 class="h-4 w-4" />
-									</Button>
-								{/if}
-							</div>
-
-							<ReceiptUploadField
-								idPrefix="{kind}-{entry.id}"
-								receipts={entry.receipts}
+		<form bind:this={formEl} class="space-y-4" onsubmit={handleSubmit}>
+			{#if entries.length === 0}
+				<ReceiptIntake
+					context={scanContext}
+					{lenders}
+					currentLoanId={loan.id}
+					suggestPeriod={isReceived ? suggestPeriod : undefined}
+					onCreate={addFromReceipts}
+					disabled={isSubmitting}
+				/>
+			{:else}
+				{#each entries as entry, index (entry.id)}
+					{@const context = getEntryContext(entry)}
+					{@const rowLabel = `${isReceived ? 'Payment' : 'Transfer'} ${index + 1}`}
+					<div
+						class="space-y-4 rounded-xl border border-border bg-muted/20 p-4"
+						data-testid="payment-entry"
+					>
+						<div class="flex items-center justify-between gap-3">
+							<p class="text-sm font-semibold">{rowLabel}</p>
+							<ScanRowActions
+								{rowLabel}
+								canMerge={index > 0}
+								canSplit={entry.receipts.length > 1}
+								canRemove={true}
+								onMerge={() => (entries = mergeRowWithPrevious(entries, index, rowAdapter))}
+								onSplit={() => (entries = splitRowAt(entries, index, rowAdapter))}
+								onRemove={() => (entries = entries.filter((item) => item.id !== entry.id))}
 								disabled={isSubmitting}
-								onChange={(receipts) => updateEntry(entry.id, { receipts })}
-								onExtracted={(extracted) => handleReceiptExtracted(entry.id, extracted)}
 							/>
+						</div>
 
-							<div class="space-y-2">
-								<Label for="{kind}-lender-{entry.id}">Lender</Label>
-								<SearchableSelect
-									id="{kind}-lender-{entry.id}"
-									options={lenderOptions}
-									value={entry.investorId}
-									onValueChange={(investorId) =>
-										updateEntry(entry.id, { investorId, interestPeriodId: 'general' })}
-									placeholder="Select a lender..."
-									searchPlaceholder="Search lenders..."
-									searchable={true}
+						<ReceiptUploadField
+							idPrefix="{kind}-{entry.id}"
+							receipts={entry.receipts}
+							required
+							showReading={!entry.scan}
+							disabled={isSubmitting}
+							scanContext={{
+								...scanContext,
+								investorIds: entry.investorId ? [Number(entry.investorId)] : undefined
+							}}
+							onChange={(receipts) => updateEntry(entry.id, { receipts })}
+							onExtracted={(extracted) => handleReceiptExtracted(entry.id, extracted)}
+							onSplitRequest={(scanned) => splitEntryFromScan(entry, scanned)}
+						/>
+
+						<ScanRowNotes scan={entry.scan} />
+
+						<PaymentEntryFields
+							idPrefix="{kind}-{entry.id}"
+							value={entry}
+							onChange={(changes) => updateEntry(entry.id, changes)}
+							{lenderOptions}
+							periodOptions={isReceived ? periodOptionsFor(entry.investorId) : null}
+							dateLabel={isReceived ? 'Received date' : 'Sent date'}
+							disabled={isSubmitting}
+						>
+							{#snippet afterLender()}
+								{#if isReceived && entry.investorId}
+									<div class="rounded-xl border border-border bg-background p-3">
+										<p class="text-xs text-muted-foreground">Estimated remaining balance</p>
+										<p class="mt-1 text-lg font-semibold">{formatCurrency(context.remaining)}</p>
+									</div>
+								{/if}
+							{/snippet}
+						</PaymentEntryFields>
+
+						{#if !isReceived && context.usesInterestSchedule}
+							<Alert.Root>
+								<CalendarDays class="h-4 w-4" />
+								<Alert.Description>
+									This lender's existing interest schedule also applies to this principal amount.
+								</Alert.Description>
+							</Alert.Root>
+						{/if}
+
+						{#if !isReceived && !context.usesInterestSchedule}
+							<div class="space-y-3">
+								<Label>Interest</Label>
+								<Tabs.Root
+									value={entry.interestType}
+									onValueChange={(interestType) =>
+										interestType &&
+										updateEntry(entry.id, { interestType: interestType as 'rate' | 'fixed' })}
+								>
+									<Tabs.List class="grid w-full grid-cols-2">
+										<Tabs.Trigger value="rate">Rate (%)</Tabs.Trigger>
+										<Tabs.Trigger value="fixed">Fixed (₱)</Tabs.Trigger>
+									</Tabs.List>
+								</Tabs.Root>
+								<Input
+									type="number"
+									min="0"
+									step="0.01"
+									value={entry.interestValue}
+									placeholder={entry.interestType === 'rate' ? '10' : '0.00'}
 									disabled={isSubmitting}
-									triggerClassName="w-full"
+									oninput={(event) =>
+										updateEntry(entry.id, {
+											interestValue: (event.currentTarget as HTMLInputElement).value
+										})}
 								/>
 							</div>
+						{/if}
 
-							{#if isReceived && entry.investorId}
-								<div class="rounded-xl border border-border bg-background p-3">
-									<p class="text-xs text-muted-foreground">Estimated remaining balance</p>
-									<p class="mt-1 text-lg font-semibold">{formatCurrency(context.remaining)}</p>
-								</div>
-							{/if}
-
-							<div class="grid gap-4 sm:grid-cols-2">
-								<div class="space-y-2">
-									<Label for="{kind}-amount-{entry.id}">Amount</Label>
-									<Input
-										id="{kind}-amount-{entry.id}"
-										type="number"
-										min="0.01"
-										step="0.01"
-										value={entry.amount}
-										placeholder="0.00"
-										disabled={isSubmitting}
-										oninput={(event) =>
-											updateEntry(entry.id, {
-												amount: (event.currentTarget as HTMLInputElement).value
-											})}
-									/>
-								</div>
-								<div class="space-y-2">
-									<Label for="{kind}-date-{entry.id}">
-										{isReceived ? 'Received date' : 'Sent date'}
-									</Label>
-									<Input
-										id="{kind}-date-{entry.id}"
-										type="date"
-										value={entry.date}
-										disabled={isSubmitting}
-										oninput={(event) =>
-											updateEntry(entry.id, {
-												date: (event.currentTarget as HTMLInputElement).value,
-												dateTouched: true
-											})}
-									/>
+						{#if !isReceived}
+							<div class="flex items-start gap-3 rounded-xl border border-border bg-background p-3">
+								<Checkbox
+									id="principal-sent-{entry.id}"
+									checked={entry.isPaid}
+									disabled={isSubmitting}
+									onCheckedChange={(checked) => updateEntry(entry.id, { isPaid: checked === true })}
+								/>
+								<div>
+									<Label for="principal-sent-{entry.id}">Funds have already been sent</Label>
+									<p class="mt-0.5 text-xs text-muted-foreground">
+										Leave unchecked to record a pending disbursement.
+									</p>
 								</div>
 							</div>
+						{/if}
+					</div>
+				{/each}
 
-							{#if isReceived && context.periods.length}
-								{@const periodOptions = [
-									{ value: 'general', label: 'General loan balance' },
-									...context.periods.map((period) => ({
-										value: String(period.id),
-										label: `Interest due ${formatDate(period.dueDate)}`
-									}))
-								]}
-								<div class="space-y-2">
-									<Label for="received-period-{entry.id}">Apply payment to</Label>
-									<SearchableSelect
-										id="received-period-{entry.id}"
-										options={periodOptions}
-										value={entry.interestPeriodId}
-										onValueChange={(interestPeriodId) =>
-											updateEntry(entry.id, { interestPeriodId })}
-										placeholder="Select period..."
-										searchPlaceholder="Search periods..."
-										disabled={isSubmitting}
-										triggerClassName="w-full"
-									/>
-								</div>
-							{/if}
-
-							{#if !isReceived && context.usesInterestSchedule}
-								<Alert.Root>
-									<CalendarDays class="h-4 w-4" />
-									<Alert.Description>
-										This lender's existing interest schedule also applies to this principal amount.
-									</Alert.Description>
-								</Alert.Root>
-							{/if}
-
-							{#if !isReceived && !context.usesInterestSchedule}
-								<div class="space-y-3">
-									<Label>Interest</Label>
-									<Tabs.Root
-										value={entry.interestType}
-										onValueChange={(interestType) =>
-											interestType &&
-											updateEntry(entry.id, { interestType: interestType as 'rate' | 'fixed' })}
-									>
-										<Tabs.List class="grid w-full grid-cols-2">
-											<Tabs.Trigger value="rate">Rate (%)</Tabs.Trigger>
-											<Tabs.Trigger value="fixed">Fixed (₱)</Tabs.Trigger>
-										</Tabs.List>
-									</Tabs.Root>
-									<Input
-										type="number"
-										min="0"
-										step="0.01"
-										value={entry.interestValue}
-										placeholder={entry.interestType === 'rate' ? '10' : '0.00'}
-										disabled={isSubmitting}
-										oninput={(event) =>
-											updateEntry(entry.id, {
-												interestValue: (event.currentTarget as HTMLInputElement).value
-											})}
-									/>
-								</div>
-							{/if}
-
-							{#if !isReceived}
-								<div
-									class="flex items-start gap-3 rounded-xl border border-border bg-background p-3"
-								>
-									<Checkbox
-										id="principal-sent-{entry.id}"
-										checked={entry.isPaid}
-										disabled={isSubmitting}
-										onCheckedChange={(checked) =>
-											updateEntry(entry.id, { isPaid: checked === true })}
-									/>
-									<div>
-										<Label for="principal-sent-{entry.id}">Funds have already been sent</Label>
-										<p class="mt-0.5 text-xs text-muted-foreground">
-											Leave unchecked to record a pending disbursement.
-										</p>
-									</div>
-								</div>
-							{/if}
-						</div>
-					{/each}
-
-					{#if lenders.length > 1}
-						<div class="grid gap-2 sm:grid-cols-2">
-							<Button
-								type="button"
-								variant="outline"
-								class="w-full"
-								disabled={isSubmitting}
-								onclick={() => {
-									entries = [...entries, createPaymentEntry()];
-								}}
-							>
-								<Plus class="mr-2 h-4 w-4" />
-								Add another
-							</Button>
-							<Button
-								type="button"
-								variant="outline"
-								class="w-full"
-								disabled={isSubmitting || unusedLenders.length === 0}
-								onclick={() => {
-									const newEntries = unusedLenders.map((lender) =>
-										createPaymentEntry(String(lender.id))
-									);
-									const hasOnlyBlankEntry =
-										entries.length === 1 && !entries[0].investorId && !entries[0].amount;
-									entries = hasOnlyBlankEntry ? newEntries : [...entries, ...newEntries];
-								}}
-							>
-								Add all remaining lenders
-							</Button>
-						</div>
-					{/if}
-				</div>
-
-			</form>
+				<ReceiptIntake
+					variant="compact"
+					context={scanContext}
+					{lenders}
+					currentLoanId={loan.id}
+					suggestPeriod={isReceived ? suggestPeriod : undefined}
+					onCreate={addFromReceipts}
+					disabled={isSubmitting}
+				/>
+			{/if}
+		</form>
 	</ResponsiveModal>
 {/if}

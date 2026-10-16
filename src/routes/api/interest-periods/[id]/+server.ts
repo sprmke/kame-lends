@@ -10,7 +10,11 @@ import { eq, desc } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import { calculateInterest } from "$lib/calculations";
-import { receiptColumnsFromInput } from "$lib/payment-receipts";
+import {
+  hasPaymentReceipt,
+  receiptColumnsFromInput,
+  RECEIPT_REQUIRED_ERROR,
+} from "$lib/payment-receipts";
 import { syncLoanStatusFromInterestPeriods } from "$lib/server/loan-interest-period-sync";
 
 const AMOUNT_TOLERANCE = 0.02;
@@ -125,6 +129,11 @@ export const PATCH: RequestHandler = async (event) => {
       const receivedDateObj = new Date(dateStr);
       if (Number.isNaN(receivedDateObj.getTime())) {
         return json({ error: "Invalid received date." }, { status: 400 });
+      }
+      if (
+        !hasPaymentReceipt({ receipts, receiptImageUrl, receiptExtractedData })
+      ) {
+        return json({ error: RECEIPT_REQUIRED_ERROR }, { status: 400 });
       }
 
       const linkedBefore = (period.loanInvestor.receivedPayments || []).filter(

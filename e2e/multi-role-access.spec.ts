@@ -1,5 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
-import { gotoApp, skipIfNoDatabase, switchE2ESession } from "./helpers";
+import {
+  e2ePaymentReceipt,
+  gotoApp,
+  skipIfNoDatabase,
+  switchE2ESession,
+} from "./helpers";
 import type {
   Borrower,
   Investor,
@@ -92,6 +97,7 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
           amount: 50000,
           interestRate: 10,
           sentDate: new Date().toISOString().slice(0, 10),
+          receipts: [e2ePaymentReceipt],
         },
       ],
       contractCustomization: {
@@ -121,6 +127,7 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
             amount: 50000,
             interestRate: 10,
             sentDate: new Date().toISOString().slice(0, 10),
+            receipts: [e2ePaymentReceipt],
           },
         ],
       },

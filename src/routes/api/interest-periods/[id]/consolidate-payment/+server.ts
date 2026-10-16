@@ -18,6 +18,11 @@ import {
   recalculateInterestPeriodStatusFromLinkedPayments,
   syncLoanStatusFromInterestPeriods,
 } from "$lib/server/loan-interest-period-sync";
+import {
+  hasPaymentReceipt,
+  receiptColumnsFromInput,
+  RECEIPT_REQUIRED_ERROR,
+} from "$lib/payment-receipts";
 
 const AMOUNT_TOLERANCE = 0.02;
 
@@ -79,6 +84,9 @@ export const POST: RequestHandler = async (event) => {
     if (period.loanInvestor.loan.userId !== session.user.id) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
+    if (!hasPaymentReceipt(body)) {
+      return json({ error: RECEIPT_REQUIRED_ERROR }, { status: 400 });
+    }
 
     const coInvestors = await db.query.loanInvestors.findMany({
       where: eq(loanInvestors.loanId, period.loanInvestor.loanId),
@@ -116,6 +124,7 @@ export const POST: RequestHandler = async (event) => {
       interestPeriodId: periodId,
       amount: String(parsedAmount),
       receivedDate: receivedDateObj,
+      ...receiptColumnsFromInput(body),
     });
 
     await recalculateInterestPeriodStatusFromLinkedPayments(periodId);

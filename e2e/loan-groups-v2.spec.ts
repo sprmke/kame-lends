@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { gotoApp, skipIfNoDatabase, switchE2ESession } from "./helpers";
+import {
+  e2ePaymentReceipt,
+  gotoApp,
+  skipIfNoDatabase,
+  switchE2ESession,
+} from "./helpers";
 
 /**
  * Groups v2 flows. UI chips stay behind SHOW_GROUPS_UI; API + hub routes are live.
@@ -136,7 +141,7 @@ test.describe("loan groups v2", () => {
                 sentDate: dueDate,
                 isPaid: true,
                 hasMultipleInterest: false,
-                receipts: [],
+                receipts: [e2ePaymentReceipt],
                 interestPeriods: [],
               },
             ],
@@ -225,7 +230,7 @@ test.describe("loan groups v2", () => {
               sentDate: dueDate,
               isPaid: true,
               hasMultipleInterest: false,
-              receipts: [],
+              receipts: [e2ePaymentReceipt],
               interestPeriods: [],
             },
           ],
@@ -357,7 +362,7 @@ test.describe("loan groups v2", () => {
               sentDate: dueDate,
               isPaid: true,
               hasMultipleInterest: false,
-              receipts: [],
+              receipts: [e2ePaymentReceipt],
               interestPeriods: [],
             },
           ],

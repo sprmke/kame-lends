@@ -85,6 +85,16 @@ export default defineConfig({
       },
     },
     {
+      name: "receipt-scan",
+      testMatch: /receipt-scan\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
       name: "advanced-controls",
       testMatch: /advanced-controls\.spec\.ts/,
       dependencies: ["setup"],

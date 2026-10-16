@@ -69,10 +69,68 @@ export function receiptColumnsFromInput(input: ReceiptInput): ReceiptColumns {
   };
 }
 
+/** Drops repeated images (same `imageUrl`), keeping the first occurrence. */
+export function uniqueReceipts(receipts: PaymentReceipt[]): PaymentReceipt[] {
+  const seen = new Set<string>();
+  return receipts.filter((receipt) => {
+    if (seen.has(receipt.imageUrl)) return false;
+    seen.add(receipt.imageUrl);
+    return true;
+  });
+}
+
 export function receiptsContainStorageRef(
   input: ReceiptInput,
   ref: string,
 ): boolean {
   if (!isStorageRef(ref)) return false;
   return normalizePaymentReceipts(input).some((item) => item.imageUrl === ref);
+}
+
+export const RECEIPT_REQUIRED_ERROR = "Upload a receipt.";
+
+export function hasPaymentReceipt(
+  input: ReceiptInput | null | undefined,
+): boolean {
+  if (!input || typeof input !== "object") return false;
+  return normalizePaymentReceipts(input).length > 0;
+}
+
+function isPositiveAmount(amount: unknown): boolean {
+  const parsed =
+    typeof amount === "number"
+      ? amount
+      : Number.parseFloat(String(amount ?? "").trim());
+  return Number.isFinite(parsed) && parsed > 0;
+}
+
+/** Principal rows on create and edit. Null when every row has a receipt. */
+export function disbursementReceiptError(investorData: unknown): string | null {
+  if (!Array.isArray(investorData)) return null;
+  const missing = investorData.some(
+    (row) => !hasPaymentReceipt(row as ReceiptInput),
+  );
+  return missing ? "Upload a receipt for each principal disbursement." : null;
+}
+
+/**
+ * Received-payment rows with an amount. Blank rows are ignored.
+ * Create-loan saves skip this check.
+ */
+export function receivedPaymentReceiptError(entries: unknown): string | null {
+  if (!Array.isArray(entries)) return null;
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object") continue;
+    const payments = (entry as { receivedPayments?: unknown }).receivedPayments;
+    if (!Array.isArray(payments)) continue;
+    for (const payment of payments) {
+      if (!payment || typeof payment !== "object") continue;
+      const row = payment as ReceiptInput & { amount?: unknown };
+      if (!isPositiveAmount(row.amount)) continue;
+      if (!hasPaymentReceipt(row)) {
+        return "Upload a receipt for each received payment.";
+      }
+    }
+  }
+  return null;
 }

@@ -32,7 +32,16 @@
 		buildAllocationsFromExistingLoan
 	} from '$lib/components/loans/loan-form-allocations';
 	import { downloadLoanContractPdf } from '$lib/pdf-download';
-	import type { ContractCustomization } from '$lib/loan-contract-customization';
+	import { untrack } from 'svelte';
+	import {
+		areContractCustomizationsEqual,
+		buildDefaultContractCustomization,
+		type ContractCustomization
+	} from '$lib/loan-contract-customization';
+	import {
+		applyDefaultWitnesses,
+		type DefaultWitnessProfile
+	} from '$lib/groups/default-witnesses';
 	import * as Collapsible from '$lib/components/ui/collapsible';
 	import { cn } from '$lib/utils';
 	import { toast } from '$lib/toast';
@@ -49,8 +58,25 @@
 	import { isLoanFullyReceived } from '$lib/calculations';
 	import { ChevronDown, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-svelte';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
+	import ReceiptIntake from '$lib/components/receipt-scan/ReceiptIntake.svelte';
+	import ScanRowActions from '$lib/components/receipt-scan/ScanRowActions.svelte';
+	import ScanRowNotes from '$lib/components/receipt-scan/ScanRowNotes.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
-	import type { PaymentReceipt } from '$lib/payment-receipts';
+	import { hasPaymentReceipt, type PaymentReceipt } from '$lib/payment-receipts';
+	import type { ReceiptScanContext } from '$lib/receipt-extraction-client';
+	import {
+		groupScannedReceipts,
+		type ProposedTransaction,
+		type ScannedReceipt
+	} from '$lib/receipt-scan/group-transactions';
+	import {
+		addProposalsToRows,
+		mergeRowWithPrevious,
+		splitRowAt,
+		type RowAdapter
+	} from '$lib/receipt-scan/rows';
+	import { findMatchingParty } from '$lib/receipt-scan/match-party';
+	import { useAiStatus } from '$lib/ai-status.svelte';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import LoanFormGroupsField from '$lib/components/loans/LoanFormGroupsField.svelte';
 	import { page } from '$app/state';
@@ -143,7 +169,7 @@
 			return [
 				{
 					investor: preselected,
-					transactions: [createTransaction()],
+					transactions: [],
 					receivedPayments: [],
 					hasMultipleInterest: false,
 					interestPeriods: []
@@ -214,6 +240,35 @@
 			loanId: existingLoan?.id
 		})
 	);
+
+	let defaultWitnessRequest = 0;
+
+	$effect(() => {
+		if (!SHOW_GROUPS_UI) return;
+		const ids = [...selectedGroupIds].sort((a, b) => a - b);
+		const key = ids.join(',');
+		if (!key) return;
+		const ticket = ++defaultWitnessRequest;
+		const draft = untrack(() => contractDraft);
+		const current = untrack(() => contractCustomization);
+		void (async () => {
+			try {
+				const response = await fetch(`/api/groups/default-witnesses?ids=${key}`);
+				if (!response.ok || ticket !== defaultWitnessRequest) return;
+				const body = (await response.json()) as { witnesses?: DefaultWitnessProfile[] };
+				const witnesses = body.witnesses ?? [];
+				if (witnesses.length === 0 || ticket !== defaultWitnessRequest) return;
+				const base = current ?? buildDefaultContractCustomization(draft);
+				const next = applyDefaultWitnesses(base, witnesses);
+				if (ticket !== defaultWitnessRequest) return;
+				if (!areContractCustomizationsEqual(base, next)) {
+					contractCustomization = next;
+				}
+			} catch {
+				// The server still applies group witnesses when the loan is saved.
+			}
+		})();
+	});
 
 	$effect(() => {
 		if (!duplicateData || investorList.length === 0 || initializedFromDuplicate || existingLoan)
@@ -301,7 +356,7 @@
 			...selectedInvestors,
 			{
 				investor,
-				transactions: [createTransaction()],
+				transactions: [],
 				receivedPayments: [],
 				hasMultipleInterest: false,
 				interestPeriods: []
@@ -405,17 +460,9 @@
 		selectedInvestors = selectedInvestors.filter((si) => si.investor.id !== investorId);
 	}
 
-	function addTransaction(investorId: number) {
-		selectedInvestors = selectedInvestors.map((si) =>
-			si.investor.id === investorId
-				? { ...si, transactions: [...si.transactions, createTransaction()] }
-				: si
-		);
-	}
-
 	function removeTransaction(investorId: number, transactionId: string) {
 		selectedInvestors = selectedInvestors.map((si) => {
-			if (si.investor.id !== investorId || si.transactions.length <= 1) return si;
+			if (si.investor.id !== investorId) return si;
 			return { ...si, transactions: si.transactions.filter((t) => t.id !== transactionId) };
 		});
 	}
@@ -472,6 +519,198 @@
 
 		if (Object.keys(changes).length > 0) {
 			updateTransactionFields(investorId, transactionId, changes);
+		}
+	}
+
+	function handleReceivedReceiptExtracted(
+		investorId: number,
+		paymentId: string,
+		extracted: ReceiptExtractedData | null
+	) {
+		const si = selectedInvestors.find((row) => row.investor.id === investorId);
+		const payment = si?.receivedPayments.find((rp) => rp.id === paymentId);
+		if (!payment || !extracted || payment.amount) return;
+
+		const changes: Partial<LoanFormReceivedPayment> = {};
+		if (extracted.amount) changes.amount = String(extracted.amount);
+		if (extracted.transactionDate) changes.receivedDate = extracted.transactionDate;
+		if (Object.keys(changes).length > 0) {
+			updateReceivedPaymentFields(investorId, paymentId, changes);
+		}
+	}
+
+	// --- Receipts first: uploads create the transaction / payment rows ----------
+
+	const ai = useAiStatus();
+
+	function scanContextFor(purpose: ReceiptScanContext['purpose']): ReceiptScanContext {
+		return {
+			purpose,
+			loanId: existingLoan?.id,
+			investorIds: selectedInvestors.map((si) => si.investor.id),
+			borrowerId: borrowerId ? Number(borrowerId) : undefined
+		};
+	}
+
+	function lenderOf(si: SelectedInvestorAllocation) {
+		return [{ id: si.investor.id, name: si.investor.name }];
+	}
+
+	/** New principal rows copy the investor's existing interest settings. */
+	function transactionAdapter(si: SelectedInvestorAllocation): RowAdapter<LoanFormTransaction> {
+		return {
+			getId: (t) => t.id,
+			read: (t) => ({
+				investorId: si.investor.id,
+				amount: t.amount,
+				date: t.sentDate,
+				receipts: t.receipts,
+				scan: t.scan ?? null
+			}),
+			write: (base, fields) => {
+				const template = si.transactions[0];
+				const fresh = template
+					? {
+							...createTransaction(),
+							interestType: template.interestType,
+							interestRate: template.interestRate,
+							interestAmount: template.interestAmount,
+							isPaid: template.isPaid
+						}
+					: createTransaction();
+				return {
+					...(base ?? fresh),
+					amount: fields.amount,
+					sentDate: fields.date || base?.sentDate || toLocalDateString(new Date()),
+					dateTouched: true,
+					receipts: fields.receipts,
+					scan: fields.scan
+				};
+			}
+		};
+	}
+
+	function receivedAdapter(si: SelectedInvestorAllocation): RowAdapter<LoanFormReceivedPayment> {
+		return {
+			getId: (rp) => rp.id,
+			read: (rp) => ({
+				investorId: si.investor.id,
+				amount: rp.amount,
+				date: rp.receivedDate,
+				receipts: rp.receipts,
+				scan: rp.scan ?? null
+			}),
+			write: (base, fields) => ({
+				...(base ?? createReceivedPayment()),
+				amount: fields.amount,
+				receivedDate: fields.date || base?.receivedDate || toLocalDateString(new Date()),
+				receipts: fields.receipts,
+				scan: fields.scan
+			})
+		};
+	}
+
+	function updateInvestor(
+		investorId: number,
+		change: (si: SelectedInvestorAllocation) => SelectedInvestorAllocation
+	) {
+		selectedInvestors = selectedInvestors.map((si) =>
+			si.investor.id === investorId ? change(si) : si
+		);
+	}
+
+	function addTransactionsFromReceipts(investorId: number, proposals: ProposedTransaction[]) {
+		updateInvestor(investorId, (si) => ({
+			...si,
+			transactions: addProposalsToRows(si.transactions, proposals, transactionAdapter(si))
+		}));
+	}
+
+	function addReceivedFromReceipts(investorId: number, proposals: ProposedTransaction[]) {
+		updateInvestor(investorId, (si) => ({
+			...si,
+			receivedPayments: addProposalsToRows(si.receivedPayments, proposals, receivedAdapter(si))
+		}));
+	}
+
+	function scannedUrls(scanned: ScannedReceipt[]) {
+		return scanned
+			.map((item) => item.receipt?.imageUrl)
+			.filter((url): url is string => Boolean(url));
+	}
+
+	/** A row's own upload holds several transfers: split that row in place. */
+	function splitTransactionFromScan(
+		si: SelectedInvestorAllocation,
+		transactionId: string,
+		scanned: ScannedReceipt[]
+	) {
+		const { proposals } = groupScannedReceipts(scanned, {
+			purpose: 'loan_funding',
+			lenders: lenderOf(si),
+			defaultInvestorId: si.investor.id,
+			currentLoanId: existingLoan?.id ?? null
+		});
+		updateInvestor(si.investor.id, (row) => ({
+			...row,
+			transactions: addProposalsToRows(row.transactions, proposals, transactionAdapter(row), {
+				sourceId: transactionId,
+				scannedImageUrls: scannedUrls(scanned)
+			})
+		}));
+	}
+
+	function splitReceivedFromScan(
+		si: SelectedInvestorAllocation,
+		paymentId: string,
+		scanned: ScannedReceipt[]
+	) {
+		const { proposals } = groupScannedReceipts(scanned, {
+			purpose: 'received_payment',
+			lenders: lenderOf(si),
+			defaultInvestorId: si.investor.id,
+			currentLoanId: existingLoan?.id ?? null
+		});
+		updateInvestor(si.investor.id, (row) => ({
+			...row,
+			receivedPayments: addProposalsToRows(row.receivedPayments, proposals, receivedAdapter(row), {
+				sourceId: paymentId,
+				scannedImageUrls: scannedUrls(scanned)
+			})
+		}));
+	}
+
+	/** New loan with no investors yet: lenders come from the whole CRM. */
+	const crmLenders = $derived(
+		investorList.map((investor) => ({ id: investor.id, name: investor.name }))
+	);
+
+	function addInvestorsFromReceipts(proposals: ProposedTransaction[]) {
+		const unmatched = proposals.filter((proposal) => proposal.investorId === null);
+		const byInvestor = new Map<number, ProposedTransaction[]>();
+		for (const proposal of proposals) {
+			if (proposal.investorId === null) continue;
+			byInvestor.set(proposal.investorId, [...(byInvestor.get(proposal.investorId) ?? []), proposal]);
+		}
+		for (const [investorId, list] of byInvestor) {
+			addInvestor(String(investorId));
+			addTransactionsFromReceipts(investorId, list);
+		}
+		if (unmatched.length > 0) {
+			toast.info(
+				`${unmatched.length} ${unmatched.length === 1 ? 'receipt' : 'receipts'} didn't match an investor. Add the investor, then upload in their card.`
+			);
+		}
+
+		if (!borrowerId) {
+			for (const proposal of proposals) {
+				const borrower = findMatchingParty(proposal.counterpartyName, borrowerList);
+				if (borrower) {
+					borrowerId = String(borrower.id);
+					toast.info(`Borrower set to ${borrower.name} from the receipt.`);
+					break;
+				}
+			}
 		}
 	}
 
@@ -543,7 +782,14 @@
 		if (!borrowerId) next.borrowerId = 'Borrower is required';
 		if (selectedInvestors.length === 0) next.investors = 'At least one investor is required';
 
+		let missingDisbursementReceipt = false;
+		let missingReceivedReceipt = false;
+
 		for (const si of selectedInvestors) {
+			if (si.transactions.length === 0) {
+				next.investors = `Upload a receipt for ${si.investor.name}'s principal disbursement.`;
+				missingDisbursementReceipt = true;
+			}
 			for (const transaction of si.transactions) {
 				const amountText = String(transaction.amount).trim();
 				const interestRateText = String(transaction.interestRate).trim();
@@ -560,6 +806,20 @@
 					next.investors = 'Each transaction needs an interest rate or fixed amount';
 					break;
 				}
+				if (!hasPaymentReceipt(transaction)) {
+					next[`receipt-tx-${transaction.id}`] = 'Upload a receipt.';
+					missingDisbursementReceipt = true;
+				}
+			}
+			if (isEditMode) {
+				for (const rp of si.receivedPayments) {
+					const amount = Number.parseFloat(rp.amount);
+					if (!Number.isFinite(amount) || amount <= 0) continue;
+					if (!hasPaymentReceipt(rp)) {
+						next[`receipt-rp-${rp.id}`] = 'Upload a receipt.';
+						missingReceivedReceipt = true;
+					}
+				}
 			}
 			if (si.hasMultipleInterest) {
 				if (si.interestPeriods.length === 0) {
@@ -575,6 +835,14 @@
 
 		if (selectedInvestors.some((si) => receivedExceedsMax(si))) {
 			next.investors = 'Total received payments cannot exceed total amount due per investor';
+		}
+
+		if (!next.investors && missingDisbursementReceipt && missingReceivedReceipt) {
+			next.investors = 'Upload a receipt for each disbursement and received payment.';
+		} else if (!next.investors && missingDisbursementReceipt) {
+			next.investors = 'Upload a receipt for each principal disbursement.';
+		} else if (!next.investors && missingReceivedReceipt) {
+			next.investors = 'Upload a receipt for each received payment.';
 		}
 
 		errors = next;
@@ -1011,7 +1279,17 @@
 			{#if errors.investors}<p class="text-sm text-destructive">{errors.investors}</p>{/if}
 
 			{#if selectedInvestors.length === 0}
-				<p class="py-4 text-center text-muted-foreground">No investors added yet</p>
+				{#if ai.receiptExtraction}
+					<ReceiptIntake
+						context={scanContextFor('loan_funding')}
+						lenders={crmLenders}
+						currentLoanId={existingLoan?.id ?? null}
+						onCreate={addInvestorsFromReceipts}
+						disabled={isSubmitting}
+					/>
+				{:else}
+					<p class="py-4 text-center text-muted-foreground">No investors added yet</p>
+				{/if}
 			{/if}
 
 			{#each selectedInvestors as si (si.investor.id)}
@@ -1070,25 +1348,50 @@
 						</Tabs.List>
 
 						<Tabs.Content value="principal" class="mt-3 space-y-4">
+							{#if si.transactions.length === 0}
+								<ReceiptIntake
+									context={scanContextFor('loan_funding')}
+									lenders={lenderOf(si)}
+									defaultInvestorId={si.investor.id}
+									currentLoanId={existingLoan?.id ?? null}
+									onCreate={(proposals) => addTransactionsFromReceipts(si.investor.id, proposals)}
+									disabled={isSubmitting}
+								/>
+							{/if}
 							{#each si.transactions as transaction, txIndex (transaction.id)}
-								<div class="space-y-3 rounded-md bg-muted/30 p-3">
+								<div class="space-y-3 rounded-md bg-muted/30 p-3" data-testid="principal-transaction">
 									<div class="flex items-center justify-between">
 										<p class="text-sm text-muted-foreground">Transaction {txIndex + 1}</p>
-										{#if si.transactions.length > 1}
-											<Button
-												type="button"
-												variant="ghost"
-												size="sm"
-												onclick={() => removeTransaction(si.investor.id, transaction.id)}
-											>
-												<Trash2 class="h-3 w-3" />
-											</Button>
-										{/if}
+										<ScanRowActions
+											rowLabel="Transaction {txIndex + 1}"
+											canMerge={txIndex > 0}
+											canSplit={transaction.receipts.length > 1}
+											canRemove={true}
+											onMerge={() =>
+												updateInvestor(si.investor.id, (row) => ({
+													...row,
+													transactions: mergeRowWithPrevious(
+														row.transactions,
+														txIndex,
+														transactionAdapter(row)
+													)
+												}))}
+											onSplit={() =>
+												updateInvestor(si.investor.id, (row) => ({
+													...row,
+													transactions: splitRowAt(row.transactions, txIndex, transactionAdapter(row))
+												}))}
+											onRemove={() => removeTransaction(si.investor.id, transaction.id)}
+											disabled={isSubmitting}
+										/>
 									</div>
 
 									<ReceiptUploadField
 										idPrefix="tx-{transaction.id}"
 										receipts={transaction.receipts}
+										showReading={!transaction.scan}
+										required
+										error={errors[`receipt-tx-${transaction.id}`]}
 										disabled={isSubmitting}
 										onChange={(receipts) =>
 											updateTransactionFields(si.investor.id, transaction.id, { receipts })}
@@ -1098,7 +1401,12 @@
 												transaction.id,
 												extracted
 											)}
+										scanContext={scanContextFor('loan_funding')}
+										onSplitRequest={(scanned) =>
+											splitTransactionFromScan(si, transaction.id, scanned)}
 									/>
+
+									<ScanRowNotes scan={transaction.scan} />
 
 									<div class="grid w-full gap-3 sm:grid-cols-2">
 										<div class="min-w-0 space-y-2">
@@ -1216,16 +1524,17 @@
 								</div>
 							{/each}
 
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								disabled={isSubmitting}
-								onclick={() => addTransaction(si.investor.id)}
-							>
-								<Plus class="mr-2 h-4 w-4" />
-								Add Transaction
-							</Button>
+							{#if si.transactions.length > 0}
+								<ReceiptIntake
+									variant="compact"
+									context={scanContextFor('loan_funding')}
+									lenders={lenderOf(si)}
+									defaultInvestorId={si.investor.id}
+									currentLoanId={existingLoan?.id ?? null}
+									onCreate={(proposals) => addTransactionsFromReceipts(si.investor.id, proposals)}
+									disabled={isSubmitting}
+								/>
+							{/if}
 
 							{#if primaryTransaction}
 								<MultipleInterestManager
@@ -1270,26 +1579,69 @@
 									</p>
 								{/if}
 
+								{#if si.receivedPayments.length === 0}
+									<ReceiptIntake
+										context={scanContextFor('received_payment')}
+										lenders={lenderOf(si)}
+										defaultInvestorId={si.investor.id}
+										currentLoanId={existingLoan?.id ?? null}
+										onCreate={(proposals) => addReceivedFromReceipts(si.investor.id, proposals)}
+										disabled={isSubmitting}
+									/>
+								{/if}
+
 								{#each si.receivedPayments as rp, rpIndex (rp.id)}
-									<div class="space-y-3 rounded-md border bg-muted/50 p-3">
+									<div class="space-y-3 rounded-md border bg-muted/50 p-3" data-testid="received-payment">
 										<div class="flex items-center justify-between">
 											<p class="text-sm text-muted-foreground">Payment {rpIndex + 1}</p>
-											{#if si.receivedPayments.length > 1}
-												<Button
-													type="button"
-													variant="ghost"
-													size="sm"
-													disabled={isSubmitting}
-													onclick={() => removeReceivedPayment(si.investor.id, rp.id)}
-												>
-													<Trash2 class="h-3 w-3" />
-												</Button>
-											{/if}
+											<ScanRowActions
+												rowLabel="Payment {rpIndex + 1}"
+												canMerge={rpIndex > 0}
+												canSplit={rp.receipts.length > 1}
+												canRemove={true}
+												onMerge={() =>
+													updateInvestor(si.investor.id, (row) => ({
+														...row,
+														receivedPayments: mergeRowWithPrevious(
+															row.receivedPayments,
+															rpIndex,
+															receivedAdapter(row)
+														)
+													}))}
+												onSplit={() =>
+													updateInvestor(si.investor.id, (row) => ({
+														...row,
+														receivedPayments: splitRowAt(
+															row.receivedPayments,
+															rpIndex,
+															receivedAdapter(row)
+														)
+													}))}
+												onRemove={() => removeReceivedPayment(si.investor.id, rp.id)}
+												disabled={isSubmitting}
+											/>
 										</div>
+										<ReceiptUploadField
+											idPrefix="rp-{rp.id}"
+											receipts={rp.receipts}
+											showReading={!rp.scan}
+											required={isEditMode && Number.parseFloat(rp.amount) > 0}
+											error={errors[`receipt-rp-${rp.id}`]}
+											disabled={isSubmitting}
+											onChange={(receipts) =>
+												updateReceivedPaymentFields(si.investor.id, rp.id, { receipts })}
+											onExtracted={(extracted) =>
+												handleReceivedReceiptExtracted(si.investor.id, rp.id, extracted)}
+											scanContext={scanContextFor('received_payment')}
+											onSplitRequest={(scanned) => splitReceivedFromScan(si, rp.id, scanned)}
+										/>
+
+										<ScanRowNotes scan={rp.scan} />
 										<div class="grid gap-3 sm:grid-cols-2">
 											<div class="space-y-2">
-												<Label>Amount</Label>
+												<Label for="rp-amount-{rp.id}">Amount</Label>
 												<Input
+													id="rp-amount-{rp.id}"
 													type="number"
 													min="0"
 													step="0.01"
@@ -1305,8 +1657,9 @@
 												/>
 											</div>
 											<div class="space-y-2">
-												<Label>Received Date</Label>
+												<Label for="rp-date-{rp.id}">Received Date</Label>
 												<Input
+													id="rp-date-{rp.id}"
 													type="date"
 													value={rp.receivedDate}
 													disabled={isSubmitting}
@@ -1320,27 +1673,34 @@
 												/>
 											</div>
 										</div>
-										<ReceiptUploadField
-											idPrefix="rp-{rp.id}"
-											receipts={rp.receipts}
-											disabled={isSubmitting}
-											onChange={(receipts) =>
-												updateReceivedPaymentFields(si.investor.id, rp.id, { receipts })}
-										/>
+
 									</div>
 								{/each}
 
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									class="w-full"
-									disabled={isSubmitting}
-									onclick={() => addReceivedPayment(si.investor.id)}
-								>
-									<Plus class="mr-2 h-4 w-4" />
-									Add received payment
-								</Button>
+								{#if si.receivedPayments.length > 0}
+									<ReceiptIntake
+										variant="compact"
+										context={scanContextFor('received_payment')}
+										lenders={lenderOf(si)}
+										defaultInvestorId={si.investor.id}
+										currentLoanId={existingLoan?.id ?? null}
+										onCreate={(proposals) => addReceivedFromReceipts(si.investor.id, proposals)}
+										disabled={isSubmitting}
+									/>
+								{/if}
+								{#if !isEditMode}
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										class="w-full text-muted-foreground"
+										disabled={isSubmitting}
+										onclick={() => addReceivedPayment(si.investor.id)}
+									>
+										<Plus class="mr-2 h-4 w-4" />
+										Add without receipt
+									</Button>
+								{/if}
 							</div>
 						</Tabs.Content>
 					</Tabs.Root>

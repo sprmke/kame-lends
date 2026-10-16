@@ -1,11 +1,18 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { test, expect } from "@playwright/test";
 import { fetchJson, gotoApp, skipIfNoDatabase } from "./helpers";
 import type { Borrower, Investor, Transaction } from "$lib/types";
 
+const RECEIPT_FIXTURES = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "fixtures/receipts",
+);
+
 test.describe.configure({ mode: "serial", timeout: 120_000, retries: 1 });
 
 // eslint-disable-next-line no-empty-pattern
-test.beforeEach((_fixtures, testInfo) => {
+test.beforeEach(({}, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 
@@ -233,6 +240,20 @@ test("create and delete a loan", async ({ page, request }) => {
   expect(borrowerRes.ok(), await borrowerRes.text()).toBeTruthy();
   const borrower = (await borrowerRes.json()) as Borrower;
 
+  // AI off and storage mocked: the upload only attaches the image.
+  await page.route("**/api/ai/status", (route) =>
+    route.fulfill({
+      json: {
+        enabled: false,
+        features: { receipt_extraction: false },
+        reason: "disabled",
+      },
+    }),
+  );
+  await page.route("**/api/storage/upload", (route) =>
+    route.fulfill({ json: { storageRef: `storage:e2e/loan-${stamp}.jpg` } }),
+  );
+
   const response = await gotoApp(page, `/loans/new?investorId=${investor.id}`);
   expect(response?.status()).toBe(200);
   await expect(page.getByRole("heading", { name: "Create Loan" })).toBeVisible({
@@ -244,10 +265,17 @@ test("create and delete a loan", async ({ page, request }) => {
   await page.getByRole("option", { name: borrower.name }).click();
   await page.locator("#loanName").fill(`E2E Loan ${stamp}`);
   await page.locator("#dueDate").fill(dueDate);
+  // Receipts first: the disbursement row is created by uploading its receipt.
   await page
-    .locator('#investors-section input[type="number"]')
+    .locator(
+      '#investors-section input[type="file"][aria-label="Upload receipts"]',
+    )
     .first()
-    .fill("50000");
+    .setInputFiles(path.join(RECEIPT_FIXTURES, "receipt-1.png"));
+  await expect(page.locator('input[id^="principal-"]')).toHaveCount(1, {
+    timeout: 30_000,
+  });
+  await page.locator('input[id^="principal-"]').first().fill("50000");
 
   const createResponsePromise = page.waitForResponse((res) =>
     res.url().includes("/api/loans"),

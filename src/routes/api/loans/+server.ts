@@ -6,6 +6,7 @@ import {
   loanInvestors,
   interestPeriods,
   receivedPayments,
+  loanSigningInvitations,
 } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
@@ -13,7 +14,10 @@ import { saveLoanContractAndInvitations } from "$lib/server/loan-contract-persis
 import { toSigningInvitationSummary } from "$lib/loan-signing";
 import { getCachedLoans } from "$lib/server/cached-data";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
-import { receiptColumnsFromInput } from "$lib/payment-receipts";
+import {
+  disbursementReceiptError,
+  receiptColumnsFromInput,
+} from "$lib/payment-receipts";
 import { resolveAppUrl } from "$lib/server/app-url";
 import { validateLoanCrmOwnership } from "$lib/server/loan-crm-ownership";
 
@@ -58,6 +62,11 @@ export const POST: RequestHandler = async (event) => {
     });
     if (!crmCheck.ok) {
       return json({ error: crmCheck.message }, { status: crmCheck.status });
+    }
+
+    const disbursementReceiptMessage = disbursementReceiptError(investorData);
+    if (disbursementReceiptMessage) {
+      return json({ error: disbursementReceiptMessage }, { status: 400 });
     }
 
     // Convert date strings to Date objects and ensure proper types
@@ -228,6 +237,13 @@ export const POST: RequestHandler = async (event) => {
           });
         }
         await applyGroupRulesForLoan(completeLoan.id, session.user.id);
+        try {
+          const { applyGroupDefaultWitnessesToLoan } =
+            await import("$lib/server/groups/apply-default-witnesses");
+          await applyGroupDefaultWitnessesToLoan(completeLoan.id);
+        } catch (witnessErr) {
+          console.error("[groups] default witnesses failed", witnessErr);
+        }
         await enqueueGroupLoanChanged(completeLoan.id);
         scheduleDrain(event);
       } catch (groupErr) {
@@ -240,11 +256,19 @@ export const POST: RequestHandler = async (event) => {
       try {
         const { sendLoanCreatedSigningEmails } =
           await import("$lib/server/email/loan-created-email");
+        const freshInvitations = await db.query.loanSigningInvitations.findMany(
+          {
+            where: eq(loanSigningInvitations.loanId, completeLoan.id),
+          },
+        );
+        const emailRecipients = (
+          freshInvitations.length > 0 ? freshInvitations : signingInvitations
+        ).filter((invitation) => !invitation.signedAt);
         const emailResult = await sendLoanCreatedSigningEmails({
           loanId: completeLoan.id,
           loanName: completeLoan.loanName,
           dueDate: completeLoan.dueDate,
-          recipients: signingInvitations.map((invitation) => ({
+          recipients: emailRecipients.map((invitation) => ({
             partyRole: invitation.partyRole,
             partyName: invitation.partyName,
             partyEmail: invitation.partyEmail,

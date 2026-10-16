@@ -6,7 +6,11 @@ import { db } from "$lib/server/db";
 import { loanInvestors, loans } from "$lib/server/db/schema";
 import { hasLoanAdminAccess } from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
-import { receiptColumnsFromInput } from "$lib/payment-receipts";
+import {
+  hasPaymentReceipt,
+  receiptColumnsFromInput,
+  RECEIPT_REQUIRED_ERROR,
+} from "$lib/payment-receipts";
 
 export const POST: RequestHandler = async (event) => {
   const { params, request } = event;
@@ -49,6 +53,9 @@ export const POST: RequestHandler = async (event) => {
     }
     if (!Number.isFinite(interestValue) || interestValue < 0) {
       return json({ error: "Interest cannot be negative." }, { status: 400 });
+    }
+    if (!hasPaymentReceipt(body)) {
+      return json({ error: RECEIPT_REQUIRED_ERROR }, { status: 400 });
     }
 
     const existingPayments = await db.query.loanInvestors.findMany({

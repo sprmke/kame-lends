@@ -21,6 +21,12 @@ export async function gotoApp(page: Page, path: string) {
   return page.goto(path, { waitUntil: "domcontentloaded", timeout: 45_000 });
 }
 
+/** Tiny PNG so loan API calls satisfy the required disbursement receipt. */
+export const e2ePaymentReceipt = {
+  imageUrl: "data:image/png;base64,iVBORw0KGgo=",
+  extractedData: null,
+};
+
 export async function fetchJson<T>(request: APIRequestContext, path: string) {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {

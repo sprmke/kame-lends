@@ -1,6 +1,7 @@
 import type { InterestPeriodStatus, InterestType, Investor } from "$lib/types";
 import type { InterestPeriodData } from "./multiple-interest-types";
 import type { PaymentReceipt } from "$lib/payment-receipts";
+import type { RowScanMeta } from "$lib/receipt-scan/rows";
 
 export interface LoanFormTransaction {
   id: string;
@@ -12,6 +13,8 @@ export interface LoanFormTransaction {
   isPaid: boolean;
   dateTouched: boolean;
   receipts: PaymentReceipt[];
+  /** AI notes when the row was created from receipts (UI only, never sent). */
+  scan?: RowScanMeta | null;
 }
 
 export interface LoanFormReceivedPayment {
@@ -19,6 +22,8 @@ export interface LoanFormReceivedPayment {
   amount: string;
   receivedDate: string;
   receipts: PaymentReceipt[];
+  /** AI notes when the row was created from receipts (UI only, never sent). */
+  scan?: RowScanMeta | null;
 }
 
 export interface SelectedInvestorAllocation {

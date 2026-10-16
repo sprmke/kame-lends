@@ -1,11 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { gotoApp, skipIfNoDatabase } from "./helpers";
+import { e2ePaymentReceipt, gotoApp, skipIfNoDatabase } from "./helpers";
 import type { Borrower, Investor, LoanWithInvestors } from "$lib/types";
 
 test.describe.configure({ mode: "serial", timeout: 120_000, retries: 1 });
 
 // eslint-disable-next-line no-empty-pattern
-test.beforeEach((_fixtures, testInfo) => {
+test.beforeEach(({}, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 
@@ -101,6 +101,7 @@ test("valid signing page renders signing controls", async ({
           amount: 50000,
           interestRate: 10,
           sentDate: new Date().toISOString().slice(0, 10),
+          receipts: [e2ePaymentReceipt],
         },
       ],
     },
@@ -178,6 +179,7 @@ test("loan duplicate action pre-fills create form", async ({
           amount: 25000,
           interestRate: 8,
           sentDate: new Date().toISOString().slice(0, 10),
+          receipts: [e2ePaymentReceipt],
         },
       ],
     },

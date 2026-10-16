@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ReceiptExtractedData } from "./receipt-extraction-types";
 import {
+  disbursementReceiptError,
+  hasPaymentReceipt,
   MAX_PAYMENT_RECEIPTS,
   normalizePaymentReceipts,
   receiptColumnsFromInput,
+  receivedPaymentReceiptError,
   receiptsContainStorageRef,
 } from "./payment-receipts";
 
@@ -104,6 +107,58 @@ describe("receiptColumnsFromInput", () => {
   });
 });
 
+describe("hasPaymentReceipt", () => {
+  it("accepts a receipts array or the legacy image column", () => {
+    expect(hasPaymentReceipt({ receipts: [] })).toBe(false);
+    expect(hasPaymentReceipt(null)).toBe(false);
+    expect(
+      hasPaymentReceipt({
+        receipts: [{ imageUrl: REF, extractedData: null }],
+      }),
+    ).toBe(true);
+    expect(hasPaymentReceipt({ receiptImageUrl: REF })).toBe(true);
+  });
+});
+
+describe("receipt requirement errors", () => {
+  it("requires a receipt on every principal disbursement", () => {
+    expect(disbursementReceiptError([{ amount: "1", receipts: [] }])).toMatch(
+      /principal disbursement/,
+    );
+    expect(
+      disbursementReceiptError([
+        { receipts: [{ imageUrl: REF, extractedData: null }] },
+      ]),
+    ).toBeNull();
+    expect(disbursementReceiptError([])).toBeNull();
+  });
+
+  it("requires a receipt only on received payments that have an amount", () => {
+    expect(
+      receivedPaymentReceiptError([
+        { receivedPayments: [{ amount: "", receipts: [] }] },
+      ]),
+    ).toBeNull();
+    expect(
+      receivedPaymentReceiptError([
+        { receivedPayments: [{ amount: "100", receipts: [] }] },
+      ]),
+    ).toMatch(/received payment/);
+    expect(
+      receivedPaymentReceiptError([
+        {
+          receivedPayments: [
+            {
+              amount: "100",
+              receipts: [{ imageUrl: REF, extractedData: null }],
+            },
+          ],
+        },
+      ]),
+    ).toBeNull();
+  });
+});
+
 describe("receiptsContainStorageRef", () => {
   it("matches a ref on either the array or the legacy column", () => {
     expect(
@@ -119,5 +174,58 @@ describe("receiptsContainStorageRef", () => {
       true,
     );
     expect(receiptsContainStorageRef({ receipts: [] }, REF)).toBe(false);
+  });
+});
+
+describe("v2 receipt readings (multi-transaction)", () => {
+  it("keeps schemaVersion 2 extractedData with transactions through save normalization", () => {
+    const extractedData = {
+      schemaVersion: 2,
+      verdict: "valid",
+      confidence: 0.9,
+      summary: "History",
+      senderName: "Juan",
+      senderBank: "GCash",
+      receiverName: null,
+      receiverBank: null,
+      amount: 100,
+      transactionDate: "2026-10-01",
+      referenceNumber: "H1",
+      provider: "gemini",
+      transactions: [
+        {
+          amount: 100,
+          currency: "PHP",
+          date: "2026-10-01",
+          time: "09:05",
+          status: "successful",
+          referenceNumber: "H1",
+          senderName: "Juan",
+          senderBank: "GCash",
+          receiverName: null,
+          receiverBank: null,
+          fee: 0,
+        },
+      ],
+    };
+    const columns = receiptColumnsFromInput({
+      receipts: [{ imageUrl: "storage:receipts/a.jpg", extractedData }],
+    });
+    expect(columns.receipts[0].extractedData).toEqual(extractedData);
+    expect(columns.receiptExtractedData).toEqual(extractedData);
+  });
+
+  it("drops forged or malformed extractedData but keeps the image", () => {
+    const columns = receiptColumnsFromInput({
+      receipts: [
+        {
+          imageUrl: "storage:receipts/a.jpg",
+          extractedData: { verdict: "valid", amount: "lots" },
+        },
+      ],
+    });
+    expect(columns.receipts).toEqual([
+      { imageUrl: "storage:receipts/a.jpg", extractedData: null },
+    ]);
   });
 });

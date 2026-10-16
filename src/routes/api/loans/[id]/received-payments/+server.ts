@@ -11,7 +11,11 @@ import {
   recalculateInterestPeriodStatusFromLinkedPayments,
   syncLoanStatusFromInterestPeriods,
 } from "$lib/server/loan-interest-period-sync";
-import { receiptColumnsFromInput } from "$lib/payment-receipts";
+import {
+  hasPaymentReceipt,
+  receiptColumnsFromInput,
+  RECEIPT_REQUIRED_ERROR,
+} from "$lib/payment-receipts";
 
 const AMOUNT_TOLERANCE = 0.02;
 
@@ -64,6 +68,9 @@ export const POST: RequestHandler = async (event) => {
     }
     if (requestedPeriodId !== null && !Number.isFinite(requestedPeriodId)) {
       return json({ error: "Invalid interest period." }, { status: 400 });
+    }
+    if (!hasPaymentReceipt(body)) {
+      return json({ error: RECEIPT_REQUIRED_ERROR }, { status: 400 });
     }
 
     const lenderPayments = await db.query.loanInvestors.findMany({

@@ -32,6 +32,8 @@
 		formatCount
 	} from './investor-transactions-helpers';
 	import ReceiptThumbnails from '$lib/components/common/ReceiptThumbnails.svelte';
+	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
+	import { hasPaymentReceipt, type PaymentReceipt } from '$lib/payment-receipts';
 
 	interface Props {
 		investorsWithTransactions: InvestorWithTransactions[];
@@ -74,6 +76,7 @@
 		amount: string;
 		receivedDate: string;
 		expectedInterest: number;
+		receipts: PaymentReceipt[];
 	} | null>(null);
 
 	let editPaymentModal = $state<{
@@ -83,6 +86,7 @@
 		amount: string;
 		receivedDate: string;
 		expectedInterest: number;
+		receipts: PaymentReceipt[];
 	} | null>(null);
 
 	const loanTotalPrincipal = $derived(computeLoanTotalPrincipal(investorsWithTransactions));
@@ -128,13 +132,14 @@
 			periodId,
 			amount: pay.toFixed(2),
 			receivedDate: today,
-			expectedInterest: fullInterestForPeriod
+			expectedInterest: fullInterestForPeriod,
+			receipts: []
 		};
 	}
 
 	async function handleCompletePeriod() {
 		if (!completeModal) return;
-		const { periodId, amount, receivedDate } = completeModal;
+		const { periodId, amount, receivedDate, receipts } = completeModal;
 		const trimmedDate = receivedDate?.trim() ?? '';
 		const parsed = parseFloat(amount);
 		if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -143,6 +148,10 @@
 		}
 		if (!trimmedDate) {
 			toast.error('Choose a received date.');
+			return;
+		}
+		if (!hasPaymentReceipt({ receipts })) {
+			toast.error('Upload a receipt.');
 			return;
 		}
 
@@ -154,7 +163,8 @@
 				body: JSON.stringify({
 					status: 'Completed',
 					receivedAmount: parsed,
-					receivedDate: trimmedDate
+					receivedDate: trimmedDate,
+					receipts
 				})
 			});
 			const data = await response.json().catch(() => ({}));
@@ -198,7 +208,8 @@
 				paymentId: null,
 				amount: periodInterest.toFixed(2),
 				receivedDate: today,
-				expectedInterest: periodInterest
+				expectedInterest: periodInterest,
+				receipts: []
 			};
 			return;
 		}
@@ -214,13 +225,14 @@
 			paymentId: single ? linkedRows[0].id! : null,
 			amount: sum.toFixed(2),
 			receivedDate: dateStr,
-			expectedInterest: periodInterest
+			expectedInterest: periodInterest,
+			receipts: []
 		};
 	}
 
 	async function handleEditPaymentSave() {
 		if (!editPaymentModal) return;
-		const { periodId, mode, paymentId, amount, receivedDate } = editPaymentModal;
+		const { periodId, mode, paymentId, amount, receivedDate, receipts } = editPaymentModal;
 		const trimmedDate = receivedDate?.trim() ?? '';
 		const parsed = parseFloat(amount);
 		if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -229,6 +241,10 @@
 		}
 		if (!trimmedDate) {
 			toast.error('Choose a received date.');
+			return;
+		}
+		if (mode === 'consolidate' && !hasPaymentReceipt({ receipts })) {
+			toast.error('Upload a receipt.');
 			return;
 		}
 
@@ -249,7 +265,7 @@
 				const response = await fetch(`/api/interest-periods/${periodId}/consolidate-payment`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ amount: parsed, receivedDate: trimmedDate })
+					body: JSON.stringify({ amount: parsed, receivedDate: trimmedDate, receipts })
 				});
 				const data = await response.json().catch(() => ({}));
 				if (!response.ok) {
@@ -833,6 +849,7 @@
 			disabled={!completeModal ||
 				!completeModal.amount?.trim() ||
 				!completeModal.receivedDate?.trim() ||
+				!hasPaymentReceipt(completeModal) ||
 				completingPeriods.has(completeModal.periodId)}
 		>
 			{#if completeModal && completingPeriods.has(completeModal.periodId)}
@@ -872,6 +889,25 @@
 					}}
 				/>
 			</div>
+			<ReceiptUploadField
+				idPrefix="period-{completeModal.periodId}"
+				receipts={completeModal.receipts}
+				required
+				disabled={completingPeriods.has(completeModal.periodId)}
+				scanContext={{ purpose: 'received_payment', loanId }}
+				onChange={(receipts) => {
+					if (completeModal) completeModal = { ...completeModal, receipts };
+				}}
+				onExtracted={(extracted) => {
+					// The first receipt shows what was actually paid; it beats the expected amount.
+					if (!completeModal || !extracted || completeModal.receipts.length > 1) return;
+					completeModal = {
+						...completeModal,
+						amount: extracted.amount ? String(extracted.amount) : completeModal.amount,
+						receivedDate: extracted.transactionDate ?? completeModal.receivedDate
+					};
+				}}
+			/>
 		</div>
 	{/if}
 </ResponsiveModal>
@@ -900,6 +936,7 @@
 			disabled={!editPaymentModal ||
 				!editPaymentModal.amount?.trim() ||
 				!editPaymentModal.receivedDate?.trim() ||
+				(editPaymentModal.mode === 'consolidate' && !hasPaymentReceipt(editPaymentModal)) ||
 				(editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId))}
 		>
 			{#if editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId)}
@@ -942,6 +979,26 @@
 					}}
 				/>
 			</div>
+			{#if editPaymentModal.mode === 'consolidate'}
+				<ReceiptUploadField
+					idPrefix="consolidate-{editPaymentModal.periodId}"
+					receipts={editPaymentModal.receipts}
+					required
+					disabled={editingPaymentPeriodIds.has(editPaymentModal.periodId)}
+					scanContext={{ purpose: 'received_payment', loanId }}
+					onChange={(receipts) => {
+						if (editPaymentModal) editPaymentModal = { ...editPaymentModal, receipts };
+					}}
+					onExtracted={(extracted) => {
+						if (!editPaymentModal || !extracted || editPaymentModal.receipts.length > 1) return;
+						editPaymentModal = {
+							...editPaymentModal,
+							amount: extracted.amount ? String(extracted.amount) : editPaymentModal.amount,
+							receivedDate: extracted.transactionDate ?? editPaymentModal.receivedDate
+						};
+					}}
+				/>
+			{/if}
 		</div>
 	{/if}
 </ResponsiveModal>
