@@ -128,7 +128,7 @@ bun run deploy:prod
 
 - Cron backup: `/api/cron/backup` at 06:00 UTC (`vercel.json`). Requires `Authorization: Bearer CRON_SECRET` (fail closed).
 - Groups cron: `/api/cron/groups` at 00:00 UTC (membership, ACL, Telegram due reminders, job drain). Requires `CRON_SECRET`.
-- Signing reminders: `/api/cron/signing-reminders` every hour. Each group sends only on its configured interval (default 1 hour, daily at 08:00 Manila). Requires `CRON_SECRET`. Hourly cron needs a Vercel plan that allows sub-daily schedules.
+- Signing reminders: `/api/cron/signing-reminders` at 00:00 UTC (08:00 Manila). Each group sends only on its configured interval. Requires `CRON_SECRET`. Hobby cron jobs cannot run more than once a day, so this is daily.
 - Decision tree: app-only bug → Vercel rollback. Bad additive SQL → fix-forward new migration. Data corruption → Neon PITR/branch or `pg_restore` onto an isolated target, never edit shipped SQL.
 - Telegram webhook: after deploy, `bun run telegram:set-webhook` (needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `PUBLIC_APP_URL`)
 - Manual Neon backup: `bun run backup:neon` (uses `DATABASE_URL_PROD` when `DATABASE_URL` is local Docker)

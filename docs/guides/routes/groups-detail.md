@@ -28,7 +28,7 @@ Membership is recomputed on loan/party writes (`recomputeGroupMembers`), not on 
 
 - Google Calendar: provisioned per group via jobs (`group.calendar.*`); subscribe URL for members
 - Default witnesses: `GET/PUT /api/groups/[id]/default-witnesses` (owner saves; a contract holds two). Loan create, loan edit, `PUT /api/loans/[id]/groups`, and adding loans from the group apply them. Empty witness slots are filled. Occupied slots that name someone else stay. **Auto-sign** sets the invitation signed when that witness has a saved signature, and those witnesses are left off the new-loan signing email.
-- Telegram: `POST /api/groups/[id]/telegram/connect` (verify `getMe` + `getChat`, store chat; optional per-group `bot_token`), `GET/PUT/DELETE /api/groups/[id]/telegram` (toggles + merged `templates`; never returns raw token, only `botTokenConfigured`), optional env `startgroup` link (`POST …/telegram/link` when `TELEGRAM_BOT_*` + webhook secret set); webhook `POST /api/webhooks/telegram`; daily due reminders on `/api/cron/groups`; unsigned-contract reminders on `/api/cron/signing-reminders` (hourly, each group still sends only on its interval)
+- Telegram: `POST /api/groups/[id]/telegram/connect` (verify `getMe` + `getChat`, store chat; optional per-group `bot_token`), `GET/PUT/DELETE /api/groups/[id]/telegram` (toggles + merged `templates`; never returns raw token, only `botTokenConfigured`), optional env `startgroup` link (`POST …/telegram/link` when `TELEGRAM_BOT_*` + webhook secret set); webhook `POST /api/webhooks/telegram`; daily due reminders on `/api/cron/groups`; unsigned-contract reminders on `/api/cron/signing-reminders` (daily at 00:00 UTC, each group still sends only on its interval)
 
 ## Implementation map
 

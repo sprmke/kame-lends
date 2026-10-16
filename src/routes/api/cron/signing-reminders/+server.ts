@@ -4,7 +4,7 @@ import { isCronAuthorized } from "$lib/server/cron-auth";
 
 export const config = { maxDuration: 60 };
 
-/** Hourly. Each group still sends only on its own interval. */
+/** Daily at 00:00 UTC (08:00 Manila). Each group still sends only on its own interval. */
 export const GET: RequestHandler = async ({ request }) => {
   if (!isCronAuthorized(request)) {
     return json({ error: "Unauthorized" }, { status: 401 });
