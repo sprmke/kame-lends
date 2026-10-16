@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
+	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
 	import { applyServiceWorkerUpdate } from '$lib/pwa/register';
 
 	interface Props {
@@ -9,7 +10,7 @@
 	let { updateReady }: Props = $props();
 </script>
 
-{#if updateReady}
+{#if updateReady && isStandaloneDisplay()}
 	<div
 		class="fixed inset-x-4 z-[45] rounded-2xl border border-border/60 bg-card p-4 shadow-lg bottom-[calc(5.5rem+var(--safe-area-bottom))] lg:inset-x-auto lg:right-4 lg:bottom-4 lg:max-w-sm"
 		role="dialog"

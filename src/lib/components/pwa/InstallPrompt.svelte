@@ -6,7 +6,6 @@
 		isIosSafari,
 		shouldShowInstallPrompt
 	} from '$lib/pwa/install';
-	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
 	import { runInstallAction } from '$lib/pwa/run-install';
 	import { PWA_CONTEXT_KEY, type PwaContextValue } from '$lib/pwa/pwa-context';
 	import InstallIosInstructionsModal from '$lib/components/pwa/InstallIosInstructionsModal.svelte';
@@ -24,14 +23,14 @@
 
 	let dismissed = $state(false);
 	let iosHelpOpen = $state(false);
+	let clientReady = $state(false);
 	const ios = $derived(isIosSafari());
 
-	const visible = $derived(
-		!dismissed &&
-			!isStandaloneDisplay() &&
-			shouldShowInstallPrompt() &&
-			(installAvailable || ios)
-	);
+	$effect(() => {
+		clientReady = true;
+	});
+
+	const visible = $derived(clientReady && !dismissed && shouldShowInstallPrompt(installAvailable));
 
 	function close() {
 		dismissInstallPrompt();

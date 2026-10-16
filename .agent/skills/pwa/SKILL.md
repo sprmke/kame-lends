@@ -12,6 +12,8 @@ Use when adding or changing features that touch installability, offline behavior
 - **SW:** `src/service-worker.ts` (SvelteKit `$service-worker` build manifest)
 - **Policy:** `src/lib/pwa/shared.ts` (importable by SW + Vitest)
 - **Client glue:** `src/lib/pwa/register.ts`, `src/lib/components/pwa/PwaProvider.svelte`
+- **Update prompt:** `UpdatePrompt` only when `isStandaloneDisplay()` (installed app). A normal browser tab does not show it.
+- **Install UI:** `InstallPrompt`, `InstallAppNavButton`, and `InstallAppCard` only when `canOfferInstall` is true (deferred `beforeinstallprompt`, or iOS Add to Home Screen). Hide them when the browser will not offer install.
 - **Push server:** `src/lib/server/push/*`, routes under `src/routes/api/push/*`
 - **Docs:** `docs/architecture/pwa.md`
 

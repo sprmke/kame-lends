@@ -203,9 +203,7 @@
 			{/each}
 		</nav>
 		<div class="border-t border-border/50 p-4">
-			<div class="mb-3">
-				<InstallAppNavButton collapsed={isCollapsed} />
-			</div>
+			<InstallAppNavButton collapsed={isCollapsed} class="mb-3" />
 			<div class={cn('mb-3', isCollapsed && 'flex justify-center')}>
 				<ThemeToggle variant={isCollapsed ? 'icon' : 'segmented'} class={isCollapsed ? undefined : 'w-full'} />
 			</div>

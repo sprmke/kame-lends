@@ -11,7 +11,8 @@ Canonical detail: **`docs/architecture/pwa.md`**. Skill: **`.agent/skills/pwa/SK
 
 - **`src/service-worker.ts` is worker-only** — never import `$lib/server/*` or DOM modules. Shared constants live in **`src/lib/pwa/shared.ts`**.
 - **No default fetch handler for POST/PUT/DELETE** — only intercept non-GET when offline (503 JSON). Online mutations pass through.
-- Registration is manual via **`src/lib/pwa/register.ts`** with `kit.serviceWorker.register = false`. Never auto-reload; use **`UpdatePrompt`**.
+- Registration is manual via **`src/lib/pwa/register.ts`** with `kit.serviceWorker.register = false`. Never auto-reload. **`UpdatePrompt`** only in the installed app (standalone), not in a browser tab.
+- **Install controls** (`InstallPrompt`, sidebar/account sheet, Settings card) only when this browser can install: deferred `beforeinstallprompt`, or iOS Add to Home Screen. Hide them otherwise.
 
 ## Offline cache allowlist
 

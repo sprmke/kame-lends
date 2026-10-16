@@ -4,10 +4,6 @@ export function supportsServiceWorker(): boolean {
   return browser && "serviceWorker" in navigator;
 }
 
-export function supportsInstallPrompt(): boolean {
-  return browser && "BeforeInstallPromptEvent" in window;
-}
-
 export function supportsWebShare(): boolean {
   return browser && typeof navigator.share === "function";
 }

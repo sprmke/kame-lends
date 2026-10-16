@@ -1,14 +1,24 @@
 import { browser } from "$app/environment";
-import {
-  isStandaloneDisplay,
-  supportsInstallPrompt,
-} from "$lib/pwa/capabilities";
+import { isStandaloneDisplay } from "$lib/pwa/capabilities";
 import { installDismissed, recordInstallDismissal } from "$lib/pwa/shared";
 
-export function shouldShowInstallPrompt(): boolean {
-  if (!browser || isStandaloneDisplay()) return false;
-  if (installDismissed()) return false;
-  return supportsInstallPrompt() || isIosSafari();
+/** True when our install controls can finish: Chromium deferred prompt, or iOS Add to Home Screen. */
+export function canOfferInstall(input: {
+  standalone: boolean;
+  ios: boolean;
+  installAvailable: boolean;
+}): boolean {
+  if (input.standalone) return false;
+  return input.ios || input.installAvailable;
+}
+
+export function shouldShowInstallPrompt(installAvailable = false): boolean {
+  if (!browser || installDismissed()) return false;
+  return canOfferInstall({
+    standalone: isStandaloneDisplay(),
+    ios: isIosBrowser(),
+    installAvailable,
+  });
 }
 
 /** Any iOS browser (Safari, Chrome, etc.). Install is manual via Share → Add to Home Screen. */

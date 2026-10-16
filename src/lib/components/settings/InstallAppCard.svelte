@@ -2,9 +2,8 @@
 	import { getContext } from 'svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
-	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
 	import { isIosBrowser } from '$lib/pwa/install';
-	import { runInstallAction } from '$lib/pwa/run-install';
+	import { installUiAvailable, runInstallAction } from '$lib/pwa/run-install';
 	import { PWA_CONTEXT_KEY, type PwaContextValue } from '$lib/pwa/pwa-context';
 	import InstallIosInstructionsModal from '$lib/components/pwa/InstallIosInstructionsModal.svelte';
 	import { toast } from '$lib/toast';
@@ -12,16 +11,16 @@
 	import { APP_NAME } from '$lib/brand';
 
 	const pwaCtx = getContext<PwaContextValue | undefined>(PWA_CONTEXT_KEY);
+	const ios = $derived(isIosBrowser());
 
-	let standalone = $state(false);
-	let ios = $state(false);
+	let clientReady = $state(false);
+	let iosHelpOpen = $state(false);
 
 	$effect(() => {
-		standalone = isStandaloneDisplay();
-		ios = isIosBrowser();
+		clientReady = true;
 	});
 
-	let iosHelpOpen = $state(false);
+	const offerInstall = $derived(clientReady && installUiAvailable(pwaCtx));
 
 	async function install() {
 		const result = await runInstallAction(pwaCtx);
@@ -30,7 +29,7 @@
 	}
 </script>
 
-{#if !standalone}
+{#if offerInstall}
 	<Card.Root id="install-app" class="scroll-mt-24 overflow-hidden border-primary/15">
 		<Card.Header class="flex flex-row items-start gap-3 space-y-0 pb-2">
 			<span

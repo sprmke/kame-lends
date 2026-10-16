@@ -2,26 +2,26 @@
 title: PWA — installable app, offline read, push
 status: active
 tags: [architecture, pwa, service-worker, offline, notifications]
-updated: 2026-09-20
+updated: 2026-10-17
 ---
 
 # PWA — installable app, offline read, push
 
-Part of [`docs/PROJECT.md`](../PROJECT.md). Rollout tracker: [`docs/workflow/planned/pwa-offline-install-push.md`](../workflow/planned/pwa-offline-install-push.md).
+Part of [`docs/PROJECT.md`](../PROJECT.md). Rollout tracker: [`docs/workflow/done/pwa-offline-install-push.md`](../workflow/done/pwa-offline-install-push.md).
 
 ## What ships
 
-| Capability    | Behavior                                                                                                                                                                               |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Install       | `manifest.webmanifest`, shortcuts, screenshots; `runInstallAction` from `InstallPrompt`, sidebar/account sheet `InstallAppNavButton`, Settings `InstallAppCard` (no Settings redirect) |
-| Offline read  | Cached shell + visited pages + `__data.json` + allowlisted GET APIs                                                                                                                    |
-| Offline write | Blocked with 503 JSON toast (`You are offline. Connect to save changes.`)                                                                                                              |
-| Update        | `UpdatePrompt` on SW waiting or SvelteKit `updated` store; never auto-reload                                                                                                           |
-| Push          | Web Push for due/overdue reminders, loan activity, signing requests                                                                                                                    |
+| Capability    | Behavior                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install       | `manifest.webmanifest`, shortcuts, screenshots. Install controls (`InstallPrompt`, sidebar/account sheet `InstallAppNavButton`, Settings `InstallAppCard`) render only when this browser can finish install: a deferred `beforeinstallprompt` on Chromium, or iOS Add to Home Screen. Hidden when already installed, and hidden in browsers that will not offer install. No Settings redirect. |
+| Offline read  | Cached shell + visited pages + `__data.json` + allowlisted GET APIs                                                                                                                                                                                                                                                                                                                            |
+| Offline write | Blocked with 503 JSON toast (`You are offline. Connect to save changes.`)                                                                                                                                                                                                                                                                                                                      |
+| Update        | `UpdatePrompt` only in the installed app (`display-mode: standalone` or iOS `navigator.standalone`) when a SW is waiting or the SvelteKit `updated` store flips. Browser tabs do not show it. Never auto-reload. A browser tab picks up the new version the next time every tab of this origin is closed.                                                                                      |
+| Push          | Web Push for due/overdue reminders, loan activity, signing requests                                                                                                                                                                                                                                                                                                                            |
 
 Platform notes: desktop Chrome/Edge and Android are fully supported. iOS 16.4+ push requires Add to Home Screen first.
 
-**Install taps:** Chromium runs `beforeinstallprompt` via `promptInstall`. iOS opens `InstallIosInstructionsModal` (Share → Add to Home Screen). Install entry points never navigate to Settings.
+**Install taps:** Chromium runs `beforeinstallprompt` via `promptInstall`. iOS opens `InstallIosInstructionsModal` (Share → Add to Home Screen). Install entry points never navigate to Settings. Desktop Safari, Firefox, and Chromium before the prompt show no install control.
 
 ## Build wiring
 

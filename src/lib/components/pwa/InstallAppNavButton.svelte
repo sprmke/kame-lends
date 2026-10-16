@@ -2,14 +2,12 @@
 	import { getContext } from 'svelte';
 	import { cn } from '$lib/utils';
 	import { APP_NAME } from '$lib/brand';
-	import { isStandaloneDisplay } from '$lib/pwa/capabilities';
 	import { isIosBrowser } from '$lib/pwa/install';
-	import { getInstallPromptEvent } from '$lib/pwa/register';
-	import { runInstallAction } from '$lib/pwa/run-install';
+	import { installUiAvailable, runInstallAction } from '$lib/pwa/run-install';
 	import { PWA_CONTEXT_KEY, type PwaContextValue } from '$lib/pwa/pwa-context';
 	import InstallIosInstructionsModal from '$lib/components/pwa/InstallIosInstructionsModal.svelte';
 	import { toast } from '$lib/toast';
-	import { Download, Smartphone } from 'lucide-svelte';
+	import { Smartphone } from 'lucide-svelte';
 
 	type Variant = 'sidebar' | 'sheet';
 
@@ -23,23 +21,19 @@
 	let { variant = 'sidebar', collapsed = false, class: className, onAction }: Props = $props();
 
 	const pwaCtx = getContext<PwaContextValue | undefined>(PWA_CONTEXT_KEY);
-	const standalone = $derived(isStandaloneDisplay());
 	const ios = $derived(isIosBrowser());
 
 	let iosHelpOpen = $state(false);
+	let clientReady = $state(false);
 
-	const canNativeInstall = $derived(
-		!ios && (Boolean(pwaCtx?.state.installAvailable) || Boolean(getInstallPromptEvent()))
-	);
+	$effect(() => {
+		clientReady = true;
+	});
 
-	const prominent = $derived(ios || canNativeInstall);
+	const offerInstall = $derived(clientReady && installUiAvailable(pwaCtx));
 
 	const hint = $derived(
-		ios
-			? 'Share, then Add to Home Screen'
-			: canNativeInstall
-				? 'Opens from your home screen'
-				: 'Tap to install when available'
+		ios ? 'Share, then Add to Home Screen' : 'Opens from your home screen'
 	);
 
 	const primaryLabel = $derived(`Install ${APP_NAME}`);
@@ -66,34 +60,22 @@
 	}
 </script>
 
-{#if !standalone}
+{#if offerInstall}
 	{#if variant === 'sheet'}
 		<button
 			type="button"
 			class={cn(
-				'native-press group flex min-h-[3.25rem] w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors',
-				prominent
-					? 'border-primary/25 bg-primary/10 active:bg-primary/15'
-					: 'border-border/60 bg-muted/30 active:bg-muted/50',
+				'native-press group flex min-h-[3.25rem] w-full items-center gap-3 rounded-2xl border border-primary/25 bg-primary/10 px-3 py-2.5 text-left transition-colors active:bg-primary/15',
 				className
 			)}
 			aria-label={`Install ${APP_NAME}`}
 			onclick={() => void runInstall()}
 		>
 			<span
-				class={cn(
-					'flex size-10 shrink-0 items-center justify-center rounded-xl',
-					prominent
-						? 'bg-primary text-primary-foreground shadow-sm'
-						: 'bg-muted text-foreground'
-				)}
+				class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm"
 				aria-hidden="true"
 			>
-				{#if prominent}
-					<Smartphone class="size-[1.125rem]" strokeWidth={2} />
-				{:else}
-					<Download class="size-[1.125rem]" strokeWidth={2} />
-				{/if}
+				<Smartphone class="size-[1.125rem]" strokeWidth={2} />
 			</span>
 			<span class="min-w-0 flex-1">
 				<span class="block text-sm font-semibold leading-tight text-foreground">
@@ -107,39 +89,24 @@
 			type="button"
 			title={primaryLabel}
 			class={cn(
-				'relative flex h-11 w-full items-center justify-center rounded-xl transition-all duration-200',
-				prominent
-					? 'bg-primary/15 text-primary hover:bg-primary/20'
-					: 'text-muted-foreground hover:bg-accent hover:text-foreground',
+				'flex h-11 w-full items-center justify-center rounded-xl bg-primary/15 text-primary transition-all duration-200 hover:bg-primary/20',
 				className
 			)}
 			onclick={() => void runInstall()}
 		>
 			<Smartphone class="h-4 w-4" />
-			{#if canNativeInstall}
-				<span
-					class="absolute top-2 right-2 size-2 rounded-full bg-primary ring-2 ring-card"
-					aria-hidden="true"
-				></span>
-			{/if}
 		</button>
 	{:else}
 		<button
 			type="button"
 			class={cn(
-				'group flex min-h-11 w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all duration-200',
-				prominent
-					? 'border-primary/25 bg-primary/10 hover:bg-primary/15'
-					: 'border-border/50 bg-muted/40 hover:bg-muted/60',
+				'group flex min-h-11 w-full items-center gap-3 rounded-2xl border border-primary/25 bg-primary/10 px-3 py-2.5 text-left transition-all duration-200 hover:bg-primary/15',
 				className
 			)}
 			onclick={() => void runInstall()}
 		>
 			<span
-				class={cn(
-					'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
-					prominent ? 'bg-primary text-primary-foreground' : 'bg-muted/80 text-foreground'
-				)}
+				class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground"
 				aria-hidden="true"
 			>
 				<Smartphone class="h-4 w-4" />

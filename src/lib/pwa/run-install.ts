@@ -1,6 +1,22 @@
-import { isIosBrowser } from "$lib/pwa/install";
+import { browser } from "$app/environment";
+import { isStandaloneDisplay } from "$lib/pwa/capabilities";
+import { canOfferInstall, isIosBrowser } from "$lib/pwa/install";
 import { getInstallPromptEvent, promptInstall } from "$lib/pwa/register";
 import type { PwaContextValue } from "$lib/pwa/pwa-context";
+
+/** Sidebar, account sheet, and Settings card. False until the browser can install. */
+export function installUiAvailable(
+  pwaCtx: PwaContextValue | undefined,
+): boolean {
+  if (!browser) return false;
+  return canOfferInstall({
+    standalone: isStandaloneDisplay(),
+    ios: isIosBrowser(),
+    installAvailable:
+      Boolean(pwaCtx?.state.installAvailable) ||
+      Boolean(getInstallPromptEvent()),
+  });
+}
 
 export type RunInstallResult =
   "accepted" | "ios-help" | "unavailable" | "dismissed";
