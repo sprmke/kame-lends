@@ -9,7 +9,7 @@
  */
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const token = process.env.VERCEL_TOKEN;
@@ -37,7 +37,8 @@ const message = execFileSync("git", ["log", "-1", "--format=%s"], {
 const files = execFileSync("git", ["ls-files", "-z"], { cwd: root })
   .toString()
   .split("\0")
-  .filter(Boolean);
+  .filter(Boolean)
+  .filter((file) => lstatSync(path.join(root, file)).isFile());
 
 const api = "https://api.vercel.com";
 
