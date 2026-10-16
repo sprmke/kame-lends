@@ -482,12 +482,10 @@ const PeriodStatusBadge = ({ status }: { status: InterestPeriodStatus }) => (
 const LoanCard = ({
   loan,
   enabledSections,
-  isFirst,
   isLast,
 }: {
   loan: LoanWithInvestors;
   enabledSections: Set<string>;
-  isFirst: boolean;
   isLast: boolean;
 }) => {
   const stats = calculateLoanStats(loan);
@@ -515,10 +513,7 @@ const LoanCard = ({
       : styles.section;
 
   return (
-    <View
-      style={[styles.loanCard, isLast ? { marginBottom: 0 } : {}]}
-      break={!isFirst}
-    >
+    <View style={[styles.loanCard, isLast ? { marginBottom: 0 } : {}]}>
       {/* Loan Header — keep on one line, never split */}
       <View style={styles.loanHeader} wrap={false}>
         <View style={styles.loanHeaderLeft}>
@@ -1104,37 +1099,49 @@ export const LoansPDFDocument = ({
           </View>
         )}
 
-        {/* Loan Cards */}
         {data.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No loans to display.</Text>
           </View>
         ) : (
-          data.map((loan, idx) => (
-            <LoanCard
-              key={loan.id}
-              loan={loan}
-              enabledSections={enabledSet}
-              isFirst={idx === 0}
-              isLast={idx === data.length - 1}
-            />
-          ))
+          <LoanCard
+            loan={data[0]}
+            enabledSections={enabledSet}
+            isLast={data.length === 1}
+          />
         )}
 
-        {/* Page Footer */}
-        <View style={styles.pageFooter} fixed>
-          <Text style={styles.footerText}>{APP_NAME} — Confidential</Text>
-          <Text
-            style={styles.footerText}
-            render={({ pageNumber, totalPages }) =>
-              `Page ${pageNumber} of ${totalPages}`
-            }
-          />
-        </View>
+        <PageFooter />
       </Page>
+
+      {/* One <Page> per remaining loan: react-pdf re-lays out everything left on
+          a page each time it splits, so a single page holding every loan grows
+          quadratically and times out the function on large exports. */}
+      {data.slice(1).map((loan, idx) => (
+        <Page key={loan.id} size="A4" style={styles.page}>
+          <LoanCard
+            loan={loan}
+            enabledSections={enabledSet}
+            isLast={idx === data.length - 2}
+          />
+          <PageFooter />
+        </Page>
+      ))}
     </Document>
   );
 };
+
+const PageFooter = () => (
+  <View style={styles.pageFooter} fixed>
+    <Text style={styles.footerText}>{APP_NAME} — Confidential</Text>
+    <Text
+      style={styles.footerText}
+      render={({ pageNumber, totalPages }) =>
+        `Page ${pageNumber} of ${totalPages}`
+      }
+    />
+  </View>
+);
 
 // ─── Export helper ─────────────────────────────────────────────────────────────
 

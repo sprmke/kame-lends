@@ -33,6 +33,7 @@ async function extractPdfErrorMessage(
 
 const DEFAULT_PDF_STATUS_MESSAGES: Partial<Record<number, string>> = {
   401: "Sign in again to download this file.",
+  504: "Export timed out. Try fewer items.",
 };
 
 async function downloadPdfFromApi(

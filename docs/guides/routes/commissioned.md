@@ -9,7 +9,7 @@ Lists loans where the signed-in user is an **investor**, **borrower**, or **witn
 
 **Summary cards** (`LoanCommissionSummaryCards`): Principal (peak concurrent in the selected due-date range), Commission Estimate (open loans), Commission Earned (`Completed` loans), and Completed count. Stats use each loan's `myCommission` via `computePartyCommissionStats` in [`src/lib/loan-list-summary.ts`](../../../src/lib/loan-list-summary.ts). Commission cards appear only on this tab, not on **Invested**, **Borrowed**, or **Witnessed**.
 
-Date range, search, status/type filters, More Filters, export PDF, cards/table/calendar, and row actions match `/loans` party scopes (read-only; **Add Commission** and **Contract Details** in the ⋯ menu). Grid cards show **Principal**, **Rate** (commission rate or **Fixed**), **Due**, and **Commission** from each loan's `myCommission` (`LoanCard` `showCommissionMetrics`).
+Date range, search, status/type filters, More Filters, export PDF, cards/table/calendar/timeline, and row actions match `/loans` party scopes (read-only; **Add Commission** and **Contract Details** in the ⋯ menu). Grid cards show **Principal**, **Rate** (commission rate or **Fixed**), **Due**, and **Commission** from each loan's `myCommission` (`LoanCard` `showCommissionMetrics`).
 
 On loan detail, each party edits **their** commission in **Your Commission** (`LoanMyCommissionCard`, `GET` / `PATCH /api/loans/[id]/my-commission`). Other users on the same loan never see that section.
 

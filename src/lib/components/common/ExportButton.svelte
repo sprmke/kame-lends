@@ -104,7 +104,11 @@
 			toast.success('PDF exported successfully');
 		} catch (error) {
 			console.error('PDF generation error:', error);
-			toast.error('Failed to generate PDF. Please try again.');
+			toast.error(
+				error instanceof Error && error.message !== 'Failed to generate PDF'
+					? error.message
+					: 'Failed to generate PDF. Please try again.'
+			);
 		} finally {
 			isGenerating = false;
 		}

@@ -3,6 +3,15 @@
     {
       "path": ".",
     },
+    {
+      "path": "../kame-homes",
+    },
+    {
+      "path": "../kame-desk",
+    },
+    {
+      "path": "../kame-ops",
+    },
   ],
   "settings": {},
 }
