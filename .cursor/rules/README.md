@@ -20,11 +20,13 @@ Agent context for **SvelteKit 2 + Svelte 5 + Neon + Drizzle + Auth.js**.
 
 ## Conditional rules (by glob)
 
-| File             | Globs / topic                                       |
-| ---------------- | --------------------------------------------------- |
-| `tech-stack.mdc` | `src/**` — ban Next.js/client React (PDF exception) |
-| `components.mdc` | shadcn-svelte, runes                                |
-| `forms.mdc`      | superforms + Zod                                    |
+| File                | Globs / topic                                       |
+| ------------------- | --------------------------------------------------- |
+| `tech-stack.mdc`    | `src/**` — ban Next.js/client React (PDF exception) |
+| `components.mdc`    | shadcn-svelte, runes                                |
+| `forms.mdc`         | superforms + Zod                                    |
+| `plan-mode.mdc`     | Save finished plans to `docs/workflow/planned/`     |
+| `workflow-docs.mdc` | Workflow lifecycle, scratchpads, no silent moves    |
 
 ## New developer setup
 
@@ -60,6 +62,9 @@ bun run setup:ai-tooling
 | `overlay-performance`         | Modal/sheet jank (blur, defer, `$effect`)  |
 | `mobile-responsive`           | Bottom sheets, overflow menus, shell `lg`  |
 | `pwa`                         | Offline cache, install/update, Web Push    |
+| `ai-platform`                 | AI gateway, prompts, receipt scanning      |
+| `workflow`                    | docs/workflow lifecycle and moves          |
+| `workflow-intake-scratchpads` | `_to-prompt` / `_to-plan` emoji sync       |
 
 ## Related
 

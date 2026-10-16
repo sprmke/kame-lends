@@ -1,3 +1,12 @@
+---
+title: "Multi-role loan access"
+status: done
+tags: [access, auth, calendar]
+updated: 2026-09-09
+stage: done
+kind: plan
+---
+
 # Multi-role loan access, authenticated signing, and calendar visibility
 
 **Status:** Done. Verified unit tests, Neon 0013, multi-role e2e, and Google Calendar CRUD smoke.  

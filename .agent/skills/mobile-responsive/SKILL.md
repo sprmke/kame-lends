@@ -57,5 +57,5 @@ Filter popovers (`MultiSelectFilter`, `DateRangeFilter`, `SearchableSelect`) are
 ## Related
 
 - Rule: `.cursor/rules/mobile-native-ui.mdc`
-- Plan: `docs/workflow/planned/mobile-native-redesign.md`
+- Plan: `docs/workflow/in-progress/mobile-native-redesign.md`
 - Overlay jank: `overlay-performance` skill

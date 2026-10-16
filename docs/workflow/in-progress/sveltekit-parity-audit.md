@@ -1,3 +1,12 @@
+---
+title: "SvelteKit parity audit"
+status: in-progress
+tags: [migration, audit]
+updated: 2026-09-10
+stage: in-progress
+kind: plan
+---
+
 # SvelteKit parity audit (vs legacy Next.js)
 
 Branch: `feat/sveltekit-migration`. Compared against last Next.js tree in git (`HEAD` before cutover).

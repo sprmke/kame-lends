@@ -5,6 +5,7 @@
 - [ ] Chrome desktop: install banner or browser menu → opens standalone
 - [ ] Android Chrome: install prompt works
 - [ ] iOS 16.4+: Share → Add to Home Screen
+- [ ] Desktop Safari / Firefox, and Chrome before the browser offers install: no Install control in the sidebar, account sheet, or Settings
 
 ## Offline
 
@@ -14,7 +15,8 @@
 
 ## Update
 
-- [ ] Deploy new build → `Update ready` prompt → Reload applies new SW
+- [ ] Installed app: deploy new build → `Update ready` prompt → Reload applies new SW
+- [ ] Browser tab of the same site: no `Update ready` prompt
 
 ## Push
 

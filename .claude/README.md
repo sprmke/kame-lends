@@ -26,6 +26,8 @@ bun run setup:ai-tooling
 
 Edit `.agent/skills/<name>/SKILL.md` — do not edit symlinked `.claude/skills/` paths.
 
+Workflow: `workflow`, `workflow-intake-scratchpads`; commands in `.claude/commands/workflow-*.md`.
+
 Key domain skills: `loan-domain`, `sveltekit-conventions`, `drizzle-neon`, `auth-js-sveltekit`, `pdf-export`, `google-calendar-integration`, `pwa`.
 
 ## Hooks (`.claude/settings.json`)

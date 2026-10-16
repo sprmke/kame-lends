@@ -1,3 +1,12 @@
+---
+title: "SvelteKit migration"
+status: done
+tags: [migration, sveltekit]
+updated: 2026-09-10
+stage: done
+kind: plan
+---
+
 # SvelteKit migration — completed
 
 Branch: **`feat/sveltekit-migration`**. **Cutover done:** SvelteKit app promoted to repo root (legacy Next.js archived locally as `_legacy-next-*`, gitignored).
@@ -97,7 +106,7 @@ Branch: **`feat/sveltekit-migration`**. **Cutover done:** SvelteKit app promoted
 
 - [ ] Port hooks → runes composables (filters, pagination, sorting, responsive view mode)
 - [ ] Navigation progress (SvelteKit lifecycle)
-- [x] Mobile responsiveness (375/768/1024px+, 44px touch targets) — see `docs/workflow/planned/mobile-native-redesign.md`
+- [x] Mobile responsiveness (375/768/1024px+, 44px touch targets) — see `docs/workflow/in-progress/mobile-native-redesign.md`
 - [ ] Accessibility pass
 
 ## Phase 8 — Testing & parity QA

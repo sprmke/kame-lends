@@ -1,3 +1,12 @@
+---
+title: "Production readiness and optimization"
+status: planned
+tags: [production, security, performance]
+updated: 2026-09-24
+stage: planned
+kind: plan
+---
+
 # Production readiness and optimization
 
 **Status:** Planned (checklist and execution guide)  

@@ -56,13 +56,17 @@ Before claiming any material task done:
 | Architecture, API, env | `docs/PROJECT.md`         |
 | Page UX in `src/`      | `docs/guides/routes/*.md` |
 
+## Plan mode / workflow
+
+Finished plans go to `docs/workflow/planned/<kebab-slug>.md` (frontmatter `title, status, tags, updated, stage, kind: plan`; sections Goal, Scope, Approach, Tasks with paths, Docs to update, Open questions) plus a row in `planned/README.md` and a 📋 item in `docs/workflow/intake/_to-plan.md`. Lifecycle: intake → planned → in-progress → for-testing → done (or wont-do). Move with `bash scripts/dev/workflow-move.sh start|for-testing|done|wont-do <slug>` and keep scratchpad emojis in sync. Skills: `workflow`, `workflow-intake-scratchpads`. Rules: `.cursor/rules/plan-mode.mdc`, `.cursor/rules/workflow-docs.mdc`.
+
 ## AI session hygiene
 
 See `.cursor/rules/ai-usage.mdc`: one task per chat, no subagent swarms, prefer Sonnet for implementation.
 
 ## Skills
 
-Canonical: `.agent/skills/<name>/SKILL.md` (symlinked to `.claude/skills/`). Invoke `loan-domain`, `sveltekit-conventions`, `drizzle-neon`, `auth-js-sveltekit`, `overlay-performance`, `mobile-responsive`, `pwa` for domain work.
+Canonical: `.agent/skills/<name>/SKILL.md` (symlinked to `.claude/skills/`). Invoke `loan-domain`, `sveltekit-conventions`, `drizzle-neon`, `auth-js-sveltekit`, `overlay-performance`, `mobile-responsive`, `pwa`, `ai-platform` for domain work.
 
 ## Don'ts
 

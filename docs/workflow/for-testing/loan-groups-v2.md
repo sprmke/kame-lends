@@ -1,3 +1,12 @@
+---
+title: "Loan Groups v2"
+status: for-testing
+tags: [groups, calendar, telegram]
+updated: 2026-09-15
+stage: for-testing
+kind: plan
+---
+
 # Loan Groups v2: shared access, a Google Calendar per group, Telegram per group
 
 **Status:** Local QA (`SHOW_GROUPS_UI = true` for testing; flip false before prod if QA incomplete)  
@@ -259,7 +268,7 @@ Call `recomputeGroupsForLoans(affectedLoanIds)` after a successful write in:
 - **Show access before it changes.** Every action that adds or removes people (create, add or remove loans, rules) first shows who gains or loses access. Warn clearly when a group mixes different borrowers.
 - **Few steps for the owner.** Create with loans in one flow, file loans from where you already are (loan list selection, loan detail, contact page), and let rules pick up future loans.
 - **Nothing to manage for members.** Members see their groups, the loans, the people, and how to get notified. They see no settings.
-- **Reuse the shell.** Follow the locked decisions in `docs/workflow/planned/mobile-native-redesign.md`:
+- **Reuse the shell.** Follow the locked decisions in `docs/workflow/in-progress/mobile-native-redesign.md`:
   - `ResponsiveModal` (bottom sheet under `lg`)
   - detail pages on phone
   - 44px touch targets

@@ -43,4 +43,4 @@ Every **UI change** in `src/**` must preserve the native mobile shell: bottom sh
 - [ ] Modals open as sheets on phone (`ResponsiveModal`)
 - [ ] Route guide updated if page UX changed (`route-guides` skill)
 
-Inventory: `docs/workflow/planned/mobile-native-redesign.md`.
+Inventory: `docs/workflow/in-progress/mobile-native-redesign.md`.

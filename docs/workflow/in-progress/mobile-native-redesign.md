@@ -1,3 +1,12 @@
+---
+title: "Mobile-native redesign"
+status: in-progress
+tags: [mobile, ui]
+updated: 2026-09-10
+stage: in-progress
+kind: plan
+---
+
 # Mobile-native redesign (kame-lends)
 
 **Status:** In progress (production hardening)  

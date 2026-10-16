@@ -1,3 +1,12 @@
+---
+title: "User privacy and group calendars"
+status: done
+tags: [privacy, calendar, groups]
+updated: 2026-09-16
+stage: done
+kind: plan
+---
+
 # User privacy, group calendars, workspace-admin removal
 
 **Status:** Shipped (implementation branch)  

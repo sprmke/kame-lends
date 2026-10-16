@@ -1,3 +1,12 @@
+---
+title: "PWA offline, install, push"
+status: done
+tags: [pwa]
+updated: 2026-09-17
+stage: done
+kind: plan
+---
+
 # PWA — offline, install, push
 
 **Status:** Shipped (2026-09-17)

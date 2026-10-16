@@ -19,11 +19,7 @@ Per-page specs mirror `src/routes/` under **`guides/routes/`**. Index: [`guides/
 
 ## Workflow
 
-| Folder                  | Purpose                                                                                                  |
-| ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| `workflow/in-progress/` | Active migration and feature work                                                                        |
-| `workflow/planned/`     | Future plans (incl. [production readiness](./workflow/planned/production-readiness-and-optimization.md)) |
-| `archive/`              | Historical ops and reference                                                                             |
+Lifecycle and conventions: [`workflow/README.md`](./workflow/README.md). Stages: `intake/` → `planned/` → `in-progress/` → `for-testing/` → `done/` (or `wont-do/`). Manual QA checklists live in `workflow/qa/`. Historical ops and reference: `archive/`.
 
 ## AI tooling
 
