@@ -85,6 +85,24 @@ export const GROUP_TELEGRAM_PLACEHOLDERS: {
   },
 ];
 
+/** Sample values for the template preview. Not sent to Telegram. */
+export const GROUP_TELEGRAM_PREVIEW_SAMPLES: Record<string, string> = {
+  heading: "Upcoming reminder",
+  loan_name: "Lot A",
+  event_type: "Interest",
+  date: "Oct 16, 2026",
+  amount: "₱12,000",
+  loan_link: "View loan",
+  group_link: "Open group",
+  digest_body: "Due today\n• Lot A · Interest · ₱12,000",
+  today: "Oct 16, 2026",
+  summary: "Payment recorded on Lot A",
+};
+
+export function groupTelegramPlaceholdersFor(kind: GroupTelegramTemplateKind) {
+  return GROUP_TELEGRAM_PLACEHOLDERS.filter((row) => row.kinds.includes(kind));
+}
+
 export const DEFAULT_GROUP_TELEGRAM_TEMPLATES: Record<
   GroupTelegramTemplateKind,
   string

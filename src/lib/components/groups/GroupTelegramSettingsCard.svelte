@@ -4,11 +4,10 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Textarea } from '$lib/components/ui/textarea';
 	import { toast } from '$lib/toast';
 	import { MessageCircle } from 'lucide-svelte';
+	import TelegramTemplateEditor from '$lib/components/groups/TelegramTemplateEditor.svelte';
 	import {
-		GROUP_TELEGRAM_PLACEHOLDERS,
 		GROUP_TELEGRAM_TEMPLATE_KINDS,
 		GROUP_TELEGRAM_TEMPLATE_LABELS,
 		type GroupTelegramTemplateKind
@@ -54,6 +53,7 @@
 	let botTokenInput = $state('');
 	let chatIdInput = $state('');
 	let templateDrafts = $state<Partial<Record<GroupTelegramTemplateKind, string>>>({});
+	let activeTemplate = $state<GroupTelegramTemplateKind>('upcoming');
 
 	$effect(() => {
 		settings = { ...(initial ?? {}) };
@@ -69,13 +69,6 @@
 
 	const status = $derived(settings.status ?? 'disconnected');
 	const connected = $derived(status === 'connected');
-
-	function placeholdersFor(kind: GroupTelegramTemplateKind): string {
-		return GROUP_TELEGRAM_PLACEHOLDERS
-			.filter((row) => row.kinds.includes(kind))
-			.map((row) => `{{${row.key}}}`)
-			.join(', ');
-	}
 
 	async function refreshSettings() {
 		const res = await fetch(`/api/groups/${groupId}/telegram`);
@@ -396,25 +389,36 @@
 
 			<div class="space-y-3 border-t border-border pt-4">
 				<p class="text-sm font-medium">Message templates</p>
-				{#each editableTemplateKinds as kind (kind)}
-					<div class="space-y-1">
-						<Label for="tg-template-{kind}">{GROUP_TELEGRAM_TEMPLATE_LABELS[kind]}</Label>
-						<Textarea
-							id="tg-template-{kind}"
-							rows={3}
-							class="font-mono text-xs"
+				<div
+					class="-mx-1 flex gap-0 overflow-x-auto border-b border-border/60 px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+					role="tablist"
+					aria-label="Message templates"
+				>
+					{#each editableTemplateKinds as kind (kind)}
+						<button
+							type="button"
+							role="tab"
+							class="inline-flex min-h-11 shrink-0 items-center border-b-2 px-3 text-sm font-medium {activeTemplate ===
+							kind
+								? 'border-primary text-foreground'
+								: 'border-transparent text-muted-foreground'}"
+							aria-selected={activeTemplate === kind}
 							disabled={busy}
-							value={templateDrafts[kind] ?? ''}
-							oninput={(event) => {
-								templateDrafts = {
-									...templateDrafts,
-									[kind]: event.currentTarget.value
-								};
-							}}
-						/>
-						<p class="text-xs text-muted-foreground">{placeholdersFor(kind)}</p>
-					</div>
-				{/each}
+							onclick={() => (activeTemplate = kind)}
+						>
+							{GROUP_TELEGRAM_TEMPLATE_LABELS[kind]}
+						</button>
+					{/each}
+				</div>
+				<TelegramTemplateEditor
+					kind={activeTemplate}
+					value={templateDrafts[activeTemplate] ?? ''}
+					showLabel={false}
+					disabled={busy}
+					onchange={(next) => {
+						templateDrafts = { ...templateDrafts, [activeTemplate]: next };
+					}}
+				/>
 				<Button
 					type="button"
 					variant="outline"
