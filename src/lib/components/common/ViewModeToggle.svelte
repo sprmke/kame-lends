@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { LayoutGrid, Table as TableIcon, CalendarDays } from 'lucide-svelte';
+	import { CalendarDays, GanttChart, LayoutGrid, Table as TableIcon } from 'lucide-svelte';
 	import { cn } from '$lib/utils';
 	import type { ViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 
@@ -8,6 +8,7 @@
 		viewMode: ViewMode;
 		onViewModeChange: (mode: ViewMode) => void;
 		showCalendar?: boolean;
+		showTimeline?: boolean;
 		hasData?: boolean;
 		class?: string;
 	}
@@ -16,26 +17,32 @@
 		viewMode,
 		onViewModeChange,
 		showCalendar = false,
+		showTimeline = false,
 		hasData = true,
 		class: className = ''
 	}: Props = $props();
 
-	const modes: Array<{ id: ViewMode; icon: typeof TableIcon; label: string; hidden?: boolean }> = [
-		{ id: 'table', icon: TableIcon, label: 'Table', hidden: true },
+	const modes = $derived<
+		Array<{ id: ViewMode; icon: typeof TableIcon; label: string; lgOnly?: boolean }>
+	>([
+		{ id: 'table', icon: TableIcon, label: 'Table', lgOnly: true },
 		{ id: 'cards', icon: LayoutGrid, label: 'Cards' },
-		...(showCalendar ? [{ id: 'calendar' as ViewMode, icon: CalendarDays, label: 'Calendar' }] : [])
-	];
+		...(showCalendar
+			? [{ id: 'calendar' as ViewMode, icon: CalendarDays, label: 'Calendar', lgOnly: true }]
+			: []),
+		...(showTimeline ? [{ id: 'timeline' as ViewMode, icon: GanttChart, label: 'Timeline' }] : [])
+	]);
 </script>
 
 <div class={cn('pill-segment inline-flex h-11 shrink-0 gap-0.5 p-0.5', className)}>
-	{#each modes as { id, icon: Icon, label, hidden }}
+	{#each modes as { id, icon: Icon, label, lgOnly }}
 		<Button
 			type="button"
 			variant={viewMode === id ? 'secondary' : 'ghost'}
 			onclick={() => onViewModeChange(id)}
 			class={cn(
 				'touch-hit h-10 min-h-0 w-10 shrink-0 rounded-lg p-0 shadow-none',
-				hidden && 'hidden lg:inline-flex',
+				lgOnly && 'hidden lg:inline-flex',
 				viewMode === id && 'bg-muted text-foreground'
 			)}
 			title="{label} view"

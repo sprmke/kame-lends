@@ -1,0 +1,332 @@
+<script lang="ts">
+	import { onMount, tick } from 'svelte';
+	import ListEmptyState from '$lib/components/common/ListEmptyState.svelte';
+	import { formatCurrencyCompact, formatText, isSensitiveDataHidden } from '$lib/format';
+	import {
+		buildLoanTimeline,
+		localDayKey,
+		timelineDayParts,
+		type TimelineEntry
+	} from '$lib/loans/loan-timeline';
+	import type { LoanWithInvestors } from '$lib/types';
+	import { cn } from '$lib/utils';
+	import { GanttChart } from 'lucide-svelte';
+
+	interface Props {
+		loans: LoanWithInvestors[];
+		from?: string | null;
+		to?: string | null;
+		onLoanClick?: (loan: LoanWithInvestors) => void;
+	}
+
+	let { loans, from = null, to = null, onLoanClick }: Props = $props();
+
+	let today = $state<Date | null>(typeof window !== 'undefined' ? new Date() : null);
+	let todayEl = $state<HTMLElement | null>(null);
+	let showJump = $state(false);
+	let mountNonce = $state(0);
+	let anchoredFor = '';
+
+	onMount(() => {
+		today = new Date();
+		mountNonce += 1;
+	});
+
+	const timeline = $derived(buildLoanTimeline(loans, { from, to, today }));
+
+	function money(amount: number, sign: '+' | '-' | 'auto' = 'auto'): string {
+		const formatted = formatCurrencyCompact(sign === '-' ? -Math.abs(amount) : amount);
+		if (isSensitiveDataHidden() || sign === 'auto' || amount === 0) return formatted;
+		if (sign === '+') return `+${formatted}`;
+		return formatted;
+	}
+
+	function netAmount(inTotal: number, outTotal: number): number {
+		return inTotal - outTotal;
+	}
+
+	function netClass(net: number): string {
+		if (isSensitiveDataHidden() || net === 0) return 'text-foreground';
+		return net > 0
+			? 'text-emerald-600 dark:text-emerald-400'
+			: 'text-rose-600 dark:text-rose-400';
+	}
+
+	function flowAria(inTotal: number, outTotal: number): string {
+		const net = netAmount(inTotal, outTotal);
+		const parts: string[] = [];
+		if (inTotal > 0) parts.push(`In ${money(inTotal, '+')}`);
+		if (outTotal > 0) parts.push(`Out ${money(outTotal, '-')}`);
+		if (inTotal > 0 && outTotal > 0) {
+			parts.push(`Net ${money(net, net > 0 ? '+' : 'auto')}`);
+		}
+		return parts.join(', ');
+	}
+
+	function entryLabel(entry: TimelineEntry): string {
+		const detail = entry.detail ? `, ${entry.detail}` : '';
+		return `${entry.direction === 'in' ? 'In' : 'Out'}, ${entry.kindLabel}, ${entry.title}${detail}, ${money(entry.amount)}`;
+	}
+
+	function markToday(node: HTMLElement, active: boolean) {
+		if (active) todayEl = node;
+		return {
+			update(next: boolean) {
+				if (next) todayEl = node;
+				else if (todayEl === node) todayEl = null;
+			},
+			destroy() {
+				if (todayEl === node) todayEl = null;
+			}
+		};
+	}
+
+	function jumpToToday() {
+		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		todayEl?.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+	}
+
+	function scrollTimelineAnchor(key: string) {
+		const attempt = () => {
+			const el = todayEl ?? document.getElementById(`timeline-day-${key}`);
+			if (!el) return false;
+			el.scrollIntoView({ block: 'center', behavior: 'auto' });
+			return true;
+		};
+
+		if (attempt()) return;
+		void tick().then(() => {
+			if (attempt()) return;
+			requestAnimationFrame(() => {
+				attempt();
+			});
+		});
+	}
+
+	$effect(() => {
+		const token = `${from ?? ''}|${to ?? ''}|${mountNonce}`;
+		const key = timeline.anchorKey;
+		if (!key) {
+			if (anchoredFor && anchoredFor !== token) anchoredFor = '';
+			return;
+		}
+		const todayKey = today ? localDayKey(today) : null;
+		if (todayKey === key && !todayEl) return;
+		if (anchoredFor === token) return;
+		anchoredFor = token;
+		scrollTimelineAnchor(key);
+	});
+
+	$effect(() => {
+		const el = todayEl;
+		if (!el) {
+			showJump = false;
+			return;
+		}
+		const observer = new IntersectionObserver(
+			([entry]) => {
+				showJump = entry ? !entry.isIntersecting : false;
+			},
+			{ root: null, rootMargin: '-88px 0px -120px 0px', threshold: 0.35 }
+		);
+		observer.observe(el);
+		return () => observer.disconnect();
+	});
+</script>
+
+{#snippet flowTotals(
+	inTotal: number,
+	outTotal: number,
+	emphasis: 'month' | 'day' = 'day',
+	align: 'start' | 'end' = 'end'
+)}
+	{@const net = netAmount(inTotal, outTotal)}
+	{@const hasFlow = inTotal > 0 || outTotal > 0}
+	{#if hasFlow}
+		{@const showNet = inTotal > 0 && outTotal > 0}
+		{@const alignClass =
+			emphasis === 'month'
+				? 'justify-start text-left lg:justify-end lg:text-right'
+				: align === 'start'
+					? 'justify-start text-left'
+					: 'justify-end text-right'}
+		<p
+			class={cn(
+				'flex w-full min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 tabular-nums',
+				alignClass,
+				emphasis === 'month' ? 'text-xs sm:text-sm' : 'text-sm'
+			)}
+			aria-label={flowAria(inTotal, outTotal)}
+		>
+			{#if inTotal > 0}
+				<span class="font-medium text-emerald-600 dark:text-emerald-400">
+					In {money(inTotal, '+')}
+				</span>
+			{/if}
+			{#if outTotal > 0}
+				<span class="font-medium text-rose-600 dark:text-rose-400">
+					Out {money(outTotal, '-')}
+				</span>
+			{/if}
+			{#if showNet}
+				<span class={cn('font-semibold', netClass(net))}>
+					Net {money(net, net > 0 ? '+' : 'auto')}
+				</span>
+			{/if}
+		</p>
+	{/if}
+{/snippet}
+
+{#snippet movement(entry: TimelineEntry, grouped: boolean)}
+	<button
+		type="button"
+		class={cn(
+			'flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left active:bg-muted/60',
+			grouped ? 'bg-transparent' : 'rounded-2xl border border-border/60 bg-card'
+		)}
+		aria-label={entryLabel(entry)}
+		onclick={() => onLoanClick?.(entry.loan)}
+	>
+		<span
+			class={cn(
+				'w-11 shrink-0 text-[11px] font-semibold uppercase tracking-wide sm:w-12 sm:text-xs',
+				entry.direction === 'in'
+					? 'text-emerald-600 dark:text-emerald-400'
+					: entry.kind === 'scheduled'
+						? 'text-amber-600 dark:text-amber-400'
+						: 'text-rose-600 dark:text-rose-400'
+			)}
+		>
+			{entry.direction === 'in' ? 'In' : 'Out'}
+		</span>
+		<span class="min-w-0 flex-1">
+			<span class="block truncate text-sm font-medium text-foreground">
+				{formatText(entry.title)}
+			</span>
+			<span class="block truncate text-xs text-muted-foreground">
+				{entry.kindLabel}{#if entry.detail}
+					· {formatText(entry.detail)}{/if}
+			</span>
+		</span>
+		<span
+			class={cn(
+				'shrink-0 text-sm font-semibold tabular-nums',
+				entry.direction === 'in'
+					? 'text-emerald-600 dark:text-emerald-400'
+					: entry.kind === 'scheduled'
+						? 'text-amber-600 dark:text-amber-400'
+						: 'text-rose-600 dark:text-rose-400'
+			)}
+		>
+			{entry.direction === 'in' ? money(entry.amount, '+') : money(entry.amount, '-')}
+		</span>
+	</button>
+{/snippet}
+
+{#if timeline.months.length === 0}
+	<ListEmptyState message="No activity in this range" icon={GanttChart} />
+{:else}
+	<div class="loan-timeline flex w-full min-w-0 flex-col gap-7">
+		{#each timeline.months as month (month.key)}
+			<section class="w-full min-w-0">
+				<header
+					class="timeline-month-header sticky top-[calc(var(--mobile-top-bar-height)+var(--safe-area-top))] z-30 w-full min-w-0 border-b border-border/60 bg-background py-3 lg:top-0"
+				>
+					<div class="grid w-full grid-cols-[2.75rem_minmax(0,1fr)] gap-x-2">
+						<div
+							class="flex w-11 items-center justify-center text-muted-foreground"
+							aria-hidden="true"
+						>
+							<GanttChart class="h-5 w-5" />
+						</div>
+						<div class="min-w-0 space-y-1 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:space-y-0">
+							<h2 class="text-sm font-semibold tracking-tight">{month.label}</h2>
+							{@render flowTotals(month.inTotal, month.outTotal, 'month')}
+						</div>
+					</div>
+				</header>
+
+				<div class="relative mt-3">
+					<div
+						class="pointer-events-none absolute top-0 bottom-0 left-[1.375rem] w-px -translate-x-1/2 bg-border/60"
+						aria-hidden="true"
+					></div>
+					{#each month.days as day (day.dateKey)}
+						{@const parts = timelineDayParts(day.dateKey)}
+						{@const showDayTotals = day.entries.length > 1}
+						<article
+							id="timeline-day-{day.dateKey}"
+							class="timeline-day flex gap-2 pb-6"
+							use:markToday={day.isToday}
+						>
+							<div
+								class={cn(
+									'relative z-10 flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full border border-transparent bg-background',
+									day.isToday && 'border-primary/20 bg-primary text-primary-foreground'
+								)}
+								aria-current={day.isToday ? 'date' : undefined}
+							>
+								<span class="text-sm font-semibold leading-none tabular-nums">{parts.day}</span>
+								<span
+									class={cn(
+										'mt-0.5 text-[10px] leading-none font-medium uppercase',
+										day.isToday ? 'text-primary-foreground/85' : 'text-muted-foreground'
+									)}
+								>
+									{parts.weekday}
+								</span>
+							</div>
+
+							<div class="min-w-0 flex-1">
+								{#if day.entries.length === 0}
+									<div
+										class="flex min-h-11 w-full items-center gap-2 rounded-2xl border border-border/60 bg-card px-3 py-2.5"
+										aria-label="Today, no activity"
+									>
+										<span class="w-11 shrink-0 sm:w-12" aria-hidden="true"></span>
+										<span class="min-w-0 flex-1 text-sm text-muted-foreground">No activity</span>
+									</div>
+								{:else if showDayTotals}
+									<div class="overflow-hidden rounded-2xl border border-border/60 bg-card">
+										<ul class="divide-y divide-border/50">
+											{#each day.entries as entry (entry.id)}
+												<li>{@render movement(entry, true)}</li>
+											{/each}
+										</ul>
+										<div class="border-t border-border/50 px-3 py-2">
+											{@render flowTotals(day.inTotal, day.outTotal, 'day')}
+										</div>
+									</div>
+								{:else if day.entries[0]}
+									{@render movement(day.entries[0], false)}
+								{/if}
+							</div>
+						</article>
+					{/each}
+				</div>
+			</section>
+		{/each}
+	</div>
+{/if}
+
+{#if showJump}
+	<button
+		type="button"
+		class="fixed left-1/2 z-30 min-h-11 -translate-x-1/2 rounded-full border border-border/70 bg-card px-4 text-sm font-medium shadow-[var(--shadow-native-float)] bottom-[calc(var(--mobile-dock-clearance)+var(--safe-area-bottom)+0.5rem)] lg:bottom-6"
+		onclick={jumpToToday}
+	>
+		Today
+	</button>
+{/if}
+
+<style>
+	.timeline-day {
+		scroll-margin-top: calc(var(--mobile-top-bar-height) + var(--safe-area-top) + 4.5rem);
+	}
+
+	@media (min-width: 1024px) {
+		.timeline-day {
+			scroll-margin-top: 4.5rem;
+		}
+	}
+</style>

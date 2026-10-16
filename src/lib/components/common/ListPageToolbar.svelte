@@ -15,6 +15,7 @@
 		viewMode?: ViewMode;
 		onViewModeChange?: (mode: ViewMode) => void;
 		showCalendar?: boolean;
+		showTimeline?: boolean;
 		hasData?: boolean;
 		showViewToggle?: boolean;
 		hasActiveFilters?: boolean;
@@ -38,6 +39,7 @@
 		viewMode,
 		onViewModeChange,
 		showCalendar = false,
+		showTimeline = false,
 		hasData = true,
 		showViewToggle = false,
 		hasActiveFilters = false,
@@ -74,6 +76,7 @@
 				{viewMode}
 				onViewModeChange={onViewModeChange}
 				{showCalendar}
+				{showTimeline}
 				{hasData}
 				class="shrink-0"
 			/>

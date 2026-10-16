@@ -1,4 +1,4 @@
-export type ViewMode = "cards" | "table" | "calendar";
+export type ViewMode = "cards" | "table" | "calendar" | "timeline";
 
 export interface ResponsiveViewModeOptions {
   defaultDesktopMode?: ViewMode;
@@ -21,15 +21,19 @@ export function createResponsiveViewMode(
 
   function coerceViewModeForMobileShell() {
     if (!isMobile) return;
-    // Table is desktop-only in the UI; calendar and cards work on phone.
+    // Table and calendar are desktop-only in loan list UI; timeline replaces calendar on phone.
     if (viewMode === "table") {
       viewMode = defaultMobileMode;
+    } else if (viewMode === "calendar") {
+      viewMode = "timeline";
     }
   }
 
   function setViewMode(mode: ViewMode) {
     if (isMobile && mode === "table") {
       viewMode = defaultMobileMode;
+    } else if (isMobile && mode === "calendar") {
+      viewMode = "timeline";
     } else {
       viewMode = mode;
     }

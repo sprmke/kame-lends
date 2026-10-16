@@ -16,6 +16,7 @@
 	import LoanCommissionSummaryCards from '$lib/components/loans/LoanCommissionSummaryCards.svelte';
 	import LoansTable from '$lib/components/loans/LoansTable.svelte';
 	import LoanCalendarView from '$lib/components/loans/LoanCalendarView.svelte';
+	import LoanTimelineView from '$lib/components/loans/LoanTimelineView.svelte';
 	import LoanDetailModal from '$lib/components/loans/LoanDetailModal.svelte';
 	import LoanCreateModal from '$lib/components/loans/LoanCreateModal.svelte';
 	import LoanQuickPaymentDialog, {
@@ -399,7 +400,12 @@
 	const filterTo = $derived(dateRangeState.filterTo);
 
 	$effect(() => {
-		if (viewParam === 'table' || viewParam === 'cards' || viewParam === 'calendar') {
+		if (
+			viewParam === 'table' ||
+			viewParam === 'cards' ||
+			viewParam === 'calendar' ||
+			viewParam === 'timeline'
+		) {
 			viewModeState.setViewMode(viewParam);
 		}
 		const statusParams = page.url.searchParams.getAll('status');
@@ -669,6 +675,7 @@
 			viewMode={viewModeState.viewMode}
 			onViewModeChange={viewModeState.setViewMode}
 			showCalendar={true}
+			showTimeline={true}
 			hasData={listLoans.length > 0}
 			showViewToggle={true}
 			{hasActiveFilters}
@@ -820,6 +827,13 @@
 					</div>
 				{/snippet}
 			</CardPagination>
+		{:else if viewModeState.viewMode === 'timeline'}
+			<LoanTimelineView
+				loans={sortedLoans}
+				from={filterFrom}
+				to={filterTo}
+				onLoanClick={handleQuickView}
+			/>
 		{:else}
 			<LoanCalendarView loans={sortedLoans} onLoanClick={handleQuickView} />
 		{/if}
