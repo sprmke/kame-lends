@@ -4,6 +4,57 @@ import type { DuplicateLoanData } from "$lib/loan-duplicate";
 import type { Investor, LoanWithInvestors } from "$lib/types";
 import { normalizePaymentReceipts } from "$lib/payment-receipts";
 
+function interestPeriodFormId(
+  period: { id?: number | null },
+  loanInvestorId: number,
+  index: number,
+): string {
+  if (period.id != null) return String(period.id);
+  return `period-li-${loanInvestorId}-${index}`;
+}
+
+function transactionFormId(
+  loanInvestorId: number | undefined,
+  index: number,
+): string {
+  if (loanInvestorId != null) return String(loanInvestorId);
+  return `tx-${index}`;
+}
+
+function mergeReceivedPaymentsForInvestor(
+  loanInvestors: LoanWithInvestors["loanInvestors"],
+  investorId: number,
+): SelectedInvestorAllocation["receivedPayments"] {
+  const seenDbIds = new Set<number>();
+  const merged: SelectedInvestorAllocation["receivedPayments"] = [];
+
+  for (const li of loanInvestors.filter(
+    (row) => row.investor.id === investorId,
+  )) {
+    for (const rp of li.receivedPayments ?? []) {
+      if (rp.id != null) {
+        if (seenDbIds.has(rp.id)) continue;
+        seenDbIds.add(rp.id);
+        merged.push({
+          id: String(rp.id),
+          amount: rp.amount,
+          receivedDate: toLocalDateString(rp.receivedDate),
+          receipts: normalizePaymentReceipts(rp),
+        });
+        continue;
+      }
+      merged.push({
+        id: `rp-li-${li.id}-${merged.length}`,
+        amount: rp.amount,
+        receivedDate: toLocalDateString(rp.receivedDate),
+        receipts: normalizePaymentReceipts(rp),
+      });
+    }
+  }
+
+  return merged;
+}
+
 export function buildAllocationsFromExistingLoan(
   loan: LoanWithInvestors,
 ): SelectedInvestorAllocation[] {
@@ -18,7 +69,7 @@ export function buildAllocationsFromExistingLoan(
     const interestRate = li.interestType === "rate" ? li.interestRate : "";
 
     transactions.push({
-      id: String(li.id),
+      id: transactionFormId(li.id, transactions.length),
       amount: li.amount,
       interestRate,
       interestAmount,
@@ -40,9 +91,10 @@ export function buildAllocationsFromExistingLoan(
     const investor = firstLoanInvestor?.investor;
     if (!investor) continue;
 
+    const loanInvestorId = firstLoanInvestor?.id ?? investorId;
     const interestPeriods =
-      firstLoanInvestor?.interestPeriods?.map((ip) => ({
-        id: String(ip.id),
+      firstLoanInvestor?.interestPeriods?.map((ip, index) => ({
+        id: interestPeriodFormId(ip, loanInvestorId, index),
         dueDate: toLocalDateString(ip.dueDate),
         interestRate: ip.interestType === "rate" ? ip.interestRate : "",
         interestAmount: ip.interestType === "fixed" ? ip.interestRate : "",
@@ -50,16 +102,10 @@ export function buildAllocationsFromExistingLoan(
         status: ip.status,
       })) ?? [];
 
-    const receivedPayments = loan.loanInvestors
-      .filter((li) => li.investor.id === investorId)
-      .flatMap((li) =>
-        (li.receivedPayments ?? []).map((rp) => ({
-          id: String(rp.id),
-          amount: rp.amount,
-          receivedDate: toLocalDateString(rp.receivedDate),
-          receipts: normalizePaymentReceipts(rp),
-        })),
-      );
+    const receivedPayments = mergeReceivedPaymentsForInvestor(
+      loan.loanInvestors,
+      investorId,
+    );
 
     result.push({
       investor,
