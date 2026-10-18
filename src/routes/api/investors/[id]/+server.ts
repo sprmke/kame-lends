@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { investors, users } from "$lib/server/db/schema";
+import { investors } from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import {
@@ -9,7 +9,10 @@ import {
   normalizeSignatureImageUrl,
 } from "$lib/valid-id-document";
 import { invalidateInvestorData } from "$lib/server/cache-invalidation";
-import { findOrCreatePartyUser } from "$lib/server/party-user";
+import {
+  PartyEmailConflictError,
+  upsertWorkspacePartyContact,
+} from "$lib/server/party-directory";
 import { hasInvestorContactViewAccess } from "$lib/server/access-control";
 
 export const GET: RequestHandler = async (event) => {
@@ -76,36 +79,27 @@ export const PUT: RequestHandler = async (event) => {
       return json({ error: "Investor not found" }, { status: 404 });
     }
 
-    const partyUser = await findOrCreatePartyUser({
-      email: body.email,
-      name: body.name,
+    if (!body.email?.trim()) {
+      return json({ error: "Investor email is required" }, { status: 400 });
+    }
+
+    const saved = await upsertWorkspacePartyContact({
+      workspaceOwnerId: session.user.id,
       role: "investor",
+      anchorId: investorId,
+      name: body.name,
+      email: body.email,
+      contactNumber: body.contactNumber || null,
+      address: body.address || null,
+      validIdUrl: normalizeValidIdUrl(body.validIdUrl),
+      eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
+      syncDocuments: body.validIdUrl != null || body.eSignatureUrl != null,
     });
-    const investorUserId = partyUser?.id ?? existingInvestor.investorUserId;
-
-    const updatedInvestor = await db
-      .update(investors)
-      .set({
-        name: body.name,
-        email: body.email,
-        contactNumber: body.contactNumber || null,
-        address: body.address || null,
-        validIdUrl: normalizeValidIdUrl(body.validIdUrl),
-        eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
-        investorUserId: investorUserId,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(investors.id, investorId),
-          eq(investors.userId, session.user.id),
-        ),
-      )
-      .returning();
-
-    invalidateInvestorData();
-    return json(updatedInvestor[0]);
+    return json(saved);
   } catch (error) {
+    if (error instanceof PartyEmailConflictError) {
+      return json({ error: error.message }, { status: 409 });
+    }
     console.error("Error updating investor:", error);
     return json({ error: "Failed to update investor" }, { status: 500 });
   }

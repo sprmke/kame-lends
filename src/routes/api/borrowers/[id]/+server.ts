@@ -9,7 +9,10 @@ import {
   normalizeSignatureImageUrl,
 } from "$lib/valid-id-document";
 import { invalidateBorrowerData } from "$lib/server/cache-invalidation";
-import { findOrCreatePartyUser } from "$lib/server/party-user";
+import {
+  PartyEmailConflictError,
+  upsertWorkspacePartyContact,
+} from "$lib/server/party-directory";
 import { borrowerDetailLoansWith } from "$lib/server/borrower-detail-query";
 import { hasBorrowerContactViewAccess } from "$lib/server/access-control";
 
@@ -83,25 +86,34 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     const email = typeof body.email === "string" ? body.email.trim() : "";
-    const partyUser = email
-      ? await findOrCreatePartyUser({
-          email,
-          name: body.name,
-          role: "borrower",
-        })
-      : null;
+    if (email) {
+      const saved = await upsertWorkspacePartyContact({
+        workspaceOwnerId: session.user.id,
+        role: "borrower",
+        anchorId: borrowerId,
+        name: body.name,
+        email,
+        contactNumber: body.contactNumber || null,
+        address: body.address || null,
+        notes: body.notes || null,
+        validIdUrl: normalizeValidIdUrl(body.validIdUrl),
+        eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
+        syncDocuments: true,
+      });
+      return json(saved);
+    }
 
     const updatedBorrower = await db
       .update(borrowers)
       .set({
         name: body.name.trim(),
         contactNumber: body.contactNumber || null,
-        email: email || null,
+        email: null,
         address: body.address || null,
         notes: body.notes || null,
         validIdUrl: normalizeValidIdUrl(body.validIdUrl),
         eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
-        borrowerUserId: partyUser?.id ?? null,
+        borrowerUserId: null,
         updatedAt: new Date(),
       })
       .where(
@@ -115,6 +127,9 @@ export const PUT: RequestHandler = async (event) => {
     invalidateBorrowerData();
     return json(updatedBorrower[0]);
   } catch (error) {
+    if (error instanceof PartyEmailConflictError) {
+      return json({ error: error.message }, { status: 409 });
+    }
     console.error("Error updating borrower:", error);
     return json({ error: "Failed to update borrower" }, { status: 500 });
   }

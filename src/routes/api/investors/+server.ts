@@ -1,15 +1,15 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { db } from "$lib/server/db";
-import { investors } from "$lib/server/db/schema";
 import { getSession } from "$lib/server/session";
 import {
   normalizeValidIdUrl,
   normalizeSignatureImageUrl,
 } from "$lib/valid-id-document";
 import { getCachedInvestors } from "$lib/server/cached-data";
-import { invalidateInvestorData } from "$lib/server/cache-invalidation";
-import { findOrCreatePartyUser } from "$lib/server/party-user";
+import {
+  PartyEmailConflictError,
+  upsertWorkspacePartyContact,
+} from "$lib/server/party-directory";
 import { workspaceAdminForbidden } from "$lib/server/workspace-admin";
 
 export const GET: RequestHandler = async (event) => {
@@ -41,31 +41,22 @@ export const POST: RequestHandler = async (event) => {
       return json({ error: "Investor email is required" }, { status: 400 });
     }
 
-    const investorUser = await findOrCreatePartyUser({
-      email: body.email,
-      name: body.name,
+    const saved = await upsertWorkspacePartyContact({
+      workspaceOwnerId: session.user.id,
       role: "investor",
+      name: body.name,
+      email: body.email,
+      contactNumber: body.contactNumber || null,
+      address: body.address || null,
+      validIdUrl: normalizeValidIdUrl(body.validIdUrl),
+      eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
+      syncDocuments: body.validIdUrl != null || body.eSignatureUrl != null,
     });
-    if (!investorUser) {
-      return json({ error: "Investor email is required" }, { status: 400 });
-    }
-
-    const newInvestor = await db
-      .insert(investors)
-      .values({
-        name: body.name,
-        email: body.email,
-        contactNumber: body.contactNumber || null,
-        address: body.address || null,
-        validIdUrl: normalizeValidIdUrl(body.validIdUrl),
-        eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
-        userId: session.user.id,
-        investorUserId: investorUser.id,
-      })
-      .returning();
-    invalidateInvestorData();
-    return json(newInvestor[0], { status: 201 });
+    return json(saved, { status: 201 });
   } catch (error) {
+    if (error instanceof PartyEmailConflictError) {
+      return json({ error: error.message }, { status: 409 });
+    }
     console.error("Error creating investor:", error);
     return json({ error: "Failed to create investor" }, { status: 500 });
   }

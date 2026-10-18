@@ -9,7 +9,10 @@ import {
   normalizeSignatureImageUrl,
   normalizeValidIdUrl,
 } from "$lib/valid-id-document";
-import { findOrCreatePartyUser } from "$lib/server/party-user";
+import {
+  PartyEmailConflictError,
+  upsertWorkspacePartyContact,
+} from "$lib/server/party-directory";
 import { hasWitnessContactViewAccess } from "$lib/server/access-control";
 
 interface RouteParams {
@@ -98,24 +101,32 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     const email = typeof body.email === "string" ? body.email.trim() : "";
-    const partyUser = email
-      ? await findOrCreatePartyUser({
-          email,
-          name: body.name,
-          role: "witness",
-        })
-      : null;
+    if (email) {
+      const saved = await upsertWorkspacePartyContact({
+        workspaceOwnerId: session.user.id,
+        role: "witness",
+        anchorId: witnessId,
+        name: body.name,
+        email,
+        contactNumber: body.contactNumber?.trim() || null,
+        address: body.address?.trim() || null,
+        validIdUrl: normalizeValidIdUrl(body.validIdUrl),
+        eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
+        syncDocuments: true,
+      });
+      return json(saved);
+    }
 
     const [updated] = await db
       .update(witnesses)
       .set({
         name: body.name.trim(),
-        email: email || null,
+        email: null,
         contactNumber: body.contactNumber?.trim() || null,
         address: body.address?.trim() || null,
         validIdUrl: normalizeValidIdUrl(body.validIdUrl),
         eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
-        witnessUserId: partyUser?.id ?? null,
+        witnessUserId: null,
         updatedAt: new Date(),
       })
       .where(
@@ -126,6 +137,9 @@ export const PUT: RequestHandler = async (event) => {
     invalidateWitnessData();
     return json(updated);
   } catch (error) {
+    if (error instanceof PartyEmailConflictError) {
+      return json({ error: error.message }, { status: 409 });
+    }
     console.error("Error updating witness:", error);
     return json({ error: "Failed to update witness" }, { status: 500 });
   }

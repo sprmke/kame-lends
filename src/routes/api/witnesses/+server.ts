@@ -1,15 +1,15 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { getSession } from "$lib/server/session";
-import { db } from "$lib/server/db";
-import { witnesses } from "$lib/server/db/schema";
-import { invalidateWitnessData } from "$lib/server/cache-invalidation";
 import { getCachedWitnesses } from "$lib/server/cached-data";
 import {
   normalizeSignatureImageUrl,
   normalizeValidIdUrl,
 } from "$lib/valid-id-document";
-import { findOrCreatePartyUser } from "$lib/server/party-user";
+import {
+  PartyEmailConflictError,
+  upsertWorkspacePartyContact,
+} from "$lib/server/party-directory";
 import { workspaceAdminForbidden } from "$lib/server/workspace-admin";
 
 export const GET: RequestHandler = async (event) => {
@@ -81,31 +81,27 @@ export const POST: RequestHandler = async (event) => {
     }
 
     const email = typeof body.email === "string" ? body.email.trim() : "";
-    const partyUser = email
-      ? await findOrCreatePartyUser({
-          email,
-          name: body.name,
-          role: "witness",
-        })
-      : null;
+    if (!email) {
+      return json({ error: "Email is required" }, { status: 400 });
+    }
 
-    const [created] = await db
-      .insert(witnesses)
-      .values({
-        userId: session.user.id,
-        witnessUserId: partyUser?.id ?? null,
-        name: body.name.trim(),
-        email: email || null,
-        contactNumber: body.contactNumber?.trim() || null,
-        address: body.address?.trim() || null,
-        validIdUrl: normalizeValidIdUrl(body.validIdUrl),
-        eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
-      })
-      .returning();
+    const saved = await upsertWorkspacePartyContact({
+      workspaceOwnerId: session.user.id,
+      role: "witness",
+      name: body.name,
+      email,
+      contactNumber: body.contactNumber?.trim() || null,
+      address: body.address?.trim() || null,
+      validIdUrl: normalizeValidIdUrl(body.validIdUrl),
+      eSignatureUrl: normalizeSignatureImageUrl(body.eSignatureUrl),
+      syncDocuments: true,
+    });
 
-    invalidateWitnessData();
-    return json(created, { status: 201 });
+    return json(saved, { status: 201 });
   } catch (error) {
+    if (error instanceof PartyEmailConflictError) {
+      return json({ error: error.message }, { status: 409 });
+    }
     console.error("Error creating witness:", error);
     return json({ error: "Failed to create witness" }, { status: 500 });
   }
