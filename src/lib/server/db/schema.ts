@@ -112,6 +112,9 @@ export const investors = pgTable(
     investorUserIdIdx: index("investors_investor_user_id_idx").on(
       table.investorUserId,
     ),
+    workspacePartyUnique: uniqueIndex("investors_workspace_party_user_uidx")
+      .on(table.userId, table.investorUserId)
+      .where(sql`${table.investorUserId} IS NOT NULL`),
   }),
 );
 
@@ -141,6 +144,9 @@ export const borrowers = pgTable(
     borrowerUserIdIdx: index("borrowers_borrower_user_id_idx").on(
       table.borrowerUserId,
     ),
+    workspacePartyUnique: uniqueIndex("borrowers_workspace_party_user_uidx")
+      .on(table.userId, table.borrowerUserId)
+      .where(sql`${table.borrowerUserId} IS NOT NULL`),
   }),
 );
 
@@ -170,6 +176,9 @@ export const witnesses = pgTable(
       table.witnessUserId,
     ),
     userNameIdx: index("witnesses_user_name_idx").on(table.userId, table.name),
+    workspacePartyUnique: uniqueIndex("witnesses_workspace_party_user_uidx")
+      .on(table.userId, table.witnessUserId)
+      .where(sql`${table.witnessUserId} IS NOT NULL`),
   }),
 );
 
