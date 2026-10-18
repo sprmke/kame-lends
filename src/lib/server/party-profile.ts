@@ -7,6 +7,7 @@ import {
 } from "$lib/valid-id-document";
 import { normalizeEmail } from "$lib/loan-signing";
 import { findOrCreatePartyUser } from "$lib/server/party-user";
+import { ensureMissingPartyRoles } from "$lib/server/party-directory";
 import { listPaymentMethodsForUser } from "$lib/server/payment-methods";
 import type {
   PartyEntityType,
@@ -481,6 +482,21 @@ export async function savePartyProfileForEntity(
         ),
       );
     invalidateWitnessData();
+  }
+
+  if (partyUserId && email) {
+    await ensureMissingPartyRoles({
+      workspaceOwnerId,
+      partyUserId,
+      name,
+      email,
+      contactNumber,
+      address,
+      notes,
+      validIdUrl,
+      eSignatureUrl,
+      syncDocuments: true,
+    });
   }
 
   return loadPartyProfileForEntity(entityType, entityId, workspaceOwnerId);

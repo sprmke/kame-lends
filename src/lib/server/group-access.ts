@@ -23,6 +23,7 @@ import {
 import { matchGroupRulesForLoan, type GroupRule } from "$lib/group-rules";
 import { normalizeEmail } from "$lib/loan-signing";
 import { findOrCreatePartyUser } from "$lib/server/party-user";
+import { ensureMissingPartyRoles } from "$lib/server/party-directory";
 import { findUserByNormalizedEmail } from "$lib/server/auth-sign-in";
 import { invalidateWitnessData } from "$lib/server/cache-invalidation";
 
@@ -40,9 +41,14 @@ export async function syncWitnessUserLinksForLoans(
   const rows = await db
     .select({
       witnessId: witnesses.id,
+      workspaceOwnerId: witnesses.userId,
       witnessUserId: witnesses.witnessUserId,
       email: witnesses.email,
       name: witnesses.name,
+      contactNumber: witnesses.contactNumber,
+      address: witnesses.address,
+      validIdUrl: witnesses.validIdUrl,
+      eSignatureUrl: witnesses.eSignatureUrl,
     })
     .from(loanWitnesses)
     .innerJoin(witnesses, eq(loanWitnesses.witnessId, witnesses.id))
@@ -50,20 +56,32 @@ export async function syncWitnessUserLinksForLoans(
 
   let linked = false;
   for (const row of rows) {
-    if (row.witnessUserId) continue;
     const email = row.email?.trim();
     if (!email) continue;
-    const partyUser = await findOrCreatePartyUser({
-      email,
-      name: row.name,
-      role: "witness",
-    });
-    if (!partyUser) continue;
-    await db
-      .update(witnesses)
-      .set({ witnessUserId: partyUser.id, updatedAt: new Date() })
-      .where(eq(witnesses.id, row.witnessId));
-    linked = true;
+    if (!row.witnessUserId) {
+      const partyUser = await findOrCreatePartyUser({
+        email,
+        name: row.name,
+        role: "witness",
+      });
+      if (!partyUser) continue;
+      await db
+        .update(witnesses)
+        .set({ witnessUserId: partyUser.id, updatedAt: new Date() })
+        .where(eq(witnesses.id, row.witnessId));
+      linked = true;
+      await ensureMissingPartyRoles({
+        workspaceOwnerId: row.workspaceOwnerId,
+        partyUserId: partyUser.id,
+        name: row.name,
+        email,
+        contactNumber: row.contactNumber,
+        address: row.address,
+        validIdUrl: row.validIdUrl,
+        eSignatureUrl: row.eSignatureUrl,
+        syncDocuments: true,
+      });
+    }
   }
   if (linked) invalidateWitnessData();
 }
