@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import ListEmptyState from '$lib/components/common/ListEmptyState.svelte';
 	import { formatCurrencyCompact, formatText, isSensitiveDataHidden } from '$lib/format';
 	import {
@@ -10,7 +11,7 @@
 	} from '$lib/loans/loan-timeline';
 	import type { LoanWithInvestors } from '$lib/types';
 	import { cn } from '$lib/utils';
-	import { GanttChart } from 'lucide-svelte';
+	import { ArrowDown, ArrowUp, GanttChart } from 'lucide-svelte';
 
 	interface Props {
 		loans: LoanWithInvestors[];
@@ -24,12 +25,13 @@
 	let today = $state<Date | null>(typeof window !== 'undefined' ? new Date() : null);
 	let todayEl = $state<HTMLElement | null>(null);
 	let showJump = $state(false);
-	let mountNonce = $state(0);
-	let anchoredFor = '';
+	/** Where today sits relative to the viewport while off screen. */
+	let todayDirection = $state<'up' | 'down'>('down');
+	let reduceMotion = $state(false);
 
 	onMount(() => {
 		today = new Date();
-		mountNonce += 1;
+		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 	});
 
 	const timeline = $derived(buildLoanTimeline(loans, { from, to, today }));
@@ -86,37 +88,6 @@
 		todayEl?.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
 	}
 
-	function scrollTimelineAnchor(key: string) {
-		const attempt = () => {
-			const el = todayEl ?? document.getElementById(`timeline-day-${key}`);
-			if (!el) return false;
-			el.scrollIntoView({ block: 'center', behavior: 'auto' });
-			return true;
-		};
-
-		if (attempt()) return;
-		void tick().then(() => {
-			if (attempt()) return;
-			requestAnimationFrame(() => {
-				attempt();
-			});
-		});
-	}
-
-	$effect(() => {
-		const token = `${from ?? ''}|${to ?? ''}|${mountNonce}`;
-		const key = timeline.anchorKey;
-		if (!key) {
-			if (anchoredFor && anchoredFor !== token) anchoredFor = '';
-			return;
-		}
-		const todayKey = today ? localDayKey(today) : null;
-		if (todayKey === key && !todayEl) return;
-		if (anchoredFor === token) return;
-		anchoredFor = token;
-		scrollTimelineAnchor(key);
-	});
-
 	$effect(() => {
 		const el = todayEl;
 		if (!el) {
@@ -126,6 +97,9 @@
 		const observer = new IntersectionObserver(
 			([entry]) => {
 				showJump = entry ? !entry.isIntersecting : false;
+				if (entry && !entry.isIntersecting) {
+					todayDirection = entry.boundingClientRect.top < 0 ? 'up' : 'down';
+				}
 			},
 			{ root: null, rootMargin: '-88px 0px -120px 0px', threshold: 0.35 }
 		);
@@ -310,11 +284,17 @@
 {/if}
 
 {#if showJump}
+	{@const Arrow = todayDirection === 'up' ? ArrowUp : ArrowDown}
 	<button
 		type="button"
-		class="fixed left-1/2 z-30 min-h-11 -translate-x-1/2 rounded-full border border-border/70 bg-card px-4 text-sm font-medium shadow-[var(--shadow-native-float)] bottom-[calc(var(--mobile-dock-clearance)+var(--safe-area-bottom)+0.5rem)] lg:bottom-6"
+		class="fixed left-1/2 z-30 inline-flex min-h-11 -translate-x-1/2 items-center gap-2 rounded-full border border-border/60 bg-card py-1.5 pr-4 pl-1.5 text-sm font-medium text-foreground shadow-[var(--shadow-native-float)] transition-transform active:scale-95 bottom-[calc(var(--mobile-dock-clearance)+var(--safe-area-bottom)+0.75rem)] lg:bottom-6"
+		aria-label="Jump to today"
 		onclick={jumpToToday}
+		transition:fly={{ y: 12, duration: reduceMotion ? 0 : 180 }}
 	>
+		<span class="grid size-8 place-items-center rounded-full bg-primary/10 text-primary" aria-hidden="true">
+			<Arrow class="size-4" />
+		</span>
 		Today
 	</button>
 {/if}

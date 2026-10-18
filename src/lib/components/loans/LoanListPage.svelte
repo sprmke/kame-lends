@@ -131,7 +131,7 @@
 		};
 	});
 
-	const viewModeState = createResponsiveViewMode();
+	const viewModeState = createResponsiveViewMode({ defaultMobileMode: 'timeline' });
 	const isMobileShell = createIsMobileShell(false);
 	const participantFilters = createLoanListParticipantFilters(() => loans);
 	let searchQuery = $state('');
@@ -709,7 +709,11 @@
 						onclick={() => {
 							phoneSelectMode = !phoneSelectMode;
 							if (!phoneSelectMode) selectedRowIds = new Set();
-							else showMoreFilters = false;
+							else {
+								showMoreFilters = false;
+								// Timeline has no checkboxes; selection works on cards.
+								if (viewModeState.viewMode === 'timeline') viewModeState.setViewMode('cards');
+							}
 						}}
 					>
 						{phoneSelectMode ? 'Done' : 'Select'}

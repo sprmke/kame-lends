@@ -6,6 +6,7 @@
 ## Behavior
 
 - Lists borrower contacts the user owns or is linked to (`borrower_user_id`). `PageHeader` subtitle: "Borrowers linked to your loans" (visible at all breakpoints).
+- A new borrower needs an email. That email is one user, also listed on the investor and witness dropdowns. The same Google account later signs in on that user. Editing a borrower that still has no email leaves them off the other lists until an email is added.
 - Search by name, email, or contact number. Inline filter: loan exposure (**All** / **Active** open loans / **Overdue**). Table or card view. Card view (`GridListCardShell`): tap the card to open; **⋯** top-right (Edit, Delete; same as table row actions). Toolbar uses shared `ListPageToolbar` (search + exposure filter on phone; view toggle `lg+` only; hidden when the list is empty).
 - Empty card view: shared `ListEmptyState` (message only, or **Clear filters** when filters hide all rows). **Add Borrower** stays in the page header.
 - **Phone (`<lg`):** row/card opens `/borrowers/[id]`. Add Borrower and row edit open a bottom sheet (`BorrowerCreateModal` / `BorrowerDetailModal` in edit mode), not `/borrowers/new`. Detail-page edit also uses a sheet (`EditFormSheet`).

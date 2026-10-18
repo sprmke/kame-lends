@@ -57,7 +57,9 @@
 		if (!name.trim() || name.trim().length < 2) {
 			next.name = 'Name is required (min 2 characters)';
 		}
-		if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+		if (!isEditMode && !email.trim()) {
+			next.email = 'Email is required';
+		} else if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
 			next.email = 'Invalid email';
 		}
 		errors = next;
@@ -173,7 +175,13 @@
 
 			<div class="space-y-2">
 				<Label for="borrower-email">Email Address</Label>
-				<Input id="borrower-email" type="email" bind:value={email} disabled={isSubmitting} />
+				<Input
+					id="borrower-email"
+					type="email"
+					bind:value={email}
+					disabled={isSubmitting}
+					required={!isEditMode}
+				/>
 				{#if errors.email}<p class="text-sm text-destructive">{errors.email}</p>{/if}
 			</div>
 

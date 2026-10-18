@@ -14,6 +14,7 @@
 	import { loadPartyOptions, clearPartyOptionsCache } from '$lib/composables/party-options';
 	import { toast } from '$lib/toast';
 	import type { Borrower, Investor, Witness } from '$lib/types';
+	import { dedupeDirectoryContacts } from '$lib/party-directory-contacts';
 	import { Check, ChevronDown, PenLine, Save, Search, UserRound, UsersRound } from 'lucide-svelte';
 
 	interface ExistingContact {
@@ -60,7 +61,7 @@
 	let witness1Saving = $state(false);
 	let witness2Saving = $state(false);
 
-	const contacts = $derived<ExistingContact[]>([
+	const contacts = $derived(dedupeDirectoryContacts<ExistingContact>([
 		...witnesses.map((witness) => ({
 			id: witness.id,
 			key: `witness-${witness.id}`,
@@ -94,7 +95,7 @@
 			validIdUrl: investor.validIdUrl,
 			eSignatureUrl: investor.eSignatureUrl
 		}))
-	]);
+	]));
 
 	const filteredContacts = $derived.by(() => {
 		const query = contactPickerQuery.trim().toLowerCase();
