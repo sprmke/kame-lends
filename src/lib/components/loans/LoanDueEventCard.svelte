@@ -2,6 +2,7 @@
 	import { formatText } from '$lib/format';
 	import type { LoanWithInvestors } from '$lib/types';
 	import LoanEventCardMetaBadges from '$lib/components/loans/LoanEventCardMetaBadges.svelte';
+	import LoanStatusBadge from '$lib/components/loans/LoanStatusBadge.svelte';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -75,7 +76,14 @@
 				{onOpenContractDetails}
 			/>
 		{/if}
-		<p class="truncate font-bold text-foreground {classes.title}">{formatText(loan.loanName)}</p>
+		<p class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+			<span class="max-w-full truncate font-bold text-foreground {classes.title}">
+				{formatText(loan.loanName)}
+			</span>
+			{#if !showHeaderBadges}
+				<LoanStatusBadge status={loan.status} />
+			{/if}
+		</p>
 		<div class={size === 'sm' ? 'space-y-1' : 'space-y-1 pl-8'}>
 			<div class="space-y-0.5 text-muted-foreground {classes.detail}">
 				<div

@@ -430,7 +430,8 @@
 	const viewParam = $derived(page.url.searchParams.get('view'));
 	const dateRangeState = createLoanListDateRange(() => page, () => ({
 		enabled: variant.showDateRange,
-		defaultPreset: variant.defaultDatePreset
+		defaultPreset: variant.defaultDatePreset,
+		rememberScope: scope === 'group' ? 'group' : 'loans'
 	}));
 	const filterFrom = $derived(dateRangeState.filterFrom);
 	const filterTo = $derived(dateRangeState.filterTo);

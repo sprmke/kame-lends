@@ -126,7 +126,8 @@
 	const canBulkSelect = $derived(canManage && SHOW_GROUPS_UI);
 
 	const dateRangeState = createLoanListDateRange(() => page, () => ({
-		enabled: pageTab === 'loans'
+		enabled: pageTab === 'loans',
+		rememberScope: 'investor'
 	}));
 	const filterFrom = $derived(dateRangeState.filterFrom);
 	const filterTo = $derived(dateRangeState.filterTo);

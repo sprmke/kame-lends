@@ -6,7 +6,7 @@
 ## Behavior
 
 - Lists witness contacts the user owns or is linked to (`witness_user_id`). `PageHeader` subtitle: "Contract witnesses for your loans" (visible at all breakpoints).
-- A new witness needs an email. That email is one user, also listed on the borrower and investor dropdowns. The same Google account later signs in on that user. Editing a witness that still has no email leaves them off the other lists until an email is added.
+- A new witness needs an email. That email is one user, also listed on the borrower and investor dropdowns. The same Google account later signs in on that user. Editing a witness that still has no email leaves them off the other lists until an email is added. Each name appears once. Saving the same name again updates that witness.
 - Search by name, email, or contact number. Inline filters: loan activity (All / With loans / No loans) and signing status (All / Signed / Pending). Table or card view. Card view (`GridListCardShell`): tap the card to open; **⋯** top-right (Edit, Delete; same as table row actions). Toolbar uses shared `ListPageToolbar` (search + inline filters on phone; view toggle `lg+` only; hidden when the list is empty).
 - Empty card view: shared `ListEmptyState` (message only, or **Clear filters** when filters hide all rows). **Add Witness** stays in the page header.
 - **Phone (`<lg`):** row/card opens `/witnesses/[id]`. Add Witness and row edit open a bottom sheet (`WitnessCreateModal` / `WitnessDetailModal` in edit mode), not `/witnesses/new`. Detail-page edit also uses a sheet (`EditFormSheet`).

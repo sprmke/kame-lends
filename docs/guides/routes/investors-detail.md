@@ -32,7 +32,7 @@ Bank loan cards hide when the investor has no bank loans.
 
 The loans table shows this investor's **capital per loan** in the Principal column (sum of their `loan_investors` rows on that loan), with their average interest rate below. It does not show full loan principal when other investors are on the same loan. Loan filters (Total Principal, Avg. Rate, etc.) use the same investor-scoped totals.
 
-**Toolbar:** Search, then **date range** on the same row. **More Filters** holds status, type, and investor-scoped amount ranges (same fields as `/loans`, without participant multi-selects). On phone, **More Filters** opens a bottom sheet; on `lg+` the panel is inline. Status and Type stack in the sheet on phone and sit side by side from `sm`. **Date range** uses the same presets as `/loans` (`from`/`to` or `range=all`); it filters by loan **due date** and drives the four summary cards below.
+**Toolbar:** Search, then **date range** on the same row. **More Filters** holds status, type, and investor-scoped amount ranges (same fields as `/loans`, without participant multi-selects). On phone, **More Filters** opens a bottom sheet; on `lg+` the panel is inline. Status and Type stack in the sheet on phone and sit side by side from `sm`. **Date range** uses the same presets as `/loans` (`from`/`to` or `range=all`). It defaults to the current month, remembers its own last range (separate from the loan lists), filters by loan **due date**, and drives the four summary cards below.
 
 **Summary cards (Loans tab):** Principal, Total, Interest (`earned / estimate`), Completed (same layout as `/loans`). Metrics use this investor's paid allocations (`computeInvestorLoanListSummaryStats`).
 

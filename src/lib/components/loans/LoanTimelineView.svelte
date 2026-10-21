@@ -3,6 +3,7 @@
 	import { fly } from 'svelte/transition';
 	import ListEmptyState from '$lib/components/common/ListEmptyState.svelte';
 	import { formatCurrencyCompact, formatText, isSensitiveDataHidden } from '$lib/format';
+	import LoanStatusBadge from '$lib/components/loans/LoanStatusBadge.svelte';
 	import {
 		buildLoanTimeline,
 		localDayKey,
@@ -27,14 +28,34 @@
 	let showJump = $state(false);
 	/** Where today sits relative to the viewport while off screen. */
 	let todayDirection = $state<'up' | 'down'>('down');
-	let reduceMotion = $state(false);
+	let reduceMotion = $state(
+		typeof window !== 'undefined' &&
+			window.matchMedia('(prefers-reduced-motion: reduce)').matches
+	);
+	let scrolledTimelineKey = '';
 
 	onMount(() => {
 		today = new Date();
-		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 	});
 
 	const timeline = $derived(buildLoanTimeline(loans, { from, to, today }));
+
+	$effect(() => {
+		const rangeKey = `${from ?? ''}:${to ?? ''}`;
+		const monthKey = today ? localDayKey(today).slice(0, 7) : null;
+		const hasCurrentMonth = timeline.months.some((month) => month.key === monthKey);
+		if (!monthKey || timeline.months.length < 2 || !hasCurrentMonth) return;
+		if (scrolledTimelineKey === rangeKey) return;
+		if (typeof document === 'undefined') return;
+		scrolledTimelineKey = rangeKey;
+		const behavior = reduceMotion ? 'auto' : 'smooth';
+		requestAnimationFrame(() => {
+			document.getElementById(`timeline-month-${monthKey}`)?.scrollIntoView({
+				block: 'start',
+				behavior
+			});
+		});
+	});
 
 	function money(amount: number, sign: '+' | '-' | 'auto' = 'auto'): string {
 		const formatted = formatCurrencyCompact(sign === '-' ? -Math.abs(amount) : amount);
@@ -67,7 +88,7 @@
 
 	function entryLabel(entry: TimelineEntry): string {
 		const detail = entry.detail ? `, ${entry.detail}` : '';
-		return `${entry.direction === 'in' ? 'In' : 'Out'}, ${entry.kindLabel}, ${entry.title}${detail}, ${money(entry.amount)}`;
+		return `${entry.direction === 'in' ? 'In' : 'Out'}, ${entry.kindLabel}, ${entry.title}${detail}, ${formatText(entry.loan.status)}, ${money(entry.amount)}`;
 	}
 
 	function markToday(node: HTMLElement, active: boolean) {
@@ -174,10 +195,13 @@
 			{entry.direction === 'in' ? 'In' : 'Out'}
 		</span>
 		<span class="min-w-0 flex-1">
-			<span class="block truncate text-sm font-medium text-foreground">
-				{formatText(entry.title)}
+			<span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+				<span class="max-w-full truncate text-sm font-medium text-foreground">
+					{formatText(entry.title)}
+				</span>
+				<LoanStatusBadge status={entry.loan.status} />
 			</span>
-			<span class="block truncate text-xs text-muted-foreground">
+			<span class="mt-0.5 block truncate text-xs text-muted-foreground">
 				{entry.kindLabel}{#if entry.detail}
 					· {formatText(entry.detail)}{/if}
 			</span>
@@ -202,7 +226,7 @@
 {:else}
 	<div class="loan-timeline flex w-full min-w-0 flex-col gap-7">
 		{#each timeline.months as month (month.key)}
-			<section class="w-full min-w-0">
+			<section id="timeline-month-{month.key}" class="w-full min-w-0 scroll-mt-24">
 				<header
 					class="timeline-month-header sticky top-[calc(var(--mobile-top-bar-height)+var(--safe-area-top))] z-30 w-full min-w-0 border-b border-border/60 bg-background py-3 lg:top-0"
 				>

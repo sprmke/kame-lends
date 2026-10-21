@@ -87,7 +87,7 @@
 			case 'unclear':
 				return { icon: HelpCircle, class: 'text-amber-600' };
 			case 'invalid':
-				return { icon: AlertTriangle, class: 'text-destructive' };
+				return { icon: AlertTriangle, class: 'text-amber-600' };
 			default:
 				return null;
 		}
@@ -282,6 +282,9 @@
 				{warningLabel(recorded)}
 			</p>
 		{/if}
+		{#each lastWarnings.filter((warning) => warning.code === 'invalid_receipt' || warning.code === 'unclear_receipt') as warning (warning.code)}
+			<p class="text-xs text-muted-foreground">{warningLabel(warning)}</p>
+		{/each}
 	{:else if scanError}
 		<div class="flex items-start gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
 			<XCircle class="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />

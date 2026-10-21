@@ -32,7 +32,7 @@ Plan: [`../for-testing/ai-platform-and-receipt-autofill.md`](../for-testing/ai-p
 - [ ] Add Received Payment: receiver matched as lender; payment equal to a period's interest pre-selects that period
 - [ ] Transaction-history screenshot → one row per date; failed transfers skipped (note in review)
 - [ ] Re-upload a receipt already saved on a loan → "Already recorded in …" badge; on the same loan in edit mode, row starts unchecked
-- [ ] Unrelated photo → unchecked, "Doesn't look like payment proof"
+- [ ] Chat or unrelated photo → image stays on the row, warning "Not a receipt", save still works once amount and date are filled
 - [ ] Create loan with no investors: Investors card **Scan receipts** → matched investors added, borrower set from receiver name; 2 lenders in one batch land on the right cards
 - [ ] Edit loan Received tab: single upload fills an empty row (was broken before)
 - [ ] Row upload with 2 receipts of different dates → **Split into 2** → source row updated, second row added
