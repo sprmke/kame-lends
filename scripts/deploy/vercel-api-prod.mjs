@@ -32,7 +32,7 @@ const sha = execFileSync("git", ["rev-parse", "HEAD"], {
 }).trim();
 
 function skipIfMainMovedOn() {
-  let tip = "";
+  let tip;
   try {
     execFileSync("git", ["fetch", "origin", "main"], {
       cwd: root,
