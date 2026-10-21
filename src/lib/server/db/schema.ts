@@ -298,6 +298,7 @@ export const loanInvestors = pgTable(
       .$type<PaymentReceipt[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -772,6 +773,7 @@ export const receivedPayments = pgTable(
       .$type<PaymentReceipt[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
+    notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
