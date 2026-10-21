@@ -16,6 +16,7 @@ import {
   witnesses,
   debts,
   loanGroups,
+  loanTemplates,
   paymentMethods,
 } from "$lib/server/db/schema";
 import { loadWorkspaceDataOwnerUsers } from "$lib/server/workspace-owner";
@@ -45,6 +46,7 @@ export interface BackupData {
     transactions: unknown[];
     groups: unknown[];
     paymentMethods: unknown[];
+    loanTemplates: unknown[];
   };
   summary: {
     totalInvestors: number;
@@ -54,6 +56,7 @@ export interface BackupData {
     totalLoans: number;
     totalTransactions: number;
     totalGroups: number;
+    totalLoanTemplates: number;
     totalLoanInvestors: number;
     totalInterestPeriods: number;
     totalReceivedPayments: number;
@@ -86,6 +89,7 @@ export async function fetchBackupDataForUser(options: {
     ownedDebts,
     ownedGroups,
     ownedPaymentMethods,
+    ownedLoanTemplates,
   ] = await Promise.all([
     db.query.loans.findMany({
       where: eq(loans.userId, userId),
@@ -135,6 +139,9 @@ export async function fetchBackupDataForUser(options: {
     }),
     db.query.paymentMethods.findMany({
       where: eq(paymentMethods.userId, userId),
+    }),
+    db.query.loanTemplates.findMany({
+      where: eq(loanTemplates.userId, userId),
     }),
   ]);
 
@@ -278,6 +285,7 @@ export async function fetchBackupDataForUser(options: {
       transactions: allTransactions,
       groups: ownedGroups,
       paymentMethods: ownedPaymentMethods,
+      loanTemplates: ownedLoanTemplates,
     },
     summary: {
       totalInvestors: allInvestors.length,
@@ -287,6 +295,7 @@ export async function fetchBackupDataForUser(options: {
       totalLoans: allLoans.length,
       totalTransactions: allTransactions.length,
       totalGroups: ownedGroups.length,
+      totalLoanTemplates: ownedLoanTemplates.length,
       totalLoanInvestors,
       totalInterestPeriods,
       totalReceivedPayments,

@@ -927,6 +927,44 @@ export const paymentMethods = pgTable(
   }),
 );
 
+export const loanTemplates = pgTable(
+  "loan_templates",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    loanName: text("loan_name").notNull(),
+    nameMode: text("name_mode").notNull().default("static"),
+    type: loanTypeEnum("type").notNull(),
+    borrowerId: integer("borrower_id").references(() => borrowers.id, {
+      onDelete: "set null",
+    }),
+    borrowerIds: jsonb("borrower_ids").$type<number[]>().notNull().default([]),
+    investors: jsonb("investors")
+      .$type<{ investorId: number; interestValue: string }[]>()
+      .notNull()
+      .default([]),
+    groupIds: jsonb("group_ids").$type<number[]>().notNull().default([]),
+    interestType: interestTypeEnum("interest_type").notNull().default("rate"),
+    interestValue: decimal("interest_value", { precision: 15, scale: 2 })
+      .notNull()
+      .default("10"),
+    termDays: integer("term_days"),
+    notes: text("notes"),
+    freeLotSqm: integer("free_lot_sqm"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userNameUnique: uniqueIndex("loan_templates_user_name_uidx").on(
+      table.userId,
+      table.name,
+    ),
+  }),
+);
+
 export const accounts = pgTable(
   "account",
   {
@@ -1302,6 +1340,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   transactions: many(transactions),
   debts: many(debts),
   paymentMethods: many(paymentMethods),
+  loanTemplates: many(loanTemplates),
   loanGroups: many(loanGroups),
   loanGroupMemberships: many(loanGroupMembers),
   loanUserCommissions: many(loanUserCommissions),
@@ -1311,6 +1350,17 @@ export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({
   user: one(users, {
     fields: [paymentMethods.userId],
     references: [users.id],
+  }),
+}));
+
+export const loanTemplatesRelations = relations(loanTemplates, ({ one }) => ({
+  user: one(users, {
+    fields: [loanTemplates.userId],
+    references: [users.id],
+  }),
+  borrower: one(borrowers, {
+    fields: [loanTemplates.borrowerId],
+    references: [borrowers.id],
   }),
 }));
 
