@@ -3,6 +3,11 @@ import { untrack } from "svelte";
 import { createDateNavigation } from "$lib/composables/use-date-navigation.svelte";
 import { shouldSkipUrlToDateNavSync } from "$lib/loan-list-date-range-sync";
 import {
+  readRememberedDateRange,
+  writeRememberedDateRange,
+  type RememberedDateRange,
+} from "$lib/date/remembered-date-range";
+import {
   ALL_TIME_RANGE_PARAM,
   DEFAULT_DATE_PRESET,
   fromIsoDate,
@@ -16,6 +21,8 @@ import type { Page } from "@sveltejs/kit";
 type Options = {
   enabled?: boolean;
   defaultPreset?: DatePreset;
+  /** localStorage scope. `loans` also writes the cookie the list load reads. */
+  rememberScope?: string;
 };
 
 type OptionsInput = Options | (() => Options);
@@ -39,15 +46,26 @@ export function createLoanListDateRange(
   const initialAllTime = isAllTimeDateRange(initialUrl);
   const initialFrom = fromIsoDate(initialUrl.searchParams.get("from"));
   const initialTo = fromIsoDate(initialUrl.searchParams.get("to"));
+  const initialRemembered =
+    !initialAllTime && !initialFrom && !initialTo && initialOpts.rememberScope
+      ? readRememberedDateRange(initialOpts.rememberScope)
+      : null;
+  const rememberedFrom = fromIsoDate(initialRemembered?.from);
+  const rememberedTo = fromIsoDate(initialRemembered?.to);
 
   const dateNav = createDateNavigation({
     initialPreset: initialAllTime
       ? "all-time"
-      : (initialOpts.defaultPreset ?? DEFAULT_DATE_PRESET),
-    initialRange:
-      initialAllTime || !initialFrom || !initialTo
-        ? null
-        : { from: initialFrom, to: initialTo },
+      : (initialRemembered?.preset ??
+        initialOpts.defaultPreset ??
+        DEFAULT_DATE_PRESET),
+    initialRange: initialAllTime
+      ? null
+      : initialFrom && initialTo
+        ? { from: initialFrom, to: initialTo }
+        : rememberedFrom && rememberedTo
+          ? { from: rememberedFrom, to: rememberedTo }
+          : null,
   });
 
   let pendingFrom: string | null = null;
@@ -113,8 +131,19 @@ export function createLoanListDateRange(
     clearPendingIfUrlMatches();
   }
 
+  function persistRange() {
+    const scope = getOptions().rememberScope;
+    if (!scope) return;
+    const value: RememberedDateRange =
+      dateNav.datePreset === "all-time"
+        ? { preset: "all-time", from: null, to: null }
+        : { preset: dateNav.datePreset, ...dateNav.getIsoRange() };
+    writeRememberedDateRange(scope, value);
+  }
+
   function applyDateRangeToUrl() {
     markPendingFromNav();
+    persistRange();
     if (dateNav.datePreset === "all-time") {
       patchDateParams(null, null, true);
       return;
@@ -148,27 +177,33 @@ export function createLoanListDateRange(
     applyDateRangeToUrl();
   }
 
-  // Default year range when params are missing (Managing / Invested lists).
-  $effect(() => {
-    if (!enabled) return;
-    if (isAllTimeDateRange(getPage().url)) return;
-    if (urlFrom && urlTo) return;
-    const preset = defaultPreset;
-    if (preset === "all-time") return;
-    untrack(() => {
-      dateNav.setDatePreset(preset);
+  function restoreRememberedRange(): boolean {
+    const scope = getOptions().rememberScope;
+    if (!scope) return false;
+    const remembered = readRememberedDateRange(scope);
+    if (!remembered) return false;
+    if (remembered.preset === "all-time") {
+      dateNav.setDatePreset("all-time");
       applyDateRangeToUrl();
-    });
-  });
+      return true;
+    }
+    const from = fromIsoDate(remembered.from);
+    const to = fromIsoDate(remembered.to);
+    if (!from || !to) return false;
+    dateNav.setDateRange({ from, to });
+    applyDateRangeToUrl();
+    return true;
+  }
 
-  // Group hub: default all-time uses ?range=all so filtering matches the preset.
+  // Saved range, then the scope default, when the URL has no dates.
   $effect(() => {
     if (!enabled) return;
-    if (defaultPreset !== "all-time") return;
     if (isAllTimeDateRange(getPage().url)) return;
     if (urlFrom || urlTo) return;
+    const preset = defaultPreset;
     untrack(() => {
-      dateNav.setDatePreset("all-time");
+      if (restoreRememberedRange()) return;
+      dateNav.setDatePreset(preset);
       applyDateRangeToUrl();
     });
   });
@@ -187,6 +222,7 @@ export function createLoanListDateRange(
         pendingTo = null;
         if (dateNav.datePreset !== "all-time") {
           dateNav.setDatePreset("all-time");
+          persistRange();
         }
         return;
       }
@@ -222,6 +258,7 @@ export function createLoanListDateRange(
       pendingFrom = null;
       pendingTo = null;
       dateNav.setDateRange({ from, to });
+      persistRange();
     });
   });
 

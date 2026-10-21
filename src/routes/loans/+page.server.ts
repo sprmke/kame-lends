@@ -2,6 +2,7 @@ import type { PageServerLoad } from "./$types";
 import { eq } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import { investors, witnesses } from "$lib/server/db/schema";
+import { LOAN_LIST_DATE_RANGE_COOKIE } from "$lib/date/remembered-date-range";
 import { ensureLoanListDateRange } from "$lib/loan-list-date-range-server";
 import { getCachedLoansByScope } from "$lib/server/cached-data";
 import { requireWorkspaceAdminPage } from "$lib/server/workspace-admin";
@@ -9,7 +10,10 @@ import { resolveLoanScopeTab } from "$lib/loans/loan-list-scope-nav";
 import { resolveLoanListPageVariant } from "$lib/components/loans/loan-list-page-config";
 
 export const load: PageServerLoad = async (event) => {
-  ensureLoanListDateRange(event.url);
+  ensureLoanListDateRange(
+    event.url,
+    event.cookies.get(LOAN_LIST_DATE_RANGE_COOKIE),
+  );
   const session = await requireWorkspaceAdminPage(event, "/dashboard");
   event.depends("app:loans");
 

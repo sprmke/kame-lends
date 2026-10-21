@@ -22,8 +22,8 @@ import {
 
 export type DatePreset = "week" | "month" | "year" | "all-time" | "custom";
 
-/** Default list/header date-range preset when URL params are missing. */
-export const DEFAULT_DATE_PRESET: DatePreset = "year";
+/** Default list/header date-range preset when URL params and a saved range are missing. */
+export const DEFAULT_DATE_PRESET: DatePreset = "month";
 
 /** URL query value for unbounded list date range (`?range=all`). */
 export const ALL_TIME_RANGE_PARAM = "all";
