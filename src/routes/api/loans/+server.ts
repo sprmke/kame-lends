@@ -17,9 +17,14 @@ import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import {
   disbursementReceiptError,
   receiptColumnsFromInput,
+  receivedPaymentReceiptError,
 } from "$lib/payment-receipts";
 import { resolveAppUrl } from "$lib/server/app-url";
 import { validateLoanCrmOwnership } from "$lib/server/loan-crm-ownership";
+import {
+  loanPaymentNotesError,
+  optionalPaymentNotes,
+} from "$lib/payment-notes";
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -68,6 +73,19 @@ export const POST: RequestHandler = async (event) => {
     if (disbursementReceiptMessage) {
       return json({ error: disbursementReceiptMessage }, { status: 400 });
     }
+    const receivedReceiptMessage = receivedPaymentReceiptError(
+      receivedPaymentsByInvestor,
+    );
+    if (receivedReceiptMessage) {
+      return json({ error: receivedReceiptMessage }, { status: 400 });
+    }
+    const notesMessage = loanPaymentNotesError({
+      investorData,
+      receivedPaymentsByInvestor,
+    });
+    if (notesMessage) {
+      return json({ error: notesMessage }, { status: 400 });
+    }
 
     // Convert date strings to Date objects and ensure proper types
     const processedLoanData = {
@@ -101,6 +119,7 @@ export const POST: RequestHandler = async (event) => {
       sentDate: new Date(inv.sentDate),
       isPaid: inv.isPaid ?? true, // Default to true for backward compatibility
       hasMultipleInterest: inv.hasMultipleInterest || false,
+      notes: optionalPaymentNotes(inv.notes),
       ...receiptColumnsFromInput(inv),
     }));
 
@@ -160,6 +179,7 @@ export const POST: RequestHandler = async (event) => {
         loanInvestorId,
         amount: String(rp.amount),
         receivedDate: new Date(rp.receivedDate),
+        notes: optionalPaymentNotes(rp.notes),
         ...receiptColumnsFromInput(rp),
       }));
       if (receivedPayload.length > 0) {

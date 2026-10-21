@@ -10,6 +10,7 @@ import { eq, and, ne } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import { calculateInterest } from "$lib/calculations";
+import { parseOptionalPaymentNotes } from "$lib/payment-notes";
 import {
   recalculateInterestPeriodStatusFromLinkedPayments,
   syncLoanStatusFromInterestPeriods,
@@ -55,6 +56,14 @@ export const PATCH: RequestHandler = async (event) => {
     const receivedDateObj = new Date(dateStr);
     if (Number.isNaN(receivedDateObj.getTime())) {
       return json({ error: "Invalid received date." }, { status: 400 });
+    }
+    let notesPatch: { notes: string | null } | undefined;
+    if (Object.prototype.hasOwnProperty.call(body, "notes")) {
+      const notesParsed = parseOptionalPaymentNotes(body.notes);
+      if ("error" in notesParsed) {
+        return json({ error: notesParsed.error }, { status: 400 });
+      }
+      notesPatch = { notes: notesParsed.notes };
     }
 
     const rp = await db.query.receivedPayments.findFirst({
@@ -138,6 +147,7 @@ export const PATCH: RequestHandler = async (event) => {
         amount: String(parsedAmount),
         receivedDate: receivedDateObj,
         updatedAt: new Date(),
+        ...notesPatch,
       })
       .where(eq(receivedPayments.id, paymentId));
 

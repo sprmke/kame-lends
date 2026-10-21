@@ -23,6 +23,7 @@ import {
   receiptColumnsFromInput,
   RECEIPT_REQUIRED_ERROR,
 } from "$lib/payment-receipts";
+import { parseOptionalPaymentNotes } from "$lib/payment-notes";
 
 const AMOUNT_TOLERANCE = 0.02;
 
@@ -64,6 +65,10 @@ export const POST: RequestHandler = async (event) => {
     const receivedDateObj = new Date(dateStr);
     if (Number.isNaN(receivedDateObj.getTime())) {
       return json({ error: "Invalid received date." }, { status: 400 });
+    }
+    const notesParsed = parseOptionalPaymentNotes(body.notes);
+    if ("error" in notesParsed) {
+      return json({ error: notesParsed.error }, { status: 400 });
     }
 
     const period = await db.query.interestPeriods.findFirst({
@@ -124,6 +129,7 @@ export const POST: RequestHandler = async (event) => {
       interestPeriodId: periodId,
       amount: String(parsedAmount),
       receivedDate: receivedDateObj,
+      notes: notesParsed.notes,
       ...receiptColumnsFromInput(body),
     });
 

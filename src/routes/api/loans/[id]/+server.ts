@@ -23,6 +23,10 @@ import {
   receivedPaymentReceiptError,
 } from "$lib/payment-receipts";
 import { validateLoanCrmOwnership } from "$lib/server/loan-crm-ownership";
+import {
+  loanPaymentNotesError,
+  optionalPaymentNotes,
+} from "$lib/payment-notes";
 
 export const GET: RequestHandler = async (event) => {
   const { params } = event;
@@ -93,6 +97,13 @@ export const PUT: RequestHandler = async (event) => {
     );
     if (receivedReceiptMessage) {
       return json({ error: receivedReceiptMessage }, { status: 400 });
+    }
+    const notesMessage = loanPaymentNotesError({
+      investorData,
+      receivedPaymentsByInvestor,
+    });
+    if (notesMessage) {
+      return json({ error: notesMessage }, { status: 400 });
     }
 
     const existingLoan = await db.query.loans.findFirst({
@@ -171,6 +182,7 @@ export const PUT: RequestHandler = async (event) => {
         sentDate: new Date(inv.sentDate),
         isPaid: inv.isPaid ?? true, // Default to true for backward compatibility
         hasMultipleInterest: inv.hasMultipleInterest || false,
+        notes: optionalPaymentNotes(inv.notes),
         ...receiptColumnsFromInput(inv),
       }));
 
@@ -271,6 +283,7 @@ export const PUT: RequestHandler = async (event) => {
           loanInvestorId,
           amount: String(rp.amount),
           receivedDate: new Date(rp.receivedDate),
+          notes: optionalPaymentNotes(rp.notes),
           ...receiptColumnsFromInput(rp),
         }));
         if (receivedPayload.length > 0) {

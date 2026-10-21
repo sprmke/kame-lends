@@ -16,6 +16,7 @@ import {
   RECEIPT_REQUIRED_ERROR,
 } from "$lib/payment-receipts";
 import { syncLoanStatusFromInterestPeriods } from "$lib/server/loan-interest-period-sync";
+import { parseOptionalPaymentNotes } from "$lib/payment-notes";
 
 const AMOUNT_TOLERANCE = 0.02;
 
@@ -29,6 +30,7 @@ export const PATCH: RequestHandler = async (event) => {
 
     const { id } = params;
     const periodId = parseInt(id);
+    const body = await request.json();
     const {
       status,
       receivedAmount,
@@ -36,7 +38,11 @@ export const PATCH: RequestHandler = async (event) => {
       receipts,
       receiptImageUrl,
       receiptExtractedData,
-    } = await request.json();
+    } = body;
+    const notesParsed = parseOptionalPaymentNotes(body.notes);
+    if ("error" in notesParsed) {
+      return json({ error: notesParsed.error }, { status: 400 });
+    }
 
     if (!status || !["Pending", "Completed", "Overdue"].includes(status)) {
       return json(
@@ -176,6 +182,7 @@ export const PATCH: RequestHandler = async (event) => {
         interestPeriodId: periodId,
         amount: String(parsedAmount),
         receivedDate: receivedDateObj,
+        notes: notesParsed.notes,
         ...receiptColumnsFromInput({
           receipts,
           receiptImageUrl,

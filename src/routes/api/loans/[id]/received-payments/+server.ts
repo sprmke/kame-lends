@@ -16,6 +16,7 @@ import {
   receiptColumnsFromInput,
   RECEIPT_REQUIRED_ERROR,
 } from "$lib/payment-receipts";
+import { parseOptionalPaymentNotes } from "$lib/payment-notes";
 
 const AMOUNT_TOLERANCE = 0.02;
 
@@ -71,6 +72,10 @@ export const POST: RequestHandler = async (event) => {
     }
     if (!hasPaymentReceipt(body)) {
       return json({ error: RECEIPT_REQUIRED_ERROR }, { status: 400 });
+    }
+    const notesParsed = parseOptionalPaymentNotes(body.notes);
+    if ("error" in notesParsed) {
+      return json({ error: notesParsed.error }, { status: 400 });
     }
 
     const lenderPayments = await db.query.loanInvestors.findMany({
@@ -153,6 +158,7 @@ export const POST: RequestHandler = async (event) => {
       interestPeriodId: requestedPeriodId,
       amount: String(amount),
       receivedDate,
+      notes: notesParsed.notes,
       ...receiptColumnsFromInput(body),
     });
 
