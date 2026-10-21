@@ -41,7 +41,7 @@ Concurrency group `cd-main` with `cancel-in-progress: false` so a mid-migration 
 | `pre-commit` | `lint-staged`         | ESLint and Prettier on the staged files, including `scripts/**/*.mjs` |
 | `pre-push`   | `bun run ci:pre-push` | Same quality gate as CD, without the production build and Playwright  |
 
-`bun run ci:quality` is the full local match, including build and the PWA smoke. CD still runs that build. The hooks are there so a lint or audit failure stops on your machine instead of after production has already been skipped.
+`bun install` runs `husky`, which points Git at these hooks. `bun run ci:quality` is the full local match, including build and the PWA smoke. CD still runs that build. The hooks are there so a lint or audit failure stops on your machine instead of after production has already been skipped.
 
 ### When CD fails
 
