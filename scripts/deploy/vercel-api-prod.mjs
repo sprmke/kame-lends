@@ -30,6 +30,30 @@ const sha = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: root,
   encoding: "utf8",
 }).trim();
+
+function skipIfMainMovedOn() {
+  let tip = "";
+  try {
+    execFileSync("git", ["fetch", "origin", "main"], {
+      cwd: root,
+      stdio: "pipe",
+    });
+    tip = execFileSync("git", ["rev-parse", "FETCH_HEAD"], {
+      cwd: root,
+      encoding: "utf8",
+    }).trim();
+  } catch (error) {
+    console.warn(
+      `Could not read origin/main (${error instanceof Error ? error.message : error}). Deploying this checkout.`,
+    );
+    return;
+  }
+  if (tip === sha) return;
+  console.log(
+    `Skip production promote. origin/main is ${tip.slice(0, 7)}; this job is ${sha.slice(0, 7)}.`,
+  );
+  process.exit(0);
+}
 const message = execFileSync("git", ["log", "-1", "--format=%s"], {
   cwd: root,
   encoding: "utf8",
@@ -88,6 +112,7 @@ async function mapPool(items, limit, worker) {
   await Promise.all(runners);
 }
 
+skipIfMainMovedOn();
 console.log(`→ upload ${files.length} files from ${sha.slice(0, 7)}`);
 
 const uploaded = [];
@@ -111,6 +136,7 @@ await mapPool(files, 12, async (file) => {
   }
 });
 
+skipIfMainMovedOn();
 console.log("→ create production deployment");
 const deployment = await vercel(
   `/v13/deployments?teamId=${encodeURIComponent(orgId)}&forceNew=1`,
