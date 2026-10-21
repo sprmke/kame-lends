@@ -265,17 +265,18 @@ test("create and delete a loan", async ({ page, request }) => {
   await page.getByRole("option", { name: borrower.name }).click();
   await page.locator("#loanName").fill(`E2E Loan ${stamp}`);
   await page.locator("#dueDate").fill(dueDate);
-  // Receipts first: the disbursement row is created by uploading its receipt.
+  await expect(page.locator('input[id^="principal-"]')).toHaveCount(1);
+  await page.locator('input[id^="principal-"]').first().fill("50000");
   await page
-    .locator(
-      '#investors-section input[type="file"][aria-label="Upload receipts"]',
-    )
+    .locator('#investors-section input[id$="-receipt-file"]')
     .first()
     .setInputFiles(path.join(RECEIPT_FIXTURES, "receipt-1.png"));
-  await expect(page.locator('input[id^="principal-"]')).toHaveCount(1, {
-    timeout: 30_000,
-  });
-  await page.locator('input[id^="principal-"]').first().fill("50000");
+  await expect(
+    page
+      .locator("#investors-section")
+      .getByAltText(/^Receipt \d+$/)
+      .first(),
+  ).toBeVisible({ timeout: 30_000 });
 
   const createResponsePromise = page.waitForResponse((res) =>
     res.url().includes("/api/loans"),

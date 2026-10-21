@@ -79,4 +79,4 @@ group by 1, 2, 3 order by 1, 2, 3;
 
 ## Receipt extraction
 
-See `docs/PROJECT.md` → "AI receipt scanning" and "Receipts first (UI)", and [`guides/routes/loans-detail.md`](../guides/routes/loans-detail.md).
+See `docs/PROJECT.md` → "AI receipt scanning" and "Payment receipts (UI)", and [`guides/routes/loans-detail.md`](../guides/routes/loans-detail.md).

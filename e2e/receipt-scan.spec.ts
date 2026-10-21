@@ -132,14 +132,19 @@ async function openQuickPayment(page: Page, loanId: number, item: string) {
   return dialog;
 }
 
-/** The empty-state dropzone of a dialog or form section. */
+/** Empty Investors card dropzone, before any investor is added. */
 function dropzoneInput(scope: Page | ReturnType<Page["locator"]>) {
   return scope
     .locator('input[type="file"][aria-label="Upload receipts"]')
     .first();
 }
 
-test("fund transfer: dialog starts with upload; 4 receipts become 2 transfers", async ({
+/** Compact "Add receipts" control under a form that is already visible. */
+function addReceiptsInput(scope: Page | ReturnType<Page["locator"]>) {
+  return scope.locator('input[type="file"][aria-label="Add receipts"]').first();
+}
+
+test("fund transfer: dialog starts with the form; 4 receipts become 2 transfers", async ({
   page,
 }) => {
   const loan = await findSingleLenderLoan(page);
@@ -154,14 +159,13 @@ test("fund transfer: dialog starts with upload; 4 receipts become 2 transfers", 
   ]);
 
   const dialog = await openQuickPayment(page, loan!.id, "Fund Transfer");
-  // Receipts first: no blank transfer row until receipts are uploaded.
-  await expect(dialog.getByTestId("payment-entry")).toHaveCount(0);
-  await expect(dialog.getByLabel("Amount")).toHaveCount(0);
+  await expect(dialog.getByTestId("payment-entry")).toHaveCount(1);
+  await expect(dialog.getByLabel("Amount")).toHaveValue("");
   await expect(
-    dialog.getByRole("button", { name: "Fund Transfer" }),
+    dialog.getByRole("button", { name: "Fund Transfer", exact: true }),
   ).toBeDisabled();
 
-  await dropzoneInput(dialog).setInputFiles(receiptFiles(4));
+  await addReceiptsInput(dialog).setInputFiles(receiptFiles(4));
 
   const rows = dialog.getByTestId("payment-entry");
   await expect(rows).toHaveCount(2, { timeout: 30_000 });
@@ -202,7 +206,7 @@ test("received payment: merge and remove rows from the ⋯ menu", async ({
   ]);
 
   const dialog = await openQuickPayment(page, loan!.id, "Add Received Payment");
-  await dropzoneInput(dialog).setInputFiles(receiptFiles(3));
+  await addReceiptsInput(dialog).setInputFiles(receiptFiles(3));
 
   const rows = dialog.getByTestId("payment-entry");
   await expect(rows).toHaveCount(3, { timeout: 30_000 });
@@ -251,7 +255,7 @@ test("receipts already on this loan are skipped", async ({ page }) => {
   ]);
 
   const dialog = await openQuickPayment(page, loan!.id, "Fund Transfer");
-  await dropzoneInput(dialog).setInputFiles(receiptFiles(2));
+  await addReceiptsInput(dialog).setInputFiles(receiptFiles(2));
   const rows = dialog.getByTestId("payment-entry");
   await expect(rows).toHaveCount(1, { timeout: 30_000 });
   await expect(rows.nth(0).getByLabel("Amount")).toHaveValue("1200");
@@ -269,7 +273,7 @@ test("AI off: each receipt becomes a row to fill in by hand", async ({
 
   await mockAi(page, false);
   const dialog = await openQuickPayment(page, loan!.id, "Fund Transfer");
-  await dropzoneInput(dialog).setInputFiles(receiptFiles(2));
+  await addReceiptsInput(dialog).setInputFiles(receiptFiles(2));
 
   const rows = dialog.getByTestId("payment-entry");
   await expect(rows).toHaveCount(2, { timeout: 30_000 });
@@ -286,7 +290,7 @@ test("row upload with two transfers offers Split into 2", async ({ page }) => {
 
   await mockAi(page, true, [reading(1100, "2026-10-01", "S-1", lender)]);
   const dialog = await openQuickPayment(page, loan!.id, "Fund Transfer");
-  await dropzoneInput(dialog).setInputFiles(receiptFiles(1));
+  await addReceiptsInput(dialog).setInputFiles(receiptFiles(1));
   const rows = dialog.getByTestId("payment-entry");
   await expect(rows).toHaveCount(1, { timeout: 30_000 });
 
@@ -376,11 +380,10 @@ test("edit loan: Received tab creates received payments from receipts", async ({
   await page.getByRole("tab", { name: "Received Payments" }).first().click();
   const payments = page.getByTestId("received-payment");
   const before = await payments.count();
-  const input =
-    before === 0
-      ? page.locator('input[type="file"][aria-label="Upload receipts"]').first()
-      : page.locator('input[type="file"][aria-label="Add receipts"]').last();
-  await input.setInputFiles(receiptFiles(2));
+  await page
+    .getByRole("tabpanel", { name: "Received Payments" })
+    .locator('input[type="file"][aria-label="Add receipts"]')
+    .setInputFiles(receiptFiles(2));
 
   // Same date → one payment with both receipts.
   await expect(payments).toHaveCount(before + 1, { timeout: 30_000 });
@@ -471,7 +474,7 @@ test("create loan: receipts add the matched investor, transactions and borrower"
   expect(deleted.ok()).toBe(true);
 });
 
-test("new investor card starts with the upload dropzone", async ({ page }) => {
+test("new investor card starts with a blank disbursement", async ({ page }) => {
   const investors = await fetchJson<Array<{ id: number; name: string }>>(
     page.request,
     "/api/investors?simple=true",
@@ -487,8 +490,9 @@ test("new investor card starts with the upload dropzone", async ({ page }) => {
   await page.waitForLoadState("networkidle");
 
   const section = page.locator("#investors-section");
-  await expect(section.getByTestId("principal-transaction")).toHaveCount(0);
-  await dropzoneInput(section).setInputFiles(receiptFiles(1));
+  await expect(section.getByTestId("principal-transaction")).toHaveCount(1);
+  await expect(page.locator('input[id^="principal-"]').first()).toHaveValue("");
+  await addReceiptsInput(section).setInputFiles(receiptFiles(1));
   await expect(section.getByTestId("principal-transaction")).toHaveCount(1, {
     timeout: 30_000,
   });
@@ -510,7 +514,7 @@ test("fund transfer saves receipts and the AI reading on the disbursement", asyn
     reading(0.01, "2026-10-11", `SAVE2-${amount}`, lender),
   ]);
   const dialog = await openQuickPayment(page, loan!.id, "Fund Transfer");
-  await dropzoneInput(dialog).setInputFiles(receiptFiles(2));
+  await addReceiptsInput(dialog).setInputFiles(receiptFiles(2));
   const rows = dialog.getByTestId("payment-entry");
   // Same date + same lender → one disbursement with both receipts.
   await expect(rows).toHaveCount(1, { timeout: 30_000 });

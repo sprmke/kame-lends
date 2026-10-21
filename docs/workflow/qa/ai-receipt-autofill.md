@@ -19,12 +19,12 @@ Plan: [`../for-testing/ai-platform-and-receipt-autofill.md`](../for-testing/ai-p
 ## Automated (done)
 
 - [x] Unit: gateway transport/client, receipt parsing, sanity, matching, grouping, merge/split, apply, period suggestion (`bun run test`)
-- [x] E2E `receipt-scan` project (mocked AI, 11 tests): dialog starts with dropzone; 4 receipts → 2 transfers with receipts tied; Add receipts appends; merge / split / remove via ⋯; same-loan duplicates skipped; AI off → one row per receipt; row Split into 2; edit loan principal + received tabs; create loan from receipts adds investor + borrower and **saves**; fund transfer **saves** receipts + v2 reading; unmocked API auth/validation/no-key
+- [x] E2E `receipt-scan` project (mocked AI, 11 tests): dialog starts with a blank transfer; 4 receipts → 2 transfers with receipts tied; Add receipts appends; merge / split / remove via ⋯; same-loan duplicates skipped; AI off → one row per receipt; row Split into 2; edit loan principal + received tabs; create loan from receipts adds investor + borrower and **saves**; fund transfer **saves** receipts + v2 reading; unmocked API auth/validation/no-key
 - [x] Migration on local Docker; `bun run check`, `bun run build`, precache budget, `check:ai-gateway`
 
 ## Live (real model)
 
-- [ ] Fund Transfer / Add Received Payment open with only **Upload receipts**; no blank row
+- [ ] Fund Transfer / Add Received Payment open with the amount, date, and lender fields visible. Receipt is required before save. **Add receipts** still fills or appends rows
 - [ ] 3 receipts where #2 and #3 are the same transfer date → 2 rows, #2 and #3 attached to row 2
 
 - [ ] Fund Transfer: 3+ receipts across 2 dates for one lender → same-date ones merged, other date separate; amounts and dates correct

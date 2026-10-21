@@ -12,6 +12,9 @@
     {
       "path": "../kame-ops",
     },
+    {
+      "path": "../kame-crew",
+    },
   ],
   "settings": {},
 }
