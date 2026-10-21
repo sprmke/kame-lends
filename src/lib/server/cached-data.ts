@@ -1,6 +1,7 @@
 import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import { stripDataImageUrls } from "$lib/json-safe-images";
+import { uniquePartiesByName } from "$lib/party-name";
 import { remember } from "$lib/server/memory-cache";
 import {
   loadInvestmentLoanIds,
@@ -338,7 +339,7 @@ async function loadInvestors(userId: string, mode: InvestorCacheMode) {
     loadLinkedInvestorContactIds(userId),
   ]);
   if (linkedInvestorIds.length === 0) {
-    return stripDataImageUrls(ownedInvestors);
+    return stripDataImageUrls(uniquePartiesByName(ownedInvestors));
   }
 
   const sharedLinks = await db.query.loanInvestors.findMany({
@@ -347,7 +348,7 @@ async function loadInvestors(userId: string, mode: InvestorCacheMode) {
   });
   const sharedLoanIds = [...new Set(sharedLinks.map((row) => row.loanId))];
   if (sharedLoanIds.length === 0) {
-    return stripDataImageUrls(ownedInvestors);
+    return stripDataImageUrls(uniquePartiesByName(ownedInvestors));
   }
 
   const coInvestorRows = await db.query.loanInvestors.findMany({
@@ -366,7 +367,9 @@ async function loadInvestors(userId: string, mode: InvestorCacheMode) {
     inArray(investors.id, missingIds),
     mode,
   );
-  return stripDataImageUrls([...ownedInvestors, ...sharedInvestors]);
+  return stripDataImageUrls(
+    uniquePartiesByName([...ownedInvestors, ...sharedInvestors]),
+  );
 }
 
 export async function getCachedBorrowers(
@@ -408,7 +411,7 @@ export async function getCachedBorrowers(
               },
             },
     });
-    return stripDataImageUrls(rows);
+    return stripDataImageUrls(uniquePartiesByName(rows));
   });
 }
 
@@ -459,7 +462,7 @@ export async function getCachedWitnesses(
               },
             },
     });
-    return stripDataImageUrls(rows);
+    return stripDataImageUrls(uniquePartiesByName(rows));
   });
 }
 

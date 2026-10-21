@@ -14,6 +14,7 @@ import { getUserPushPreferences } from "$lib/server/push/preferences";
 import { db } from "$lib/server/db";
 import { borrowers, investors, loanGroups } from "$lib/server/db/schema";
 import { listLoanTemplatesForUser } from "$lib/server/loan-templates";
+import { uniquePartiesByName } from "$lib/party-name";
 
 export const load: PageServerLoad = async (event) => {
   const session = requireUserSession(event);
@@ -72,8 +73,8 @@ export const load: PageServerLoad = async (event) => {
     identityDocuments,
     pushPreferences,
     loanTemplates,
-    templateBorrowers: borrowerRows,
-    templateInvestors: investorRows,
+    templateBorrowers: uniquePartiesByName(borrowerRows),
+    templateInvestors: uniquePartiesByName(investorRows),
     templateGroups: groupRows,
   };
 };

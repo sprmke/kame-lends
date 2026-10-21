@@ -37,13 +37,17 @@ function knownParties(ctx: ReceiptPromptContext): string {
 
 export const RECEIPT_EXTRACTION_PROMPT = definePrompt<ReceiptPromptContext>({
   id: "receipt_extraction",
-  version: "2026-10-17.1",
+  version: "2026-10-22.1",
   build: (ctx) =>
     [
       `You read payment proof images for a private lending app in the Philippines. Today is ${ctx.today}.`,
       PURPOSE_HINT[ctx.purpose],
       knownParties(ctx),
-      `Accept digital transfer screenshots (GCash, Maya, InstaPay, PESONet, bank apps, bank-to-bank) and clear photos of PHP cash bills. This is money moving between people, not a store purchase.`,
+      `Accept anything that shows money moving between people, not a store purchase:
+- digital transfer screenshots (GCash, Maya, InstaPay, PESONet, bank apps, bank-to-bank)
+- clear photos of PHP cash bills
+- chat screenshots (Messenger, Viber, SMS, Telegram, WhatsApp) that mention a payment, include a receipt, or confirm an amount was sent or received
+- handwritten notes or informal messages that state an amount`,
       `Return ONLY a JSON object:
 {
   "verdict": "valid" | "likely_valid" | "unclear" | "invalid",
@@ -73,7 +77,8 @@ export const RECEIPT_EXTRACTION_PROMPT = definePrompt<ReceiptPromptContext>({
 - status: "failed" for failed/reversed/cancelled transfers, "pending" for processing; "successful" when the receipt says successful/sent/completed or it is a normal confirmation; else "unknown".
 - sender_* = where money came FROM; receiver_* = where it went TO. Keep masked names as shown (e.g. "JU** DE** C."). Bank or wallet name in *_bank (e.g. "GCash", "BDO").
 - Cash photos: one entry with the visible total; names and banks null; date null unless printed.
-- verdict: "valid" = clear proof with amount and date; "likely_valid" = recognizable but partly blurry or cropped; "unclear" = cannot tell; "invalid" = not payment proof (unrelated photo, blank, chat without a transfer). For "invalid", transactions may be [].
+- Chat and informal notes: if an amount was sent or received, add one transaction for that payment. Use the sender and receiver named in the thread. Use the message date when it is visible. reference_number stays null unless a reference is visible. status is "successful" when the message says sent, received, or paid; otherwise "unknown". A receipt image inside the chat is read the same way as a standalone receipt.
+- verdict: "valid" = clear proof with amount and date; "likely_valid" = recognizable but partly blurry, cropped, or stated in a chat; "unclear" = a conversation or note with no amount, or you cannot tell; "invalid" = no payment content at all (blank, selfie, unrelated photo). A chat is not "invalid" just because it is not a bank receipt. For "invalid" or "unclear" with no amount, transactions may be [].
 - summary: no line breaks, no account numbers.`,
       DOCUMENT_INJECTION_RULE,
     ]

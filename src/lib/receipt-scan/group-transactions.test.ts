@@ -196,7 +196,7 @@ describe("groupScannedReceipts", () => {
     expect(result.proposals[0].warnings[0].code).toBe("scan_failed");
   });
 
-  it("starts invalid images and references already on this loan unchecked", () => {
+  it("keeps a non-receipt image on the transaction and unchecks a reference already on this loan", () => {
     const invalid = scanned([]);
     invalid.extracted!.verdict = "invalid";
     const recorded = scanned([tx({ referenceNumber: "OLD1" })], {
@@ -237,7 +237,7 @@ describe("groupScannedReceipts", () => {
     ]);
     expect(
       result.proposals.find((p) => p.references.length === 0)!.include,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("flags an unmatched lender when several lenders exist", () => {

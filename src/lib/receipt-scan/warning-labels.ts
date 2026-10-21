@@ -6,7 +6,7 @@ export type WarningTone = "danger" | "warning";
 export function warningLabel(warning: ProposalWarning): string {
   switch (warning.code) {
     case "invalid_receipt":
-      return "Doesn't look like payment proof";
+      return "Not a receipt";
     case "unclear_receipt":
       return "Hard to read";
     case "low_confidence":
@@ -42,7 +42,6 @@ export function warningLabel(warning: ProposalWarning): string {
 
 export function warningTone(warning: ProposalWarning): WarningTone {
   return warning.code === "already_recorded" ||
-    warning.code === "invalid_receipt" ||
     warning.code === "failed_transfer"
     ? "danger"
     : "warning";

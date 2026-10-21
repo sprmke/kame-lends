@@ -137,7 +137,10 @@ export async function extractReceipt(
           borrowerName: input.borrowerName ?? null,
         },
         parts: [
-          { type: "text", text: "Read this payment proof image." },
+          {
+            type: "text",
+            text: "Read this image. It may be a receipt, a chat, or another record of a payment.",
+          },
           { type: "image", mimeType: image.mimeType, base64: image.base64 },
         ],
         schema: receiptModelOutputSchema,

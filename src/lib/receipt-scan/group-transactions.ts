@@ -216,8 +216,8 @@ export function groupScannedReceipts(
       });
 
     if (usable.length === 0) {
-      // Invalid / unreadable / only failed transfers: keep the image so nothing is lost,
-      // but start unchecked when the AI is sure it is not payment proof.
+      // Keep the image. A reading that is not a receipt stays on the transaction
+      // as a warning. Only an image whose transfers all failed starts unchecked.
       const proposal = emptyProposal(
         item,
         fallbackInvestorId,
@@ -227,9 +227,7 @@ export function groupScannedReceipts(
           loanId,
         })),
       );
-      if (item.extracted.verdict === "invalid" || transactions.length > 0) {
-        proposal.include = false;
-      }
+      if (transactions.length > 0) proposal.include = false;
       standalone.push(proposal);
       continue;
     }

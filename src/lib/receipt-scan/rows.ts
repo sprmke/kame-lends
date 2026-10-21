@@ -1,4 +1,4 @@
-import type { PaymentReceipt } from "$lib/payment-receipts";
+import { uniqueReceipts, type PaymentReceipt } from "$lib/payment-receipts";
 import { applyProposals } from "./apply";
 import {
   mergeProposals,
@@ -81,6 +81,111 @@ export function isBlankRow(fields: ScanRowFields): boolean {
 }
 
 /**
+ * An image the scan could not turn into a transfer (a chat, a note, an
+ * unrelated photo). It stays on the payment as a warning. It is not its own row.
+ */
+function isGuideImage(proposal: ProposedTransaction): boolean {
+  return proposal.include && !proposal.amount && proposal.transferCount === 0;
+}
+
+function mergeScan(
+  current: RowScanMeta | null,
+  guide: ProposedTransaction,
+): RowScanMeta {
+  const warnings = [...(current?.warnings ?? [])];
+  for (const warning of guide.warnings) {
+    const key = `${warning.code}:${warning.detail ?? ""}`;
+    if (
+      warnings.some(
+        (existing) => `${existing.code}:${existing.detail ?? ""}` === key,
+      )
+    ) {
+      continue;
+    }
+    warnings.push(warning);
+  }
+  const confidence =
+    current?.confidence == null
+      ? guide.confidence
+      : guide.confidence == null
+        ? current.confidence
+        : Math.min(current.confidence, guide.confidence);
+  return {
+    warnings,
+    summary: current?.summary ?? guide.summary,
+    transferCount: current?.transferCount ?? 0,
+    references: current?.references ?? [],
+    confidence,
+  };
+}
+
+/** Attach non-receipt images to the payment already being filled. */
+function attachGuideImages<T>(
+  rows: T[],
+  guides: ProposedTransaction[],
+  adapter: RowAdapter<T>,
+  sourceId?: string | null,
+): T[] {
+  if (guides.length === 0) return rows;
+  const [first, ...rest] = guides;
+  const merged: ProposedTransaction = rest.reduce(
+    (current, guide) => ({
+      ...current,
+      receipts: uniqueReceipts([...current.receipts, ...guide.receipts]),
+      warnings: mergeScan(
+        {
+          warnings: current.warnings,
+          summary: current.summary,
+          transferCount: 0,
+          references: [],
+          confidence: current.confidence,
+        },
+        guide,
+      ).warnings,
+      summary: current.summary ?? guide.summary,
+      confidence:
+        current.confidence == null
+          ? guide.confidence
+          : guide.confidence == null
+            ? current.confidence
+            : Math.min(current.confidence, guide.confidence),
+    }),
+    first,
+  );
+
+  const sourceIndex =
+    sourceId == null
+      ? -1
+      : rows.findIndex((row) => adapter.getId(row) === sourceId);
+  let hostIndex = sourceIndex;
+  if (hostIndex === -1) {
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      if (adapter.read(rows[index]).amount) {
+        hostIndex = index;
+        break;
+      }
+    }
+  }
+  if (hostIndex === -1) {
+    hostIndex = rows.findIndex((row) => isBlankRow(adapter.read(row)));
+  }
+
+  if (hostIndex === -1) {
+    return [...rows, adapter.write(null, proposalToFields(merged))];
+  }
+
+  const host = rows[hostIndex];
+  const fields = adapter.read(host);
+  const next = rows.slice();
+  next[hostIndex] = adapter.write(host, {
+    ...fields,
+    receipts: uniqueReceipts([...fields.receipts, ...merged.receipts]),
+    scan: mergeScan(fields.scan, merged),
+  });
+  return next;
+}
+
+/**
  * Creates (or fills blank) rows from proposals, receipts attached to each.
  * With `sourceId`, that row is split in place instead ("Split into N transactions").
  */
@@ -90,7 +195,10 @@ export function addProposalsToRows<T>(
   adapter: RowAdapter<T>,
   options: { sourceId?: string | null; scannedImageUrls?: string[] } = {},
 ): T[] {
-  return applyProposals(rows, proposals, {
+  const guides = proposals.filter(isGuideImage);
+  const transfers = proposals.filter((proposal) => !isGuideImage(proposal));
+  const withGuides = attachGuideImages(rows, guides, adapter, options.sourceId);
+  return applyProposals(withGuides, transfers, {
     getId: adapter.getId,
     getReceipts: (row) => adapter.read(row).receipts,
     isBlank: (row) => isBlankRow(adapter.read(row)),

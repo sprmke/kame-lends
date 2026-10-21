@@ -110,6 +110,35 @@ describe("addProposalsToRows", () => {
       warnings: [{ code: "low_confidence" }],
     });
   });
+
+  it("attaches a non-receipt image to the payment already filled in", () => {
+    created = 0;
+    const chat = proposal("", "", [receipt("chat")]);
+    chat.transferCount = 0;
+    chat.warnings = [{ code: "invalid_receipt" }];
+    chat.summary = "A chat about a payment.";
+    const rows = addProposalsToRows<TxRow>(
+      [
+        {
+          id: "typed",
+          amount: "1500",
+          sentDate: "2026-10-20",
+          interestRate: "5",
+          receipts: [],
+          scan: null,
+        },
+      ],
+      [chat],
+      adapter,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].amount).toBe("1500");
+    expect(rows[0].sentDate).toBe("2026-10-20");
+    expect(rows[0].receipts.map((item) => item.imageUrl)).toEqual([
+      "storage:chat",
+    ]);
+    expect(rows[0].scan?.warnings).toEqual([{ code: "invalid_receipt" }]);
+  });
 });
 
 describe("mergeRowWithPrevious / splitRowAt", () => {
