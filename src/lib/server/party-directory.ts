@@ -1,7 +1,8 @@
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, ne, or, sql } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import { borrowers, investors, witnesses } from "$lib/server/db/schema";
 import { normalizeEmail } from "$lib/loan-signing";
+import { normalizePartyName } from "$lib/party-name";
 import {
   findOrCreatePartyUser,
   type PartyUserRole,
@@ -15,14 +16,18 @@ import {
 export class PartyEmailConflictError extends Error {
   readonly role: PartyUserRole;
 
-  constructor(role: PartyUserRole) {
+  constructor(role: PartyUserRole, kind: "email" | "name" = "email") {
     const label =
       role === "borrower"
         ? "borrower"
         : role === "investor"
           ? "investor"
           : "witness";
-    super(`A ${label} with this email already exists`);
+    super(
+      kind === "name"
+        ? `A ${label} with this name already exists`
+        : `A ${label} with this email already exists`,
+    );
     this.name = "PartyEmailConflictError";
     this.role = role;
   }
@@ -60,6 +65,13 @@ function emailEquals(
   return sql`lower(btrim(${column})) = ${email}`;
 }
 
+function nameEquals(
+  column: typeof investors.name | typeof borrowers.name | typeof witnesses.name,
+  name: string,
+) {
+  return sql`lower(regexp_replace(btrim(${column}), '[[:space:]]+', ' ', 'g')) = ${normalizePartyName(name)}`;
+}
+
 function canonical<T extends { id: number }>(rows: T[]): T | null {
   if (rows.length === 0) return null;
   return rows.reduce((best, row) => (row.id < best.id ? row : best));
@@ -75,6 +87,7 @@ async function loadInvestorMatches(
   workspaceOwnerId: string,
   partyUserId: string,
   email: string,
+  name: string,
   anchorId?: number,
 ) {
   return db.query.investors.findMany({
@@ -83,6 +96,7 @@ async function loadInvestorMatches(
       or(
         eq(investors.investorUserId, partyUserId),
         emailEquals(investors.email, email),
+        nameEquals(investors.name, name),
         ...(anchorId ? [eq(investors.id, anchorId)] : []),
       ),
     ),
@@ -93,6 +107,7 @@ async function loadBorrowerMatches(
   workspaceOwnerId: string,
   partyUserId: string,
   email: string,
+  name: string,
   anchorId?: number,
 ) {
   return db.query.borrowers.findMany({
@@ -101,6 +116,7 @@ async function loadBorrowerMatches(
       or(
         eq(borrowers.borrowerUserId, partyUserId),
         emailEquals(borrowers.email, email),
+        nameEquals(borrowers.name, name),
         ...(anchorId ? [eq(borrowers.id, anchorId)] : []),
       ),
     ),
@@ -111,6 +127,7 @@ async function loadWitnessMatches(
   workspaceOwnerId: string,
   partyUserId: string,
   email: string,
+  name: string,
   anchorId?: number,
 ) {
   return db.query.witnesses.findMany({
@@ -119,10 +136,25 @@ async function loadWitnessMatches(
       or(
         eq(witnesses.witnessUserId, partyUserId),
         emailEquals(witnesses.email, email),
+        nameEquals(witnesses.name, name),
         ...(anchorId ? [eq(witnesses.id, anchorId)] : []),
       ),
     ),
   });
+}
+
+function anchorFromNameMatches(
+  role: PartyUserRole,
+  rows: PartyRow[],
+  email: string,
+): number | undefined {
+  const chosen = canonical(rows);
+  if (!chosen) return undefined;
+  const existingEmail = normalizeEmail(chosen.email ?? "");
+  if (existingEmail && existingEmail !== email) {
+    throw new PartyEmailConflictError(role, "name");
+  }
+  return chosen.id;
 }
 
 /**
@@ -152,18 +184,21 @@ export async function upsertWorkspacePartyContact(
       input.workspaceOwnerId,
       partyUser.id,
       email,
+      name,
       anchorFor("investor"),
     ),
     loadBorrowerMatches(
       input.workspaceOwnerId,
       partyUser.id,
       email,
+      name,
       anchorFor("borrower"),
     ),
     loadWitnessMatches(
       input.workspaceOwnerId,
       partyUser.id,
       email,
+      name,
       anchorFor("witness"),
     ),
   ]);
@@ -177,17 +212,22 @@ export async function upsertWorkspacePartyContact(
   let anchorId = input.anchorId;
   const roleMatches = matches[input.role];
   if (anchorId) {
-    const others = roleMatches.filter((row) => row.id !== anchorId);
-    if (others.length > 0) throw new PartyEmailConflictError(input.role);
+    const emailClash = roleMatches.some(
+      (row) =>
+        row.id !== anchorId &&
+        normalizeEmail(row.email ?? "") === email &&
+        email.length > 0,
+    );
+    if (emailClash) throw new PartyEmailConflictError(input.role);
     if (!roleMatches.some((row) => row.id === anchorId)) {
       throw new Error("Not found");
     }
   } else if (input.role === "investor") {
-    anchorId = canonical(investorMatches)?.id;
+    anchorId = anchorFromNameMatches("investor", investorMatches, email);
   } else if (input.role === "borrower") {
-    anchorId = canonical(borrowerMatches)?.id;
+    anchorId = anchorFromNameMatches("borrower", borrowerMatches, email);
   } else {
-    anchorId = canonical(witnessMatches)?.id;
+    anchorId = anchorFromNameMatches("witness", witnessMatches, email);
   }
 
   const documentSource = [
@@ -219,7 +259,9 @@ export async function upsertWorkspacePartyContact(
       workspaceOwnerId: input.workspaceOwnerId,
       partyUserId: partyUser.id,
       anchorId:
-        input.role === "investor" ? anchorId : canonical(investorMatches)?.id,
+        input.role === "investor"
+          ? anchorId
+          : anchorFromNameMatches("investor", investorMatches, email),
       insertIfMissing: input.role !== "investor" || !anchorId,
       patch: {
         ...shared,
@@ -238,7 +280,9 @@ export async function upsertWorkspacePartyContact(
       workspaceOwnerId: input.workspaceOwnerId,
       partyUserId: partyUser.id,
       anchorId:
-        input.role === "borrower" ? anchorId : canonical(borrowerMatches)?.id,
+        input.role === "borrower"
+          ? anchorId
+          : anchorFromNameMatches("borrower", borrowerMatches, email),
       patch: {
         ...shared,
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
@@ -254,7 +298,9 @@ export async function upsertWorkspacePartyContact(
       workspaceOwnerId: input.workspaceOwnerId,
       partyUserId: partyUser.id,
       anchorId:
-        input.role === "witness" ? anchorId : canonical(witnessMatches)?.id,
+        input.role === "witness"
+          ? anchorId
+          : anchorFromNameMatches("witness", witnessMatches, email),
       patch: {
         ...shared,
         ...(input.syncDocuments ? { validIdUrl, eSignatureUrl } : {}),
@@ -299,6 +345,16 @@ async function writeInvestor(
   },
 ): Promise<InvestorRow | null> {
   if (input.anchorId) {
+    await tx
+      .update(investors)
+      .set({ investorUserId: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(investors.userId, input.workspaceOwnerId),
+          eq(investors.investorUserId, input.partyUserId),
+          ne(investors.id, input.anchorId),
+        ),
+      );
     const patch = input.syncDocuments
       ? input.patch
       : omitDocuments(input.patch);
@@ -350,6 +406,16 @@ async function writeBorrower(
   },
 ): Promise<BorrowerRow | null> {
   if (input.anchorId) {
+    await tx
+      .update(borrowers)
+      .set({ borrowerUserId: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(borrowers.userId, input.workspaceOwnerId),
+          eq(borrowers.borrowerUserId, input.partyUserId),
+          ne(borrowers.id, input.anchorId),
+        ),
+      );
     const patch = input.syncDocuments
       ? input.patch
       : omitDocuments(input.patch);
@@ -400,6 +466,16 @@ async function writeWitness(
   },
 ): Promise<WitnessRow | null> {
   if (input.anchorId) {
+    await tx
+      .update(witnesses)
+      .set({ witnessUserId: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(witnesses.userId, input.workspaceOwnerId),
+          eq(witnesses.witnessUserId, input.partyUserId),
+          ne(witnesses.id, input.anchorId),
+        ),
+      );
     const patch = input.syncDocuments
       ? input.patch
       : omitDocuments(input.patch);
@@ -454,9 +530,9 @@ export async function ensureMissingPartyRoles(
   if (!email || name.length < 2) return;
 
   const [investorMatches, borrowerMatches, witnessMatches] = await Promise.all([
-    loadInvestorMatches(input.workspaceOwnerId, input.partyUserId, email),
-    loadBorrowerMatches(input.workspaceOwnerId, input.partyUserId, email),
-    loadWitnessMatches(input.workspaceOwnerId, input.partyUserId, email),
+    loadInvestorMatches(input.workspaceOwnerId, input.partyUserId, email, name),
+    loadBorrowerMatches(input.workspaceOwnerId, input.partyUserId, email, name),
+    loadWitnessMatches(input.workspaceOwnerId, input.partyUserId, email, name),
   ]);
   if (
     investorMatches.length > 0 &&

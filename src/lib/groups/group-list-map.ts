@@ -8,6 +8,7 @@ import type {
 } from "$lib/components/groups/types";
 import { calculateTotalPrincipal, isOpenLoan } from "$lib/calculations";
 import { isOverdueLoanForDashboard } from "$lib/loan-due-date";
+import { normalizePartyName } from "$lib/party-name";
 
 export type CachedGroupRecord = {
   id: number;
@@ -207,7 +208,35 @@ export function buildWizardContactOptions(
     });
   }
   out.sort((a, b) => a.name.localeCompare(b.name));
-  return out;
+  return collapseWizardContactsByName(out);
+}
+
+function collapseWizardContactsByName(
+  options: WizardContactOption[],
+): WizardContactOption[] {
+  const byKey = new Map<string, WizardContactOption>();
+  const order: string[] = [];
+  for (const option of options) {
+    const nameKey = normalizePartyName(option.name);
+    const key = nameKey
+      ? `${option.partyType}:${nameKey}`
+      : `${option.partyType}:id:${option.contactId}`;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, { ...option, loanIds: [...option.loanIds] });
+      order.push(key);
+      continue;
+    }
+    if (option.contactId < existing.contactId) {
+      existing.contactId = option.contactId;
+      existing.name = option.name;
+    }
+    for (const loanId of option.loanIds) {
+      if (!existing.loanIds.includes(loanId)) existing.loanIds.push(loanId);
+    }
+    existing.loanIds.sort((a, b) => a - b);
+  }
+  return order.map((key) => byKey.get(key)!);
 }
 
 function unionContactLoanIds(contacts: WizardContactOption[]): Set<number> {

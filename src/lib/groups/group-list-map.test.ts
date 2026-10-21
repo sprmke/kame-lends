@@ -80,6 +80,42 @@ describe("buildWizardContactOptions", () => {
       },
     ]);
   });
+
+  it("lists one borrower when two records share a name", () => {
+    const options = buildWizardContactOptions([
+      {
+        id: 1,
+        loanName: "Older",
+        status: "Active",
+        dueDate: "2026-01-01",
+        borrowerId: 1,
+        borrower: { id: 1, name: "Precious Natividad", email: null },
+        loanInvestors: [],
+      },
+      {
+        id: 2,
+        loanName: "Newer",
+        status: "Active",
+        dueDate: "2026-02-01",
+        borrowerId: 5,
+        borrower: {
+          id: 5,
+          name: "precious  natividad",
+          email: "a@example.com",
+        },
+        loanInvestors: [],
+      },
+    ]);
+
+    expect(options).toEqual([
+      {
+        partyType: "borrower",
+        contactId: 1,
+        name: "Precious Natividad",
+        loanIds: [1, 2],
+      },
+    ]);
+  });
 });
 
 describe("resolveWizardContactLoanIds", () => {
