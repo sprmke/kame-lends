@@ -115,6 +115,10 @@ export const investors = pgTable(
     workspacePartyUnique: uniqueIndex("investors_workspace_party_user_uidx")
       .on(table.userId, table.investorUserId)
       .where(sql`${table.investorUserId} IS NOT NULL`),
+    workspaceNameUnique: uniqueIndex("investors_workspace_name_uidx").on(
+      table.userId,
+      sql`lower(regexp_replace(btrim(${table.name}), '[[:space:]]+', ' ', 'g'))`,
+    ),
   }),
 );
 
@@ -147,6 +151,10 @@ export const borrowers = pgTable(
     workspacePartyUnique: uniqueIndex("borrowers_workspace_party_user_uidx")
       .on(table.userId, table.borrowerUserId)
       .where(sql`${table.borrowerUserId} IS NOT NULL`),
+    workspaceNameUnique: uniqueIndex("borrowers_workspace_name_uidx").on(
+      table.userId,
+      sql`lower(regexp_replace(btrim(${table.name}), '[[:space:]]+', ' ', 'g'))`,
+    ),
   }),
 );
 
@@ -179,6 +187,10 @@ export const witnesses = pgTable(
     workspacePartyUnique: uniqueIndex("witnesses_workspace_party_user_uidx")
       .on(table.userId, table.witnessUserId)
       .where(sql`${table.witnessUserId} IS NOT NULL`),
+    workspaceNameUnique: uniqueIndex("witnesses_workspace_name_uidx").on(
+      table.userId,
+      sql`lower(regexp_replace(btrim(${table.name}), '[[:space:]]+', ' ', 'g'))`,
+    ),
   }),
 );
 
