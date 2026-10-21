@@ -339,7 +339,7 @@ async function loadInvestors(userId: string, mode: InvestorCacheMode) {
     loadLinkedInvestorContactIds(userId),
   ]);
   if (linkedInvestorIds.length === 0) {
-    return stripDataImageUrls(uniquePartiesByName(ownedInvestors));
+    return stripDataImageUrls(uniquePartiesByName([...ownedInvestors]));
   }
 
   const sharedLinks = await db.query.loanInvestors.findMany({
@@ -348,7 +348,7 @@ async function loadInvestors(userId: string, mode: InvestorCacheMode) {
   });
   const sharedLoanIds = [...new Set(sharedLinks.map((row) => row.loanId))];
   if (sharedLoanIds.length === 0) {
-    return stripDataImageUrls(uniquePartiesByName(ownedInvestors));
+    return stripDataImageUrls(uniquePartiesByName([...ownedInvestors]));
   }
 
   const coInvestorRows = await db.query.loanInvestors.findMany({
