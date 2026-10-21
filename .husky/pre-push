@@ -1,0 +1,2 @@
+echo "pre-push: typecheck, format, lint, unit tests, audit"
+bun run ci:pre-push

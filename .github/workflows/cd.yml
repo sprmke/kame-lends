@@ -141,16 +141,19 @@ jobs:
             const failed = Object.entries(results)
               .filter(([, result]) => result === 'failure')
               .map(([name]) => name);
+            const actor = context.actor;
             const title = 'Production CD failed';
             const body = [
+              `@${actor} production CD failed.`,
+              '',
               `Workflow [${context.runId}](${runUrl}) failed on \`${context.sha.substring(0, 7)}\`.`,
               '',
               '**Failed jobs:** ' + (failed.length ? failed.join(', ') : 'see run'),
               '',
-              'Production may be on stale code, missing migrations, or an unhealthy deploy.',
+              'Production is still the previous successful deploy.',
               'Check Actions → CD, then run `bun run db:migrate:pending:vercel --yes` if SQL is behind.',
               '',
-              `_Auto-opened by CD notify-failure._`
+              '_Auto-opened by CD notify-failure._'
             ].join('\n');
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -159,22 +162,35 @@ jobs:
               labels: 'cd-failure',
               per_page: 1
             });
+            let issueNumber;
             if (issues.length > 0) {
+              issueNumber = issues[0].number;
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: issues[0].number,
+                issue_number: issueNumber,
                 body
               });
             } else {
-              await github.rest.issues.create({
+              const created = await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title,
                 body,
                 labels: ['cd-failure']
               });
+              issueNumber = created.data.number;
+            }
+            try {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                assignees: [actor]
+              });
+            } catch (error) {
+              core.warning(`Could not assign ${actor}: ${error.message}`);
             }
       - name: Annotate workflow summary
         run: |
-          echo "::error title=Production CD failed::See https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} — quality, migrate, or deploy did not finish."
+          echo "::error title=Production CD failed::See https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}. Quality, migrate, or deploy did not finish."

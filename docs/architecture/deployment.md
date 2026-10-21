@@ -34,15 +34,26 @@ Locally: `bun run ci:quality`.
 
 Concurrency group `cd-main` with `cancel-in-progress: false` so a mid-migration run is never cancelled by a newer push.
 
+### Before push
+
+| Hook         | Command               | What it catches                                                       |
+| ------------ | --------------------- | --------------------------------------------------------------------- |
+| `pre-commit` | `lint-staged`         | ESLint and Prettier on the staged files, including `scripts/**/*.mjs` |
+| `pre-push`   | `bun run ci:pre-push` | Same quality gate as CD, without the production build and Playwright  |
+
+`bun run ci:quality` is the full local match, including build and the PWA smoke. CD still runs that build. The hooks are there so a lint or audit failure stops on your machine instead of after production has already been skipped.
+
 ### When CD fails
 
-| Signal                            | Where                                           |
-| --------------------------------- | ----------------------------------------------- |
-| Red **CD** badge in README        | Links to the latest workflow run                |
-| GitHub issue labeled `cd-failure` | Opened or commented by the `notify-failure` job |
-| Workflow annotation               | `Production CD failed` on the run summary       |
+| Signal                            | Where                                                               |
+| --------------------------------- | ------------------------------------------------------------------- |
+| Red **CD** badge in README        | Links to the latest workflow run                                    |
+| GitHub issue labeled `cd-failure` | Opened or commented by `notify-failure`, and assigned to the pusher |
+| Workflow annotation               | `Production CD failed` on the run summary                           |
 
-Enable email: GitHub → **Watch** → **Custom** → **Actions** (repo or org).
+The issue mentions the person who pushed, which is the GitHub notification. Vercel stays on the previous production deployment and does not show an error for that failed run. Enable email too: GitHub → **Watch** → **Custom** → **Actions** (repo or org).
+
+Dependabot updates are not deploys. The repo uses `bun.lock`, so Dependabot must use `package-ecosystem: bun`. The old `npm_and_yarn` setting cannot update that lockfile, and those failed Actions rows are the updater quitting. They do not ship code.
 
 If CD is red, **do not** hand-deploy app code until quality passes and migrations apply. Schema drift (code shipped without SQL) surfaces as `Internal Error` on `/loans` and `GET /api/health` returns **503** with `pendingFiles` / `missingColumns`.
 
