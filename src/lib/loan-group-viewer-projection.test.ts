@@ -26,6 +26,7 @@ describe("projectLoanForGroupViewer", () => {
       loanInvestors: [
         {
           amount: "50000",
+          notes: "wire ref",
           receiptImageUrl: "http://r",
           receipts: [{ url: "http://r" }],
           receiptExtractedData: { amount: 1 },
@@ -37,6 +38,7 @@ describe("projectLoanForGroupViewer", () => {
           receivedPayments: [
             {
               amount: "1000",
+              notes: "partial",
               receipts: [{ url: "http://p" }],
               receiptImageUrl: "http://p",
             },

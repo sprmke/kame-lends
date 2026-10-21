@@ -136,6 +136,7 @@ export interface ReceivedPayment {
   receiptImageUrl?: string | null;
   receiptExtractedData?: ReceiptExtractedData | null;
   receipts?: PaymentReceipt[];
+  notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -195,6 +196,7 @@ export interface LoanInvestor {
   receiptImageUrl?: string | null;
   receiptExtractedData?: ReceiptExtractedData | null;
   receipts?: PaymentReceipt[];
+  notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
   interestPeriods?: InterestPeriod[];

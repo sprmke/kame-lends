@@ -115,7 +115,7 @@ export function disbursementReceiptError(investorData: unknown): string | null {
 
 /**
  * Received-payment rows with an amount. Blank rows are ignored.
- * Create-loan saves skip this check.
+ * Create and edit both require a receipt once the amount is positive.
  */
 export function receivedPaymentReceiptError(entries: unknown): string | null {
   if (!Array.isArray(entries)) return null;

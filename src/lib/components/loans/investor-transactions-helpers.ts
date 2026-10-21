@@ -26,6 +26,7 @@ export interface InvestorTransactionDisplay {
   sentDate: Date | string;
   isPaid: boolean;
   receipts?: PaymentReceipt[];
+  notes?: string | null;
 }
 
 export interface ReceivedPaymentDisplay {
@@ -34,6 +35,7 @@ export interface ReceivedPaymentDisplay {
   receivedDate: string;
   interestPeriodId?: number | null;
   receipts?: PaymentReceipt[];
+  notes?: string | null;
 }
 
 export interface InvestorWithTransactions {

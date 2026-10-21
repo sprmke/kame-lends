@@ -30,6 +30,7 @@ function redactAllocation(
   delete next.receiptImageUrl;
   delete next.receipts;
   delete next.receiptExtractedData;
+  delete next.notes;
   if (next.investor && typeof next.investor === "object") {
     next.investor = redactParty(next.investor as Record<string, unknown>);
   }
@@ -41,6 +42,7 @@ function redactPayment<T extends Record<string, unknown>>(payment: T): T {
   delete next.receiptImageUrl;
   delete next.receipts;
   delete next.receiptExtractedData;
+  delete next.notes;
   return next;
 }
 
@@ -126,6 +128,14 @@ export function collectForbiddenHits(
       if (row.receipts != null) hits.push("loanInvestors.receipts");
       if (row.receiptImageUrl != null)
         hits.push("loanInvestors.receiptImageUrl");
+      if (row.notes != null && row.notes !== "")
+        hits.push("loanInvestors.notes");
+      for (const payment of (row.receivedPayments as unknown[]) ?? []) {
+        if (!payment || typeof payment !== "object") continue;
+        const rp = payment as Record<string, unknown>;
+        if (rp.notes != null && rp.notes !== "")
+          hits.push("receivedPayments.notes");
+      }
       const inv = row.investor as Record<string, unknown> | undefined;
       if (inv?.email) hits.push("loanInvestors.investor.email");
     }
