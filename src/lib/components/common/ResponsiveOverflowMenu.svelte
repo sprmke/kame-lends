@@ -49,7 +49,7 @@
 				</Sheet.Header>
 
 				<div
-					class="flex flex-col gap-0.5 px-2 py-2 pb-[max(0.5rem,var(--safe-area-bottom))]"
+					class="flex max-h-[min(70vh,32rem)] flex-col gap-0.5 overflow-y-auto px-2 py-2 pb-[max(0.5rem,var(--safe-area-bottom))]"
 					role="menu"
 					aria-label={title}
 				>
@@ -64,7 +64,10 @@
 					{@render trigger({ props })}
 				{/snippet}
 			</DropdownMenu.Trigger>
-			<DropdownMenu.Content align="end" class={contentClass}>
+			<DropdownMenu.Content
+				align="end"
+				class="max-h-[min(70vh,32rem)] overflow-y-auto {contentClass}"
+			>
 				<ActionMenuList {items} />
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>

@@ -5,6 +5,7 @@
 	import DownloadBackupButton from '$lib/components/common/DownloadBackupButton.svelte';
 	import FixReceivedPaymentsButton from '$lib/components/common/FixReceivedPaymentsButton.svelte';
 	import SyncLoanDueDatesButton from '$lib/components/common/SyncLoanDueDatesButton.svelte';
+	import LoanTemplatesManager from '$lib/components/settings/LoanTemplatesManager.svelte';
 	import PaymentMethodsManager from '$lib/components/settings/PaymentMethodsManager.svelte';
 	import PartyIdentityDocumentsManager from '$lib/components/settings/PartyIdentityDocumentsManager.svelte';
 	import InstallAppCard from '$lib/components/settings/InstallAppCard.svelte';
@@ -41,6 +42,13 @@
 			</dl>
 		</Card.Content>
 	</Card.Root>
+
+	<LoanTemplatesManager
+		initialTemplates={data.loanTemplates ?? []}
+		borrowers={data.templateBorrowers ?? []}
+		investors={data.templateInvestors ?? []}
+		groups={data.templateGroups ?? []}
+	/>
 
 	{#if hasPartyLinks}
 		<PartyIdentityDocumentsManager initialDocuments={data.identityDocuments} />

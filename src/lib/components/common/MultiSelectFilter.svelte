@@ -24,6 +24,7 @@
 		triggerClassName?: string;
 		searchable?: boolean;
 		searchPlaceholder?: string;
+		disabled?: boolean;
 	}
 
 	let {
@@ -35,7 +36,8 @@
 		class: className,
 		triggerClassName,
 		searchable,
-		searchPlaceholder = 'Search...'
+		searchPlaceholder = 'Search...',
+		disabled = false
 	}: Props = $props();
 
 	let open = $state(false);
@@ -86,13 +88,15 @@
 </script>
 
 <Popover.Root bind:open>
-	<Popover.Trigger>
+	<Popover.Trigger {disabled}>
 		{#snippet child({ props })}
 			<Button
 				{...props}
+				type="button"
 				variant="outline"
 				role="combobox"
 				aria-expanded={open}
+				{disabled}
 				class={cn(
 					'h-11 min-h-11 shrink-0 justify-between font-normal',
 					selected.length > 0 && 'border-primary/50',

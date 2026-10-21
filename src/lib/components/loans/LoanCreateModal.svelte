@@ -4,6 +4,7 @@
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import type { Borrower, Investor } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
+	import type { LoanTemplate } from '$lib/loan-templates';
 	import FormPageSkeleton from '$lib/components/common/FormPageSkeleton.svelte';
 	import { createOverlayContentReady } from '$lib/composables/use-overlay-content-ready.svelte';
 
@@ -13,6 +14,7 @@
 		onSuccess?: () => void | Promise<void>;
 		preselectedInvestorId?: number;
 		duplicateData?: DuplicateLoanData | null;
+		initialTemplate?: LoanTemplate | null;
 		investors?: Investor[];
 		borrowers?: Borrower[];
 		loadingFormData?: boolean;
@@ -24,6 +26,7 @@
 		onSuccess,
 		preselectedInvestorId,
 		duplicateData = null,
+		initialTemplate = null,
 		investors = [],
 		borrowers = [],
 		loadingFormData = false
@@ -104,12 +107,13 @@
 	{#if showFormSkeleton}
 		<FormPageSkeleton />
 	{:else}
-		{#key duplicateData ? `dup-${duplicateData.name}` : 'new'}
+		{#key duplicateData ? `dup-${duplicateData.name}` : `new-${initialTemplate?.id ?? 'blank'}`}
 			<LoanFormComponent
 				{investors}
 				{borrowers}
 				{preselectedInvestorId}
 				{duplicateData}
+				{initialTemplate}
 				{formId}
 				showFormHeader={false}
 				bind:isSubmitting

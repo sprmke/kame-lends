@@ -1,4 +1,5 @@
 import type { PageServerLoad } from "./$types";
+import { eq } from "drizzle-orm";
 import { requireUserSession } from "$lib/server/request-auth";
 import { getNavCapabilities } from "$lib/server/access-control";
 import { loadPartyActivityRoles } from "$lib/server/account-roles";
@@ -10,6 +11,9 @@ import {
 import { accountRolesFromCapabilities } from "$lib/account-roles";
 import { isWorkspaceOwnerEmail } from "$lib/server/workspace-owner";
 import { getUserPushPreferences } from "$lib/server/push/preferences";
+import { db } from "$lib/server/db";
+import { borrowers, investors, loanGroups } from "$lib/server/db/schema";
+import { listLoanTemplatesForUser } from "$lib/server/loan-templates";
 
 export const load: PageServerLoad = async (event) => {
   const session = requireUserSession(event);
@@ -20,12 +24,32 @@ export const load: PageServerLoad = async (event) => {
     paymentMethods,
     hasPartyLinks,
     pushPreferences,
+    loanTemplates,
+    borrowerRows,
+    investorRows,
+    groupRows,
   ] = await Promise.all([
     getNavCapabilities(userId),
     loadPartyActivityRoles(userId, session.user.email),
     listPaymentMethodsForUser(userId),
     hasPartyUserCrmLinks(userId),
     getUserPushPreferences(userId),
+    listLoanTemplatesForUser(userId),
+    db.query.borrowers.findMany({
+      where: eq(borrowers.userId, userId),
+      columns: { id: true, name: true },
+      orderBy: (table, { asc }) => [asc(table.name)],
+    }),
+    db.query.investors.findMany({
+      where: eq(investors.userId, userId),
+      columns: { id: true, name: true },
+      orderBy: (table, { asc }) => [asc(table.name)],
+    }),
+    db.query.loanGroups.findMany({
+      where: eq(loanGroups.creatorUserId, userId),
+      columns: { id: true, name: true, color: true },
+      orderBy: (table, { asc }) => [asc(table.name)],
+    }),
   ]);
   const identityDocuments = hasPartyLinks
     ? await loadPartyUserIdentityDocuments(userId)
@@ -47,5 +71,9 @@ export const load: PageServerLoad = async (event) => {
     hasPartyLinks,
     identityDocuments,
     pushPreferences,
+    loanTemplates,
+    templateBorrowers: borrowerRows,
+    templateInvestors: investorRows,
+    templateGroups: groupRows,
   };
 };

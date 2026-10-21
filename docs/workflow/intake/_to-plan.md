@@ -2,7 +2,7 @@
 title: "To plan"
 status: active
 tags: [planning]
-updated: 2026-10-16
+updated: 2026-10-21
 ---
 
 **Status legend:** ❌ cancelled / won't do · ✅ done · 🧪 for testing · 📋 planned (plan doc written) · 🚧 in progress · 🔵 pending / open
@@ -14,6 +14,14 @@ updated: 2026-10-16
 Integrate AI the same way Kame Homes / Kame Ops do, but harden it (gateway, usage log, kill switch, caps). First feature: analyze uploaded transfer receipts (one or many) when creating/editing a loan, doing a fund transfer, or adding a received payment, and pre-populate the active form. Multiple receipts with different dates become separate transactions; same date + same lender merge into one. User reviews and edits before applying.
 
 → **For testing:** [`../for-testing/ai-platform-and-receipt-autofill.md`](../for-testing/ai-platform-and-receipt-autofill.md) · QA: [`../qa/ai-receipt-autofill.md`](../qa/ai-receipt-autofill.md)
+
+===
+
+🚧 Loan templates
+
+Per-user loan templates in Settings. Prefill borrower, name, type, groups, rate, and an optional date-range name when creating a loan. No shared defaults.
+
+→ **In progress:** [`../in-progress/loan-templates.md`](../in-progress/loan-templates.md)
 
 ===
 

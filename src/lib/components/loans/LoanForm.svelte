@@ -82,12 +82,20 @@
 	import LoanFormGroupsField from '$lib/components/loans/LoanFormGroupsField.svelte';
 	import { page } from '$app/state';
 	import { loanGroupIds, type GroupsIndexItem } from '$lib/groups/loan-group-filter';
+	import {
+		addIsoDays,
+		formatInterestInput,
+		loanNameFromTemplate,
+		templateLoanNameIsDynamic,
+		type LoanTemplate
+	} from '$lib/loan-templates';
 
 	interface Props {
 		investors?: Investor[];
 		borrowers?: Borrower[];
 		preselectedInvestorId?: number;
 		duplicateData?: DuplicateLoanData | null;
+		initialTemplate?: LoanTemplate | null;
 		existingLoan?: LoanWithInvestors;
 		cancelHref?: string;
 		onSuccess?: () => void | Promise<void>;
@@ -103,6 +111,7 @@
 		borrowers: initialBorrowers = [],
 		preselectedInvestorId,
 		duplicateData = null,
+		initialTemplate = null,
 		existingLoan,
 		cancelHref = '/loans',
 		onSuccess,
@@ -129,6 +138,8 @@
 	let copySourceInvestorId = $state<number | null>(null);
 	let formRef = $state<HTMLFormElement | null>(null);
 	const loanTypes: LoanType[] = ['Lot Title', 'OR/CR', 'Agent'];
+	let defaultInterestType = $state<'rate' | 'fixed'>('rate');
+	let defaultInterestValue = $state('10');
 
 	function createReceivedPayment(): LoanFormReceivedPayment {
 		return {
@@ -140,14 +151,15 @@
 		};
 	}
 
-	function createTransaction(): LoanFormTransaction {
+	function createTransaction(interestValue?: string): LoanFormTransaction {
+		const value = interestValue ?? defaultInterestValue;
 		return {
 			id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
 			amount: '',
 			sentDate: toLocalDateString(new Date()),
-			interestType: 'rate',
-			interestRate: '10',
-			interestAmount: '',
+			interestType: defaultInterestType,
+			interestRate: defaultInterestType === 'rate' ? value : '',
+			interestAmount: defaultInterestType === 'fixed' ? value : '',
 			isPaid: true,
 			dateTouched: false,
 			receipts: [],
@@ -216,6 +228,156 @@
 			duplicateData?.contractCustomization ??
 			null
 	);
+	let loanTemplates = $state<LoanTemplate[]>([]);
+	let selectedTemplateId = $state('none');
+	let appliedTemplate = $state<LoanTemplate | null>(null);
+	let loanNameTouched = $state(false);
+	let useTemplateBorrowers = $state(false);
+
+	const templateBorrowerChoices = $derived(
+		(appliedTemplate?.borrowers ?? []).filter((borrower) =>
+			borrowerList.some((item) => item.id === borrower.id)
+		)
+	);
+	const templateInvestorChoices = $derived(
+		(appliedTemplate?.investors ?? []).filter(
+			(investor) =>
+				investor.name && investorList.some((item) => item.id === investor.investorId)
+		)
+	);
+	const templateOptions = $derived([
+		{ value: 'none', label: 'None' },
+		...loanTemplates.map((template) => ({ value: String(template.id), label: template.name }))
+	]);
+	const templateSentDate = $derived(
+		selectedInvestors[0]?.transactions[0]?.sentDate || toLocalDateString(new Date())
+	);
+
+	$effect(() => {
+		if (existingLoan || duplicateData) return;
+		let cancelled = false;
+		void fetch('/api/loan-templates')
+			.then(async (response) => {
+				if (!response.ok || cancelled) return;
+				const body = (await response.json()) as unknown;
+				if (!cancelled && Array.isArray(body)) loanTemplates = body as LoanTemplate[];
+			})
+			.catch((error) => {
+				console.error('Failed to load loan templates', error);
+			});
+		return () => {
+			cancelled = true;
+		};
+	});
+
+	$effect(() => {
+		const template = appliedTemplate;
+		const sent = templateSentDate;
+		const due = dueDate;
+		const touched = loanNameTouched;
+		if (!template || touched || !templateLoanNameIsDynamic(template.loanName, template.nameMode)) {
+			return;
+		}
+		const next = loanNameFromTemplate(template.loanName, template.nameMode, sent, due);
+		if (!next) return;
+		untrack(() => {
+			if (loanName !== next) loanName = next;
+		});
+	});
+
+	function handleLoanNameInput(value: string) {
+		loanName = value;
+		if (
+			!appliedTemplate ||
+			!templateLoanNameIsDynamic(appliedTemplate.loanName, appliedTemplate.nameMode)
+		) {
+			loanNameTouched = true;
+			return;
+		}
+		const expected = loanNameFromTemplate(
+			appliedTemplate.loanName,
+			appliedTemplate.nameMode,
+			templateSentDate,
+			dueDate
+		);
+		loanNameTouched = value !== expected;
+	}
+
+	function applyLoanTemplate(value: string) {
+		selectedTemplateId = value || 'none';
+		const template = loanTemplates.find((item) => String(item.id) === value);
+		if (!template) {
+			appliedTemplate = null;
+			useTemplateBorrowers = false;
+			return;
+		}
+
+		const today = toLocalDateString(new Date());
+		const due = template.termDays ? addIsoDays(today, template.termDays) : dueDate;
+		const interestValue = formatInterestInput(template.interestValue);
+		defaultInterestType = template.interestType;
+		defaultInterestValue = interestValue;
+		type = template.type;
+		const borrowerPool = (
+			template.borrowerIds?.length
+				? template.borrowerIds
+				: template.borrowerId != null
+					? [template.borrowerId]
+					: []
+		).filter((id) => borrowerList.some((borrower) => borrower.id === id));
+		borrowerId = borrowerPool[0] != null ? String(borrowerPool[0]) : '';
+		useTemplateBorrowers = borrowerPool.length > 0;
+		notes = template.notes ?? '';
+		freeLotSqm = template.freeLotSqm != null ? String(template.freeLotSqm) : '';
+		if (template.termDays) dueDate = due;
+		if (SHOW_GROUPS_UI) {
+			const allowed = new Set(groupsIndex.map((group) => group.id));
+			selectedGroupIds = template.groupIds.filter((id) => allowed.has(id));
+		}
+		const investorPresets = (template.investors ?? []).filter((preset) =>
+			investorList.some((investor) => investor.id === preset.investorId)
+		);
+		if (investorPresets.length > 0) {
+			selectedInvestors = investorPresets.flatMap((preset) => {
+				const investor = investorList.find((item) => item.id === preset.investorId);
+				if (!investor) return [];
+				return [
+					{
+						investor,
+						transactions: [createTransaction(formatInterestInput(preset.interestValue))],
+						receivedPayments: [],
+						hasMultipleInterest: false,
+						interestPeriods: []
+					}
+				];
+			});
+		} else {
+			selectedInvestors = selectedInvestors.map((allocation) => ({
+				...allocation,
+				transactions: allocation.transactions.map((transaction) =>
+					template.interestType === 'fixed'
+						? { ...transaction, interestType: 'fixed', interestAmount: interestValue }
+						: { ...transaction, interestType: 'rate', interestRate: interestValue }
+				)
+			}));
+		}
+		loanNameTouched = false;
+		appliedTemplate = template;
+		loanName = loanNameFromTemplate(template.loanName, template.nameMode, templateSentDate, due);
+	}
+
+	let didApplyInitialTemplate = false;
+	$effect(() => {
+		const template = initialTemplate;
+		if (!template || didApplyInitialTemplate || existingLoan || duplicateData) return;
+		didApplyInitialTemplate = true;
+		untrack(() => {
+			if (!loanTemplates.some((item) => item.id === template.id)) {
+				loanTemplates = [template, ...loanTemplates];
+			}
+			applyLoanTemplate(String(template.id));
+		});
+	});
 
 	const selectedBorrower = $derived(
 		borrowerList.find((borrower) => String(borrower.id) === borrowerId) ?? null
@@ -350,7 +512,7 @@
 		return 'Fully Funded';
 	}
 
-	function addInvestor(investorId: string) {
+	function addInvestor(investorId: string, interestValue?: string) {
 		if (!investorId || investorId === 'placeholder') return;
 		const investor = investorList.find((inv) => String(inv.id) === investorId);
 		if (!investor || selectedInvestors.some((si) => si.investor.id === investor.id)) return;
@@ -359,13 +521,32 @@
 			...selectedInvestors,
 			{
 				investor,
-				transactions: [createTransaction()],
+				transactions: [createTransaction(interestValue)],
 				receivedPayments: [],
 				hasMultipleInterest: false,
 				interestPeriods: []
 			}
 		];
 		investorSelectValue = '';
+	}
+
+	function setTemplateBorrower(id: number, checked: boolean | 'indeterminate') {
+		if (checked === true) {
+			borrowerId = String(id);
+			return;
+		}
+		if (borrowerId !== String(id)) return;
+		borrowerId = '';
+		useTemplateBorrowers = false;
+	}
+
+	function setTemplateInvestor(
+		investorId: number,
+		interestValue: string,
+		checked: boolean | 'indeterminate'
+	) {
+		if (checked === true) addInvestor(String(investorId), formatInterestInput(interestValue));
+		else removeInvestor(investorId);
 	}
 
 	function handleInvestorSelect(value: string) {
@@ -1165,40 +1346,83 @@
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
+				{#if !isEditMode && !duplicateData && loanTemplates.length > 0}
+					<div class="space-y-2 sm:col-span-2">
+						<Label for="loanTemplate">Template</Label>
+						<SearchableSelect
+							id="loanTemplate"
+							options={templateOptions}
+							value={selectedTemplateId}
+							onValueChange={applyLoanTemplate}
+							placeholder="None"
+							searchPlaceholder="Search templates..."
+							searchable={loanTemplates.length > 8}
+							disabled={isSubmitting}
+							triggerClassName="w-full"
+						/>
+					</div>
+				{/if}
 				<div class="space-y-2">
-					<Label for="borrowerId">Borrower *</Label>
-					<SearchableSelect
-						id="borrowerId"
-						options={borrowerOptions}
-						value={borrowerId}
-						onValueChange={handleBorrowerSelect}
-						placeholder="Select a borrower..."
-						searchPlaceholder="Search borrowers..."
-						searchable={true}
-						disabled={isSubmitting}
-						triggerClassName="w-full"
-					>
-						{#snippet header({ select })}
-							<button
-								type="button"
-								class="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-primary hover:bg-accent"
-								onclick={() => select('new')}
-							>
-								<UserPlus class="h-4 w-4" />
-								Add New Borrower
-							</button>
-							{#if borrowerList.length > 0}
-								<div class="my-1 h-px bg-border"></div>
-							{/if}
-						{/snippet}
-					</SearchableSelect>
+					<Label for={useTemplateBorrowers ? undefined : 'borrowerId'}>Borrower *</Label>
+					{#if useTemplateBorrowers && templateBorrowerChoices.length > 0}
+						<ul class="space-y-2">
+							{#each templateBorrowerChoices as borrower (borrower.id)}
+								{@const selected = borrowerId === String(borrower.id)}
+								<li>
+									<label
+										class={cn(
+											'flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border bg-card px-3',
+											selected
+												? 'border-primary/45 bg-primary/[0.06]'
+												: 'border-border/60'
+										)}
+									>
+										<span class="min-w-0 flex-1 truncate text-sm font-medium">{borrower.name}</span>
+										<Checkbox
+											checked={selected}
+											disabled={isSubmitting}
+											aria-label={borrower.name}
+											onCheckedChange={(checked) => setTemplateBorrower(borrower.id, checked)}
+										/>
+									</label>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<SearchableSelect
+							id="borrowerId"
+							options={borrowerOptions}
+							value={borrowerId}
+							onValueChange={handleBorrowerSelect}
+							placeholder="Select a borrower..."
+							searchPlaceholder="Search borrowers..."
+							searchable={true}
+							disabled={isSubmitting}
+							triggerClassName="w-full"
+						>
+							{#snippet header({ select })}
+								<button
+									type="button"
+									class="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-primary hover:bg-accent"
+									onclick={() => select('new')}
+								>
+									<UserPlus class="h-4 w-4" />
+									Add New Borrower
+								</button>
+								{#if borrowerList.length > 0}
+									<div class="my-1 h-px bg-border"></div>
+								{/if}
+							{/snippet}
+						</SearchableSelect>
+					{/if}
 					{#if errors.borrowerId}<p class="text-sm text-destructive">{errors.borrowerId}</p>{/if}
 				</div>
 				<div class="space-y-2">
 					<Label for="loanName">Loan Name / Label *</Label>
 					<Input
 						id="loanName"
-						bind:value={loanName}
+						value={loanName}
+						oninput={(event) => handleLoanNameInput(event.currentTarget.value)}
 						disabled={isSubmitting}
 						placeholder="e.g., Mexico, Pampanga"
 						required
@@ -1262,6 +1486,33 @@
 			<Card.Title>Investors</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
+			{#if templateInvestorChoices.length > 0}
+				<ul class="space-y-2">
+					{#each templateInvestorChoices as preset (preset.investorId)}
+						{@const selected = selectedInvestors.some((si) => si.investor.id === preset.investorId)}
+						<li
+							class={cn(
+								'flex min-h-11 items-center gap-3 rounded-xl border bg-card px-3',
+								selected ? 'border-primary/45 bg-primary/[0.06]' : 'border-border/60'
+							)}
+						>
+							<span class="min-w-0 flex-1 truncate text-sm font-medium">{preset.name}</span>
+							<span class="shrink-0 text-sm tabular-nums text-muted-foreground">
+								{appliedTemplate?.interestType === 'fixed'
+									? formatCurrency(preset.interestValue)
+									: `${formatInterestInput(preset.interestValue)}%`}
+							</span>
+							<Checkbox
+								checked={selected}
+								disabled={isSubmitting}
+								aria-label={preset.name ?? 'Investor'}
+								onCheckedChange={(checked) =>
+									setTemplateInvestor(preset.investorId, preset.interestValue, checked)}
+							/>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 			<div class="space-y-3">
 				<Label>Add Investor</Label>
 				<SearchableSelect

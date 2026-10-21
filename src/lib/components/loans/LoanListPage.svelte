@@ -23,6 +23,8 @@
 		type LoanQuickPaymentKind
 	} from '$lib/components/loans/LoanQuickPaymentDialog.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import ResponsiveOverflowMenu from '$lib/components/common/ResponsiveOverflowMenu.svelte';
+	import type { RowActionItem } from '$lib/components/common/action-buttons';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 	import {
 		createIsMobileShell,
@@ -53,7 +55,8 @@
 	import type { LoanListChange } from '$lib/composables/refresh-loan-list';
 	import { refreshLoanIfCurrent } from '$lib/loan-modal-utils';
 	import { loanListRowActionHandlers } from '$lib/components/common/action-buttons';
-	import { PlusCircle, X } from 'lucide-svelte';
+	import { ChevronDown, FileText, PlusCircle, X } from 'lucide-svelte';
+	import type { LoanTemplate } from '$lib/loan-templates';
 	import type { LoanWithInvestors } from '$lib/types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import GroupScopedFilterInfo from '$lib/components/groups/GroupScopedFilterInfo.svelte';
@@ -160,6 +163,8 @@
 	let showCommissionModal = $state(false);
 	let showCreateModal = $state(false);
 	let createModalDuplicateData = $state<DuplicateLoanData | null>(null);
+	let createTemplates = $state<LoanTemplate[]>([]);
+	let createTemplate = $state<LoanTemplate | null>(null);
 	let duplicateSourceLoanId = $state<number | null>(null);
 	let detailStartInEdit = $state(false);
 	const loanFormOptions = createLoanFormOptions();
@@ -170,15 +175,45 @@
 		scopeNoun: variant.groupScopeNoun
 	});
 
+	const newLoanMenuItems = $derived<RowActionItem[]>([
+		{
+			label: 'Blank loan',
+			lucideIcon: PlusCircle,
+			onClick: () => openCreateModal()
+		},
+		...createTemplates.map((template, index) => ({
+			label: template.name,
+			lucideIcon: FileText,
+			separatorBefore: index === 0,
+			onClick: () => openCreateModal(null, template)
+		}))
+	]);
+
 	onMount(() => {
 		viewModeState.init();
 		if (variant.showDateRange) isMobileShell.init();
 		void participantFilters.loadFilterOptions();
 		loanFormOptions.prefetch();
+		if (canCreate) void loadCreateTemplates();
 	});
 
-	function openCreateModal(duplicateData: DuplicateLoanData | null = null) {
+	async function loadCreateTemplates() {
+		try {
+			const response = await fetch('/api/loan-templates');
+			if (!response.ok) return;
+			const body = (await response.json()) as unknown;
+			if (Array.isArray(body)) createTemplates = body as LoanTemplate[];
+		} catch (error) {
+			console.error('Failed to load loan templates', error);
+		}
+	}
+
+	function openCreateModal(
+		duplicateData: DuplicateLoanData | null = null,
+		template: LoanTemplate | null = null
+	) {
 		createModalDuplicateData = duplicateData;
+		createTemplate = duplicateData ? null : template;
 		showCreateModal = true;
 		void loanFormOptions.load();
 	}
@@ -186,6 +221,7 @@
 	function closeCreateModal() {
 		showCreateModal = false;
 		createModalDuplicateData = null;
+		createTemplate = null;
 		duplicateSourceLoanId = null;
 	}
 
@@ -613,7 +649,22 @@
 				sections={loanPDFSections}
 				onGeneratePDF={downloadLoansPdf}
 			/>
-			{#if canCreate}
+			{#if canCreate && createTemplates.length > 0}
+				<ResponsiveOverflowMenu
+					items={newLoanMenuItems}
+					ariaLabel="New loan"
+					sheetTitle="New loan"
+					contentClass="min-w-56"
+				>
+					{#snippet trigger({ props })}
+						<Button {...props} class="px-3" adaptToMobileHero aria-label="New loan">
+							<PlusCircle class="h-4 w-4 xl:mr-2" />
+							<span class="hidden xl:inline">New Loan</span>
+							<ChevronDown class="h-4 w-4 opacity-70" />
+						</Button>
+					{/snippet}
+				</ResponsiveOverflowMenu>
+			{:else if canCreate}
 				<Button class="px-3" adaptToMobileHero onclick={() => openCreateModal()} aria-label="New Loan">
 					<PlusCircle class="h-4 w-4 xl:mr-2" />
 					<span class="hidden xl:inline">New Loan</span>
@@ -851,6 +902,7 @@
 			investors={loanFormOptions.investors}
 			borrowers={loanFormOptions.borrowers}
 			duplicateData={createModalDuplicateData}
+			initialTemplate={createTemplate}
 			loadingFormData={loanFormOptions.loading}
 			onSuccess={refreshLoans}
 		/>
