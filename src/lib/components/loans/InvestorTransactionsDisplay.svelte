@@ -33,6 +33,7 @@
 	} from './investor-transactions-helpers';
 	import ReceiptThumbnails from '$lib/components/common/ReceiptThumbnails.svelte';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
+	import PaymentNotesField from '$lib/components/payments/PaymentNotesField.svelte';
 	import { hasPaymentReceipt, type PaymentReceipt } from '$lib/payment-receipts';
 
 	interface Props {
@@ -77,6 +78,7 @@
 		receivedDate: string;
 		expectedInterest: number;
 		receipts: PaymentReceipt[];
+		notes: string;
 	} | null>(null);
 
 	let editPaymentModal = $state<{
@@ -87,6 +89,7 @@
 		receivedDate: string;
 		expectedInterest: number;
 		receipts: PaymentReceipt[];
+		notes: string;
 	} | null>(null);
 
 	const loanTotalPrincipal = $derived(computeLoanTotalPrincipal(investorsWithTransactions));
@@ -133,13 +136,14 @@
 			amount: pay.toFixed(2),
 			receivedDate: today,
 			expectedInterest: fullInterestForPeriod,
-			receipts: []
+			receipts: [],
+			notes: ''
 		};
 	}
 
 	async function handleCompletePeriod() {
 		if (!completeModal) return;
-		const { periodId, amount, receivedDate, receipts } = completeModal;
+		const { periodId, amount, receivedDate, receipts, notes } = completeModal;
 		const trimmedDate = receivedDate?.trim() ?? '';
 		const parsed = parseFloat(amount);
 		if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -164,7 +168,8 @@
 					status: 'Completed',
 					receivedAmount: parsed,
 					receivedDate: trimmedDate,
-					receipts
+					receipts,
+					notes: notes.trim() || null
 				})
 			});
 			const data = await response.json().catch(() => ({}));
@@ -198,7 +203,12 @@
 	function openEditPaymentModal(
 		periodId: number,
 		periodInterest: number,
-		linkedRows: { id?: number; amount: string; receivedDate: string }[]
+		linkedRows: {
+			id?: number;
+			amount: string;
+			receivedDate: string;
+			notes?: string | null;
+		}[]
 	) {
 		const today = new Date().toISOString().slice(0, 10);
 		if (linkedRows.length === 0) {
@@ -209,7 +219,8 @@
 				amount: periodInterest.toFixed(2),
 				receivedDate: today,
 				expectedInterest: periodInterest,
-				receipts: []
+				receipts: [],
+				notes: ''
 			};
 			return;
 		}
@@ -226,13 +237,14 @@
 			amount: sum.toFixed(2),
 			receivedDate: dateStr,
 			expectedInterest: periodInterest,
-			receipts: []
+			receipts: [],
+			notes: (single ? linkedRows[0]?.notes : last.notes) ?? ''
 		};
 	}
 
 	async function handleEditPaymentSave() {
 		if (!editPaymentModal) return;
-		const { periodId, mode, paymentId, amount, receivedDate, receipts } = editPaymentModal;
+		const { periodId, mode, paymentId, amount, receivedDate, receipts, notes } = editPaymentModal;
 		const trimmedDate = receivedDate?.trim() ?? '';
 		const parsed = parseFloat(amount);
 		if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -254,7 +266,11 @@
 				const response = await fetch(`/api/received-payments/${paymentId}`, {
 					method: 'PATCH',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ amount: parsed, receivedDate: trimmedDate })
+					body: JSON.stringify({
+						amount: parsed,
+						receivedDate: trimmedDate,
+						notes: notes.trim() || null
+					})
 				});
 				const data = await response.json().catch(() => ({}));
 				if (!response.ok) {
@@ -265,7 +281,12 @@
 				const response = await fetch(`/api/interest-periods/${periodId}/consolidate-payment`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ amount: parsed, receivedDate: trimmedDate, receipts })
+					body: JSON.stringify({
+						amount: parsed,
+						receivedDate: trimmedDate,
+						receipts,
+						notes: notes.trim() || null
+					})
 				});
 				const data = await response.json().catch(() => ({}));
 				if (!response.ok) {
@@ -420,6 +441,11 @@
 											</Button>
 										{/if}
 										<ReceiptThumbnails receipts={transaction.receipts ?? []} />
+										{#if transaction.notes?.trim()}
+											<p class="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">
+												{formatText(transaction.notes)}
+											</p>
+										{/if}
 									</div>
 								{/each}
 							</div>
@@ -618,6 +644,11 @@
 																		{/if}
 																	</div>
 																	<ReceiptThumbnails receipts={rp.receipts ?? []} />
+																	{#if rp.notes?.trim()}
+																		<p class="whitespace-pre-wrap px-1 text-xs text-muted-foreground">
+																			{formatText(rp.notes)}
+																		</p>
+																	{/if}
 																</div>
 															{/each}
 														</div>
@@ -772,6 +803,11 @@
 															</span>
 														</div>
 														<ReceiptThumbnails receipts={rp.receipts ?? []} />
+														{#if rp.notes?.trim()}
+															<p class="whitespace-pre-wrap px-1 text-xs text-muted-foreground">
+																{formatText(rp.notes)}
+															</p>
+														{/if}
 													</div>
 												{/each}
 											</div>
@@ -908,6 +944,14 @@
 					};
 				}}
 			/>
+			<PaymentNotesField
+				id="period-notes-{completeModal.periodId}"
+				value={completeModal.notes}
+				disabled={completingPeriods.has(completeModal.periodId)}
+				onChange={(notes) => {
+					if (completeModal) completeModal = { ...completeModal, notes };
+				}}
+			/>
 		</div>
 	{/if}
 </ResponsiveModal>
@@ -999,6 +1043,14 @@
 					}}
 				/>
 			{/if}
+			<PaymentNotesField
+				id="edit-payment-notes-{editPaymentModal.periodId}"
+				value={editPaymentModal.notes}
+				disabled={editingPaymentPeriodIds.has(editPaymentModal.periodId)}
+				onChange={(notes) => {
+					if (editPaymentModal) editPaymentModal = { ...editPaymentModal, notes };
+				}}
+			/>
 		</div>
 	{/if}
 </ResponsiveModal>

@@ -214,6 +214,7 @@ export function buildInvestorsWithTransactionsForPreview(
           interestPeriodId: null,
           id: /^\d+$/.test(rp.id) ? parseInt(rp.id, 10) : undefined,
           receipts: rp.receipts,
+          notes: rp.notes,
         })) ?? [],
       transactions: transactions.map((t, index) => {
         const originalTransaction = investorData?.transactions.find(
@@ -236,6 +237,7 @@ export function buildInvestorsWithTransactionsForPreview(
           sentDate: t.sentDate,
           isPaid: t.isPaid,
           receipts: originalTransaction?.receipts ?? [],
+          notes: originalTransaction?.notes,
         };
       }),
       hasMultipleInterest: investorData?.hasMultipleInterest || false,

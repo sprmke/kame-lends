@@ -105,6 +105,7 @@ describe("buildAllocationsFromExistingLoan", () => {
           hasMultipleInterest: false,
           profitType: "rate",
           profitValue: "0",
+          notes: "Wire",
           createdAt: new Date(),
           updatedAt: new Date(),
           investor: {
@@ -129,6 +130,7 @@ describe("buildAllocationsFromExistingLoan", () => {
               receiptImageUrl: null,
               receiptExtractedData: null,
               receipts: [],
+              notes: "Partial",
               createdAt: new Date(),
               updatedAt: new Date(),
             },
@@ -181,5 +183,7 @@ describe("buildAllocationsFromExistingLoan", () => {
     const allocations = buildAllocationsFromExistingLoan(loan);
     expect(allocations[0]?.receivedPayments).toHaveLength(1);
     expect(allocations[0]?.receivedPayments[0]?.id).toBe("99");
+    expect(allocations[0]?.transactions[0]?.notes).toBe("Wire");
+    expect(allocations[0]?.receivedPayments[0]?.notes).toBe("Partial");
   });
 });

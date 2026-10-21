@@ -40,6 +40,7 @@ function mergeReceivedPaymentsForInvestor(
           amount: rp.amount,
           receivedDate: toLocalDateString(rp.receivedDate),
           receipts: normalizePaymentReceipts(rp),
+          notes: rp.notes ?? "",
         });
         continue;
       }
@@ -48,6 +49,7 @@ function mergeReceivedPaymentsForInvestor(
         amount: rp.amount,
         receivedDate: toLocalDateString(rp.receivedDate),
         receipts: normalizePaymentReceipts(rp),
+        notes: rp.notes ?? "",
       });
     }
   }
@@ -78,6 +80,7 @@ export function buildAllocationsFromExistingLoan(
       isPaid: li.isPaid,
       dateTouched: true,
       receipts: normalizePaymentReceipts(li),
+      notes: li.notes ?? "",
     });
     investorMap.set(li.investor.id, transactions);
   }
@@ -161,6 +164,7 @@ export function buildAllocationsFromDuplicateData(
       isPaid: row.isPaid,
       dateTouched: true,
       receipts: [],
+      notes: "",
     });
   }
 

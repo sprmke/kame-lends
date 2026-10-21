@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { CalendarDays } from 'lucide-svelte';
+	import { untrack } from 'svelte';
+	import { CalendarDays, Plus } from 'lucide-svelte';
 	import * as Alert from '$lib/components/ui/alert';
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
@@ -48,6 +49,7 @@
 		isPaid: boolean;
 		interestPeriodId: string;
 		receipts: PaymentReceipt[];
+		notes: string;
 		/** AI notes when the row was created from receipts. */
 		scan: RowScanMeta | null;
 	}
@@ -85,6 +87,7 @@
 			isPaid: true,
 			interestPeriodId: 'general',
 			receipts: [],
+			notes: '',
 			scan: null
 		};
 	}
@@ -230,14 +233,22 @@
 		return list;
 	});
 
-	/** Empty until receipts are uploaded — each receipt group becomes a row. */
+	/** One blank row on open so amount, date, and lender can be filled before the receipt. */
 	let entries = $state<PaymentEntry[]>([]);
 	let isSubmitting = $state(false);
 
 	$effect(() => {
 		if (!open) return;
-		entries = [];
+		untrack(() => {
+			const investorId = lenders.length === 1 ? lenders[0].id : null;
+			entries = [newEntryFor(investorId)];
+		});
 	});
+
+	function addBlankEntry() {
+		const investorId = lenders.length === 1 ? lenders[0].id : null;
+		entries = [...entries, newEntryFor(investorId)];
+	}
 
 	function getEntryContext(entry: PaymentEntry) {
 		if (!loan) {
@@ -319,7 +330,8 @@
 						? `/api/loans/${loan.id}/received-payments`
 						: `/api/loans/${loan.id}/payments`;
 				const receiptFields = {
-					receipts: entry.receipts
+					receipts: entry.receipts,
+					notes: entry.notes.trim() || null
 				};
 				const payload = isPeriodPayment
 					? {
@@ -409,140 +421,140 @@
 			</Button>
 		{/snippet}
 		<form bind:this={formEl} class="space-y-4" onsubmit={handleSubmit}>
-			{#if entries.length === 0}
-				<ReceiptIntake
-					context={scanContext}
-					{lenders}
-					currentLoanId={loan.id}
-					suggestPeriod={isReceived ? suggestPeriod : undefined}
-					onCreate={addFromReceipts}
-					disabled={isSubmitting}
-				/>
-			{:else}
-				{#each entries as entry, index (entry.id)}
-					{@const context = getEntryContext(entry)}
-					{@const rowLabel = `${isReceived ? 'Payment' : 'Transfer'} ${index + 1}`}
-					<div
-						class="space-y-4 rounded-xl border border-border bg-muted/20 p-4"
-						data-testid="payment-entry"
+			{#each entries as entry, index (entry.id)}
+				{@const context = getEntryContext(entry)}
+				{@const rowLabel = `${isReceived ? 'Payment' : 'Transfer'} ${index + 1}`}
+				<div
+					class="space-y-4 rounded-xl border border-border bg-muted/20 p-4"
+					data-testid="payment-entry"
+				>
+					<div class="flex items-center justify-between gap-3">
+						<p class="text-sm font-semibold">{rowLabel}</p>
+						<ScanRowActions
+							{rowLabel}
+							canMerge={index > 0}
+							canSplit={entry.receipts.length > 1}
+							canRemove={true}
+							onMerge={() => (entries = mergeRowWithPrevious(entries, index, rowAdapter))}
+							onSplit={() => (entries = splitRowAt(entries, index, rowAdapter))}
+							onRemove={() => (entries = entries.filter((item) => item.id !== entry.id))}
+							disabled={isSubmitting}
+						/>
+					</div>
+
+					<PaymentEntryFields
+						idPrefix="{kind}-{entry.id}"
+						value={entry}
+						onChange={(changes) => updateEntry(entry.id, changes)}
+						{lenderOptions}
+						periodOptions={isReceived ? periodOptionsFor(entry.investorId) : null}
+						dateLabel={isReceived ? 'Received date' : 'Sent date'}
+						disabled={isSubmitting}
 					>
-						<div class="flex items-center justify-between gap-3">
-							<p class="text-sm font-semibold">{rowLabel}</p>
-							<ScanRowActions
-								{rowLabel}
-								canMerge={index > 0}
-								canSplit={entry.receipts.length > 1}
-								canRemove={true}
-								onMerge={() => (entries = mergeRowWithPrevious(entries, index, rowAdapter))}
-								onSplit={() => (entries = splitRowAt(entries, index, rowAdapter))}
-								onRemove={() => (entries = entries.filter((item) => item.id !== entry.id))}
+						{#snippet afterLender()}
+							{#if isReceived && entry.investorId}
+								<div class="rounded-xl border border-border bg-background p-3">
+									<p class="text-xs text-muted-foreground">Estimated remaining balance</p>
+									<p class="mt-1 text-lg font-semibold">{formatCurrency(context.remaining)}</p>
+								</div>
+							{/if}
+						{/snippet}
+					</PaymentEntryFields>
+
+					{#if !isReceived && context.usesInterestSchedule}
+						<Alert.Root>
+							<CalendarDays class="h-4 w-4" />
+							<Alert.Description>
+								This lender's existing interest schedule also applies to this principal amount.
+							</Alert.Description>
+						</Alert.Root>
+					{/if}
+
+					{#if !isReceived && !context.usesInterestSchedule}
+						<div class="space-y-3">
+							<Label>Interest</Label>
+							<Tabs.Root
+								value={entry.interestType}
+								onValueChange={(interestType) =>
+									interestType &&
+									updateEntry(entry.id, { interestType: interestType as 'rate' | 'fixed' })}
+							>
+								<Tabs.List class="grid w-full grid-cols-2">
+									<Tabs.Trigger value="rate">Rate (%)</Tabs.Trigger>
+									<Tabs.Trigger value="fixed">Fixed (₱)</Tabs.Trigger>
+								</Tabs.List>
+							</Tabs.Root>
+							<Input
+								type="number"
+								min="0"
+								step="0.01"
+								value={entry.interestValue}
+								placeholder={entry.interestType === 'rate' ? '10' : '0.00'}
 								disabled={isSubmitting}
+								oninput={(event) =>
+									updateEntry(entry.id, {
+										interestValue: (event.currentTarget as HTMLInputElement).value
+									})}
 							/>
 						</div>
+					{/if}
 
-						<ReceiptUploadField
-							idPrefix="{kind}-{entry.id}"
-							receipts={entry.receipts}
-							required
-							showReading={!entry.scan}
-							disabled={isSubmitting}
-							scanContext={{
-								...scanContext,
-								investorIds: entry.investorId ? [Number(entry.investorId)] : undefined
-							}}
-							onChange={(receipts) => updateEntry(entry.id, { receipts })}
-							onExtracted={(extracted) => handleReceiptExtracted(entry.id, extracted)}
-							onSplitRequest={(scanned) => splitEntryFromScan(entry, scanned)}
-						/>
-
-						<ScanRowNotes scan={entry.scan} />
-
-						<PaymentEntryFields
-							idPrefix="{kind}-{entry.id}"
-							value={entry}
-							onChange={(changes) => updateEntry(entry.id, changes)}
-							{lenderOptions}
-							periodOptions={isReceived ? periodOptionsFor(entry.investorId) : null}
-							dateLabel={isReceived ? 'Received date' : 'Sent date'}
-							disabled={isSubmitting}
-						>
-							{#snippet afterLender()}
-								{#if isReceived && entry.investorId}
-									<div class="rounded-xl border border-border bg-background p-3">
-										<p class="text-xs text-muted-foreground">Estimated remaining balance</p>
-										<p class="mt-1 text-lg font-semibold">{formatCurrency(context.remaining)}</p>
-									</div>
-								{/if}
-							{/snippet}
-						</PaymentEntryFields>
-
-						{#if !isReceived && context.usesInterestSchedule}
-							<Alert.Root>
-								<CalendarDays class="h-4 w-4" />
-								<Alert.Description>
-									This lender's existing interest schedule also applies to this principal amount.
-								</Alert.Description>
-							</Alert.Root>
-						{/if}
-
-						{#if !isReceived && !context.usesInterestSchedule}
-							<div class="space-y-3">
-								<Label>Interest</Label>
-								<Tabs.Root
-									value={entry.interestType}
-									onValueChange={(interestType) =>
-										interestType &&
-										updateEntry(entry.id, { interestType: interestType as 'rate' | 'fixed' })}
-								>
-									<Tabs.List class="grid w-full grid-cols-2">
-										<Tabs.Trigger value="rate">Rate (%)</Tabs.Trigger>
-										<Tabs.Trigger value="fixed">Fixed (₱)</Tabs.Trigger>
-									</Tabs.List>
-								</Tabs.Root>
-								<Input
-									type="number"
-									min="0"
-									step="0.01"
-									value={entry.interestValue}
-									placeholder={entry.interestType === 'rate' ? '10' : '0.00'}
-									disabled={isSubmitting}
-									oninput={(event) =>
-										updateEntry(entry.id, {
-											interestValue: (event.currentTarget as HTMLInputElement).value
-										})}
-								/>
+					{#if !isReceived}
+						<div class="flex items-start gap-3 rounded-xl border border-border bg-background p-3">
+							<Checkbox
+								id="principal-sent-{entry.id}"
+								checked={entry.isPaid}
+								disabled={isSubmitting}
+								onCheckedChange={(checked) => updateEntry(entry.id, { isPaid: checked === true })}
+							/>
+							<div>
+								<Label for="principal-sent-{entry.id}">Funds have already been sent</Label>
+								<p class="mt-0.5 text-xs text-muted-foreground">
+									Leave unchecked to record a pending disbursement.
+								</p>
 							</div>
-						{/if}
+						</div>
+					{/if}
 
-						{#if !isReceived}
-							<div class="flex items-start gap-3 rounded-xl border border-border bg-background p-3">
-								<Checkbox
-									id="principal-sent-{entry.id}"
-									checked={entry.isPaid}
-									disabled={isSubmitting}
-									onCheckedChange={(checked) => updateEntry(entry.id, { isPaid: checked === true })}
-								/>
-								<div>
-									<Label for="principal-sent-{entry.id}">Funds have already been sent</Label>
-									<p class="mt-0.5 text-xs text-muted-foreground">
-										Leave unchecked to record a pending disbursement.
-									</p>
-								</div>
-							</div>
-						{/if}
-					</div>
-				{/each}
+					<ReceiptUploadField
+						idPrefix="{kind}-{entry.id}"
+						receipts={entry.receipts}
+						required
+						showReading={!entry.scan}
+						disabled={isSubmitting}
+						scanContext={{
+							...scanContext,
+							investorIds: entry.investorId ? [Number(entry.investorId)] : undefined
+						}}
+						onChange={(receipts) => updateEntry(entry.id, { receipts })}
+						onExtracted={(extracted) => handleReceiptExtracted(entry.id, extracted)}
+						onSplitRequest={(scanned) => splitEntryFromScan(entry, scanned)}
+					/>
 
-				<ReceiptIntake
-					variant="compact"
-					context={scanContext}
-					{lenders}
-					currentLoanId={loan.id}
-					suggestPeriod={isReceived ? suggestPeriod : undefined}
-					onCreate={addFromReceipts}
-					disabled={isSubmitting}
-				/>
-			{/if}
+					<ScanRowNotes scan={entry.scan} />
+				</div>
+			{/each}
+
+			<Button
+				type="button"
+				variant="outline"
+				class="w-full"
+				disabled={isSubmitting}
+				onclick={addBlankEntry}
+			>
+				<Plus class="mr-2 h-4 w-4" />
+				{isReceived ? 'Add payment' : 'Add transfer'}
+			</Button>
+
+			<ReceiptIntake
+				variant="compact"
+				context={scanContext}
+				{lenders}
+				currentLoanId={loan.id}
+				suggestPeriod={isReceived ? suggestPeriod : undefined}
+				onCreate={addFromReceipts}
+				disabled={isSubmitting}
+			/>
 		</form>
 	</ResponsiveModal>
 {/if}

@@ -4,6 +4,7 @@
 		amount: string;
 		date: string;
 		interestPeriodId: string;
+		notes?: string;
 	}
 
 	export interface PaymentEntryFieldChanges extends Partial<PaymentEntryFieldValues> {
@@ -22,6 +23,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import SearchableSelect from '$lib/components/common/SearchableSelect.svelte';
+	import PaymentNotesField from '$lib/components/payments/PaymentNotesField.svelte';
 
 	interface Props {
 		idPrefix: string;
@@ -112,4 +114,11 @@
 			/>
 		</div>
 	{/if}
+
+	<PaymentNotesField
+		id="{idPrefix}-notes"
+		value={value.notes}
+		{disabled}
+		onChange={(notes) => onChange({ notes })}
+	/>
 </div>

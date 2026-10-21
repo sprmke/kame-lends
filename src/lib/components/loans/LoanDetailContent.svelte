@@ -179,6 +179,7 @@
 					amount: rp.amount,
 					interestPeriodId: rp.interestPeriodId ?? null,
 					receipts: normalizePaymentReceipts(rp),
+					notes: rp.notes ?? null,
 					receivedDate:
 						typeof rp.receivedDate === 'string'
 							? rp.receivedDate

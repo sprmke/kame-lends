@@ -13,6 +13,7 @@ export interface LoanFormTransaction {
   isPaid: boolean;
   dateTouched: boolean;
   receipts: PaymentReceipt[];
+  notes: string;
   /** AI notes when the row was created from receipts (UI only, never sent). */
   scan?: RowScanMeta | null;
 }
@@ -22,6 +23,7 @@ export interface LoanFormReceivedPayment {
   amount: string;
   receivedDate: string;
   receipts: PaymentReceipt[];
+  notes: string;
   /** AI notes when the row was created from receipts (UI only, never sent). */
   scan?: RowScanMeta | null;
 }
