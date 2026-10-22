@@ -25,6 +25,9 @@ describe("resolveLoanListPageVariant", () => {
     expect(resolveLoanListPageVariant("group").listInvalidate).toBe(
       "app:groups",
     );
+    expect(resolveLoanListPageVariant("group").defaultDatePreset).toBe(
+      resolveLoanListPageVariant("loans").defaultDatePreset,
+    );
     expect(resolveLoanListPageVariant("investments").listInvalidate).toBe(
       "app:loans",
     );
