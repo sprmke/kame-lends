@@ -5,9 +5,11 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Button } from '$lib/components/ui/button';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import GroupColorSwatches from '$lib/components/groups/GroupColorSwatches.svelte';
 	import { formatText } from '$lib/format';
 	import type { GroupGeneralDraft, GroupRuleRow } from '$lib/components/groups/types';
+	import type { GroupInterestVisibility } from '$lib/groups/interest-visibility';
 	import type { GroupColorKey } from '$lib/groups/group-colors';
 	import { cn } from '$lib/utils';
 	import { groupSettingsActionClass } from '$lib/groups/group-settings-actions';
@@ -17,6 +19,9 @@
 		onGeneralChange: (draft: GroupGeneralDraft) => void;
 		onSaveGeneral: () => void | Promise<void>;
 		isSavingGeneral?: boolean;
+		interestVisibility: GroupInterestVisibility;
+		onInterestVisibilityChange: (next: GroupInterestVisibility) => void | Promise<void>;
+		isSavingInterestVisibility?: boolean;
 		rules: GroupRuleRow[];
 		onAddRule?: () => void;
 		onRemoveRule?: (ruleId: number) => void;
@@ -33,6 +38,9 @@
 		onGeneralChange,
 		onSaveGeneral,
 		isSavingGeneral = false,
+		interestVisibility,
+		onInterestVisibilityChange,
+		isSavingInterestVisibility = false,
 		rules,
 		onAddRule,
 		onRemoveRule,
@@ -47,6 +55,16 @@
 	function patchGeneral(partial: Partial<GroupGeneralDraft>) {
 		onGeneralChange({ ...general, ...partial });
 	}
+
+	const interestRows = [
+		{ key: 'showInterestToOwners', label: 'Owner' },
+		{ key: 'showInterestToInvestors', label: 'Investors' },
+		{ key: 'showInterestToBorrowers', label: 'Borrowers' },
+		{ key: 'showInterestToWitnesses', label: 'Witnesses' }
+	] as const;
+
+	const settingRowClass =
+		'flex min-h-11 w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left text-sm';
 </script>
 
 <div class={cn('space-y-6', className)}>
@@ -91,6 +109,34 @@
 			>
 				{isSavingGeneral ? 'Saving…' : 'Save'}
 			</Button>
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header class="space-y-1">
+			<Card.Title class="text-base">Interest card</Card.Title>
+			<p class="text-sm font-normal text-muted-foreground">
+				Show to these people. You always see it.
+			</p>
+		</Card.Header>
+		<Card.Content>
+			<div class="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60">
+				{#each interestRows as row (row.key)}
+					<label class={settingRowClass}>
+						<Checkbox
+							checked={interestVisibility[row.key]}
+							disabled={isSavingInterestVisibility}
+							onCheckedChange={(checked) => {
+								void onInterestVisibilityChange({
+									...interestVisibility,
+									[row.key]: Boolean(checked)
+								});
+							}}
+						/>
+						<span>{row.label}</span>
+					</label>
+				{/each}
+			</div>
 		</Card.Content>
 	</Card.Root>
 

@@ -99,7 +99,11 @@ export const PUT: RequestHandler = async (event) => {
       !body.name &&
       !body.color &&
       body.description === undefined &&
-      body.notes === undefined
+      body.notes === undefined &&
+      body.showInterestToOwners === undefined &&
+      body.showInterestToInvestors === undefined &&
+      body.showInterestToBorrowers === undefined &&
+      body.showInterestToWitnesses === undefined
     ) {
       return json({ error: "No changes" }, { status: 400 });
     }
@@ -118,6 +122,18 @@ export const PUT: RequestHandler = async (event) => {
         ...(body.color ? { color: body.color } : {}),
         ...(description !== undefined
           ? { notes: description?.trim() || null }
+          : {}),
+        ...(body.showInterestToOwners !== undefined
+          ? { showInterestToOwners: body.showInterestToOwners }
+          : {}),
+        ...(body.showInterestToInvestors !== undefined
+          ? { showInterestToInvestors: body.showInterestToInvestors }
+          : {}),
+        ...(body.showInterestToBorrowers !== undefined
+          ? { showInterestToBorrowers: body.showInterestToBorrowers }
+          : {}),
+        ...(body.showInterestToWitnesses !== undefined
+          ? { showInterestToWitnesses: body.showInterestToWitnesses }
           : {}),
         updatedAt: new Date(),
       })

@@ -23,6 +23,10 @@ export const updateGroupBodySchema = z.object({
   color: colorSchema.optional(),
   description: z.string().trim().max(2000).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
+  showInterestToOwners: z.boolean().optional(),
+  showInterestToInvestors: z.boolean().optional(),
+  showInterestToBorrowers: z.boolean().optional(),
+  showInterestToWitnesses: z.boolean().optional(),
 });
 
 export const accessPreviewBodySchema = z.object({
