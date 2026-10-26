@@ -33,7 +33,7 @@
 		buildAllocationsFromExistingLoan
 	} from '$lib/components/loans/loan-form-allocations';
 	import { downloadLoanContractPdf } from '$lib/pdf-download';
-	import { untrack } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import {
 		areContractCustomizationsEqual,
 		buildDefaultContractCustomization,
@@ -63,7 +63,16 @@
 	import ScanRowActions from '$lib/components/receipt-scan/ScanRowActions.svelte';
 	import ScanRowNotes from '$lib/components/receipt-scan/ScanRowNotes.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
-	import { hasPaymentReceipt, type PaymentReceipt } from '$lib/payment-receipts';
+	import {
+		hasPaymentReceipt,
+		RECEIPT_REQUIRED_ERROR,
+		type PaymentReceipt
+	} from '$lib/payment-receipts';
+	import {
+		firstLoanFormFocusTarget,
+		loanFormValidationSummary
+	} from '$lib/loan-form-focus';
+	import { scrollFieldIntoView } from '$lib/scroll-field';
 	import type { ReceiptScanContext } from '$lib/receipt-extraction-client';
 	import {
 		groupScannedReceipts,
@@ -104,6 +113,10 @@
 		showFormHeader?: boolean;
 		formId?: string;
 		isSubmitting?: boolean;
+		/** True after a failed save, until every required field is filled. */
+		submitBlocked?: boolean;
+		/** Why save is blocked. Empty once the form is valid again. */
+		submitError?: string | null;
 	}
 
 	let {
@@ -118,7 +131,9 @@
 		onCancel,
 		showFormHeader = true,
 		formId,
-		isSubmitting = $bindable(false)
+		isSubmitting = $bindable(false),
+		submitBlocked = $bindable(false),
+		submitError = $bindable<string | null>(null)
 	}: Props = $props();
 
 	const isEditMode = $derived(Boolean(existingLoan));
@@ -221,7 +236,10 @@
 	);
 	let selectedInvestors = $state<SelectedInvestorAllocation[]>(buildInitialAllocations());
 	let investorSelectValue = $state('');
-	let errors = $state<Record<string, string>>({});
+	let investorTab = $state<Record<number, string>>({});
+	/** Errors stay hidden until the first failed save, then track the form as it is fixed. */
+	let validationRevealed = $state(false);
+	let lastScrolledFieldId = $state<string | null>(null);
 	let initializedFromDuplicate = $state(false);
 	let contractCustomization = $state<ContractCustomization | null>(
 		(existingLoan?.loanContract?.customization as ContractCustomization | undefined) ??
@@ -967,7 +985,7 @@
 		return receivedTotalForInvestor(si) > totalDue + 0.01;
 	}
 
-	function validate() {
+	function collectFieldErrors() {
 		const next: Record<string, string> = {};
 		if (!loanName.trim()) next.loanName = 'Loan name is required';
 		if (!dueDate) next.dueDate = 'Due date is required';
@@ -999,7 +1017,7 @@
 					break;
 				}
 				if (!hasPaymentReceipt(transaction)) {
-					next[`receipt-tx-${transaction.id}`] = 'Upload a receipt.';
+					next[`receipt-tx-${transaction.id}`] = RECEIPT_REQUIRED_ERROR;
 					missingDisbursementReceipt = true;
 				}
 			}
@@ -1007,7 +1025,7 @@
 				const amount = Number.parseFloat(rp.amount);
 				if (!Number.isFinite(amount) || amount <= 0) continue;
 				if (!hasPaymentReceipt(rp)) {
-					next[`receipt-rp-${rp.id}`] = 'Upload a receipt.';
+					next[`receipt-rp-${rp.id}`] = RECEIPT_REQUIRED_ERROR;
 					missingReceivedReceipt = true;
 				}
 			}
@@ -1035,9 +1053,52 @@
 			next.investors = 'Upload a receipt for each received payment.';
 		}
 
-		errors = next;
-		return Object.keys(next).length === 0;
+		return next;
 	}
+
+	const fieldErrors = $derived.by(() => collectFieldErrors());
+	const errors = $derived(validationRevealed ? fieldErrors : {});
+
+	function focusInvestors() {
+		return selectedInvestors.map((si) => ({
+			investorId: si.investor.id,
+			transactionIds: si.transactions.map((transaction) => transaction.id),
+			receivedPaymentIds: si.receivedPayments.map((payment) => payment.id)
+		}));
+	}
+
+	async function revealInvalidField(next: Record<string, string>) {
+		const target = firstLoanFormFocusTarget(next, focusInvestors());
+		if (!target) return false;
+		if (target.investorId != null && target.tab) {
+			investorTab[target.investorId] = target.tab;
+		}
+		await tick();
+		await new Promise<void>((resolve) => {
+			requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+		});
+		return scrollFieldIntoView(target.domId, {
+			focus: target.domId !== 'investors-section'
+		});
+	}
+
+	$effect(() => {
+		const blocked = validationRevealed && Object.keys(fieldErrors).length > 0;
+		const message = blocked ? loanFormValidationSummary(fieldErrors) : null;
+		if (submitBlocked !== blocked) submitBlocked = blocked;
+		if (submitError !== message) submitError = message;
+
+		if (!blocked) {
+			if (lastScrolledFieldId !== null) lastScrolledFieldId = null;
+			return;
+		}
+
+		const target = firstLoanFormFocusTarget(fieldErrors, focusInvestors());
+		const domId = target?.domId ?? null;
+		if (!domId || domId === lastScrolledFieldId) return;
+		lastScrolledFieldId = domId;
+		void revealInvalidField(fieldErrors);
+	});
 
 	function buildInvestorPayload() {
 		const investorData: Array<{
@@ -1119,7 +1180,13 @@
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
-		if (!validate()) return;
+		if (Object.keys(fieldErrors).length > 0) {
+			validationRevealed = true;
+			const message = loanFormValidationSummary(fieldErrors);
+			if (message) toast.error(message);
+			return;
+		}
+		validationRevealed = false;
 
 		isSubmitting = true;
 		try {
@@ -1334,6 +1401,8 @@
 			onSubmit={handleFormSubmit}
 			{formId}
 			{isSubmitting}
+			submitDisabled={submitBlocked}
+			error={submitError}
 			{isEditMode}
 			submitLabel={submitButtonLabel}
 			variant={isModalMode ? 'embedded' : 'page'}
@@ -1362,7 +1431,7 @@
 						/>
 					</div>
 				{/if}
-				<div class="space-y-2">
+				<div id="field-borrower" class="scroll-mt-24 space-y-2">
 					<Label for={useTemplateBorrowers ? undefined : 'borrowerId'}>Borrower *</Label>
 					{#if useTemplateBorrowers && templateBorrowerChoices.length > 0}
 						<ul class="space-y-2">
@@ -1415,9 +1484,9 @@
 							{/snippet}
 						</SearchableSelect>
 					{/if}
-					{#if errors.borrowerId}<p class="text-sm text-destructive">{errors.borrowerId}</p>{/if}
+					{#if errors.borrowerId}<p id="borrower-error" class="text-sm font-medium text-destructive" role="alert">{errors.borrowerId}</p>{/if}
 				</div>
-				<div class="space-y-2">
+				<div id="field-loan-name" class="scroll-mt-24 space-y-2">
 					<Label for="loanName">Loan Name / Label *</Label>
 					<Input
 						id="loanName"
@@ -1426,8 +1495,10 @@
 						disabled={isSubmitting}
 						placeholder="e.g., Mexico, Pampanga"
 						required
+						aria-invalid={errors.loanName ? 'true' : undefined}
+						aria-describedby={errors.loanName ? 'loan-name-error' : undefined}
 					/>
-					{#if errors.loanName}<p class="text-sm text-destructive">{errors.loanName}</p>{/if}
+					{#if errors.loanName}<p id="loan-name-error" class="text-sm font-medium text-destructive" role="alert">{errors.loanName}</p>{/if}
 				</div>
 				<div class="space-y-2">
 					<Label for="type">Type *</Label>
@@ -1440,10 +1511,17 @@
 						</Select.Content>
 					</Select.Root>
 				</div>
-				<div class="space-y-2">
+				<div id="field-due-date" class="scroll-mt-24 space-y-2">
 					<Label for="dueDate">Due Date *</Label>
-					<Input id="dueDate" type="date" bind:value={dueDate} disabled={isSubmitting} />
-					{#if errors.dueDate}<p class="text-sm text-destructive">{errors.dueDate}</p>{/if}
+					<Input
+						id="dueDate"
+						type="date"
+						bind:value={dueDate}
+						disabled={isSubmitting}
+						aria-invalid={errors.dueDate ? 'true' : undefined}
+						aria-describedby={errors.dueDate ? 'due-date-error' : undefined}
+					/>
+					{#if errors.dueDate}<p id="due-date-error" class="text-sm font-medium text-destructive" role="alert">{errors.dueDate}</p>{/if}
 				</div>
 				{#if type === 'Lot Title'}
 					<div class="space-y-2">
@@ -1481,7 +1559,7 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root id="investors-section">
+	<Card.Root id="investors-section" class="scroll-mt-24">
 		<Card.Header>
 			<Card.Title>Investors</Card.Title>
 		</Card.Header>
@@ -1541,7 +1619,7 @@
 				</SearchableSelect>
 			</div>
 
-			{#if errors.investors}<p class="text-sm text-destructive">{errors.investors}</p>{/if}
+			{#if errors.investors}<p class="text-sm font-medium text-destructive" role="alert">{errors.investors}</p>{/if}
 
 			{#if selectedInvestors.length === 0}
 				{#if ai.receiptExtraction}
@@ -1602,7 +1680,14 @@
 						</div>
 					</div>
 
-					<Tabs.Root value="principal" class="w-full">
+					<Tabs.Root
+						value={investorTab[si.investor.id] ?? 'principal'}
+						onValueChange={(value) => {
+							if (value !== 'principal' && value !== 'received') return;
+							investorTab[si.investor.id] = value;
+						}}
+						class="w-full"
+					>
 						<Tabs.List class="grid h-11 w-full grid-cols-2">
 							<Tabs.Trigger value="principal" class="text-xs sm:text-sm">
 								Principal Disbursement
@@ -1614,7 +1699,13 @@
 
 						<Tabs.Content value="principal" class="mt-3 space-y-4">
 							{#each si.transactions as transaction, txIndex (transaction.id)}
-								<div class="space-y-3 rounded-md bg-muted/30 p-3" data-testid="principal-transaction">
+								<div
+									class={cn(
+										'space-y-3 rounded-md bg-muted/30 p-3',
+										errors[`receipt-tx-${transaction.id}`] && 'ring-1 ring-destructive/40'
+									)}
+									data-testid="principal-transaction"
+								>
 									<div class="flex items-center justify-between">
 										<p class="text-sm text-muted-foreground">Transaction {txIndex + 1}</p>
 										<ScanRowActions
@@ -1764,6 +1855,7 @@
 									/>
 
 									<ReceiptUploadField
+										fieldId="receipt-tx-{transaction.id}"
 										idPrefix="tx-{transaction.id}"
 										receipts={transaction.receipts}
 										showReading={!transaction.scan}
@@ -1853,7 +1945,13 @@
 								{/if}
 
 								{#each si.receivedPayments as rp, rpIndex (rp.id)}
-									<div class="space-y-3 rounded-md border bg-muted/50 p-3" data-testid="received-payment">
+									<div
+										class={cn(
+											'space-y-3 rounded-md border bg-muted/50 p-3',
+											errors[`receipt-rp-${rp.id}`] && 'border-destructive ring-1 ring-destructive/40'
+										)}
+										data-testid="received-payment"
+									>
 										<div class="flex items-center justify-between">
 											<p class="text-sm text-muted-foreground">Payment {rpIndex + 1}</p>
 											<ScanRowActions
@@ -1929,6 +2027,7 @@
 										/>
 
 										<ReceiptUploadField
+											fieldId="receipt-rp-{rp.id}"
 											idPrefix="rp-{rp.id}"
 											receipts={rp.receipts}
 											showReading={!rp.scan}
@@ -2026,6 +2125,8 @@
 		onCancel={handleCancel}
 		{formId}
 		{isSubmitting}
+		submitDisabled={submitBlocked}
+		error={submitError}
 		submitLabel={submitButtonLabel}
 		layout={isModalMode ? 'stacked' : 'responsive'}
 		class={isModalMode ? 'md:hidden' : 'lg:hidden'}

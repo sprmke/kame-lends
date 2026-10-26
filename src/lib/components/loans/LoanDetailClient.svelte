@@ -53,6 +53,8 @@
 	let quickPaymentKind = $state<LoanQuickPaymentKind | null>(null);
 	let showDuplicateModal = $state(false);
 	let editSubmitting = $state(false);
+	let editSubmitBlocked = $state(false);
+	let editSubmitError = $state<string | null>(null);
 	let groupPickerOpen = $state(false);
 	const mobile = createIsMobileOverlay(
 		typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false
@@ -222,6 +224,8 @@
 		description="Update loan details and investor allocations"
 		formId={editFormId}
 		isSubmitting={editSubmitting}
+		submitDisabled={editSubmitBlocked}
+		error={editSubmitError}
 		isEditMode={true}
 		submitLabel={editSubmitting ? 'Updating...' : 'Update Loan'}
 	>
@@ -236,6 +240,8 @@
 					formId={editFormId}
 					showFormHeader={false}
 					bind:isSubmitting={editSubmitting}
+					bind:submitBlocked={editSubmitBlocked}
+					bind:submitError={editSubmitError}
 					onSuccess={handleEditSuccess}
 					onCancel={() => (isEditing = false)}
 				/>

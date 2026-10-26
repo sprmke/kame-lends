@@ -63,6 +63,8 @@
 	let loadingFormData = $state(false);
 	let isLoadingLoan = $state(false);
 	let isSubmitting = $state(false);
+	let submitBlocked = $state(false);
+	let submitError = $state<string | null>(null);
 	let LoanFormComponent = $state<Component | null>(null);
 	let loadingLoanFormModule = $state(false);
 	let LoanDetailContentComponent = $state<typeof LoanDetailContent | null>(null);
@@ -320,6 +322,8 @@
 					formId={editFormId}
 					onCancel={() => (isEditing = false)}
 					{isSubmitting}
+					submitDisabled={submitBlocked}
+					error={submitError}
 					isEditMode={true}
 					submitLabel={editSubmitLabel}
 					variant="embedded"
@@ -376,6 +380,8 @@
 							formId={editFormId}
 							showFormHeader={false}
 							bind:isSubmitting
+							bind:submitBlocked
+							bind:submitError
 							onSuccess={handleEditSuccess}
 							onCancel={() => (isEditing = false)}
 						/>

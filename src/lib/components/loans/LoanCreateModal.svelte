@@ -33,6 +33,8 @@
 	}: Props = $props();
 
 	let isSubmitting = $state(false);
+	let submitBlocked = $state(false);
+	let submitError = $state<string | null>(null);
 	let LoanFormComponent = $state<Component | null>(null);
 	let loadingLoanFormModule = $state(false);
 	const overlayContent = createOverlayContentReady();
@@ -98,6 +100,8 @@
 			{formId}
 			onCancel={() => onOpenChange(false)}
 			{isSubmitting}
+			submitDisabled={submitBlocked}
+			error={submitError}
 			isEditMode={false}
 			{submitLabel}
 			variant="embedded"
@@ -117,6 +121,8 @@
 				{formId}
 				showFormHeader={false}
 				bind:isSubmitting
+				bind:submitBlocked
+				bind:submitError
 				onSuccess={handleSuccess}
 				onCancel={() => onOpenChange(false)}
 			/>
