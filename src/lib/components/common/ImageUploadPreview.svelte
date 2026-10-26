@@ -15,6 +15,8 @@
 		onPick: () => void;
 		onRemove: () => void;
 		onDraw?: () => void;
+		invalid?: boolean;
+		describedBy?: string;
 	}
 
 	let {
@@ -27,7 +29,9 @@
 		frameClass = '',
 		onPick,
 		onRemove,
-		onDraw
+		onDraw,
+		invalid = false,
+		describedBy
 	}: Props = $props();
 
 	const busy = $derived(disabled || isProcessing);
@@ -37,7 +41,8 @@
 {#if previewSrc}
 	<div
 		class={cn(
-			'group/upload relative min-h-[5.5rem] overflow-hidden rounded-xl border border-border bg-muted/20',
+			'group/upload relative min-h-[5.5rem] overflow-hidden rounded-xl border bg-muted/20',
+			invalid ? 'border-destructive bg-destructive/5' : 'border-border',
 			frameClass,
 			busy && 'opacity-60'
 		)}
@@ -89,11 +94,14 @@
 	<button
 		type="button"
 		class={cn(
-			'flex min-h-[8.75rem] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/20 px-4 py-6 text-sm transition-colors',
-			!busy && 'hover:border-primary/40 hover:bg-muted/40',
+			'flex min-h-[8.75rem] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-sm transition-colors',
+			invalid ? 'border-destructive bg-destructive/5 text-destructive' : 'border-border',
+			!busy && !invalid && 'hover:border-primary/40 hover:bg-muted/40',
+			!busy && invalid && 'hover:bg-destructive/10',
 			busy && 'cursor-not-allowed opacity-60'
 		)}
 		disabled={busy}
+		aria-describedby={describedBy}
 		onclick={onPick}
 	>
 		<span class="flex size-10 items-center justify-center rounded-full bg-muted">

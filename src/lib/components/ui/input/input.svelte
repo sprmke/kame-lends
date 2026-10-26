@@ -38,7 +38,7 @@
 		bind:this={ref}
 		data-slot={dataSlot}
 		class={cn(
-			"flex h-11 w-full min-w-0 cursor-text rounded-2xl border border-border/50 bg-card px-4 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground surface-control focus-visible:border-primary/40 focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+			"flex h-11 w-full min-w-0 cursor-text rounded-2xl border border-border/50 bg-card px-4 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground surface-control focus-visible:border-primary/40 focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20",
 			type === "number" &&
 				"[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
 			className
