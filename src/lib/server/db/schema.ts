@@ -388,6 +388,22 @@ export const loanGroups = pgTable(
     /** UI label: Description */
     notes: text("notes"),
     color: text("color").notNull().default("orange"),
+    /** Interest stat card for owners. Creator always sees it. */
+    showInterestToOwners: boolean("show_interest_to_owners")
+      .notNull()
+      .default(true),
+    /** Interest stat card for investors. Creator always sees it. */
+    showInterestToInvestors: boolean("show_interest_to_investors")
+      .notNull()
+      .default(true),
+    /** Interest stat card for borrowers. Creator always sees it. */
+    showInterestToBorrowers: boolean("show_interest_to_borrowers")
+      .notNull()
+      .default(true),
+    /** Interest stat card for witnesses. Creator always sees it. */
+    showInterestToWitnesses: boolean("show_interest_to_witnesses")
+      .notNull()
+      .default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -667,6 +683,17 @@ export const userPushPreferences = pgTable("user_push_preferences", {
   notifyOverdue: boolean("notify_overdue").notNull().default(true),
   notifyActivity: boolean("notify_activity").notNull().default(true),
   notifySigning: boolean("notify_signing").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const userSigningPreferences = pgTable("user_signing_preferences", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  autoAttachSignature: boolean("auto_attach_signature")
+    .notNull()
+    .default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -1343,7 +1370,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   }),
 }));
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
   investors: many(investors),
@@ -1356,6 +1383,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   loanGroups: many(loanGroups),
   loanGroupMemberships: many(loanGroupMembers),
   loanUserCommissions: many(loanUserCommissions),
+  signingPreferences: one(userSigningPreferences, {
+    fields: [users.id],
+    references: [userSigningPreferences.userId],
+  }),
 }));
 
 export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({
