@@ -15,6 +15,7 @@ All signed-in users get:
 - **Loan templates** — each user saves their own presets (template name, borrowers, investors, type, groups, rate, loan name). None are shared. Borrowers and investors are multi-selects, and each name is listed once. Chosen people are listed under the field, and each investor row has a rate that starts from the template rate. Due in days and the rate sit in one column. The loan name can include `{sent}` and `{due}`. The form shows an example under that field, and switching type fills the matching pattern until the name is edited. Due in days starts at 14, so a new loan is due two weeks after the sent date. New Loan can start from one.
 - **Install app** — shown only when this browser can install. **Chromium:** after `beforeinstallprompt`, the sidebar, account sheet (`InstallAppNavButton`), and this card run the browser install dialog. **iOS:** those same controls open an in-app sheet (Share → Add to Home Screen). Hidden when already installed, and hidden in browsers that will not offer install (desktop Safari, Firefox, or Chromium before the prompt). No Settings redirect.
 - **Notifications** — per-device Web Push opt-in, reminder/activity/signing preferences, **Send test** when subscribed.
+- **Contract signing** — checkbox **Auto attach my signature on loans** (`PUT /api/signing/preferences`). Requires a saved e-signature (identity documents or linked party rows). When turned on, unsigned slots on existing loans where you are borrower, lender, or witness are signed with your saved signature; new and updated loans do the same for parties with this setting. Turning it off does not remove signatures already recorded.
 - **Data & maintenance** — sync loan due dates, fix received payments, **Download my data** (`GET /api/backup?download=true`).
 
 Platform owner email only:
@@ -31,7 +32,7 @@ Google Calendar sync is per group on the group hub only (no workspace calendar o
 
 - Requires session.
 - `isPlatformOwner` from `isWorkspaceOwnerEmail`.
-- Payment methods, loan templates (plus the user's borrowers and groups for the template form), and optional party identity documents.
+- Payment methods, loan templates (plus the user's borrowers and groups for the template form), signing preferences, saved-signature flag, and optional party identity documents.
 
 ## Permissions
 

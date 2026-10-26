@@ -11,7 +11,7 @@ Bank loan summary cards use all bank loans for this investor.
 
 ### Summary cards (all-time)
 
-**Loan capital and interest** use `computeInvestorPortfolioCapitalStats` on this investor's rows from the `loans` load (includes `interestPeriods` for multi-period loans). Peak concurrent paid allocation: sequential non-overlapping periods count once; overlapping periods add together.
+**Loan capital and interest** use `computeInvestorPortfolioCapitalStats` on this investor's rows from the `loans` load (includes `interestPeriods` for multi-period loans). Peak concurrent paid allocation: sequential non-overlapping periods count once; overlapping periods add together. Each card has an **About** control (hover on a fine pointer, tap on touch) with that meaning in one sentence.
 
 | Card                    | Meaning                                                                                                                                          |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -34,7 +34,7 @@ The loans table shows this investor's **capital per loan** in the Principal colu
 
 **Toolbar:** Search, then **date range** on the same row. **More Filters** holds status, type, and investor-scoped amount ranges (same fields as `/loans`, without participant multi-selects). On phone, **More Filters** opens a bottom sheet; on `lg+` the panel is inline. Status and Type stack in the sheet on phone and sit side by side from `sm`. **Date range** uses the same presets as `/loans` (`from`/`to` or `range=all`). It defaults to the current month, remembers its own last range (separate from the loan lists), filters by loan **due date**, and drives the four summary cards below.
 
-**Summary cards (Loans tab):** Principal, Total, Interest (`earned / estimate`), Completed (same layout as `/loans`). Metrics use this investor's paid allocations (`computeInvestorLoanListSummaryStats`).
+**Summary cards (Loans tab):** Principal, Total, Interest (`earned / estimate`), Completed (same layout as `/loans`, including **About**). Metrics use this investor's paid allocations (`computeInvestorLoanListSummaryStats`). The note says "this person". Owner, borrower, and witness rows on a group People tab use full loan principal, so the note does not say "this person".
 
 **Bulk select:** When groups are enabled and the viewer can manage the workspace, the table shows row checkboxes (desktop always; phone uses the same table). **Summary** opens a modal with investor-scoped totals for the selection. **Add to group** uses the shared group picker (`POST /api/groups/:id/loans`).
 
