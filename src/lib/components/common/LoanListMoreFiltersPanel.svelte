@@ -26,6 +26,7 @@
 		onMaxAvgRateChange: (value: string) => void;
 		minInterest: string;
 		maxInterest: string;
+		showInterestRange?: boolean;
 		onMinInterestChange: (value: string) => void;
 		onMaxInterestChange: (value: string) => void;
 		minTotalAmount: string;
@@ -59,6 +60,7 @@
 		onMaxAvgRateChange,
 		minInterest,
 		maxInterest,
+		showInterestRange = true,
 		onMinInterestChange,
 		onMaxInterestChange,
 		minTotalAmount,
@@ -139,15 +141,17 @@
 		minPlaceholder="Min (%)"
 		maxPlaceholder="Max (%)"
 	/>
-	<RangeFilter
-		label="Total Interest"
-		minValue={minInterest}
-		maxValue={maxInterest}
-		onMinChange={onMinInterestChange}
-		onMaxChange={onMaxInterestChange}
-		minPlaceholder="Min (₱)"
-		maxPlaceholder="Max (₱)"
-	/>
+	{#if showInterestRange}
+		<RangeFilter
+			label="Total Interest"
+			minValue={minInterest}
+			maxValue={maxInterest}
+			onMinChange={onMinInterestChange}
+			onMaxChange={onMaxInterestChange}
+			minPlaceholder="Min (₱)"
+			maxPlaceholder="Max (₱)"
+		/>
+	{/if}
 	<RangeFilter
 		label="Total Amount"
 		minValue={minTotalAmount}

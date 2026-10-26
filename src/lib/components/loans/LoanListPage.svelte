@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto, replaceState } from '$app/navigation';
+	import { goto } from '$app/navigation';
+	import { replaceStateWhenRouterReady } from '$lib/replace-state-when-ready';
 	import { page } from '$app/state';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -66,6 +67,14 @@
 	import { LIST_FILTER_PANEL_TRIGGER_CLASS } from '$lib/list-filters';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import { createLoanListGroupScope } from '$lib/composables/use-loan-list-group-scope.svelte';
+	import { createListFilterUrlSync } from '$lib/composables/use-list-filter-url-sync.svelte';
+	import {
+		LOAN_LIST_FILTER_KEYS,
+		loanListFilterValuesFromUrl,
+		parseLoanListFilterValues,
+		snapshotLoanListFilters
+	} from '$lib/loan-list-filter-params';
+	import type { ListFilterValues } from '$lib/list-filter-persistence';
 	import AccessPreview from '$lib/components/groups/AccessPreview.svelte';
 	import type { AccessPreviewData } from '$lib/components/groups/types';
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
@@ -82,7 +91,8 @@
 		data,
 		scope = 'loans',
 		groupContext = null,
-		showScopeTabs = false
+		showScopeTabs = false,
+		showInterestSummary = true
 	}: {
 		// Accept full page load (layout fields + list fields).
 		data: {
@@ -96,6 +106,8 @@
 		scope?: LoanListPageScope;
 		groupContext?: GroupListContext | null;
 		showScopeTabs?: boolean;
+		/** Group hub hides the interest total for some members. */
+		showInterestSummary?: boolean;
 	} = $props();
 
 	const variant = $derived(resolveLoanListPageVariant(scope));
@@ -137,6 +149,10 @@
 	const viewModeState = createResponsiveViewMode({ defaultMobileMode: 'timeline' });
 	const isMobileShell = createIsMobileShell(false);
 	const participantFilters = createLoanListParticipantFilters(() => loans);
+	const listFilterSync = createListFilterUrlSync(() => page, {
+		scope: () => page.url.pathname,
+		keys: LOAN_LIST_FILTER_KEYS
+	});
 	let searchQuery = $state('');
 	let statusFilter = $state<string[]>([]);
 	let typeFilter = $state<string[]>([]);
@@ -189,12 +205,87 @@
 		}))
 	]);
 
+	function applyLoanListFilterValues(
+		values: ListFilterValues,
+		source: 'bootstrap' | 'url' = 'url'
+	) {
+		const normalized =
+			source === 'bootstrap'
+				? values
+				: loanListFilterValuesFromUrl(values);
+		const parsed = parseLoanListFilterValues(normalized);
+		searchQuery = parsed.searchQuery;
+		statusFilter = parsed.statusFilter;
+		typeFilter = parsed.typeFilter;
+		participantFilters.selectedInvestors = parsed.selectedInvestors;
+		participantFilters.selectedBorrowers = parsed.selectedBorrowers;
+		participantFilters.selectedWitnesses = parsed.selectedWitnesses;
+		minPrincipal = parsed.minPrincipal;
+		maxPrincipal = parsed.maxPrincipal;
+		minAvgRate = parsed.minAvgRate;
+		maxAvgRate = parsed.maxAvgRate;
+		minInterest = parsed.minInterest;
+		maxInterest = parsed.maxInterest;
+		minTotalAmount = parsed.minTotalAmount;
+		maxTotalAmount = parsed.maxTotalAmount;
+		if (parsed.view) viewModeState.setViewMode(parsed.view);
+		return snapshotLoanListFilters({
+			searchQuery,
+			view: parsed.view ?? viewModeState.viewMode,
+			statusFilter,
+			typeFilter,
+			selectedInvestors: participantFilters.selectedInvestors,
+			selectedBorrowers: participantFilters.selectedBorrowers,
+			selectedWitnesses: participantFilters.selectedWitnesses,
+			minPrincipal,
+			maxPrincipal,
+			minAvgRate,
+			maxAvgRate,
+			minInterest,
+			maxInterest,
+			minTotalAmount,
+			maxTotalAmount
+		});
+	}
+
+	function commitLoanListFilters() {
+		listFilterSync.commit(
+			snapshotLoanListFilters({
+				searchQuery,
+				view: viewModeState.viewMode,
+				statusFilter,
+				typeFilter,
+				selectedInvestors: participantFilters.selectedInvestors,
+				selectedBorrowers: participantFilters.selectedBorrowers,
+				selectedWitnesses: participantFilters.selectedWitnesses,
+				minPrincipal,
+				maxPrincipal,
+				minAvgRate,
+				maxAvgRate,
+				minInterest,
+				maxInterest,
+				minTotalAmount,
+				maxTotalAmount
+			})
+		);
+	}
+
+	$effect.pre(() => {
+		void page.url.search;
+		listFilterSync.bootstrap((values) => applyLoanListFilterValues(values, 'bootstrap'));
+	});
+
 	onMount(() => {
 		viewModeState.init();
 		if (variant.showDateRange) isMobileShell.init();
 		void participantFilters.loadFilterOptions();
 		loanFormOptions.prefetch();
 		if (canCreate) void loadCreateTemplates();
+	});
+
+	$effect(() => {
+		void page.url.search;
+		listFilterSync.watch((values) => applyLoanListFilterValues(values, 'url'));
 	});
 
 	async function loadCreateTemplates() {
@@ -427,7 +518,6 @@
 	);
 
 	const dueDateFilter = $derived(page.url.searchParams.get('dueDate'));
-	const viewParam = $derived(page.url.searchParams.get('view'));
 	const dateRangeState = createLoanListDateRange(() => page, () => ({
 		enabled: variant.showDateRange,
 		defaultPreset: variant.defaultDatePreset,
@@ -435,21 +525,6 @@
 	}));
 	const filterFrom = $derived(dateRangeState.filterFrom);
 	const filterTo = $derived(dateRangeState.filterTo);
-
-	$effect(() => {
-		if (
-			viewParam === 'table' ||
-			viewParam === 'cards' ||
-			viewParam === 'calendar' ||
-			viewParam === 'timeline'
-		) {
-			viewModeState.setViewMode(viewParam);
-		}
-		const statusParams = page.url.searchParams.getAll('status');
-		if (statusParams.length) statusFilter = statusParams;
-		const typeParams = page.url.searchParams.getAll('type');
-		if (typeParams.length) typeFilter = typeParams;
-	});
 
 	const scopeBaseLoans = $derived.by(() => {
 		const list = loans ?? [];
@@ -517,8 +592,8 @@
 				maxPrincipal,
 				minAvgRate,
 				maxAvgRate,
-				minInterest,
-				maxInterest,
+				minInterest: showInterestSummary ? minInterest : '',
+				maxInterest: showInterestSummary ? maxInterest : '',
 				minTotalAmount,
 				maxTotalAmount
 			});
@@ -541,8 +616,8 @@
 			maxPrincipal,
 			minAvgRate,
 			maxAvgRate,
-			minInterest,
-			maxInterest,
+			minInterest: showInterestSummary ? minInterest : '',
+			maxInterest: showInterestSummary ? maxInterest : '',
 			minTotalAmount,
 			maxTotalAmount
 		})
@@ -583,11 +658,13 @@
 		maxInterest = '';
 		minTotalAmount = '';
 		maxTotalAmount = '';
+		listFilterSync.clearStorage();
+		listFilterSync.commit({});
 		if (variant.showDateRange) {
 			dateRangeState.clearDateFilter();
 			const url = new URL(page.url);
 			url.searchParams.delete('dueDate');
-			replaceState(`${url.pathname}${url.search}`, page.state);
+			replaceStateWhenRouterReady(`${url.pathname}${url.search}`, page.state);
 		}
 		if (hasActiveGroupFilter) {
 			groupScope.setGroupSelection('all');
@@ -693,7 +770,7 @@
 		{/if}
 
 		{#if variant.showLoanListSummary && scopedLoans.length > 0 && summaryStats}
-			<LoanListSummaryCards stats={summaryStats} />
+			<LoanListSummaryCards stats={summaryStats} showInterest={showInterestSummary} />
 		{/if}
 
 		{#if variant.showCommissionSummary && commissionStats}
@@ -723,9 +800,15 @@
 		<ListPageToolbar
 			searchValue={searchQuery}
 			searchPlaceholder="Search loans by name or notes..."
-			onSearchChange={(value) => (searchQuery = value)}
+			onSearchChange={(value) => {
+				searchQuery = value;
+				commitLoanListFilters();
+			}}
 			viewMode={viewModeState.viewMode}
-			onViewModeChange={viewModeState.setViewMode}
+			onViewModeChange={(mode) => {
+				viewModeState.setViewMode(mode);
+				commitLoanListFilters();
+			}}
 			showCalendar={true}
 			showTimeline={true}
 			hasData={listLoans.length > 0}
@@ -777,33 +860,73 @@
 					groupFilter={showGroupFilter ? loanGroupFilter : undefined}
 					{statusFilter}
 					{typeFilter}
-					onStatusChange={(value) => (statusFilter = value)}
-					onTypeChange={(value) => (typeFilter = value)}
+					onStatusChange={(value) => {
+						statusFilter = value;
+						commitLoanListFilters();
+					}}
+					onTypeChange={(value) => {
+						typeFilter = value;
+						commitLoanListFilters();
+					}}
 					{minPrincipal}
 					{maxPrincipal}
-					onMinPrincipalChange={(value) => (minPrincipal = value)}
-					onMaxPrincipalChange={(value) => (maxPrincipal = value)}
+					onMinPrincipalChange={(value) => {
+						minPrincipal = value;
+						commitLoanListFilters();
+					}}
+					onMaxPrincipalChange={(value) => {
+						maxPrincipal = value;
+						commitLoanListFilters();
+					}}
 					{minAvgRate}
 					{maxAvgRate}
-					onMinAvgRateChange={(value) => (minAvgRate = value)}
-					onMaxAvgRateChange={(value) => (maxAvgRate = value)}
+					onMinAvgRateChange={(value) => {
+						minAvgRate = value;
+						commitLoanListFilters();
+					}}
+					onMaxAvgRateChange={(value) => {
+						maxAvgRate = value;
+						commitLoanListFilters();
+					}}
 					{minInterest}
 					{maxInterest}
-					onMinInterestChange={(value) => (minInterest = value)}
-					onMaxInterestChange={(value) => (maxInterest = value)}
+					showInterestRange={showInterestSummary}
+					onMinInterestChange={(value) => {
+						minInterest = value;
+						commitLoanListFilters();
+					}}
+					onMaxInterestChange={(value) => {
+						maxInterest = value;
+						commitLoanListFilters();
+					}}
 					{minTotalAmount}
 					{maxTotalAmount}
-					onMinTotalAmountChange={(value) => (minTotalAmount = value)}
-					onMaxTotalAmountChange={(value) => (maxTotalAmount = value)}
+					onMinTotalAmountChange={(value) => {
+						minTotalAmount = value;
+						commitLoanListFilters();
+					}}
+					onMaxTotalAmountChange={(value) => {
+						maxTotalAmount = value;
+						commitLoanListFilters();
+					}}
 					investorFilterOptions={participantFilters.investorFilterOptions}
 					selectedInvestors={participantFilters.selectedInvestors}
-					onInvestorsChange={(value) => (participantFilters.selectedInvestors = value)}
+					onInvestorsChange={(value) => {
+						participantFilters.selectedInvestors = value;
+						commitLoanListFilters();
+					}}
 					borrowerFilterOptions={participantFilters.borrowerFilterOptions}
 					selectedBorrowers={participantFilters.selectedBorrowers}
-					onBorrowersChange={(value) => (participantFilters.selectedBorrowers = value)}
+					onBorrowersChange={(value) => {
+						participantFilters.selectedBorrowers = value;
+						commitLoanListFilters();
+					}}
 					witnessFilterOptions={participantFilters.witnessFilterOptions}
 					selectedWitnesses={participantFilters.selectedWitnesses}
-					onWitnessesChange={(value) => (participantFilters.selectedWitnesses = value)}
+					onWitnessesChange={(value) => {
+						participantFilters.selectedWitnesses = value;
+						commitLoanListFilters();
+					}}
 				/>
 			{/snippet}
 		</ListPageToolbar>
@@ -992,6 +1115,7 @@
 			from={filterFrom}
 			to={filterTo}
 			showCommission={variant.showCommissionSummary}
+			showInterest={showInterestSummary}
 		/>
 
 		<ConfirmDeleteDialog

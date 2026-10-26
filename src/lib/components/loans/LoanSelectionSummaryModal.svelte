@@ -17,6 +17,7 @@
 		from?: string | null;
 		to?: string | null;
 		showCommission?: boolean;
+		showInterest?: boolean;
 		/** When set, summary cards use this investor's allocations instead of full loan totals. */
 		investorAllocations?: InvestorLoanAllocation[] | null;
 	}
@@ -28,6 +29,7 @@
 		from = null,
 		to = null,
 		showCommission = false,
+		showInterest = true,
 		investorAllocations = null
 	}: Props = $props();
 
@@ -41,8 +43,13 @@
 
 <ResponsiveModal {open} {onOpenChange} title="Summary" contentClass="sm:max-w-4xl">
 	{#if showCommission}
-		<LoanCommissionSummaryCards stats={commissionStats} />
+		<LoanCommissionSummaryCards stats={commissionStats} detailPlace="selection" />
 	{:else}
-		<LoanListSummaryCards stats={summaryStats} />
+		<LoanListSummaryCards
+			stats={summaryStats}
+			{showInterest}
+			detailPlace="selection"
+			detailBasis={investorAllocations ? 'share' : 'loan'}
+		/>
 	{/if}
 </ResponsiveModal>

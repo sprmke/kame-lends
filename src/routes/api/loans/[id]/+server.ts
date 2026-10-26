@@ -322,6 +322,13 @@ export const PUT: RequestHandler = async (event) => {
       } catch (witnessErr) {
         console.error("[groups] default witnesses failed", witnessErr);
       }
+      try {
+        const { applyAutoAttachSignatureToLoan } =
+          await import("$lib/server/signing/auto-attach");
+        await applyAutoAttachSignatureToLoan(loanId);
+      } catch (autoSignErr) {
+        console.error("[signing] auto attach failed", autoSignErr);
+      }
     }
 
     invalidateLoanData();

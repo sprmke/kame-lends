@@ -1,4 +1,4 @@
-import { replaceState } from "$app/navigation";
+import { replaceStateWhenRouterReady } from "$lib/replace-state-when-ready";
 import { untrack } from "svelte";
 import { createDateNavigation } from "$lib/composables/use-date-navigation.svelte";
 import { shouldSkipUrlToDateNavSync } from "$lib/loan-list-date-range-sync";
@@ -127,7 +127,7 @@ export function createLoanListDateRange(
       clearPendingIfUrlMatches();
       return;
     }
-    replaceState(href, getPage().state);
+    replaceStateWhenRouterReady(href, getPage().state);
     clearPendingIfUrlMatches();
   }
 

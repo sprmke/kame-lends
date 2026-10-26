@@ -264,6 +264,13 @@ export const POST: RequestHandler = async (event) => {
         } catch (witnessErr) {
           console.error("[groups] default witnesses failed", witnessErr);
         }
+        try {
+          const { applyAutoAttachSignatureToLoan } =
+            await import("$lib/server/signing/auto-attach");
+          await applyAutoAttachSignatureToLoan(completeLoan.id);
+        } catch (autoSignErr) {
+          console.error("[signing] auto attach failed", autoSignErr);
+        }
         await enqueueGroupLoanChanged(completeLoan.id);
         scheduleDrain(event);
       } catch (groupErr) {
