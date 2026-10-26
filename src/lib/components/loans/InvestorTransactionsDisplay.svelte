@@ -34,7 +34,8 @@
 	import ReceiptThumbnails from '$lib/components/common/ReceiptThumbnails.svelte';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import PaymentNotesField from '$lib/components/payments/PaymentNotesField.svelte';
-	import { hasPaymentReceipt, type PaymentReceipt } from '$lib/payment-receipts';
+	import { hasPaymentReceipt, RECEIPT_REQUIRED_ERROR, type PaymentReceipt } from '$lib/payment-receipts';
+	import { scrollFieldIntoView } from '$lib/scroll-field';
 
 	interface Props {
 		investorsWithTransactions: InvestorWithTransactions[];
@@ -91,6 +92,36 @@
 		receipts: PaymentReceipt[];
 		notes: string;
 	} | null>(null);
+
+	let promptedCompleteReceipt = $state<number | null>(null);
+	let promptedConsolidateReceipt = $state<number | null>(null);
+
+	$effect(() => {
+		const periodId = completeModal?.periodId ?? null;
+		const missing = Boolean(completeModal && !hasPaymentReceipt(completeModal));
+		if (!periodId || !missing) {
+			if (!completeModal && promptedCompleteReceipt !== null) promptedCompleteReceipt = null;
+			return;
+		}
+		if (promptedCompleteReceipt === periodId) return;
+		promptedCompleteReceipt = periodId;
+		queueMicrotask(() => scrollFieldIntoView(`receipt-period-${periodId}`, { block: 'nearest' }));
+	});
+
+	$effect(() => {
+		const modal = editPaymentModal;
+		const periodId = modal?.periodId ?? null;
+		const missing = Boolean(modal && modal.mode === 'consolidate' && !hasPaymentReceipt(modal));
+		if (!periodId || !missing) {
+			if (!modal && promptedConsolidateReceipt !== null) promptedConsolidateReceipt = null;
+			return;
+		}
+		if (promptedConsolidateReceipt === periodId) return;
+		promptedConsolidateReceipt = periodId;
+		queueMicrotask(() =>
+			scrollFieldIntoView(`receipt-consolidate-${periodId}`, { block: 'nearest' })
+		);
+	});
 
 	const loanTotalPrincipal = $derived(computeLoanTotalPrincipal(investorsWithTransactions));
 
@@ -926,9 +957,11 @@
 				/>
 			</div>
 			<ReceiptUploadField
+				fieldId="receipt-period-{completeModal.periodId}"
 				idPrefix="period-{completeModal.periodId}"
 				receipts={completeModal.receipts}
 				required
+				error={hasPaymentReceipt(completeModal) ? null : RECEIPT_REQUIRED_ERROR}
 				disabled={completingPeriods.has(completeModal.periodId)}
 				scanContext={{ purpose: 'received_payment', loanId }}
 				onChange={(receipts) => {
@@ -1025,9 +1058,11 @@
 			</div>
 			{#if editPaymentModal.mode === 'consolidate'}
 				<ReceiptUploadField
+					fieldId="receipt-consolidate-{editPaymentModal.periodId}"
 					idPrefix="consolidate-{editPaymentModal.periodId}"
 					receipts={editPaymentModal.receipts}
 					required
+					error={hasPaymentReceipt(editPaymentModal) ? null : RECEIPT_REQUIRED_ERROR}
 					disabled={editingPaymentPeriodIds.has(editPaymentModal.periodId)}
 					scanContext={{ purpose: 'received_payment', loanId }}
 					onChange={(receipts) => {

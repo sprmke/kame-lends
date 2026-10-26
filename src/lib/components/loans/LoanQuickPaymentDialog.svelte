@@ -19,7 +19,8 @@
 	import type { LoanWithInvestors } from '$lib/types';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
-	import { hasPaymentReceipt, type PaymentReceipt } from '$lib/payment-receipts';
+	import { hasPaymentReceipt, RECEIPT_REQUIRED_ERROR, type PaymentReceipt } from '$lib/payment-receipts';
+	import { scrollFieldIntoView } from '$lib/scroll-field';
 	import type { ReceiptScanContext } from '$lib/receipt-extraction-client';
 	import {
 		groupScannedReceipts,
@@ -304,6 +305,27 @@
 			})
 	);
 
+	let promptedReceiptId = $state<string | null>(null);
+
+	function receiptFieldError(entry: PaymentEntry): string | null {
+		if (!(Number.parseFloat(entry.amount) > 0) || !entry.date?.trim() || hasPaymentReceipt(entry)) {
+			return null;
+		}
+		return RECEIPT_REQUIRED_ERROR;
+	}
+
+	$effect(() => {
+		if (!open || !kind) {
+			if (promptedReceiptId !== null) promptedReceiptId = null;
+			return;
+		}
+		const entry = entries.find((item) => receiptFieldError(item));
+		const id = entry ? `receipt-${kind}-${entry.id}` : null;
+		if (!id || id === promptedReceiptId) return;
+		promptedReceiptId = id;
+		queueMicrotask(() => scrollFieldIntoView(id, { block: 'nearest' }));
+	});
+
 	const lenderOptions = $derived(
 		lenders.map((lender) => ({ value: String(lender.id), label: lender.name }))
 	);
@@ -517,9 +539,11 @@
 					{/if}
 
 					<ReceiptUploadField
+						fieldId="receipt-{kind}-{entry.id}"
 						idPrefix="{kind}-{entry.id}"
 						receipts={entry.receipts}
 						required
+						error={receiptFieldError(entry)}
 						showReading={!entry.scan}
 						disabled={isSubmitting}
 						scanContext={{
