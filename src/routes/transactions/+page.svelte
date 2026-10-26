@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
+	import { createListFilterUrlSync } from '$lib/composables/use-list-filter-url-sync.svelte';
+	import {
+		TRANSACTIONS_LIST_FILTER_KEYS,
+		parseTransactionsListFilterValues,
+		snapshotTransactionsListFilters
+	} from '$lib/transactions-list-filter-params';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
@@ -39,6 +46,10 @@
 	});
 
 	const viewModeState = createResponsiveViewMode();
+	const listFilterSync = createListFilterUrlSync(() => page, {
+		scope: '/transactions',
+		keys: TRANSACTIONS_LIST_FILTER_KEYS
+	});
 	let searchQuery = $state('');
 	let directionFilter = $state<string[]>([]);
 	let selectedInvestors = $state<string[]>([]);
@@ -46,7 +57,42 @@
 	let cardsPerPage = $state(9);
 	let showCreateModal = $state(false);
 
-	onMount(() => viewModeState.init());
+	function applyTransactionFilterValues(
+		values: import('$lib/list-filter-persistence').ListFilterValues
+	) {
+		const parsed = parseTransactionsListFilterValues(values);
+		searchQuery = parsed.searchQuery;
+		directionFilter = parsed.directionFilter;
+		selectedInvestors = parsed.selectedInvestors;
+		if (parsed.view) viewModeState.setViewMode(parsed.view);
+		return snapshotTransactionsListFilters({
+			searchQuery,
+			view: parsed.view ?? viewModeState.viewMode,
+			directionFilter,
+			selectedInvestors
+		});
+	}
+
+	function commitTransactionFilters() {
+		listFilterSync.commit(
+			snapshotTransactionsListFilters({
+				searchQuery,
+				view: viewModeState.viewMode,
+				directionFilter,
+				selectedInvestors
+			})
+		);
+	}
+
+	onMount(() => {
+		viewModeState.init();
+		listFilterSync.bootstrap(applyTransactionFilterValues);
+	});
+
+	$effect(() => {
+		void page.url.search;
+		listFilterSync.watch(applyTransactionFilterValues);
+	});
 
 	const hasActiveFilters = $derived(
 		searchQuery !== '' || directionFilter.length > 0 || selectedInvestors.length > 0
@@ -57,6 +103,8 @@
 		directionFilter = [];
 		selectedInvestors = [];
 		cardsPage = 1;
+		listFilterSync.clearStorage();
+		listFilterSync.commit({});
 	}
 
 	const investorFilterOptions = $derived(
@@ -150,9 +198,13 @@
 			onSearchChange={(value) => {
 				searchQuery = value;
 				cardsPage = 1;
+				commitTransactionFilters();
 			}}
 			viewMode={viewModeState.viewMode}
-			onViewModeChange={(mode) => viewModeState.setViewMode(mode)}
+			onViewModeChange={(mode) => {
+				viewModeState.setViewMode(mode);
+				commitTransactionFilters();
+			}}
 			hasData={(items?.length ?? 0) > 0}
 			showViewToggle={true}
 			{hasActiveFilters}
@@ -165,6 +217,7 @@
 					onChange={(value) => {
 						directionFilter = value;
 						cardsPage = 1;
+						commitTransactionFilters();
 					}}
 					placeholder="Direction"
 					allLabel="All Directions"
@@ -177,6 +230,7 @@
 						onChange={(value) => {
 							selectedInvestors = value;
 							cardsPage = 1;
+							commitTransactionFilters();
 						}}
 						placeholder="All Investors"
 						allLabel="All Investors"

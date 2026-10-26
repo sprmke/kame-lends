@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
+	import { createListFilterUrlSync } from '$lib/composables/use-list-filter-url-sync.svelte';
+	import {
+		WITNESS_LIST_FILTER_KEYS,
+		parseWitnessListFilterValues,
+		snapshotWitnessListFilters
+	} from '$lib/witness-list-filter-params';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
@@ -47,6 +54,10 @@
 	});
 
 	const viewModeState = createResponsiveViewMode();
+	const listFilterSync = createListFilterUrlSync(() => page, {
+		scope: '/witnesses',
+		keys: WITNESS_LIST_FILTER_KEYS
+	});
 	let searchQuery = $state('');
 	let loanActivityFilter = $state<LoanActivityFilter>('all');
 	let signingFilter = $state<WitnessSigningFilter>('all');
@@ -56,7 +67,42 @@
 	let showCreateModal = $state(false);
 	let witnessPendingDeletion = $state<WitnessWithLoans | null>(null);
 
-	onMount(() => viewModeState.init());
+	function applyWitnessFilterValues(
+		values: import('$lib/list-filter-persistence').ListFilterValues
+	) {
+		const parsed = parseWitnessListFilterValues(values);
+		searchQuery = parsed.searchQuery;
+		loanActivityFilter = parsed.loanActivityFilter;
+		signingFilter = parsed.signingFilter;
+		if (parsed.view) viewModeState.setViewMode(parsed.view);
+		return snapshotWitnessListFilters({
+			searchQuery,
+			view: parsed.view ?? viewModeState.viewMode,
+			loanActivityFilter,
+			signingFilter
+		});
+	}
+
+	function commitWitnessFilters() {
+		listFilterSync.commit(
+			snapshotWitnessListFilters({
+				searchQuery,
+				view: viewModeState.viewMode,
+				loanActivityFilter,
+				signingFilter
+			})
+		);
+	}
+
+	onMount(() => {
+		viewModeState.init();
+		listFilterSync.bootstrap(applyWitnessFilterValues);
+	});
+
+	$effect(() => {
+		void page.url.search;
+		listFilterSync.watch(applyWitnessFilterValues);
+	});
 
 	async function refreshWitnesses() {
 		await invalidate('app:witnesses');
@@ -102,6 +148,8 @@
 		searchQuery = '';
 		loanActivityFilter = 'all';
 		signingFilter = 'all';
+		listFilterSync.clearStorage();
+		listFilterSync.commit({});
 	}
 
 	const filteredWitnesses = $derived(
@@ -146,9 +194,15 @@
 		<ListPageToolbar
 			searchValue={searchQuery}
 			searchPlaceholder="Search witnesses..."
-			onSearchChange={(value) => (searchQuery = value)}
+			onSearchChange={(value) => {
+				searchQuery = value;
+				commitWitnessFilters();
+			}}
 			viewMode={viewModeState.viewMode}
-			onViewModeChange={(mode) => viewModeState.setViewMode(mode)}
+			onViewModeChange={(mode) => {
+				viewModeState.setViewMode(mode);
+				commitWitnessFilters();
+			}}
 			hasData={items.length > 0}
 			showViewToggle={true}
 			{hasActiveFilters}
@@ -158,12 +212,18 @@
 				<SingleSelectFilter
 					options={LOAN_ACTIVITY_FILTER_OPTIONS}
 					value={loanActivityFilter}
-					onChange={(value) => (loanActivityFilter = value as LoanActivityFilter)}
+					onChange={(value) => {
+						loanActivityFilter = value as LoanActivityFilter;
+						commitWitnessFilters();
+					}}
 				/>
 				<SingleSelectFilter
 					options={WITNESS_SIGNING_FILTER_OPTIONS}
 					value={signingFilter}
-					onChange={(value) => (signingFilter = value as WitnessSigningFilter)}
+					onChange={(value) => {
+						signingFilter = value as WitnessSigningFilter;
+						commitWitnessFilters();
+					}}
 				/>
 			{/snippet}
 		</ListPageToolbar>

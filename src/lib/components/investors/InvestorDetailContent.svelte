@@ -1,6 +1,17 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
+	import { createListFilterUrlSync } from '$lib/composables/use-list-filter-url-sync.svelte';
+	import type { ListFilterValues } from '$lib/list-filter-persistence';
+	import {
+		INVESTOR_DETAIL_DEBT_FILTER_KEYS,
+		INVESTOR_DETAIL_LOAN_FILTER_KEYS,
+		parseInvestorDetailDebtFilterValues,
+		parseInvestorDetailLoanFilterValues,
+		snapshotInvestorDetailDebtFilters,
+		snapshotInvestorDetailLoanFilters
+	} from '$lib/investor-detail-filter-params';
 	import {
 		isMaturingFundedLoan,
 		isOverdueLoanForDashboard
@@ -43,6 +54,7 @@
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
 	import { computeTotalLot, buildTotalLotMetric } from '$lib/lot-utils';
+	import { investorOverviewDetails } from '$lib/summary-metric-details';
 	import { INVESTOR_DETAIL_SUMMARY_GRID } from '$lib/summary-grid';
 	import { formatCurrency } from '$lib/format';
 	import { downloadLoansPdf } from '$lib/pdf-download';
@@ -78,6 +90,8 @@
 		scopeToInvestor?: boolean;
 		/** When set with scopeToInvestor, match allocations by linked user. */
 		investorUserId?: string | null;
+		/** Group hub can hide interest totals from some members. */
+		showInterestStats?: boolean;
 	}
 
 	let {
@@ -88,7 +102,8 @@
 		embedded = false,
 		showBorrowings = true,
 		scopeToInvestor = true,
-		investorUserId = null
+		investorUserId = null,
+		showInterestStats = true
 	}: Props = $props();
 
 	let pageTab = $state<'overview' | 'loans' | 'debts'>('overview');
@@ -123,6 +138,71 @@
 	const debtsViewMode = createResponsiveViewMode();
 	const loanFormOptions = createLoanFormOptions();
 
+	const investorDetailFilterKeys = [
+		...INVESTOR_DETAIL_LOAN_FILTER_KEYS,
+		...INVESTOR_DETAIL_DEBT_FILTER_KEYS
+	] as const;
+
+	const detailFilterSync = createListFilterUrlSync(() => page, {
+		scope: () => `${page.url.pathname}:detail-filters`,
+		keys: investorDetailFilterKeys
+	});
+
+	function snapshotAllDetailFilters(): ListFilterValues {
+		return {
+			...snapshotInvestorDetailLoanFilters({
+				searchQuery: loanSearchQuery,
+				statusFilter: loanStatusFilter,
+				typeFilter: loanTypeFilter,
+				freeLotFilter,
+				minPrincipal,
+				maxPrincipal,
+				minAvgRate,
+				maxAvgRate,
+				minInterest,
+				maxInterest,
+				minTotalAmount,
+				maxTotalAmount
+			}),
+			...snapshotInvestorDetailDebtFilters({
+				searchQuery: debtSearchQuery,
+				showPastDebts,
+				intervalFilter: debtIntervalFilter,
+				minAmount: minDebtAmount,
+				maxAmount: maxDebtAmount
+			})
+		};
+	}
+
+	function applyDetailFilterValues(values: ListFilterValues): ListFilterValues {
+		const loan = parseInvestorDetailLoanFilterValues(values);
+		loanSearchQuery = loan.searchQuery;
+		loanStatusFilter = loan.statusFilter;
+		loanTypeFilter = loan.typeFilter;
+		freeLotFilter = loan.freeLotFilter;
+		minPrincipal = loan.minPrincipal;
+		maxPrincipal = loan.maxPrincipal;
+		minAvgRate = loan.minAvgRate;
+		maxAvgRate = loan.maxAvgRate;
+		minInterest = loan.minInterest;
+		maxInterest = loan.maxInterest;
+		minTotalAmount = loan.minTotalAmount;
+		maxTotalAmount = loan.maxTotalAmount;
+
+		const debt = parseInvestorDetailDebtFilterValues(values);
+		debtSearchQuery = debt.searchQuery;
+		showPastDebts = debt.showPastDebts;
+		debtIntervalFilter = debt.intervalFilter;
+		minDebtAmount = debt.minAmount;
+		maxDebtAmount = debt.maxAmount;
+
+		return snapshotAllDetailFilters();
+	}
+
+	function commitDetailFilters() {
+		detailFilterSync.commit(snapshotAllDetailFilters());
+	}
+
 	const canBulkSelect = $derived(canManage && SHOW_GROUPS_UI);
 
 	const dateRangeState = createLoanListDateRange(() => page, () => ({
@@ -135,6 +215,15 @@
 	const groupsIndex = $derived(
 		((page.data as { groupsIndex?: GroupsIndexItem[] }).groupsIndex ?? []) as GroupsIndexItem[]
 	);
+
+	onMount(() => {
+		detailFilterSync.bootstrap(applyDetailFilterValues);
+	});
+
+	$effect(() => {
+		void page.url.search;
+		detailFilterSync.watch(applyDetailFilterValues);
+	});
 
 	$effect(() => isMobileShell.init());
 	$effect(() => debtsViewMode.init());
@@ -261,8 +350,10 @@
 			if (maxPrincipal !== '' && totalPrincipal > parseFloat(maxPrincipal)) return false;
 			if (minAvgRate !== '' && avgRate < parseFloat(minAvgRate)) return false;
 			if (maxAvgRate !== '' && avgRate > parseFloat(maxAvgRate)) return false;
-			if (minInterest !== '' && totalInterest < parseFloat(minInterest)) return false;
-			if (maxInterest !== '' && totalInterest > parseFloat(maxInterest)) return false;
+			if (showInterestStats && minInterest !== '' && totalInterest < parseFloat(minInterest))
+				return false;
+			if (showInterestStats && maxInterest !== '' && totalInterest > parseFloat(maxInterest))
+				return false;
 			if (minTotalAmount !== '' && totalAmount < parseFloat(minTotalAmount)) return false;
 			if (maxTotalAmount !== '' && totalAmount > parseFloat(maxTotalAmount)) return false;
 			return true;
@@ -395,6 +486,7 @@
 		if (pageTab === 'loans') {
 			dateRangeState.clearDateFilter();
 		}
+		commitDetailFilters();
 	}
 
 	function clearDebtFilters() {
@@ -403,6 +495,7 @@
 		debtIntervalFilter = [];
 		minDebtAmount = '';
 		maxDebtAmount = '';
+		commitDetailFilters();
 	}
 
 	const hasActiveAdvancedLoanFilters = $derived(
@@ -414,8 +507,8 @@
 				maxPrincipal,
 				minAvgRate,
 				maxAvgRate,
-				minInterest,
-				maxInterest,
+				minInterest: showInterestStats ? minInterest : '',
+				maxInterest: showInterestStats ? maxInterest : '',
 				minTotalAmount,
 				maxTotalAmount
 			})
@@ -469,12 +562,14 @@
 				metrics={[
 					{
 						label: 'Total Capital',
+						detail: investorOverviewDetails.totalCapital,
 						amount: overviewStats.totalCapital,
 						subCount: overviewStats.totalLoanCount,
 						subCountSuffix: ' loans'
 					},
 					{
 						label: 'Active',
+						detail: investorOverviewDetails.active,
 						amount: overviewStats.activeCapital,
 						subCount: overviewStats.activeLoansCount,
 						subCountSuffix: ' loans'
@@ -483,6 +578,7 @@
 						? [
 								{
 									label: 'Active Bank Loans',
+									detail: investorOverviewDetails.activeBankLoans,
 									amount: debtStats.activePrincipal,
 									subCount: debtStats.activeCount,
 									subCountSuffix: ' bank loans',
@@ -490,31 +586,43 @@
 								},
 								{
 									label: 'Bank Loan Cost Paid',
+									detail: investorOverviewDetails.bankLoanCostPaid,
 									amount: debtStats.interestPaid,
 									subValue: 'Interest and fees paid',
 									empty: debtStats.totalCount === 0
 								}
 							]
 						: []),
-					{
-						label: 'Interest Estimate',
-						amount: overviewStats.interestEstimate
-					},
-					{
-						label: 'Interest Earned',
-						amount: overviewStats.interestEarned,
-						subValue: 'Completed loans',
-						valueClassName: 'text-chart-2'
-					},
-					{
-						label: 'Net Earnings',
-						amount: overviewStats.netEarnings,
-						subValue:
-							debtStats.totalCount > 0
-								? 'Loan interest - Bank loan cost'
-								: 'Loan interest scheduled',
-						valueClassName: overviewStats.netEarnings >= 0 ? undefined : 'text-chart-3'
-					},
+					...(showInterestStats
+						? [
+								{
+									label: 'Interest Estimate',
+									detail: investorOverviewDetails.interestEstimate,
+									amount: overviewStats.interestEstimate
+								},
+								{
+									label: 'Interest Earned',
+									detail: investorOverviewDetails.interestEarned,
+									amount: overviewStats.interestEarned,
+									subValue: 'Completed loans',
+									valueClassName: 'text-chart-2'
+								},
+								{
+									label: 'Net Earnings',
+									detail:
+										debtStats.totalCount > 0
+											? investorOverviewDetails.netWithBank
+											: investorOverviewDetails.netWithoutBank,
+									amount: overviewStats.netEarnings,
+									subValue:
+										debtStats.totalCount > 0
+											? 'Loan interest - Bank loan cost'
+											: 'Loan interest scheduled',
+									valueClassName:
+										overviewStats.netEarnings >= 0 ? undefined : 'text-chart-3'
+								}
+							]
+						: []),
 					buildTotalLotMetric(overviewStats.totalLot, overviewStats.totalLotWithDepacto)
 				]}
 			/>
@@ -531,7 +639,10 @@
 			<ListPageToolbar
 				searchValue={loanSearchQuery}
 				searchPlaceholder="Search loans by name or notes..."
-				onSearchChange={(v) => (loanSearchQuery = v)}
+				onSearchChange={(v) => {
+					loanSearchQuery = v;
+					commitDetailFilters();
+				}}
 				hasActiveFilters={hasActiveLoanFilters}
 				onClearFilters={clearLoanFilters}
 				showMoreFilters={showMoreLoanFilters}
@@ -585,30 +696,65 @@
 					<LoanListMoreFiltersPanel
 						statusFilter={loanStatusFilter}
 						typeFilter={loanTypeFilter}
-						onStatusChange={(v) => (loanStatusFilter = v)}
-						onTypeChange={(v) => (loanTypeFilter = v)}
+						onStatusChange={(v) => {
+							loanStatusFilter = v;
+							commitDetailFilters();
+						}}
+						onTypeChange={(v) => {
+							loanTypeFilter = v;
+							commitDetailFilters();
+						}}
 						{minPrincipal}
 						{maxPrincipal}
-						onMinPrincipalChange={(v) => (minPrincipal = v)}
-						onMaxPrincipalChange={(v) => (maxPrincipal = v)}
+						onMinPrincipalChange={(v) => {
+							minPrincipal = v;
+							commitDetailFilters();
+						}}
+						onMaxPrincipalChange={(v) => {
+							maxPrincipal = v;
+							commitDetailFilters();
+						}}
 						{minAvgRate}
 						{maxAvgRate}
-						onMinAvgRateChange={(v) => (minAvgRate = v)}
-						onMaxAvgRateChange={(v) => (maxAvgRate = v)}
+						onMinAvgRateChange={(v) => {
+							minAvgRate = v;
+							commitDetailFilters();
+						}}
+						onMaxAvgRateChange={(v) => {
+							maxAvgRate = v;
+							commitDetailFilters();
+						}}
 						{minInterest}
 						{maxInterest}
-						onMinInterestChange={(v) => (minInterest = v)}
-						onMaxInterestChange={(v) => (maxInterest = v)}
+						showInterestRange={showInterestStats}
+						onMinInterestChange={(v) => {
+							minInterest = v;
+							commitDetailFilters();
+						}}
+						onMaxInterestChange={(v) => {
+							maxInterest = v;
+							commitDetailFilters();
+						}}
 						{minTotalAmount}
 						{maxTotalAmount}
-						onMinTotalAmountChange={(v) => (minTotalAmount = v)}
-						onMaxTotalAmountChange={(v) => (maxTotalAmount = v)}
+						onMinTotalAmountChange={(v) => {
+							minTotalAmount = v;
+							commitDetailFilters();
+						}}
+						onMaxTotalAmountChange={(v) => {
+							maxTotalAmount = v;
+							commitDetailFilters();
+						}}
 					/>
 				{/snippet}
 			</ListPageToolbar>
 
 			{#if loansTabSummaryStats}
-				<LoanListSummaryCards stats={loansTabSummaryStats} />
+				<LoanListSummaryCards
+					stats={loansTabSummaryStats}
+					showInterest={showInterestStats}
+					detailBasis={scopeToInvestor ? 'share' : 'loan'}
+				/>
 			{/if}
 
 			<LoansTable
@@ -663,6 +809,7 @@
 				from={filterFrom}
 				to={filterTo}
 				investorAllocations={scopeToInvestor ? selectedInvestorAllocations : null}
+				showInterest={showInterestStats}
 			/>
 		</Tabs.Content>
 
@@ -671,7 +818,10 @@
 			<div class="mobile-list-toolbar">
 				<SearchFilter
 					value={debtSearchQuery}
-					onChange={(v) => (debtSearchQuery = v)}
+					onChange={(v) => {
+						debtSearchQuery = v;
+						commitDetailFilters();
+					}}
 					placeholder="Search bank loans..."
 					class="min-w-0 flex-1 lg:min-w-[12rem]"
 				/>
@@ -714,8 +864,14 @@
 						label="Principal Amount"
 						minValue={minDebtAmount}
 						maxValue={maxDebtAmount}
-						onMinChange={(v) => (minDebtAmount = v)}
-						onMaxChange={(v) => (maxDebtAmount = v)}
+						onMinChange={(v) => {
+							minDebtAmount = v;
+							commitDetailFilters();
+						}}
+						onMaxChange={(v) => {
+							maxDebtAmount = v;
+							commitDetailFilters();
+						}}
 						minPlaceholder="Min (₱)"
 						maxPlaceholder="Max (₱)"
 					/>

@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
+	import { createListFilterUrlSync } from '$lib/composables/use-list-filter-url-sync.svelte';
+	import {
+		DEBTS_LIST_FILTER_KEYS,
+		parseDebtsListFilterValues,
+		snapshotDebtsListFilters
+	} from '$lib/debts-list-filter-params';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
@@ -53,6 +60,10 @@
 	});
 
 	const viewModeState = createResponsiveViewMode();
+	const listFilterSync = createListFilterUrlSync(() => page, {
+		scope: '/debts',
+		keys: DEBTS_LIST_FILTER_KEYS
+	});
 	let searchQuery = $state('');
 	let showPastDebts = $state(false);
 	let intervalFilter = $state<string[]>([]);
@@ -67,8 +78,43 @@
 	let editingDebt = $state<DebtWithInvestor | null>(null);
 	let editSubmitting = $state(false);
 
+	function applyDebtsFilterValues(values: import('$lib/list-filter-persistence').ListFilterValues) {
+		const parsed = parseDebtsListFilterValues(values);
+		searchQuery = parsed.searchQuery;
+		showPastDebts = parsed.showPastDebts;
+		intervalFilter = parsed.intervalFilter;
+		selectedInvestors = parsed.selectedInvestors;
+		minAmount = parsed.minAmount;
+		maxAmount = parsed.maxAmount;
+		if (parsed.view) viewModeState.setViewMode(parsed.view);
+		return snapshotDebtsListFilters({
+			searchQuery,
+			view: parsed.view ?? viewModeState.viewMode,
+			showPastDebts,
+			intervalFilter,
+			selectedInvestors,
+			minAmount,
+			maxAmount
+		});
+	}
+
+	function commitDebtsFilters() {
+		listFilterSync.commit(
+			snapshotDebtsListFilters({
+				searchQuery,
+				view: viewModeState.viewMode,
+				showPastDebts,
+				intervalFilter,
+				selectedInvestors,
+				minAmount,
+				maxAmount
+			})
+		);
+	}
+
 	onMount(async () => {
 		viewModeState.init();
+		listFilterSync.bootstrap(applyDebtsFilterValues);
 		try {
 			const response = await fetch('/api/investors?simple=true');
 			const investorData = await response.json();
@@ -80,6 +126,11 @@
 		} catch (error) {
 			console.error('Failed to load investors', error);
 		}
+	});
+
+	$effect(() => {
+		void page.url.search;
+		listFilterSync.watch(applyDebtsFilterValues);
 	});
 
 	async function refreshDebts() {
@@ -129,6 +180,8 @@
 		selectedInvestors = [];
 		minAmount = '';
 		maxAmount = '';
+		listFilterSync.clearStorage();
+		listFilterSync.commit({});
 	}
 
 	const hasActiveAmountFilters = $derived(
@@ -201,9 +254,15 @@
 		<ListPageToolbar
 			searchValue={searchQuery}
 			searchPlaceholder="Search bank loans..."
-			onSearchChange={(value) => (searchQuery = value)}
+			onSearchChange={(value) => {
+				searchQuery = value;
+				commitDebtsFilters();
+			}}
 			viewMode={viewModeState.viewMode}
-			onViewModeChange={(mode) => viewModeState.setViewMode(mode)}
+			onViewModeChange={(mode) => {
+				viewModeState.setViewMode(mode);
+				commitDebtsFilters();
+			}}
 			hasData={items.length > 0}
 			showViewToggle={true}
 			{hasActiveFilters}
@@ -217,14 +276,20 @@
 					<SingleSelectFilter
 						options={REPAYMENT_FILTER_OPTIONS}
 						value={showPastDebts ? 'show' : 'hide'}
-						onChange={(value) => (showPastDebts = value === 'show')}
+						onChange={(value) => {
+							showPastDebts = value === 'show';
+							commitDebtsFilters();
+						}}
 					/>
 				</div>
 				<div class="hidden shrink-0 xl:block">
 					<MultiSelectFilter
 						options={DEBT_INTERVAL_FILTER_OPTIONS}
 						selected={intervalFilter}
-						onChange={(value) => (intervalFilter = value)}
+						onChange={(value) => {
+							intervalFilter = value;
+							commitDebtsFilters();
+						}}
 						placeholder="Accrual Period"
 						allLabel="All Periods"
 						triggerClassName={LIST_FILTER_DESKTOP_TRIGGER_CLASS}
@@ -234,16 +299,31 @@
 			{#snippet moreFilters()}
 				<DebtsMoreFiltersPanel
 					{showPastDebts}
-					onShowPastDebtsChange={(value) => (showPastDebts = value)}
+					onShowPastDebtsChange={(value) => {
+						showPastDebts = value;
+						commitDebtsFilters();
+					}}
 					{intervalFilter}
-					onIntervalChange={(value) => (intervalFilter = value)}
+					onIntervalChange={(value) => {
+						intervalFilter = value;
+						commitDebtsFilters();
+					}}
 					{minAmount}
 					{maxAmount}
-					onMinAmountChange={(value) => (minAmount = value)}
-					onMaxAmountChange={(value) => (maxAmount = value)}
+					onMinAmountChange={(value) => {
+						minAmount = value;
+						commitDebtsFilters();
+					}}
+					onMaxAmountChange={(value) => {
+						maxAmount = value;
+						commitDebtsFilters();
+					}}
 					{investorFilterOptions}
 					{selectedInvestors}
-					onInvestorsChange={(value) => (selectedInvestors = value)}
+					onInvestorsChange={(value) => {
+						selectedInvestors = value;
+						commitDebtsFilters();
+					}}
 				/>
 			{/snippet}
 		</ListPageToolbar>

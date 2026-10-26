@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
+	import { createListFilterUrlSync } from '$lib/composables/use-list-filter-url-sync.svelte';
+	import {
+		PARTICIPANT_LIST_FILTER_KEYS,
+		parseParticipantListFilterValues,
+		snapshotParticipantListFilters
+	} from '$lib/participant-list-filter-params';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import ConfirmDeleteDialog from '$lib/components/common/ConfirmDeleteDialog.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -45,13 +52,49 @@
 	});
 
 	const viewModeState = createResponsiveViewMode();
+	const listFilterSync = createListFilterUrlSync(() => page, {
+		scope: '/investors',
+		keys: PARTICIPANT_LIST_FILTER_KEYS
+	});
 	let searchQuery = $state('');
 	let exposureFilter = $state<ParticipantExposureFilter>('all');
 	let investorPendingDeletion = $state<InvestorWithLoans | null>(null);
 	let showFormModal = $state(false);
 	let editingInvestor = $state<InvestorWithLoans | null>(null);
 
-	onMount(() => viewModeState.init());
+	function applyInvestorFilterValues(
+		values: import('$lib/list-filter-persistence').ListFilterValues
+	) {
+		const parsed = parseParticipantListFilterValues(values);
+		searchQuery = parsed.searchQuery;
+		exposureFilter = parsed.exposureFilter;
+		if (parsed.view) viewModeState.setViewMode(parsed.view);
+		return snapshotParticipantListFilters({
+			searchQuery,
+			view: parsed.view ?? viewModeState.viewMode,
+			exposureFilter
+		});
+	}
+
+	function commitInvestorFilters() {
+		listFilterSync.commit(
+			snapshotParticipantListFilters({
+				searchQuery,
+				view: viewModeState.viewMode,
+				exposureFilter
+			})
+		);
+	}
+
+	onMount(() => {
+		viewModeState.init();
+		listFilterSync.bootstrap(applyInvestorFilterValues);
+	});
+
+	$effect(() => {
+		void page.url.search;
+		listFilterSync.watch(applyInvestorFilterValues);
+	});
 
 	async function refreshInvestors() {
 		await invalidate('app:investors');
@@ -96,6 +139,8 @@
 	function clearFilters() {
 		searchQuery = '';
 		exposureFilter = 'all';
+		listFilterSync.clearStorage();
+		listFilterSync.commit({});
 	}
 
 	const filteredInvestors = $derived(
@@ -145,9 +190,15 @@
 		<ListPageToolbar
 			searchValue={searchQuery}
 			searchPlaceholder="Search investors..."
-			onSearchChange={(value) => (searchQuery = value)}
+			onSearchChange={(value) => {
+				searchQuery = value;
+				commitInvestorFilters();
+			}}
 			viewMode={viewModeState.viewMode}
-			onViewModeChange={(mode) => viewModeState.setViewMode(mode)}
+			onViewModeChange={(mode) => {
+				viewModeState.setViewMode(mode);
+				commitInvestorFilters();
+			}}
 			hasData={items.length > 0}
 			showViewToggle={true}
 			{hasActiveFilters}
@@ -157,7 +208,10 @@
 				<SingleSelectFilter
 					options={PARTICIPANT_EXPOSURE_FILTER_OPTIONS}
 					value={exposureFilter}
-					onChange={(value) => (exposureFilter = value as ParticipantExposureFilter)}
+					onChange={(value) => {
+						exposureFilter = value as ParticipantExposureFilter;
+						commitInvestorFilters();
+					}}
 				/>
 			{/snippet}
 		</ListPageToolbar>

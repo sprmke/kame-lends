@@ -8,6 +8,7 @@
 	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
 	import { calculateBorrowerStats } from '$lib/calculations';
 	import { buildTotalLotMetric } from '$lib/lot-utils';
+	import { borrowerMetricDetails } from '$lib/summary-metric-details';
 	import { BORROWER_DETAIL_SUMMARY_GRID } from '$lib/summary-grid';
 	import { cn } from '$lib/utils';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
@@ -66,22 +67,26 @@
 			metrics={[
 				{
 					label: 'Active Balance',
+					detail: borrowerMetricDetails.activeBalance,
 					amount: stats.activePrincipal,
 					subCount: stats.openLoans,
 					subCountSuffix: ' open loans'
 				},
 				{
 					label: 'Interest',
+					detail: borrowerMetricDetails.interest,
 					amount: stats.activeInterest,
 					subValue: 'Open loans'
 				},
 				{
 					label: 'Total Due',
+					detail: borrowerMetricDetails.totalDue,
 					amount: stats.activeTotal,
 					subValue: 'Principal + interest'
 				},
 				{
 					label: 'Overdue',
+					detail: borrowerMetricDetails.overdue,
 					amount: stats.overdueAmount,
 					subCount: stats.overdueLoans,
 					subCountSuffix: stats.overdueLoans === 1 ? ' loan' : ' loans',
@@ -90,6 +95,7 @@
 				},
 				{
 					label: 'Completed',
+					detail: borrowerMetricDetails.completed,
 					value: String(stats.completedLoans),
 					subValue: stats.completedLoans === 1 ? 'Loan closed' : 'Loans closed',
 					empty: stats.completedLoans === 0

@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
+	import { createListFilterUrlSync } from '$lib/composables/use-list-filter-url-sync.svelte';
+	import {
+		PARTICIPANT_LIST_FILTER_KEYS,
+		parseParticipantListFilterValues,
+		snapshotParticipantListFilters
+	} from '$lib/participant-list-filter-params';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
@@ -43,6 +50,10 @@
 	});
 
 	const viewModeState = createResponsiveViewMode();
+	const listFilterSync = createListFilterUrlSync(() => page, {
+		scope: '/borrowers',
+		keys: PARTICIPANT_LIST_FILTER_KEYS
+	});
 	let searchQuery = $state('');
 	let exposureFilter = $state<ParticipantExposureFilter>('all');
 	let selectedBorrower = $state<BorrowerWithLoans | null>(null);
@@ -51,7 +62,39 @@
 	let showCreateModal = $state(false);
 	let borrowerPendingDeletion = $state<BorrowerWithLoans | null>(null);
 
-	onMount(() => viewModeState.init());
+	function applyBorrowerFilterValues(
+		values: import('$lib/list-filter-persistence').ListFilterValues
+	) {
+		const parsed = parseParticipantListFilterValues(values);
+		searchQuery = parsed.searchQuery;
+		exposureFilter = parsed.exposureFilter;
+		if (parsed.view) viewModeState.setViewMode(parsed.view);
+		return snapshotParticipantListFilters({
+			searchQuery,
+			view: parsed.view ?? viewModeState.viewMode,
+			exposureFilter
+		});
+	}
+
+	function commitBorrowerFilters() {
+		listFilterSync.commit(
+			snapshotParticipantListFilters({
+				searchQuery,
+				view: viewModeState.viewMode,
+				exposureFilter
+			})
+		);
+	}
+
+	onMount(() => {
+		viewModeState.init();
+		listFilterSync.bootstrap(applyBorrowerFilterValues);
+	});
+
+	$effect(() => {
+		void page.url.search;
+		listFilterSync.watch(applyBorrowerFilterValues);
+	});
 
 	async function refreshBorrowers() {
 		await invalidate('app:borrowers');
@@ -94,6 +137,8 @@
 	function clearFilters() {
 		searchQuery = '';
 		exposureFilter = 'all';
+		listFilterSync.clearStorage();
+		listFilterSync.commit({});
 	}
 
 	const filteredBorrowers = $derived(
@@ -135,9 +180,15 @@
 		<ListPageToolbar
 			searchValue={searchQuery}
 			searchPlaceholder="Search borrowers..."
-			onSearchChange={(value) => (searchQuery = value)}
+			onSearchChange={(value) => {
+				searchQuery = value;
+				commitBorrowerFilters();
+			}}
 			viewMode={viewModeState.viewMode}
-			onViewModeChange={(mode) => viewModeState.setViewMode(mode)}
+			onViewModeChange={(mode) => {
+				viewModeState.setViewMode(mode);
+				commitBorrowerFilters();
+			}}
 			hasData={items.length > 0}
 			showViewToggle={true}
 			{hasActiveFilters}
@@ -147,7 +198,10 @@
 				<SingleSelectFilter
 					options={PARTICIPANT_EXPOSURE_FILTER_OPTIONS}
 					value={exposureFilter}
-					onChange={(value) => (exposureFilter = value as ParticipantExposureFilter)}
+					onChange={(value) => {
+						exposureFilter = value as ParticipantExposureFilter;
+						commitBorrowerFilters();
+					}}
 				/>
 			{/snippet}
 		</ListPageToolbar>
