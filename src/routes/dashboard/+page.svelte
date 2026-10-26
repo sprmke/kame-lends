@@ -12,6 +12,7 @@
 	import CurrencyBarChart from '$lib/components/charts/CurrencyBarChart.svelte';
 	import LoanTypePieChart from '$lib/components/charts/LoanTypePieChart.svelte';
 	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
+	import { dashboardMetricDetails } from '$lib/summary-metric-details';
 	import { SHOW_GROUPS_UI, SHOW_TRANSACTIONS_UI } from '$lib/feature-flags';
 	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
 	import { page } from '$app/state';
@@ -46,18 +47,22 @@
 			metrics={[
 				{
 					label: 'Total Principal',
+					detail: dashboardMetricDetails.totalPrincipal,
 					amount: summary.totalPrincipal
 				},
 				{
 					label: 'Active',
+					detail: dashboardMetricDetails.active,
 					amount: summary.activePrincipal
 				},
 				{
 					label: 'Interest Estimate',
+					detail: dashboardMetricDetails.interestEstimate,
 					amount: summary.interestEstimate
 				},
 				{
 					label: 'Interest Earned',
+					detail: dashboardMetricDetails.interestEarned,
 					amount: summary.interestEarned,
 					valueClassName: 'text-chart-2'
 				}

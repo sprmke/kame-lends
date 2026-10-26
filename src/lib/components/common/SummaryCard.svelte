@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { IconComponent } from '$lib/types/icon';
+	import MetricDetail from '$lib/components/common/MetricDetail.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { cn } from '$lib/utils';
 	import { getOddLastVisibleMobileSpan, getSummaryMetricGridCols } from '$lib/summary-grid';
@@ -8,6 +9,8 @@
 
 	export interface MetricItem {
 		label: string;
+		/** Short explanation of how this figure is computed. */
+		detail?: string;
 		value?: string;
 		amount?: number;
 		subValue?: string;
@@ -87,16 +90,21 @@
 				)}
 			>
 				<div class="flex items-center justify-between gap-2">
-					<p class="text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
+					<p class="min-w-0 text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
 						{metric.label}
 					</p>
-					<div
-						class={cn(
-							'icon-well-sm shrink-0 transition-transform duration-300 group-hover:scale-105',
-							metric.accentClassName ?? defaults.accentClassName
-						)}
-					>
-						<Icon class="h-3 w-3" />
+					<div class="flex shrink-0 items-center gap-1">
+						{#if metric.detail}
+							<MetricDetail label={metric.label} detail={metric.detail} />
+						{/if}
+						<div
+							class={cn(
+								'icon-well-sm shrink-0 transition-transform duration-300 group-hover:scale-105',
+								metric.accentClassName ?? defaults.accentClassName
+							)}
+						>
+							<Icon class="h-3 w-3" />
+						</div>
 					</div>
 				</div>
 				<p

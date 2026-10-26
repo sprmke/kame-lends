@@ -8,6 +8,7 @@
 	import { cn } from '$lib/utils';
 	import type { LoanWithInvestors, LoanType } from '$lib/types';
 	import { calculateOverdueAmount } from '$lib/calculations';
+	import { overdueLoansListHref } from '$lib/loan-list-overdue-filter';
 	import { TriangleAlert } from 'lucide-svelte';
 
 	interface Props {
@@ -60,7 +61,9 @@
 	icon={TriangleAlert}
 	accentClassName="bg-destructive/12"
 	iconClassName="text-destructive"
-	onViewAllClick={() => (window.location.href = '/loans?view=table&status=Overdue')}
+	onViewAllClick={() => {
+		window.location.href = overdueLoansListHref('/loans', loans, { view: 'table' });
+	}}
 >
 	{@render listContent()}
 </ActivityPanelCard>
