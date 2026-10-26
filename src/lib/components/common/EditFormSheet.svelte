@@ -10,6 +10,8 @@
 		description?: string;
 		formId?: string;
 		isSubmitting: boolean;
+		submitDisabled?: boolean;
+		error?: string | null;
 		isEditMode: boolean;
 		submitLabel?: string;
 		contentClass?: string;
@@ -23,6 +25,8 @@
 		description,
 		formId,
 		isSubmitting,
+		submitDisabled = false,
+		error = null,
 		isEditMode,
 		submitLabel,
 		contentClass = 'dashboard-dialog-wide !max-w-4xl',
@@ -38,6 +42,8 @@
 			{formId}
 			onCancel={() => onOpenChange(false)}
 			{isSubmitting}
+			{submitDisabled}
+			{error}
 			{isEditMode}
 			{submitLabel}
 			variant="embedded"

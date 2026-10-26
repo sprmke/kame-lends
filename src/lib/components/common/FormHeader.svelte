@@ -11,6 +11,9 @@
 		/** When set, submit uses the `form` attribute (header actions outside the form). */
 		formId?: string;
 		isSubmitting: boolean;
+		submitDisabled?: boolean;
+		/** Why submit is blocked. Shown under the description. */
+		error?: string | null;
 		isEditMode: boolean;
 		submitLabel?: string;
 		cancelLabel?: string;
@@ -28,6 +31,8 @@
 		onSubmit: _onSubmit,
 		formId,
 		isSubmitting,
+		submitDisabled = false,
+		error = null,
 		isEditMode,
 		submitLabel,
 		cancelLabel = 'Cancel',
@@ -59,12 +64,17 @@
 		{#if description}
 			<p class="mt-1 text-sm text-muted-foreground">{formatText(description)}</p>
 		{/if}
+		{#if error}
+			<p class="mt-1 text-sm font-medium text-destructive" role="alert">{error}</p>
+		{/if}
 	</div>
 
 	<FormActions
 		{onCancel}
 		{formId}
 		{isSubmitting}
+		{submitDisabled}
+		{error}
 		submitLabel={resolvedSubmitLabel}
 		{cancelLabel}
 		layout="inline"

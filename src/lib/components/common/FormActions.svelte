@@ -6,7 +6,11 @@
 		onCancel: () => void;
 		formId?: string;
 		isSubmitting: boolean;
+		/** Keep the label, but block another submit while validation errors are showing. */
+		submitDisabled?: boolean;
 		submitLabel: string;
+		/** Shown above the buttons when the submit action is blocked. */
+		error?: string | null;
 		cancelLabel?: string;
 		/** stacked = full-width column (sheet / phone). inline = row. responsive = column below sm, row at sm+. */
 		layout?: 'stacked' | 'inline' | 'responsive';
@@ -17,7 +21,9 @@
 		onCancel,
 		formId,
 		isSubmitting,
+		submitDisabled = false,
 		submitLabel,
+		error = null,
 		cancelLabel = 'Cancel',
 		layout = 'responsive',
 		class: className
@@ -26,6 +32,8 @@
 	const isStacked = $derived(layout === 'stacked');
 	const isInline = $derived(layout === 'inline');
 	const isResponsive = $derived(layout === 'responsive');
+
+	const submitBlocked = $derived(isSubmitting || submitDisabled);
 
 	const buttonClass = $derived(
 		cn(
@@ -39,24 +47,37 @@
 
 <div
 	class={cn(
-		'form-actions flex gap-3',
-		isStacked && 'mt-4 w-full flex-col-reverse border-t border-border/60 pt-4 pb-safe',
-		isInline && 'w-auto shrink-0 flex-row items-center',
-		isResponsive &&
-			'mt-4 w-full flex-col-reverse border-t border-border/60 pt-4 pb-safe sm:flex-row sm:items-center sm:border-t-0 sm:pt-0 sm:pb-0',
+		'form-actions',
+		isStacked && 'mt-4 w-full border-t border-border/60 pt-4 pb-safe',
+		isInline && 'w-auto shrink-0',
+		isResponsive && 'mt-4 w-full border-t border-border/60 pt-4 pb-safe sm:border-t-0 sm:pt-0 sm:pb-0',
 		className
 	)}
 >
-	<Button
-		type="button"
-		variant="outline"
-		onclick={onCancel}
-		disabled={isSubmitting}
-		class={buttonClass}
+	{#if error}
+		<p class={cn('text-sm font-medium text-destructive', isInline ? 'sr-only' : 'mb-3')}>
+			{error}
+		</p>
+	{/if}
+	<div
+		class={cn(
+			'flex gap-3',
+			isStacked && 'flex-col-reverse',
+			isInline && 'flex-row items-center',
+			isResponsive && 'flex-col-reverse sm:flex-row sm:items-center'
+		)}
 	>
-		{cancelLabel}
-	</Button>
-	<Button type="submit" form={formId} disabled={isSubmitting} class={buttonClass}>
-		{submitLabel}
-	</Button>
+		<Button
+			type="button"
+			variant="outline"
+			onclick={onCancel}
+			disabled={isSubmitting}
+			class={buttonClass}
+		>
+			{cancelLabel}
+		</Button>
+		<Button type="submit" form={formId} disabled={submitBlocked} class={buttonClass}>
+			{submitLabel}
+		</Button>
+	</div>
 </div>
