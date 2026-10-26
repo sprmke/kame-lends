@@ -8,7 +8,7 @@
 		loan: LoanWithInvestors;
 		onclick: () => void;
 		formatCurrency: (amount: number) => string;
-		investors: Array<{ name: string; amount: number }>;
+		investors: Array<{ name: string; amount: number; note?: string }>;
 		totalAmount: number;
 		size?: 'sm' | 'md' | 'lg';
 		isFuture?: boolean;
@@ -100,6 +100,9 @@
 							<span class="font-semibold">{formatText(inv.name)}:</span>
 							<span class="tabular-nums">{formatCurrency(inv.amount)}</span>
 						</span>
+						{#if inv.note}
+							<span class="shrink-0 tabular-nums text-muted-foreground">{inv.note}</span>
+						{/if}
 					</div>
 				{/each}
 			</div>

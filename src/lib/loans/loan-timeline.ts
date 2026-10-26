@@ -93,6 +93,22 @@ export function dayInRange(
   return true;
 }
 
+/** One muted subtitle line: investors, then borrower when both exist. */
+export function timelinePartyLine(loan: LoanWithInvestors): string {
+  const investorNames = [
+    ...new Set(
+      loan.loanInvestors
+        .map((row) => row.investor.name.trim())
+        .filter((name) => name.length > 0),
+    ),
+  ];
+  const borrowerName = loan.borrower?.name?.trim() ?? "";
+  const parts: string[] = [];
+  if (investorNames.length > 0) parts.push(investorNames.join(", "));
+  if (borrowerName) parts.push(borrowerName);
+  return parts.join(" · ");
+}
+
 export function timelineDayParts(dateKey: string): {
   day: string;
   weekday: string;

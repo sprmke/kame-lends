@@ -8,6 +8,7 @@
 		buildLoanTimeline,
 		localDayKey,
 		timelineDayParts,
+		timelinePartyLine,
 		type TimelineEntry
 	} from '$lib/loans/loan-timeline';
 	import type { LoanWithInvestors } from '$lib/types';
@@ -87,8 +88,18 @@
 	}
 
 	function entryLabel(entry: TimelineEntry): string {
-		const detail = entry.detail ? `, ${entry.detail}` : '';
-		return `${entry.direction === 'in' ? 'In' : 'Out'}, ${entry.kindLabel}, ${entry.title}${detail}, ${formatText(entry.loan.status)}, ${money(entry.amount)}`;
+		const parties = timelinePartyLine(entry.loan);
+		const partyPart = parties ? `, ${parties}` : '';
+		return `${entry.direction === 'in' ? 'In' : 'Out'}, ${entry.kindLabel}, ${entry.title}${partyPart}, ${formatText(entry.loan.status)}, ${money(entry.amount)}`;
+	}
+
+	function amountClass(entry: TimelineEntry): string {
+		if (entry.direction === 'in') {
+			return 'text-emerald-600 dark:text-emerald-400';
+		}
+		return entry.kind === 'scheduled'
+			? 'text-amber-600 dark:text-amber-400'
+			: 'text-rose-600 dark:text-rose-400';
 	}
 
 	function markToday(node: HTMLElement, active: boolean) {
@@ -173,50 +184,33 @@
 {/snippet}
 
 {#snippet movement(entry: TimelineEntry, grouped: boolean)}
+	{@const parties = timelinePartyLine(entry.loan)}
 	<button
 		type="button"
 		class={cn(
-			'flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left active:bg-muted/60',
+			'flex min-h-11 w-full px-3 py-2.5 text-left active:bg-muted/60',
 			grouped ? 'bg-transparent' : 'rounded-2xl border border-border/60 bg-card'
 		)}
 		aria-label={entryLabel(entry)}
 		onclick={() => onLoanClick?.(entry.loan)}
 	>
-		<span
-			class={cn(
-				'w-11 shrink-0 text-[11px] font-semibold uppercase tracking-wide sm:w-12 sm:text-xs',
-				entry.direction === 'in'
-					? 'text-emerald-600 dark:text-emerald-400'
-					: entry.kind === 'scheduled'
-						? 'text-amber-600 dark:text-amber-400'
-						: 'text-rose-600 dark:text-rose-400'
-			)}
-		>
-			{entry.direction === 'in' ? 'In' : 'Out'}
-		</span>
 		<span class="min-w-0 flex-1">
-			<span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-				<span class="max-w-full truncate text-sm font-medium text-foreground">
+			<span class="flex items-start justify-between gap-2">
+				<span class="min-w-0 truncate text-sm font-medium text-foreground">
 					{formatText(entry.title)}
 				</span>
+				<span class={cn('shrink-0 text-sm font-semibold tabular-nums', amountClass(entry))}>
+					{entry.direction === 'in' ? money(entry.amount, '+') : money(entry.amount, '-')}
+				</span>
+			</span>
+			<span class="mt-1 block">
 				<LoanStatusBadge status={entry.loan.status} />
 			</span>
-			<span class="mt-0.5 block truncate text-xs text-muted-foreground">
-				{entry.kindLabel}{#if entry.detail}
-					· {formatText(entry.detail)}{/if}
-			</span>
-		</span>
-		<span
-			class={cn(
-				'shrink-0 text-sm font-semibold tabular-nums',
-				entry.direction === 'in'
-					? 'text-emerald-600 dark:text-emerald-400'
-					: entry.kind === 'scheduled'
-						? 'text-amber-600 dark:text-amber-400'
-						: 'text-rose-600 dark:text-rose-400'
-			)}
-		>
-			{entry.direction === 'in' ? money(entry.amount, '+') : money(entry.amount, '-')}
+			{#if parties}
+				<span class="mt-1 block truncate text-xs text-muted-foreground">
+					{formatText(parties)}
+				</span>
+			{/if}
 		</span>
 	</button>
 {/snippet}
@@ -278,11 +272,10 @@
 							<div class="min-w-0 flex-1">
 								{#if day.entries.length === 0}
 									<div
-										class="flex min-h-11 w-full items-center gap-2 rounded-2xl border border-border/60 bg-card px-3 py-2.5"
+										class="flex min-h-11 w-full items-center rounded-2xl border border-border/60 bg-card px-3 py-2.5"
 										aria-label="Today, no activity"
 									>
-										<span class="w-11 shrink-0 sm:w-12" aria-hidden="true"></span>
-										<span class="min-w-0 flex-1 text-sm text-muted-foreground">No activity</span>
+										<span class="text-sm text-muted-foreground">No activity</span>
 									</div>
 								{:else if showDayTotals}
 									<div class="overflow-hidden rounded-2xl border border-border/60 bg-card">

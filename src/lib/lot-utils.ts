@@ -31,17 +31,21 @@ export function buildTotalLotMetric(
 ) {
   const empty = totalLot === 0 && totalLotWithDepacto === 0;
 
+  const hasDepacto = totalLotWithDepacto > totalLot;
+
   return {
     label: "Total Lot",
+    detail: hasDepacto
+      ? "Free lot, plus extra sqm written in the notes. The line under the number adds those together."
+      : "Free lot on these loans, in sqm.",
     empty,
     value: empty
       ? "0 sqm"
-      : totalLotWithDepacto > totalLot
+      : hasDepacto
         ? `${totalLot.toLocaleString()} + ${(totalLotWithDepacto - totalLot).toLocaleString()}`
         : `${totalLot.toLocaleString()} sqm`,
-    subValue:
-      totalLotWithDepacto > totalLot
-        ? `= ${totalLotWithDepacto.toLocaleString()} sqm`
-        : undefined,
+    subValue: hasDepacto
+      ? `= ${totalLotWithDepacto.toLocaleString()} sqm`
+      : undefined,
   };
 }

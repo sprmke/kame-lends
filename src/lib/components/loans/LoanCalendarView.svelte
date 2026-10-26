@@ -10,7 +10,10 @@
 		CalendarEventInterestDue,
 		CalendarEventSent
 	} from '$lib/components/common/calendar/types';
-	import { buildLoanCalendarEvents } from '$lib/composables/use-loan-calendar-events';
+	import {
+		buildLoanCalendarEvents,
+		sentInvestorLinesForCard
+	} from '$lib/composables/use-loan-calendar-events';
 	import { formatCurrencyCompact } from '$lib/format';
 	import type { LoanWithInvestors } from '$lib/types';
 	import LoanDueEventCard from './LoanDueEventCard.svelte';
@@ -79,7 +82,7 @@
 			loan={sentEvent.loan}
 			onclick={() => handleLoanClick(sentEvent.loan)}
 			formatCurrency={formatCurrencyCompact}
-			investors={sentEvent.investors}
+			investors={sentInvestorLinesForCard(sentEvent, forModal)}
 			totalAmount={sentEvent.totalAmount}
 			size={forModal ? 'md' : 'sm'}
 			isFuture={sentEvent.hasUnpaidTransactions}

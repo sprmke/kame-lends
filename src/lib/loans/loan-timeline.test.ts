@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Investor, LoanWithInvestors } from "$lib/types";
-import { buildLoanTimeline } from "./loan-timeline";
+import { buildLoanTimeline, timelinePartyLine } from "./loan-timeline";
 
 const investorA: Investor = {
   id: 1,
@@ -163,5 +163,44 @@ describe("buildLoanTimeline", () => {
 
     expect(timeline.months).toEqual([]);
     expect(timeline.anchorKey).toBeNull();
+  });
+});
+
+describe("timelinePartyLine", () => {
+  it("lists unique investors then borrower", () => {
+    expect(
+      timelinePartyLine(
+        loan({
+          borrower: {
+            id: 1,
+            name: "Juan",
+            email: null,
+            contactNumber: null,
+            address: null,
+            notes: null,
+            validIdUrl: null,
+            eSignatureUrl: null,
+            borrowerUserId: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          loanInvestors: [
+            allocation(10, investorA, "60000", "2026-09-01"),
+            allocation(10, investorB, "40000", "2026-09-01"),
+          ],
+        }),
+      ),
+    ).toBe("Ada, Bob · Juan");
+  });
+
+  it("returns empty when no parties are set", () => {
+    expect(
+      timelinePartyLine(
+        loan({
+          borrower: null,
+          loanInvestors: [],
+        }),
+      ),
+    ).toBe("");
   });
 });
