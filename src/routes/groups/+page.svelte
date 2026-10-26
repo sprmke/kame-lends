@@ -1,6 +1,14 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
+	import { createListFilterUrlSync } from '$lib/composables/use-list-filter-url-sync.svelte';
+	import {
+		GROUPS_LIST_FILTER_KEYS,
+		parseGroupsListFilterValues,
+		snapshotGroupsListFilters,
+		type GroupListSortMode
+	} from '$lib/groups-list-filter-params';
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import ListPageToolbar from '$lib/components/common/ListPageToolbar.svelte';
@@ -16,8 +24,6 @@
 
 	let { data } = $props();
 
-	type SortMode = 'attention' | 'name' | 'updated';
-
 	type WizardPayload = {
 		ownedLoans: import('$lib/components/groups/types').WizardLoanRow[];
 		usedColorKeys: string[];
@@ -29,8 +35,12 @@
 	let wizardData = $state<WizardPayload | null>(null);
 	let wizardLoading = $state(false);
 
+	const listFilterSync = createListFilterUrlSync(() => page, {
+		scope: '/groups',
+		keys: GROUPS_LIST_FILTER_KEYS
+	});
 	let searchQuery = $state('');
-	let sortMode = $state<SortMode>('attention');
+	let sortMode = $state<GroupListSortMode>('attention');
 	let showWizard = $state(false);
 	let wizardContact = $state<WizardContactOption | null>(null);
 	let wizardLoanIds = $state<number[]>([]);
@@ -88,8 +98,33 @@
 
 	const hasActiveFilters = $derived(searchQuery !== '');
 
+	function applyGroupsFilterValues(
+		values: import('$lib/list-filter-persistence').ListFilterValues
+	) {
+		const parsed = parseGroupsListFilterValues(values);
+		searchQuery = parsed.searchQuery;
+		sortMode = parsed.sortMode;
+		return snapshotGroupsListFilters({ searchQuery, sortMode });
+	}
+
+	function commitGroupsFilters() {
+		listFilterSync.commit(snapshotGroupsListFilters({ searchQuery, sortMode }));
+	}
+
+	onMount(() => {
+		listFilterSync.bootstrap(applyGroupsFilterValues);
+	});
+
+	$effect(() => {
+		void page.url.search;
+		listFilterSync.watch(applyGroupsFilterValues);
+	});
+
 	function clearFilters() {
 		searchQuery = '';
+		sortMode = 'attention';
+		listFilterSync.clearStorage();
+		listFilterSync.commit({});
 	}
 
 	async function ensureWizardData() {
@@ -185,7 +220,10 @@
 					<ListPageToolbar
 						searchValue={searchQuery}
 						searchPlaceholder="Search groups"
-						onSearchChange={(value) => (searchQuery = value)}
+						onSearchChange={(value) => {
+							searchQuery = value;
+							commitGroupsFilters();
+						}}
 						hasData={items.length > 0}
 						showViewToggle={false}
 						{hasActiveFilters}
@@ -198,6 +236,7 @@
 						id="group-sort"
 						class="h-9 rounded-md border border-input bg-background px-2 text-sm"
 						bind:value={sortMode}
+						onchange={() => commitGroupsFilters()}
 					>
 						<option value="attention">Needs attention</option>
 						<option value="name">Name</option>

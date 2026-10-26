@@ -22,10 +22,12 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { buildGroupPeopleRows } from '$lib/groups/group-people';
 	import type { GroupGeneralDraft, GroupRuleRow } from '$lib/components/groups/types';
+	import type { GroupInterestVisibility } from '$lib/groups/interest-visibility';
 	import type { GroupColorKey } from '$lib/groups/group-colors';
 	import { computeLoanListSummaryStats } from '$lib/loan-list-summary';
 	import { isOpenLoan } from '$lib/calculations';
 	import { isOverdueLoanForDashboard } from '$lib/loan-due-date';
+	import { applyOverdueLoansListFilters } from '$lib/loan-list-overdue-filter';
 	import { formatCount, formatDate } from '$lib/format';
 	import { groupChannelStatusLabel } from '$lib/groups/channel-status';
 	import type { PartyRole } from '$lib/group-membership-diff';
@@ -45,6 +47,8 @@
 	let ruleApplyExisting = $state(true);
 	let isSavingRule = $state(false);
 	let isSavingGeneral = $state(false);
+	let isSavingInterestVisibility = $state(false);
+	let interestEdit = $state<GroupInterestVisibility | null>(null);
 	let ruleContacts = $state<WizardContactOption[]>([]);
 	let ruleContactsLoading = $state(false);
 	let generalEdit = $state<Partial<GroupGeneralDraft>>({});
@@ -53,6 +57,14 @@
 		color: (generalEdit.color ?? data.group.color ?? 'orange') as GroupColorKey,
 		description: generalEdit.description ?? data.group.notes ?? ''
 	});
+	const interestVisibility = $derived<GroupInterestVisibility>(
+		interestEdit ?? {
+			showInterestToOwners: data.group.showInterestToOwners,
+			showInterestToInvestors: data.group.showInterestToInvestors,
+			showInterestToBorrowers: data.group.showInterestToBorrowers,
+			showInterestToWitnesses: data.group.showInterestToWitnesses
+		}
+	);
 
 	const activeTab = $derived.by(() => {
 		const tab = page.url.searchParams.get('tab');
@@ -105,9 +117,21 @@
 		computeLoanListSummaryStats(data.loans as LoanWithInvestors[], null, null)
 	);
 
-	const overdueCount = $derived(
-		data.loans.filter((loan) => isOverdueLoanForDashboard(loan as LoanWithInvestors)).length
+	const overdueLoansForAttention = $derived(
+		data.loans.filter((loan) => isOverdueLoanForDashboard(loan as LoanWithInvestors))
 	);
+
+	const overdueCount = $derived(overdueLoansForAttention.length);
+
+	function viewOverdueLoans() {
+		const url = new URL(page.url);
+		applyOverdueLoansListFilters(url, overdueLoansForAttention, { tab: 'loans' });
+		void goto(`${url.pathname}${url.search}`, {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
+	}
 
 	const rules = $derived(
 		(data.group.rules ?? []).map(
@@ -173,6 +197,31 @@
 			toast.error(error instanceof Error ? error.message : 'Save failed');
 		} finally {
 			isSavingGeneral = false;
+		}
+	}
+
+	async function saveInterestVisibility(next: GroupInterestVisibility) {
+		const previous = interestEdit;
+		interestEdit = next;
+		isSavingInterestVisibility = true;
+		try {
+			const response = await fetch(`/api/groups/${data.group.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(next)
+			});
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error || 'Save failed');
+			}
+			toast.success('Saved');
+			await refresh();
+			interestEdit = null;
+		} catch (error) {
+			interestEdit = previous;
+			toast.error(error instanceof Error ? error.message : 'Save failed');
+		} finally {
+			isSavingInterestVisibility = false;
 		}
 	}
 
@@ -312,7 +361,7 @@
 						<button
 							type="button"
 							class="ml-1 font-medium text-primary hover:underline"
-							onclick={() => setTab('loans')}
+							onclick={viewOverdueLoans}
 						>
 							View loans
 						</button>
@@ -321,7 +370,11 @@
 			{/if}
 
 			{#if data.loans.length > 0}
-				<LoanListSummaryCards stats={summaryStats} />
+				<LoanListSummaryCards
+					stats={summaryStats}
+					showInterest={data.showGroupInterest}
+					detailPlace="group"
+				/>
 			{:else}
 				<Card.Root>
 					<Card.Content class="flex flex-col items-start gap-3 p-6">
@@ -428,11 +481,16 @@
 				data={{ ...data, loans: data.loans as LoanWithInvestors[] }}
 				scope="group"
 				groupContext={{ groupId: data.group.id }}
+				showInterestSummary={data.showGroupInterest}
 			/>
 		</Tabs.Content>
 
 		<Tabs.Content value="people">
-			<GroupPeopleTab people={people} loans={data.loans as LoanWithInvestors[]} />
+			<GroupPeopleTab
+				people={people}
+				loans={data.loans as LoanWithInvestors[]}
+				showInterest={data.showGroupInterest}
+			/>
 		</Tabs.Content>
 
 		{#if data.canManage}
@@ -442,6 +500,9 @@
 					onGeneralChange={(draft) => (generalEdit = draft)}
 					onSaveGeneral={saveGeneral}
 					{isSavingGeneral}
+					{interestVisibility}
+					onInterestVisibilityChange={saveInterestVisibility}
+					{isSavingInterestVisibility}
 					{rules}
 					canManageRules={true}
 					onAddRule={() => (showAddRule = true)}

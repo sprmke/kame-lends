@@ -20,9 +20,10 @@
 		person: GroupPersonRow;
 		sectionRole: PartyRole;
 		loans: LoanWithInvestors[];
+		showInterest?: boolean;
 	}
 
-	let { person, sectionRole, loans }: Props = $props();
+	let { person, sectionRole, loans, showInterest = true }: Props = $props();
 
 	const roleLoans = $derived(loansForPersonRole(person.userId, loans, sectionRole));
 	const stats = $derived(compactStatsForPersonRole(person.userId, loans, sectionRole));
@@ -63,10 +64,12 @@
 				<span class="max-sm:sr-only">{stats.amountLabel}</span>
 				<span class="text-foreground">{formatCurrencyCompact(stats.amount)}</span>
 			</span>
-			<span class="whitespace-nowrap">
-				<span class="max-sm:sr-only">Interest</span>
-				<span class="text-foreground">{formatCurrencyCompact(stats.interest)}</span>
-			</span>
+			{#if showInterest}
+				<span class="whitespace-nowrap">
+					<span class="max-sm:sr-only">Interest</span>
+					<span class="text-foreground">{formatCurrencyCompact(stats.interest)}</span>
+				</span>
+			{/if}
 		</div>
 	{/if}
 	<span
@@ -100,6 +103,7 @@
 					canManage={false}
 					embedded
 					showBorrowings={false}
+					showInterestStats={showInterest}
 					scopeToInvestor={view.scopeToInvestor}
 					investorUserId={view.scopeToInvestor ? person.userId : null}
 				/>

@@ -15,6 +15,7 @@ import { isTelegramConfigured } from "$lib/server/telegram/config";
 import { publicTelegramSettings } from "$lib/server/telegram/public-settings";
 import { groupCalendarSubscribeUrl } from "$lib/server/group-calendar";
 import { getCachedLoansByIds } from "$lib/server/cached-data";
+import { viewerCanSeeGroupInterest } from "$lib/groups/interest-visibility";
 
 async function resolveRuleContactNames(
   rules: Array<{ partyType: string; contactId: number }>,
@@ -120,6 +121,17 @@ export const load: PageServerLoad = async (event) => {
 
   const viewerMember = group.members.find((m) => m.userId === userId);
   const viewerRoles = (viewerMember?.partyRoles ?? []) as string[];
+  const interestVisibility = {
+    showInterestToOwners: group.showInterestToOwners,
+    showInterestToInvestors: group.showInterestToInvestors,
+    showInterestToBorrowers: group.showInterestToBorrowers,
+    showInterestToWitnesses: group.showInterestToWitnesses,
+  };
+  const showGroupInterest = viewerCanSeeGroupInterest({
+    isCreator,
+    roles: viewerRoles,
+    visibility: interestVisibility,
+  });
 
   const members = canManage
     ? group.members
@@ -158,6 +170,10 @@ export const load: PageServerLoad = async (event) => {
       name: group.name,
       color: group.color,
       notes: group.notes,
+      showInterestToOwners: interestVisibility.showInterestToOwners,
+      showInterestToInvestors: interestVisibility.showInterestToInvestors,
+      showInterestToBorrowers: interestVisibility.showInterestToBorrowers,
+      showInterestToWitnesses: interestVisibility.showInterestToWitnesses,
       creatorUserId: group.creatorUserId,
       creator,
       rules,
@@ -169,6 +185,7 @@ export const load: PageServerLoad = async (event) => {
     },
     loans,
     canManage,
+    showGroupInterest,
     canCreate: false,
     emptyMessage: "No loans in this group yet",
     viewerRoles,

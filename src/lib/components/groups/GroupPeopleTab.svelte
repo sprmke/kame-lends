@@ -12,10 +12,11 @@
 	interface Props {
 		people: GroupPersonRow[];
 		loans: LoanWithInvestors[];
+		showInterest?: boolean;
 		class?: string;
 	}
 
-	let { people, loans, class: className }: Props = $props();
+	let { people, loans, showInterest = true, class: className }: Props = $props();
 
 	const sections: { key: PartyRole; title: string; icon: IconComponent }[] = [
 		{ key: 'owner', title: 'Owner', icon: Shield },
@@ -55,7 +56,12 @@
 					>
 						{#each rows as person (`${section.key}-${person.userId}`)}
 							<li>
-								<GroupPersonPanel {person} sectionRole={section.key} {loans} />
+								<GroupPersonPanel
+									{person}
+									sectionRole={section.key}
+									{loans}
+									{showInterest}
+								/>
 							</li>
 						{/each}
 					</ul>
