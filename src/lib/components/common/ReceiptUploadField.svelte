@@ -43,6 +43,8 @@
 		error?: string | null;
 		label?: string;
 		idPrefix?: string;
+		/** Scroll target. Defaults to `{idPrefix}-receipt` when `idPrefix` is set. */
+		fieldId?: string;
 	}
 
 	let {
@@ -56,7 +58,8 @@
 		required = false,
 		error = null,
 		label,
-		idPrefix
+		idPrefix,
+		fieldId
 	}: Props = $props();
 
 	const fieldLabel = $derived(label ?? (required ? 'Receipts *' : 'Receipts (optional)'));
@@ -69,6 +72,8 @@
 	/** Scanned batch that looks like several transfers, waiting for "Split". */
 	let splitCandidate = $state<{ scanned: ScannedReceipt[]; count: number } | null>(null);
 	const inputId = $derived(idPrefix ? `${idPrefix}-receipt-file` : undefined);
+	const sectionId = $derived(fieldId ?? (idPrefix ? `${idPrefix}-receipt` : undefined));
+	const errorId = $derived(sectionId ? `${sectionId}-error` : undefined);
 	const latestExtracted = $derived.by(() => {
 		for (let i = receipts.length - 1; i >= 0; i -= 1) {
 			if (receipts[i]?.extractedData) return receipts[i].extractedData;
@@ -195,8 +200,8 @@
 	}
 </script>
 
-<div class="space-y-2">
-	<Label for={inputId}>{fieldLabel}</Label>
+<div id={sectionId} class="scroll-mt-24 space-y-2" data-invalid={error ? '' : undefined}>
+	<Label for={inputId} class={error ? 'text-destructive' : undefined}>{fieldLabel}</Label>
 
 	{#if receipts.length > 0}
 		<div class="grid gap-3 sm:grid-cols-2">
@@ -208,6 +213,8 @@
 					isProcessing={isExtracting && index === receipts.length - 1}
 					emptyLabel="Scan a receipt"
 					previewClass="max-h-40 w-full object-contain"
+					invalid={Boolean(error)}
+					describedBy={error ? errorId : undefined}
 					onPick={() => inputRef?.click()}
 					onRemove={() => removeAt(index)}
 				/>
@@ -224,6 +231,8 @@
 				isProcessing={isExtracting}
 				emptyLabel="Upload receipts"
 				previewClass="max-h-40 w-full object-contain"
+				invalid={Boolean(error)}
+				describedBy={error ? errorId : undefined}
 				onPick={() => inputRef?.click()}
 				onRemove={() => {}}
 			/>
@@ -293,7 +302,7 @@
 	{/if}
 
 	{#if error}
-		<p class="text-sm text-destructive">{error}</p>
+		<p id={errorId} class="text-sm font-medium text-destructive" role="alert">{error}</p>
 	{/if}
 
 	{#if splitCandidate && onSplitRequest}
