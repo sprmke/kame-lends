@@ -10,6 +10,7 @@
 	import PartyIdentityDocumentsManager from '$lib/components/settings/PartyIdentityDocumentsManager.svelte';
 	import InstallAppCard from '$lib/components/settings/InstallAppCard.svelte';
 	import PushNotificationsCard from '$lib/components/settings/PushNotificationsCard.svelte';
+	import AutoAttachSignatureCard from '$lib/components/settings/AutoAttachSignatureCard.svelte';
 	import { formatAccountRoles } from '$lib/account-roles';
 	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
 
@@ -53,6 +54,11 @@
 	{#if hasPartyLinks}
 		<PartyIdentityDocumentsManager initialDocuments={data.identityDocuments} />
 	{/if}
+
+	<AutoAttachSignatureCard
+		initialEnabled={data.signingPreferences?.autoAttachSignature === true}
+		hasSavedSignature={data.hasSavedSignature === true}
+	/>
 
 	<PaymentMethodsManager initialMethods={data.paymentMethods ?? []} />
 

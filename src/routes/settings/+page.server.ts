@@ -15,6 +15,7 @@ import { db } from "$lib/server/db";
 import { borrowers, investors, loanGroups } from "$lib/server/db/schema";
 import { listLoanTemplatesForUser } from "$lib/server/loan-templates";
 import { uniquePartiesByName } from "$lib/party-name";
+import { getUserSigningPreferences } from "$lib/server/signing/preferences";
 
 export const load: PageServerLoad = async (event) => {
   const session = requireUserSession(event);
@@ -29,6 +30,8 @@ export const load: PageServerLoad = async (event) => {
     borrowerRows,
     investorRows,
     groupRows,
+    signingPreferences,
+    partySignatureDocuments,
   ] = await Promise.all([
     getNavCapabilities(userId),
     loadPartyActivityRoles(userId, session.user.email),
@@ -51,6 +54,8 @@ export const load: PageServerLoad = async (event) => {
       columns: { id: true, name: true, color: true },
       orderBy: (table, { asc }) => [asc(table.name)],
     }),
+    getUserSigningPreferences(userId),
+    loadPartyUserIdentityDocuments(userId),
   ]);
   const identityDocuments = hasPartyLinks
     ? await loadPartyUserIdentityDocuments(userId)
@@ -76,5 +81,7 @@ export const load: PageServerLoad = async (event) => {
     templateBorrowers: uniquePartiesByName(borrowerRows),
     templateInvestors: uniquePartiesByName(investorRows),
     templateGroups: groupRows,
+    signingPreferences,
+    hasSavedSignature: Boolean(partySignatureDocuments.eSignatureUrl?.trim()),
   };
 };
