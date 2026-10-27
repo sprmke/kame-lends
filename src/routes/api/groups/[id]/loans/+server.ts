@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { loanGroupLoans, groupCalendars } from "$lib/server/db/schema";
+import { loanGroupLoans, groupCalendars, loans } from "$lib/server/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import {
@@ -74,6 +74,13 @@ export const POST: RequestHandler = async (event) => {
       console.error("[groups] default witnesses failed", witnessErr);
     }
 
+    const addedNames = await db.query.loans.findMany({
+      where: inArray(loans.id, loanIds),
+      columns: { id: true, loanName: true },
+    });
+    const addedNameById = new Map(
+      addedNames.map((row) => [row.id, row.loanName]),
+    );
     for (const loanId of loanIds) {
       await enqueueJob({
         kind: "group.calendar.syncLoan",
@@ -81,6 +88,7 @@ export const POST: RequestHandler = async (event) => {
         payload: { loanId },
         dedupeKey: `group.calendar.syncLoan:${groupId}:${loanId}`,
       });
+      const loanName = addedNameById.get(loanId)?.trim() || "Loan";
       await enqueueJob({
         kind: "group.telegram.activity",
         groupId,
@@ -90,6 +98,7 @@ export const POST: RequestHandler = async (event) => {
             entityId: loanId,
             loanId,
             updatedAt: new Date().toISOString(),
+            summary: `Loan added: ${loanName}`,
           },
         },
       });
@@ -129,6 +138,20 @@ export const DELETE: RequestHandler = async (event) => {
       columns: { googleCalendarId: true },
     });
 
+    const removedLoans = await db.query.loans.findMany({
+      where: inArray(loans.id, loanIds),
+      columns: {
+        id: true,
+        loanName: true,
+        type: true,
+        status: true,
+      },
+      with: {
+        borrower: { columns: { name: true } },
+        loanInvestors: { columns: { amount: true } },
+      },
+    });
+
     await db
       .delete(loanGroupLoans)
       .where(
@@ -148,6 +171,34 @@ export const DELETE: RequestHandler = async (event) => {
           payload: { loanId, calendarId: calendar.googleCalendarId },
         });
       }
+    }
+
+    const removedAt = new Date().toISOString();
+    for (const loan of removedLoans) {
+      const principal = loan.loanInvestors.reduce((sum, row) => {
+        const amount = Number.parseFloat(row.amount);
+        return sum + (Number.isFinite(amount) ? amount : 0);
+      }, 0);
+      await enqueueJob({
+        kind: "group.telegram.activity",
+        groupId,
+        payload: {
+          event: {
+            type: "loan_removed",
+            entityId: loan.id,
+            loanId: loan.id,
+            updatedAt: removedAt,
+            summary: `Loan removed: ${loan.loanName}`,
+            detail: {
+              loanName: loan.loanName,
+              loanType: loan.type,
+              status: loan.status,
+              borrowerName: loan.borrower?.name ?? "",
+              principal,
+            },
+          },
+        },
+      });
     }
 
     invalidateGroupData();

@@ -6,7 +6,9 @@ import {
   loanGroupLoans,
   loanGroupRules,
   groupCalendars,
+  loans,
 } from "$lib/server/db/schema";
+import { inArray } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { getCachedGroupsForUser } from "$lib/server/cached-data";
 import { invalidateGroupData } from "$lib/server/cache-invalidation";
@@ -124,6 +126,15 @@ export const POST: RequestHandler = async (event) => {
         dedupeKey: `group.calendar.acl:${group.id}`,
       });
     }
+    const addedNames = body.loanIds.length
+      ? await db.query.loans.findMany({
+          where: inArray(loans.id, body.loanIds),
+          columns: { id: true, loanName: true },
+        })
+      : [];
+    const addedNameById = new Map(
+      addedNames.map((row) => [row.id, row.loanName]),
+    );
     for (const loanId of body.loanIds) {
       await enqueueJob({
         kind: "group.calendar.syncLoan",
@@ -131,6 +142,7 @@ export const POST: RequestHandler = async (event) => {
         payload: { loanId },
         dedupeKey: `group.calendar.syncLoan:${group.id}:${loanId}`,
       });
+      const loanName = addedNameById.get(loanId)?.trim() || "Loan";
       await enqueueJob({
         kind: "group.telegram.activity",
         groupId: group.id,
@@ -140,6 +152,7 @@ export const POST: RequestHandler = async (event) => {
             entityId: loanId,
             loanId,
             updatedAt: new Date().toISOString(),
+            summary: `Loan added: ${loanName}`,
           },
         },
       });
