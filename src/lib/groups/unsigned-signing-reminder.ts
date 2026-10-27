@@ -1,9 +1,16 @@
 import { manilaTodayKey } from "$lib/calendar-sync-plan";
+import { toLocalDateString } from "$lib/date-utils";
 import type { PlannedGroupNotification } from "$lib/group-notification-plan";
 import {
   applyTelegramTemplate,
   resolveGroupTelegramTemplate,
 } from "$lib/groups/group-telegram-templates";
+import {
+  escapeTelegramHtml,
+  formatTelegramDateKey,
+  formatTelegramMoney,
+  telegramLinkHtml,
+} from "$lib/groups/telegram-message-context";
 
 export const SIGNING_REMINDER_INTERVALS = [1, 2, 4, 6, 12, 24] as const;
 
@@ -34,6 +41,9 @@ export type UnsignedLoanInput = {
   id: number;
   loanName: string;
   status: string;
+  loanType?: string;
+  dueDate?: Date | string | null;
+  principal?: number | null;
   invitations: UnsignedInvitation[];
 };
 
@@ -86,23 +96,12 @@ export function signingReminderSlot(
   return `${dateKey}:${Math.floor(hour / interval)}`;
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
 function loanUrl(appUrl: string, loanId: number): string {
   return `${appUrl.replace(/\/$/, "")}/loans/${loanId}`;
 }
 
 function groupUrl(appUrl: string, groupId: number): string {
   return `${appUrl.replace(/\/$/, "")}/groups/${groupId}`;
-}
-
-function linkHtml(url: string, label: string): string {
-  return `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`;
 }
 
 function requiredRole(partyRole: string): RequiredRole | null {
@@ -159,15 +158,29 @@ function formatLoanBlock(
   loan: UnsignedLoanInput,
   parties: WaitingParty[],
   appUrl: string,
+  includeAmounts: boolean,
 ): string {
   const lines = parties.map(
-    (party) => `• ${escapeHtml(party.name)}, ${roleLabel(party.role)}`,
+    (party) => `• ${escapeTelegramHtml(party.name)}, ${roleLabel(party.role)}`,
   );
+  const meta: string[] = [];
+  if (loan.loanType?.trim())
+    meta.push(escapeTelegramHtml(loan.loanType.trim()));
+  if (loan.dueDate) {
+    meta.push(`Due ${formatTelegramDateKey(toLocalDateString(loan.dueDate))}`);
+  }
+  if (loan.principal != null && Number.isFinite(loan.principal)) {
+    meta.push(formatTelegramMoney(loan.principal, includeAmounts));
+  }
   return [
-    `<b>${escapeHtml(loan.loanName.trim() || "Loan")}</b>`,
+    `<b>${escapeTelegramHtml(loan.loanName.trim() || "Loan")}</b>`,
+    meta.join(" · "),
+    "Waiting:",
     ...lines,
-    linkHtml(loanUrl(appUrl, loan.id), "Open loan"),
-  ].join("\n");
+    telegramLinkHtml(loanUrl(appUrl, loan.id), "Open loan"),
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
 }
 
 /**
@@ -182,6 +195,8 @@ export function planUnsignedSigningReminder(
   options: {
     appUrl: string;
     groupId: number;
+    groupName?: string;
+    includeAmounts?: boolean;
     templates?: Record<string, string> | null;
   },
 ): PlannedGroupNotification | null {
@@ -209,7 +224,12 @@ export function planUnsignedSigningReminder(
       omitted += 1;
       continue;
     }
-    const next = formatLoanBlock(loan, parties, options.appUrl);
+    const next = formatLoanBlock(
+      loan,
+      parties,
+      options.appUrl,
+      options.includeAmounts !== false,
+    );
     const draft = [...blocks, next].join("\n\n");
     if (draft.length > MAX_HTML_LENGTH) {
       omitted += 1;
@@ -228,7 +248,9 @@ export function planUnsignedSigningReminder(
   const template = resolveGroupTelegramTemplate("unsigned", options.templates);
   const html = applyTelegramTemplate(template, {
     pending_body: pendingBody,
-    group_link: linkHtml(
+    pending_count: String(blocks.length + omitted),
+    group_name: escapeTelegramHtml(options.groupName ?? ""),
+    group_link: telegramLinkHtml(
       groupUrl(options.appUrl, options.groupId),
       "Open group",
     ),

@@ -20,6 +20,9 @@ function loan(overrides: Partial<UnsignedLoanInput> = {}): UnsignedLoanInput {
     id: 10,
     loanName: "Lot A",
     status: "Fully Funded",
+    loanType: "OR/CR",
+    dueDate: new Date("2026-10-16T00:00:00.000Z"),
+    principal: 120000,
     invitations: [
       {
         partyRole: "borrower",
@@ -67,6 +70,8 @@ describe("planUnsignedSigningReminder", () => {
     expect(planned?.fingerprint).toBe("unsigned:2026-10-17:8");
     expect(planned?.kind).toBe("unsigned");
     expect(planned?.html).toContain("Signatures still needed");
+    expect(planned?.html).toContain("Due Oct 16, 2026");
+    expect(planned?.html).toContain("₱120,000");
     expect(planned?.html).toContain("Maria Cruz, Borrower");
     expect(planned?.html).toContain("Juan Reyes, Investor");
     expect(planned?.html).not.toContain("Ana Lim");
