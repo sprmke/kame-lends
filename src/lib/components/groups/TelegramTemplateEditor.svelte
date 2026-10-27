@@ -9,6 +9,7 @@
 		DEFAULT_GROUP_TELEGRAM_TEMPLATES,
 		GROUP_TELEGRAM_PREVIEW_SAMPLES,
 		GROUP_TELEGRAM_TEMPLATE_LABELS,
+		TELEGRAM_PLACEHOLDER_GROUPS,
 		applyTelegramTemplate,
 		groupTelegramPlaceholdersFor,
 		type GroupTelegramTemplateKind
@@ -37,6 +38,12 @@
 
 	const label = $derived(GROUP_TELEGRAM_TEMPLATE_LABELS[kind]);
 	const placeholders = $derived(groupTelegramPlaceholdersFor(kind));
+	const placeholderGroups = $derived(
+		TELEGRAM_PLACEHOLDER_GROUPS.map((group) => ({
+			group,
+			rows: placeholders.filter((row) => row.group === group)
+		})).filter((section) => section.rows.length > 0)
+	);
 	const validKeys = $derived(new Set(placeholders.map((row) => row.key)));
 	const editParts = $derived(splitTemplateHighlightParts(value, validKeys));
 	const previewText = $derived(applyTelegramTemplate(value, GROUP_TELEGRAM_PREVIEW_SAMPLES));
@@ -253,9 +260,13 @@
 	onOpenChange={(open) => (placeholdersOpen = open)}
 	title="Placeholders"
 >
-	<p class="mb-3 text-xs text-muted-foreground">Tap to insert.</p>
-	<ul class="space-y-1">
-		{#each placeholders as row (row.key)}
+	<p class="mb-3 text-xs text-muted-foreground">
+		Tap to insert. Wrap a line in &#123;&#123;#if key&#125;&#125; to hide it when that value is empty.
+	</p>
+	{#each placeholderGroups as section (section.group)}
+		<p class="mb-1 mt-3 text-xs font-medium text-foreground">{section.group}</p>
+		<ul class="space-y-1">
+			{#each section.rows as row (row.key)}
 			{@const token = `{{${row.key}}}`}
 			{@const sample = GROUP_TELEGRAM_PREVIEW_SAMPLES[row.key]}
 			<li class="flex items-start gap-1 rounded-lg hover:bg-muted/40">
@@ -285,6 +296,7 @@
 					{/if}
 				</button>
 			</li>
-		{/each}
-	</ul>
+			{/each}
+		</ul>
+	{/each}
 </ResponsiveModal>

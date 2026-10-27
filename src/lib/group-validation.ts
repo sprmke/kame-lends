@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { GROUP_COLOR_KEYS } from "$lib/groups/group-colors";
+import {
+  GROUP_TELEGRAM_TEMPLATE_KINDS,
+  telegramTemplateRejection,
+} from "$lib/groups/group-telegram-templates";
 
 const colorSchema = z.enum(GROUP_COLOR_KEYS);
 
@@ -84,7 +88,26 @@ export const signingReminderIntervalSchema = z.union([
   z.literal(24),
 ]);
 
-const telegramTemplatesSchema = z.record(z.string(), z.string()).optional();
+const telegramTemplatesSchema = z
+  .record(z.string(), z.string())
+  .optional()
+  .superRefine((value, ctx) => {
+    if (!value) return;
+    const known = new Set<string>(GROUP_TELEGRAM_TEMPLATE_KINDS);
+    for (const [key, text] of Object.entries(value)) {
+      if (!known.has(key)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Unknown template",
+          path: [key],
+        });
+      }
+      const reason = telegramTemplateRejection(text);
+      if (reason) {
+        ctx.addIssue({ code: "custom", message: reason, path: [key] });
+      }
+    }
+  });
 
 export const connectTelegramBodySchema = z.object({
   botToken: z.string().trim().min(1).optional().nullable(),

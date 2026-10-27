@@ -10,8 +10,10 @@
 	import { MessageCircle } from 'lucide-svelte';
 	import TelegramTemplateEditor from '$lib/components/groups/TelegramTemplateEditor.svelte';
 	import {
+		GROUP_TELEGRAM_TEMPLATE_CATEGORIES,
 		GROUP_TELEGRAM_TEMPLATE_KINDS,
 		GROUP_TELEGRAM_TEMPLATE_LABELS,
+		type GroupTelegramTemplateCategoryId,
 		type GroupTelegramTemplateKind
 	} from '$lib/groups/group-telegram-templates';
 	import {
@@ -50,17 +52,29 @@
 
 	let { groupId, startGroupAvailable = false, initial = null, onChanged }: Props = $props();
 
-	const editableTemplateKinds = GROUP_TELEGRAM_TEMPLATE_KINDS.filter(
-		(kind) => kind !== 'test'
-	);
-
 	let settings = $state<TelegramSettings>({ ...(initial ?? {}) });
 	let busy = $state(false);
 	let pollTimer: ReturnType<typeof setInterval> | undefined;
 	let botTokenInput = $state('');
 	let chatIdInput = $state('');
 	let templateDrafts = $state<Partial<Record<GroupTelegramTemplateKind, string>>>({});
+	let activeCategory = $state<GroupTelegramTemplateCategoryId>('reminders');
 	let activeTemplate = $state<GroupTelegramTemplateKind>('upcoming');
+
+	const categoryKinds = $derived(
+		GROUP_TELEGRAM_TEMPLATE_CATEGORIES.find((row) => row.id === activeCategory)?.kinds ??
+			GROUP_TELEGRAM_TEMPLATE_CATEGORIES[0].kinds
+	);
+
+	function selectCategory(id: GroupTelegramTemplateCategoryId) {
+		activeCategory = id;
+		const kinds =
+			GROUP_TELEGRAM_TEMPLATE_CATEGORIES.find((row) => row.id === id)?.kinds ?? [];
+		const next = kinds[0];
+		if (next && !(kinds as readonly string[]).includes(activeTemplate)) {
+			activeTemplate = next;
+		}
+	}
 
 	$effect(() => {
 		settings = { ...(initial ?? {}) };
@@ -207,7 +221,7 @@
 
 	async function saveTemplates() {
 		const templates: Record<string, string> = {};
-		for (const kind of editableTemplateKinds) {
+		for (const kind of GROUP_TELEGRAM_TEMPLATE_KINDS) {
 			const value = templateDrafts[kind]?.trim();
 			if (value) templates[kind] = value;
 		}
@@ -566,11 +580,32 @@
 			<div class="space-y-3 border-t border-border pt-4">
 				<p class="text-sm font-medium">Message templates</p>
 				<div
+					class="-mx-1 flex gap-1 overflow-x-auto px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+					role="tablist"
+					aria-label="Template categories"
+				>
+					{#each GROUP_TELEGRAM_TEMPLATE_CATEGORIES as category (category.id)}
+						<button
+							type="button"
+							role="tab"
+							class="inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm font-medium {activeCategory ===
+							category.id
+								? 'bg-primary/10 text-foreground'
+								: 'text-muted-foreground'}"
+							aria-selected={activeCategory === category.id}
+							disabled={busy}
+							onclick={() => selectCategory(category.id)}
+						>
+							{category.label}
+						</button>
+					{/each}
+				</div>
+				<div
 					class="-mx-1 flex gap-0 overflow-x-auto border-b border-border/60 px-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 					role="tablist"
 					aria-label="Message templates"
 				>
-					{#each editableTemplateKinds as kind (kind)}
+					{#each categoryKinds as kind (kind)}
 						<button
 							type="button"
 							role="tab"
