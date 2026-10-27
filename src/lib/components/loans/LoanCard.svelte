@@ -238,8 +238,8 @@
 	<Card.Content class="flex-1 space-y-3 px-4 pt-0 pb-3">
 		<div class="grid grid-cols-2 gap-2">
 			<div class="dashboard-metric-cell p-2">
-				<p class="text-caption mb-1">Principal</p>
-				<p class="text-sm font-medium">{formatCurrency(stats.totalPrincipal)}</p>
+				<p class="text-caption mb-1">Total Amount</p>
+				<p class="text-sm font-medium">{formatCurrency(stats.total)}</p>
 			</div>
 			<div class="dashboard-metric-cell p-2">
 				<p class="text-caption mb-1">Rate</p>

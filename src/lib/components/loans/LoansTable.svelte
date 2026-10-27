@@ -6,12 +6,7 @@
 	import TableEmptyRow from '$lib/components/common/TableEmptyRow.svelte';
 	import { createLoanActionItems } from '$lib/components/common/action-buttons';
 	import { formatCurrency, formatDateVeryShort, formatText, formatPercentage } from '$lib/format';
-	import {
-		calculateAverageRate,
-		calculateLoanStats,
-		calculateTotalPrincipal,
-		calculateTransactionStats
-	} from '$lib/calculations';
+	import { calculateTransactionStats } from '$lib/calculations';
 	import { getLoanStatusBadge, getLoanTypeBadge } from '$lib/badge-config';
 	import { TABLE_ROW_CLICKABLE } from '$lib/table-styles';
 	import { cn } from '$lib/utils';
@@ -33,7 +28,7 @@
 		onDelete?: (loan: LoanWithInvestors) => void;
 		onRemoveFromGroup?: (loan: LoanWithInvestors) => void;
 		emptyMessage?: string;
-		/** When set, Principal shows this investor's allocation on each loan (not full loan principal). */
+		/** When set, Total Amount is this investor's principal plus interest (not the full loan). */
 		investorId?: number;
 		/** Same as investorId, matching the linked auth user across CRM rows. */
 		investorUserId?: string | null;
@@ -117,7 +112,7 @@
 				<Table.Head class="hidden md:table-cell">Type</Table.Head>
 				<Table.Head class="hidden lg:table-cell">Status</Table.Head>
 				<Table.Head class="hidden md:table-cell">Signing</Table.Head>
-				<Table.Head class="text-right">Principal</Table.Head>
+				<Table.Head class="text-right">Total Amount</Table.Head>
 				<Table.Head class="hidden md:table-cell text-right">Due</Table.Head>
 				<Table.Head class="w-28 text-right">Actions</Table.Head>
 			</Table.Row>
@@ -131,14 +126,9 @@
 			{:else}
 			{#each loans as loan (loan.id)}
 				{@const scopedEntries = investorEntriesForLoan(loan)}
-				{@const principal =
-					scopedEntries != null
-						? calculateTotalPrincipal(scopedEntries)
-						: calculateLoanStats(loan).totalPrincipal}
-				{@const averageRate =
-					scopedEntries != null
-						? calculateAverageRate(scopedEntries)
-						: calculateTransactionStats(loan.loanInvestors).averageRate}
+				{@const amountStats = calculateTransactionStats(
+					scopedEntries ?? loan.loanInvestors
+				)}
 				<Table.Row
 					class={cn(onQuickView && TABLE_ROW_CLICKABLE)}
 					onclick={(event) => handleRowClick(event, loan)}
@@ -209,10 +199,10 @@
 						/>
 					</Table.Cell>
 					<Table.Cell class="text-right tabular-nums">
-						{formatCurrency(principal)}
-						{#if principal > 0}
+						{formatCurrency(amountStats.total)}
+						{#if amountStats.totalPrincipal > 0}
 							<p class="text-[10px] text-muted-foreground">
-								{formatPercentage(averageRate)}
+								{formatPercentage(amountStats.averageRate)}
 							</p>
 						{/if}
 					</Table.Cell>
