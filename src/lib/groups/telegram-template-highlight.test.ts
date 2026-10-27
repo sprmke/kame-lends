@@ -54,7 +54,7 @@ describe("telegram template highlight", () => {
           : formatTelegramPreviewText(part.text),
       )
       .join("");
-    expect(html).toContain("<b>Upcoming reminder</b>");
+    expect(html).toContain("<b>Upcoming in 3 days</b>");
     expect(html).not.toContain("{{");
   });
 });
