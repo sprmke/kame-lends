@@ -2,7 +2,7 @@
 title: "To plan"
 status: active
 tags: [planning]
-updated: 2026-10-21
+updated: 2026-10-27
 ---
 
 **Status legend:** ❌ cancelled / won't do · ✅ done · 🧪 for testing · 📋 planned (plan doc written) · 🚧 in progress · 🔵 pending / open
@@ -14,6 +14,14 @@ updated: 2026-10-21
 Integrate AI the same way Kame Homes / Kame Ops do, but harden it (gateway, usage log, kill switch, caps). First feature: analyze uploaded transfer receipts (one or many) when creating/editing a loan, doing a fund transfer, or adding a received payment, and pre-populate the active form. Multiple receipts with different dates become separate transactions; same date + same lender merge into one. User reviews and edits before applying.
 
 → **For testing:** [`../for-testing/ai-platform-and-receipt-autofill.md`](../for-testing/ai-platform-and-receipt-autofill.md) · QA: [`../qa/ai-receipt-autofill.md`](../qa/ai-receipt-autofill.md)
+
+===
+
+🧪 Telegram message templates
+
+Group Telegram templates are one line and skip borrower, investors, due date, and amount. Give each reminder, digest, and loan action a detailed default, with placeholders the owner can still insert.
+
+→ **For testing:** [`../for-testing/telegram-message-templates.md`](../for-testing/telegram-message-templates.md)
 
 ===
 

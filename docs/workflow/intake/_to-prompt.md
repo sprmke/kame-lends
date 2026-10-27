@@ -2,7 +2,7 @@
 title: "To prompt"
 status: active
 tags: [planning]
-updated: 2026-10-17
+updated: 2026-10-27
 ---
 
 **Status legend:** ❌ cancelled / won't do · ✅ done · 🧪 for testing · 📋 planned (plan doc written) · 🚧 in progress · 🔵 pending / open
@@ -17,4 +17,12 @@ updated: 2026-10-17
 
 ✅ Add tooltip or popup for each stat card computation or additional details for better understanding to the user. Keep it short, straightforward and easy to understand. The UI/UX should be good for both desktop and mobile
 
+===
+
+🧪 Telegram message templates
+
 Fix and improve telegram template to be usable properly
+
+→ **For testing:** [`../for-testing/telegram-message-templates.md`](../for-testing/telegram-message-templates.md)
+
+===
