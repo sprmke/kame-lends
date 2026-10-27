@@ -9,7 +9,7 @@ Authenticated e-signature for a loan party. Google session email must match the 
 
 After loan create (`POST /api/loans`), parties with emails receive a branded Resend email with a **Sign contract** button pointing at this page (`buildAuthenticatedSigningUrl`). Sign-in uses Google with the same address as the invitation.
 
-A signature submitted on this page is stored on the contract invitation and takes priority over any saved CRM e-signature on the PDF.
+A signature submitted on this page is stored on the contract invitation and takes priority over any saved CRM e-signature on the PDF. Groups that contain the loan get a Telegram contract-signed message. Auto-sign from a group's default witness does not send that message.
 
 When the signer has a profile e-signature (`/settings` or party profile), the sign page shows **Draw** and **E-signature**. **E-signature** submits the profile image; **Draw** uses the pad. Without a profile e-signature, only the draw pad is shown (with a short note pointing to Settings).
 
