@@ -3,6 +3,8 @@ import {
   groupNotificationLog,
   groupTelegramSettings,
   loanGroupLoans,
+  loanGroups,
+  loanInvestors,
   loanSigningInvitations,
   loans,
 } from "$lib/server/db/schema";
@@ -40,6 +42,8 @@ import type { LoanWithInvestors } from "$lib/types";
 
 const loanQueryShape = {
   with: {
+    borrower: true,
+    loanWitnesses: { with: { witness: true } },
     loanInvestors: {
       with: {
         investor: true,
@@ -49,6 +53,24 @@ const loanQueryShape = {
     },
   },
 } as const;
+
+async function loadGroupName(groupId: number): Promise<string> {
+  const row = await db.query.loanGroups.findFirst({
+    where: eq(loanGroups.id, groupId),
+    columns: { name: true },
+  });
+  return row?.name?.trim() ?? "";
+}
+
+export async function loadLoanForTelegram(
+  loanId: number,
+): Promise<LoanWithInvestors | null> {
+  const row = await db.query.loans.findFirst({
+    where: eq(loans.id, loanId),
+    ...loanQueryShape,
+  });
+  return (row as unknown as LoanWithInvestors) ?? null;
+}
 
 export async function loadGroupLoansForNotifications(
   groupId: number,
@@ -214,11 +236,19 @@ export async function sendGroupActivityNotification(
   const fingerprint = `activity:${activity.type}:${activity.entityId}:${updatedAt}`;
   const appUrl = readAppUrl();
   const summary = activity.summary?.trim() || formatActivitySummary(activity);
-  const html = buildGroupTelegramActivityHtml(summary, {
+  const loanId = activity.loanId ?? null;
+  const loan = loanId != null ? await loadLoanForTelegram(loanId) : null;
+  const html = buildGroupTelegramActivityHtml({
+    type: activity.type,
+    summary,
+    loan,
     appUrl,
     groupId,
-    loanId: activity.loanId,
+    groupName: await loadGroupName(groupId),
+    includeAmounts: settings.includeAmounts !== false,
     templates: settings.templates,
+    detail: activity.detail,
+    loanId,
   });
 
   await sendGroupNotification({
@@ -233,14 +263,16 @@ export async function sendGroupActivityNotification(
 
 function formatActivitySummary(activity: ActivityEvent): string {
   const map: Record<string, string> = {
-    loan_added: "Loan added to group",
+    loan_added: "Loan added",
     loan_updated: "Loan updated",
-    loan_created: "Loan created",
+    loan_created: "New loan",
     disbursement: "Disbursement recorded",
     payment_received: "Payment received",
-    interest_paid: "Interest paid",
+    interest_paid: "Payment received",
     interest_extended: "Interest extended",
     loan_completed: "Loan completed",
+    loan_removed: "Loan removed",
+    contract_signed: "Contract signed",
   };
   return map[activity.type] ?? activity.type.replaceAll("_", " ");
 }
@@ -284,6 +316,7 @@ export async function runGroupTelegramDailyReminders(
     result.groups += 1;
 
     const groupLoans = await loadGroupLoansForNotifications(settings.groupId);
+    const groupName = await loadGroupName(settings.groupId);
     const notifications = planGroupNotifications(
       groupLoans,
       settingsFromRow(settings),
@@ -291,6 +324,7 @@ export async function runGroupTelegramDailyReminders(
       {
         appUrl,
         groupId: settings.groupId,
+        groupName,
         templates: settings.templates,
       },
     );
@@ -343,6 +377,7 @@ export async function runGroupTelegramDailyReminders(
       {
         appUrl,
         groupId: row.groupId,
+        groupName: await loadGroupName(row.groupId),
         templates: settings.templates,
       },
     ).find((n) => n.fingerprint === row.fingerprint);
@@ -389,12 +424,14 @@ async function loadGroupLoansForSigningReminders(
   if (links.length === 0) return [];
 
   const loanIds = links.map((row) => row.loanId);
-  const [loanRows, invitations] = await Promise.all([
+  const [loanRows, invitations, amounts] = await Promise.all([
     db
       .select({
         id: loans.id,
         loanName: loans.loanName,
         status: loans.status,
+        type: loans.type,
+        dueDate: loans.dueDate,
       })
       .from(loans)
       .where(inArray(loans.id, loanIds)),
@@ -407,12 +444,24 @@ async function loadGroupLoansForSigningReminders(
       })
       .from(loanSigningInvitations)
       .where(inArray(loanSigningInvitations.loanId, loanIds)),
+    db
+      .select({
+        loanId: loanInvestors.loanId,
+        amount: loanInvestors.amount,
+      })
+      .from(loanInvestors)
+      .where(inArray(loanInvestors.loanId, loanIds)),
   ]);
 
   return loanRows.map((loan) => ({
     id: loan.id,
     loanName: loan.loanName,
     status: loan.status,
+    loanType: loan.type,
+    dueDate: loan.dueDate,
+    principal: amounts
+      .filter((row) => row.loanId === loan.id)
+      .reduce((sum, row) => sum + (Number.parseFloat(row.amount) || 0), 0),
     invitations: invitations
       .filter((invitation) => invitation.loanId === loan.id)
       .map((invitation) => ({
@@ -471,6 +520,8 @@ export async function runGroupTelegramSigningReminders(
       {
         appUrl,
         groupId: settings.groupId,
+        groupName: await loadGroupName(settings.groupId),
+        includeAmounts: settings.includeAmounts,
         templates: settings.templates,
       },
     );
@@ -537,7 +588,12 @@ export async function sendGroupTelegramTestMessage(
   }
 
   const appUrl = readAppUrl();
-  const html = buildGroupTelegramTestHtml(appUrl, groupId, settings.templates);
+  const html = buildGroupTelegramTestHtml(
+    appUrl,
+    groupId,
+    settings.templates,
+    await loadGroupName(groupId),
+  );
 
   try {
     const result = await sendMessage(settings.chatId, html, {

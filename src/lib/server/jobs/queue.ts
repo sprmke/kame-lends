@@ -1,3 +1,4 @@
+import type { TelegramActivityDetail } from "$lib/groups/telegram-message-context";
 import { db } from "$lib/server/db";
 import { integrationJobs } from "$lib/server/db/schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -21,6 +22,7 @@ export type ActivityEvent = {
   updatedAt?: string;
   summary?: string;
   loanId?: number;
+  detail?: TelegramActivityDetail;
 };
 
 export async function enqueueJob(input: {

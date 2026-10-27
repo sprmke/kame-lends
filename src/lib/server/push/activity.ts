@@ -6,14 +6,16 @@ import { sendPushToUser } from "$lib/server/push/web-push";
 import { eq, inArray } from "drizzle-orm";
 
 const SUMMARY_MAP: Record<string, string> = {
-  loan_added: "Loan added to group",
+  loan_added: "Loan added",
   loan_updated: "Loan updated",
-  loan_created: "Loan created",
+  loan_created: "New loan",
   disbursement: "Disbursement recorded",
   payment_received: "Payment received",
-  interest_paid: "Interest paid",
+  interest_paid: "Payment received",
   interest_extended: "Interest extended",
   loan_completed: "Loan completed",
+  loan_removed: "Loan removed",
+  contract_signed: "Contract signed",
 };
 
 export async function sendUserActivityPush(
