@@ -33,7 +33,7 @@ describe("formatTelegramMoney", () => {
   });
 
   it("hides amounts when disabled", () => {
-    expect(formatTelegramMoney(1000, false)).toBe("—");
+    expect(formatTelegramMoney(1000, false)).toBe("Hidden");
   });
 });
 

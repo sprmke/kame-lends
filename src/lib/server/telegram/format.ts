@@ -13,7 +13,7 @@ export function formatTelegramMoney(
   amount: number,
   includeAmounts: boolean,
 ): string {
-  if (!includeAmounts) return "—";
+  if (!includeAmounts) return "Hidden";
   return formatCalendarCurrency(amount);
 }
 
