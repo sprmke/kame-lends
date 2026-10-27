@@ -9,6 +9,7 @@ import {
   loadSigningInvitationByToken,
 } from "$lib/server/loan-signing-server";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { enqueueContractSigned } from "$lib/server/telegram/enqueue-contract-signed";
 
 /** Retained for existing token links (P0-3). Rate-limited in hooks. Prefer `/api/loans/[id]/sign`. */
 
@@ -97,6 +98,16 @@ export const POST: RequestHandler = async (event) => {
       .where(eq(loanSigningInvitations.id, invitation.id));
 
     invalidateLoanData();
+    try {
+      await enqueueContractSigned(event, {
+        loanId: invitation.loanId,
+        invitationId: invitation.id,
+        partyName: invitation.partyName,
+        partyRole: invitation.partyRole,
+      });
+    } catch (notifyErr) {
+      console.error("[telegram] contract signed notify failed", notifyErr);
+    }
 
     const updated = await loadSigningInvitationByToken(token);
     if (!updated?.loan || !updated.contract) {

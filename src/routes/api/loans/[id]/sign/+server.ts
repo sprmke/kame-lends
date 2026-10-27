@@ -10,6 +10,7 @@ import {
 } from "$lib/loan-signing";
 import { resolveAuthenticatedSigningPayload } from "$lib/server/loan-signing-server";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { enqueueContractSigned } from "$lib/server/telegram/enqueue-contract-signed";
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -129,6 +130,16 @@ export const POST: RequestHandler = async (event) => {
       .where(eq(loanSigningInvitations.id, invitation.id));
 
     invalidateLoanData();
+    try {
+      await enqueueContractSigned(event, {
+        loanId,
+        invitationId: invitation.id,
+        partyName: invitation.partyName,
+        partyRole: invitation.partyRole,
+      });
+    } catch (notifyErr) {
+      console.error("[telegram] contract signed notify failed", notifyErr);
+    }
 
     const refreshed = await resolveAuthenticatedSigningPayload({
       loanId,
