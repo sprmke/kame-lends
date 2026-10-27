@@ -344,7 +344,9 @@ export const PUT: RequestHandler = async (event) => {
         activity: {
           type: "loan_updated",
           entityId: loanId,
-          summary: updatedLoan?.loanName,
+          summary: updatedLoan?.loanName
+            ? `Loan updated: ${updatedLoan.loanName}`
+            : "Loan updated",
         },
       });
       scheduleDrain(event);

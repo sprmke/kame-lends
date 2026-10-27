@@ -55,7 +55,9 @@ export const PATCH: RequestHandler = async (event) => {
         activity: {
           type: "loan_completed",
           entityId: loanId,
-          summary: updatedLoan?.loanName,
+          summary: updatedLoan?.loanName
+            ? `Loan completed: ${updatedLoan.loanName}`
+            : "Loan completed",
         },
       });
       scheduleDrain(event);

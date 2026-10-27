@@ -271,7 +271,13 @@ export const POST: RequestHandler = async (event) => {
         } catch (autoSignErr) {
           console.error("[signing] auto attach failed", autoSignErr);
         }
-        await enqueueGroupLoanChanged(completeLoan.id);
+        await enqueueGroupLoanChanged(completeLoan.id, {
+          activity: {
+            type: "loan_created",
+            entityId: completeLoan.id,
+            summary: `New loan: ${completeLoan.loanName}`,
+          },
+        });
         scheduleDrain(event);
       } catch (groupErr) {
         console.error(
