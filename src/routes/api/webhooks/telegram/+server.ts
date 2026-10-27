@@ -220,12 +220,18 @@ async function handleCommand(message: TelegramMessage) {
   if (text.startsWith("/upcoming")) {
     const todayKey = manilaTodayKey();
     const loans = await loadGroupLoansForNotifications(settings.groupId);
+    const group = await db.query.loanGroups.findFirst({
+      where: eq(loanGroups.id, settings.groupId),
+      columns: { name: true },
+    });
     const html = planUpcomingWeekHtml(
       loans,
       todayKey,
       settings.includeAmounts,
       readAppUrl(),
       settings.groupId,
+      group?.name ?? "",
+      settings.templates,
     );
     await reply(chatId, html);
   }
