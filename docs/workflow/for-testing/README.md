@@ -2,7 +2,7 @@
 title: "For testing"
 status: active
 tags: [workflow, for-testing]
-updated: 2026-10-17
+updated: 2026-10-27
 stage: for-testing
 kind: reference
 ---
@@ -15,3 +15,4 @@ Implementation complete; manual QA remaining. Move to [`../done/`](../done/) whe
 | ---------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [loan-groups-v2.md](./loan-groups-v2.md)                                     | Local QA | Group access from loan parties, group hubs, per-group Google Calendar and Telegram. QA: [`../qa/loan-groups-v2.md`](../qa/loan-groups-v2.md)                                                                               |
 | [ai-platform-and-receipt-autofill.md](./ai-platform-and-receipt-autofill.md) | Live QA  | AI gateway (Gemini + Groq, usage log, kill switch, caps) and multi-receipt scan → review → apply for loan form, Fund Transfer and Add Received Payment. QA: [`../qa/ai-receipt-autofill.md`](../qa/ai-receipt-autofill.md) |
+| [telegram-message-templates.md](./telegram-message-templates.md)             | Local QA | Richer group Telegram templates: loan summary placeholders and one template per action.                                                                                                                                    |
