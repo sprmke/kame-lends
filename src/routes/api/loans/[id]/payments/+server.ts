@@ -3,15 +3,24 @@ import type { RequestHandler } from "./$types";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { db } from "$lib/server/db";
-import { loanInvestors, loans } from "$lib/server/db/schema";
+import { loanInvestors, loans, investors } from "$lib/server/db/schema";
 import { hasLoanAdminAccess } from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { toLocalDateString } from "$lib/date-utils";
 import {
   hasPaymentReceipt,
   receiptColumnsFromInput,
   RECEIPT_REQUIRED_ERROR,
 } from "$lib/payment-receipts";
 import { parseOptionalPaymentNotes } from "$lib/payment-notes";
+
+async function investorName(investorId: number): Promise<string> {
+  const row = await db.query.investors.findFirst({
+    where: eq(investors.id, investorId),
+    columns: { name: true },
+  });
+  return row?.name?.trim() ?? "";
+}
 
 export const POST: RequestHandler = async (event) => {
   const { params, request } = event;
@@ -127,6 +136,11 @@ export const POST: RequestHandler = async (event) => {
         activity: {
           type: "disbursement",
           entityId: loanId,
+          detail: {
+            amount,
+            date: toLocalDateString(sentDate),
+            investorName: await investorName(investorId),
+          },
         },
       });
       scheduleDrain(event);

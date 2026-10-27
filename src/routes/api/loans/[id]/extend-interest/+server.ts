@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import { hasLoanAdminAccess } from "$lib/server/access-control";
+import { toLocalDateString } from "$lib/date-utils";
 
 function safeParseFloat(value: string | number | null | undefined): number {
   if (value === null || value === undefined) return 0;
@@ -215,6 +216,9 @@ export const POST: RequestHandler = async (event) => {
         activity: {
           type: "interest_extended",
           entityId: loanId,
+          detail: {
+            date: toLocalDateString(latestDueDate),
+          },
         },
       });
       scheduleDrain(event);

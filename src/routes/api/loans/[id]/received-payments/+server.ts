@@ -3,10 +3,15 @@ import type { RequestHandler } from "./$types";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { db } from "$lib/server/db";
-import { loanInvestors, receivedPayments } from "$lib/server/db/schema";
+import {
+  loanInvestors,
+  receivedPayments,
+  investors,
+} from "$lib/server/db/schema";
 import { hasLoanAdminAccess } from "$lib/server/access-control";
 import { calculateInterest, calculateTotalAmount } from "$lib/calculations";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { toLocalDateString } from "$lib/date-utils";
 import {
   recalculateInterestPeriodStatusFromLinkedPayments,
   syncLoanStatusFromInterestPeriods,
@@ -17,6 +22,14 @@ import {
   RECEIPT_REQUIRED_ERROR,
 } from "$lib/payment-receipts";
 import { parseOptionalPaymentNotes } from "$lib/payment-notes";
+
+async function investorName(investorId: number): Promise<string> {
+  const row = await db.query.investors.findFirst({
+    where: eq(investors.id, investorId),
+    columns: { name: true },
+  });
+  return row?.name?.trim() ?? "";
+}
 
 const AMOUNT_TOLERANCE = 0.02;
 
@@ -178,6 +191,11 @@ export const POST: RequestHandler = async (event) => {
         activity: {
           type: "payment_received",
           entityId: loanId,
+          detail: {
+            amount,
+            date: toLocalDateString(receivedDate),
+            investorName: await investorName(investorId),
+          },
         },
       });
       scheduleDrain(event);
