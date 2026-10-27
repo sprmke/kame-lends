@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addDaysToDateKey,
+  buildGroupTelegramActivityHtml,
   planGroupNotifications,
   type GroupNotificationSettings,
 } from "./group-notification-plan";
@@ -132,5 +133,104 @@ describe("planGroupNotifications", () => {
       todayKey,
     );
     expect(planned.filter((p) => p.kind === "overdue")).toHaveLength(0);
+  });
+
+  it("renders a loan summary on upcoming reminders", () => {
+    const planned = planGroupNotifications(
+      [loan()],
+      baseSettings,
+      "2026-09-14",
+      {
+        groupId: 4,
+        groupName: "Agents",
+      },
+    );
+    const html = planned.find((row) => row.kind === "upcoming")?.html ?? "";
+    expect(html).toContain("Sample Loan");
+    expect(html).toContain("No borrower");
+    expect(html).toContain("Ada");
+    expect(html).toContain("Due in 3 days");
+    expect(html).not.toContain("{{");
+  });
+
+  it("keeps a custom upcoming template", () => {
+    const planned = planGroupNotifications(
+      [loan()],
+      baseSettings,
+      "2026-09-14",
+      {
+        templates: { upcoming: "Hello {{loan_name}}" },
+      },
+    );
+    expect(planned.find((row) => row.kind === "upcoming")?.html).toBe(
+      "Hello Sample Loan",
+    );
+  });
+
+  it("says Hidden when amounts are off", () => {
+    const planned = planGroupNotifications(
+      [loan()],
+      { ...baseSettings, includeAmounts: false },
+      "2026-09-17",
+    );
+    const html = planned.find((row) => row.kind === "due_today")?.html ?? "";
+    expect(html).toContain("Hidden");
+    expect(html).not.toContain("—");
+    expect(html).not.toContain("Due in");
+    expect(html).not.toContain("Overdue by");
+  });
+
+  it("counts days overdue", () => {
+    const planned = planGroupNotifications(
+      [loan()],
+      baseSettings,
+      "2026-09-18",
+    );
+    const html = planned.find((row) => row.kind === "overdue")?.html ?? "";
+    expect(html).toContain("Overdue by 1 day");
+  });
+
+  it("uses the empty notice when the next week has nothing due", () => {
+    const planned = planGroupNotifications(
+      [loan({ dueDate: new Date("2026-12-01T00:00:00.000Z") })],
+      baseSettings,
+      "2026-09-14",
+    );
+    const html = planned.find((row) => row.kind === "digest")?.html ?? "";
+    expect(html).toContain("Nothing due in the next 7 days.");
+  });
+});
+
+describe("buildGroupTelegramActivityHtml", () => {
+  it("uses the loaded loan when the summary is only a name", () => {
+    const html = buildGroupTelegramActivityHtml({
+      type: "loan_updated",
+      summary: "Lot A",
+      loan: loan({ loanName: "Lot A", borrower: undefined }),
+      appUrl: "https://app.example",
+      groupId: 2,
+      groupName: "Agents",
+      includeAmounts: true,
+      loanId: 10,
+    });
+    expect(html).toContain("Loan updated");
+    expect(html).toContain("Lot A");
+    expect(html).toContain("Ada");
+    expect(html).toContain("No borrower");
+    expect(html).not.toBe("Lot A");
+  });
+
+  it("includes a disbursement amount from the event detail", () => {
+    const html = buildGroupTelegramActivityHtml({
+      type: "disbursement",
+      summary: "Disbursement on Sample Loan",
+      loan: loan(),
+      appUrl: "https://app.example",
+      groupId: 2,
+      groupName: "Agents",
+      includeAmounts: true,
+      detail: { amount: 50000, date: "2026-10-01", investorName: "Ada" },
+    });
+    expect(html).toContain("₱50,000 from Ada on Oct 1, 2026");
   });
 });
