@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateAmountDueOnDate,
   calculateInterest,
   calculateBorrowerStats,
   calculateInvestorStats,
@@ -147,5 +148,67 @@ describe("calculations", () => {
     expect(stats.activeInterest).toBe(15000);
     expect(stats.activeTotal).toBe(165000);
     expect(stats.overdueAmount).toBe(55000);
+  });
+
+  it("includes unpaid early interest in the amount due on the final date", () => {
+    const periods = (rateStart: number) =>
+      ["2026-09-27", "2026-10-11", "2026-10-25", "2026-11-09"].map(
+        (dueDate, index) => ({
+          dueDate,
+          interestRate: String(rateStart),
+          interestType: "rate" as const,
+          status: "Overdue",
+          id: index,
+        }),
+      );
+
+    const amount = calculateAmountDueOnDate([
+      {
+        amount: "350000",
+        interestRate: "10",
+        interestType: "rate",
+        hasMultipleInterest: true,
+        investorId: 1,
+        interestPeriods: periods(10),
+      },
+      {
+        amount: "130000",
+        interestRate: "10",
+        interestType: "rate",
+        hasMultipleInterest: true,
+        investorId: 2,
+        interestPeriods: periods(10),
+      },
+    ]);
+
+    expect(amount).toBe(672000);
+  });
+
+  it("excludes a completed final interest from the amount due", () => {
+    const amount = calculateAmountDueOnDate([
+      {
+        amount: "100000",
+        interestRate: "10",
+        interestType: "rate",
+        hasMultipleInterest: true,
+        investorId: 1,
+        interestPeriods: [
+          {
+            dueDate: "2026-09-01",
+            interestRate: "10",
+            interestType: "rate",
+            status: "Completed",
+          },
+          {
+            dueDate: "2026-10-01",
+            interestRate: "10",
+            interestType: "rate",
+            status: "Completed",
+          },
+        ],
+      },
+    ]);
+
+    expect(amount).toBe(100000);
   });
 });

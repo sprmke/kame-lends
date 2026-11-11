@@ -1,3 +1,5 @@
+import { draftLoanGoogleEvents } from "$lib/calendar-events";
+import { buildLoanPaymentSchedule } from "$lib/loan-payment-schedule";
 import { toLocalDateString } from "$lib/date-utils";
 import type { LoanWithInvestors } from "$lib/types";
 
@@ -9,49 +11,27 @@ export type DailySummaryDay = {
 
 /** Dates whose daily summaries may change when a loan is updated. */
 export function getAffectedDatesFromLoan(loan: LoanWithInvestors): Date[] {
-  const dates: Date[] = [];
-  const dateSet = new Set<string>();
+  const dateSet = new Map<string, Date>();
+
+  const add = (date: Date | string) => {
+    const key = toLocalDateString(date);
+    if (!dateSet.has(key)) dateSet.set(key, new Date(date));
+  };
 
   loan.loanInvestors.forEach((li) => {
-    const dateKey = toLocalDateString(li.sentDate);
-    if (!dateSet.has(dateKey)) {
-      dateSet.add(dateKey);
-      dates.push(new Date(li.sentDate));
+    add(li.sentDate);
+    // Include every period date, including ones that now roll into the due
+    // row, so stale daily summary events get cleared.
+    if (li.hasMultipleInterest && li.interestPeriods) {
+      li.interestPeriods.forEach((period) => add(period.dueDate));
     }
   });
 
-  const hasAnyMultipleInterest = loan.loanInvestors.some(
-    (li) =>
-      li.hasMultipleInterest &&
-      li.interestPeriods &&
-      li.interestPeriods.length > 0,
-  );
+  const schedule = buildLoanPaymentSchedule(loan);
+  schedule.dues.forEach((due) => add(due.date));
+  schedule.interests.forEach((interest) => add(interest.date));
 
-  if (hasAnyMultipleInterest) {
-    for (const li of loan.loanInvestors) {
-      if (
-        li.hasMultipleInterest &&
-        li.interestPeriods &&
-        li.interestPeriods.length > 0
-      ) {
-        for (const period of li.interestPeriods) {
-          const dateKey = toLocalDateString(period.dueDate);
-          if (!dateSet.has(dateKey)) {
-            dateSet.add(dateKey);
-            dates.push(new Date(period.dueDate));
-          }
-        }
-      }
-    }
-  } else {
-    const dateKey = toLocalDateString(loan.dueDate);
-    if (!dateSet.has(dateKey)) {
-      dateSet.add(dateKey);
-      dates.push(new Date(loan.dueDate));
-    }
-  }
-
-  return dates;
+  return [...dateSet.values()];
 }
 
 /** Pure daily cash-flow rollup for group Google Calendar summaries. */
@@ -72,103 +52,25 @@ export function collectDailySummaryDays(
   }
 
   for (const loan of loans) {
-    const sentDateMap = new Map<string, number>();
-    loan.loanInvestors.forEach((li) => {
-      const dateKey = toLocalDateString(li.sentDate);
-      const amount = parseFloat(li.amount);
-      sentDateMap.set(dateKey, (sentDateMap.get(dateKey) || 0) + amount);
-    });
+    for (const draft of draftLoanGoogleEvents(loan, "all")) {
+      const dayData = ensureDay(draft.dateKey);
+      const isOut = draft.type === "sent";
+      const bucket = isOut ? dayData.out : dayData.in;
 
-    for (const [dateKey, amount] of sentDateMap.entries()) {
-      const dayData = ensureDay(dateKey);
-      if (!dayData.out.loans.find((l) => l.id === loan.id)) {
-        dayData.out.loans.push(loan);
+      if (!bucket.loans.find((row) => row.id === loan.id)) {
+        bucket.loans.push(loan);
       }
-      dayData.out.amount += amount;
+      bucket.amount += draft.totalAmount;
+
       const existing = dayData.loanAmounts.get(loan.id);
+      const signedAmount = isOut ? -draft.totalAmount : draft.totalAmount;
       if (existing) {
-        existing.amount -= amount;
-      } else {
-        dayData.loanAmounts.set(loan.id, { amount: -amount, isOut: true });
-      }
-    }
-
-    const hasAnyMultipleInterest = loan.loanInvestors.some(
-      (li) =>
-        li.hasMultipleInterest &&
-        li.interestPeriods &&
-        li.interestPeriods.length > 0,
-    );
-
-    if (hasAnyMultipleInterest) {
-      for (const li of loan.loanInvestors) {
-        if (
-          !li.hasMultipleInterest ||
-          !li.interestPeriods ||
-          li.interestPeriods.length === 0
-        ) {
-          continue;
-        }
-        const sortedPeriods = [...li.interestPeriods].sort(
-          (a, b) =>
-            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
-        );
-
-        for (let i = 0; i < sortedPeriods.length; i++) {
-          const period = sortedPeriods[i];
-          const isLastPeriod = i === sortedPeriods.length - 1;
-          const dateKey = toLocalDateString(period.dueDate);
-          const principal = parseFloat(li.amount);
-          const interest =
-            period.interestType === "rate"
-              ? principal * (parseFloat(period.interestRate) / 100)
-              : parseFloat(period.interestRate);
-          const totalAmount = isLastPeriod ? principal + interest : interest;
-          const dayData = ensureDay(dateKey);
-          if (!dayData.in.loans.find((l) => l.id === loan.id)) {
-            dayData.in.loans.push(loan);
-          }
-          dayData.in.amount += totalAmount;
-          const existing = dayData.loanAmounts.get(loan.id);
-          if (existing) {
-            existing.amount += totalAmount;
-            existing.isOut = existing.amount < 0;
-          } else {
-            dayData.loanAmounts.set(loan.id, {
-              amount: totalAmount,
-              isOut: false,
-            });
-          }
-        }
-      }
-    } else {
-      const dateKey = toLocalDateString(loan.dueDate);
-      const totalPrincipal = loan.loanInvestors.reduce(
-        (sum, li) => sum + parseFloat(li.amount),
-        0,
-      );
-      const totalInterest = loan.loanInvestors.reduce((sum, li) => {
-        const capital = parseFloat(li.amount);
-        if (li.interestType === "rate") {
-          const rate = parseFloat(li.interestRate) / 100;
-          return sum + capital * rate;
-        }
-        return sum + parseFloat(li.interestRate);
-      }, 0);
-      const totalAmount = totalPrincipal + totalInterest;
-      const dayData = ensureDay(dateKey);
-      if (!dayData.in.loans.find((l) => l.id === loan.id)) {
-        dayData.in.loans.push(loan);
-      }
-      dayData.in.amount += totalAmount;
-      const existing = dayData.loanAmounts.get(loan.id);
-      if (existing) {
-        existing.amount += totalAmount;
+        existing.amount += signedAmount;
         existing.isOut = existing.amount < 0;
       } else {
         dayData.loanAmounts.set(loan.id, {
-          amount: totalAmount,
-          isOut: false,
+          amount: signedAmount,
+          isOut,
         });
       }
     }

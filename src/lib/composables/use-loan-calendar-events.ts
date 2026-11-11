@@ -1,4 +1,5 @@
 import { toLocalDateString } from "$lib/date-utils";
+import { buildLoanPaymentSchedule } from "$lib/loan-payment-schedule";
 import type { LoanWithInvestors } from "$lib/types";
 import type {
   CalendarEvent,
@@ -110,80 +111,31 @@ export function buildLoanCalendarEvents(
       } satisfies CalendarEventSent);
     });
 
-    const hasAnyMultipleInterest = loan.loanInvestors.some(
-      (li) =>
-        li.hasMultipleInterest &&
-        li.interestPeriods &&
-        li.interestPeriods.length > 0,
-    );
+    const schedule = buildLoanPaymentSchedule(loan);
 
-    if (hasAnyMultipleInterest) {
-      loan.loanInvestors.forEach((li) => {
-        if (
-          li.hasMultipleInterest &&
-          li.interestPeriods &&
-          li.interestPeriods.length > 0
-        ) {
-          const sortedPeriods = [...li.interestPeriods].sort(
-            (a, b) =>
-              new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
-          );
-
-          sortedPeriods.forEach((period, index) => {
-            const isLastPeriod = index === sortedPeriods.length - 1;
-            const principal = parseFloat(li.amount);
-            const interest =
-              period.interestType === "rate"
-                ? principal * (parseFloat(period.interestRate) / 100)
-                : parseFloat(period.interestRate);
-
-            if (isLastPeriod) {
-              events.push({
-                type: "due",
-                loan,
-                date: new Date(period.dueDate),
-                totalPrincipal: principal,
-                totalInterest: interest,
-                totalAmount: principal + interest,
-              } satisfies CalendarEventDue);
-            } else {
-              events.push({
-                type: "interest_due",
-                loan,
-                loanInvestor: li,
-                interestPeriod: period,
-                date: new Date(period.dueDate),
-                principal,
-                interest,
-                totalAmount: interest,
-              } satisfies CalendarEventInterestDue);
-            }
-          });
-        }
-      });
-    } else {
-      const totalPrincipal = loan.loanInvestors.reduce(
-        (sum, li) => sum + parseFloat(li.amount),
-        0,
-      );
-      const totalInterest = loan.loanInvestors.reduce((sum, li) => {
-        const capital = parseFloat(li.amount);
-        if (li.interestType === "rate") {
-          const rate = parseFloat(li.interestRate) / 100;
-          return sum + capital * rate;
-        }
-        return sum + parseFloat(li.interestRate);
-      }, 0);
-
+    schedule.dues.forEach((due) => {
       events.push({
         type: "due",
         loan,
-        date: new Date(loan.dueDate),
-        totalPrincipal,
-        totalInterest,
-        totalAmount: totalPrincipal + totalInterest,
+        date: due.date,
+        totalPrincipal: due.totalPrincipal,
+        totalInterest: due.totalInterest,
+        totalAmount: due.totalAmount,
       } satisfies CalendarEventDue);
-    }
+    });
+
+    schedule.interests.forEach((interest) => {
+      events.push({
+        type: "interest_due",
+        loan,
+        loanInvestor: interest.loanInvestor,
+        interestPeriod: interest.interestPeriod,
+        date: interest.date,
+        principal: interest.principal,
+        interest: interest.interest,
+        totalAmount: interest.totalAmount,
+      } satisfies CalendarEventInterestDue);
+    });
   });
 
   return events;

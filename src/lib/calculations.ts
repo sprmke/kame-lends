@@ -199,9 +199,10 @@ export function calculateInterest(
 }
 
 /**
- * Calculate the amount due on the loan's final due date
- * For multiple interest periods: capital + final period interest only
- * For single interest: capital + total interest
+ * Calculate the amount due on the loan's final due date.
+ * - Multiple interest periods: capital + final period interest + any
+ *   unpaid/overdue earlier period interest.
+ * - Single interest: capital + total interest.
  */
 export function calculateAmountDueOnDate(
   loanInvestors: Array<{
@@ -213,6 +214,7 @@ export function calculateAmountDueOnDate(
       interestRate: string;
       interestType?: string;
       dueDate?: Date | string;
+      status?: string;
     }>;
     investor?: { id: number };
     investorId?: number;
@@ -246,18 +248,38 @@ export function calculateAmountDueOnDate(
     );
 
     if (transactionWithPeriods && transactionWithPeriods.interestPeriods) {
-      const periods = transactionWithPeriods.interestPeriods;
+      const periods = [...transactionWithPeriods.interestPeriods].sort(
+        (a, b) =>
+          new Date(a.dueDate || 0).getTime() -
+          new Date(b.dueDate || 0).getTime(),
+      );
       const finalPeriod = periods[periods.length - 1];
       const base =
         investorTotalCapital === 0 ? loanTotalPrincipal : investorTotalCapital;
 
-      const finalPeriodInterest = calculateInterest(
-        base,
-        finalPeriod.interestRate,
-        finalPeriod.interestType,
-      );
+      let rolledInterest = 0;
+      periods.slice(0, -1).forEach((period) => {
+        if (period.status !== "Overdue" && period.status !== "Incomplete") {
+          return;
+        }
+        rolledInterest += calculateInterest(
+          base,
+          period.interestRate,
+          period.interestType,
+        );
+      });
 
-      totalAmount += investorTotalCapital + finalPeriodInterest;
+      const finalPeriodInterest =
+        finalPeriod.status === "Completed"
+          ? 0
+          : calculateInterest(
+              base,
+              finalPeriod.interestRate,
+              finalPeriod.interestType,
+            );
+
+      totalAmount +=
+        investorTotalCapital + finalPeriodInterest + rolledInterest;
     } else {
       const interest = transactions.reduce((sum, li) => {
         const capital = safeParseFloat(li.amount);

@@ -5,6 +5,7 @@ import {
   type CalendarSyncScope,
 } from "$lib/calendar-sync-plan";
 import { toLocalDateString } from "$lib/date-utils";
+import { buildLoanPaymentSchedule } from "$lib/loan-payment-schedule";
 import type { LoanWithInvestors } from "$lib/types";
 
 export const TOTAL_SUMMARY_PREFIX = "Total Summary";
@@ -90,17 +91,6 @@ export function loanGoogleEventTitle(
   return `${loanType}: ${loanName} - Interest Due (+${formatCalendarCurrency(totalAmount)})`;
 }
 
-function periodInterest(
-  principal: number,
-  interestType: string,
-  interestRate: string,
-): number {
-  if (interestType === "rate") {
-    return principal * (parseFloat(interestRate) / 100);
-  }
-  return parseFloat(interestRate);
-}
-
 export function draftLoanGoogleEvents(
   loan: LoanWithInvestors,
   scope: CalendarSyncScope = "all",
@@ -154,87 +144,35 @@ export function draftLoanGoogleEvents(
     });
   }
 
-  const hasAnyMultipleInterest = loan.loanInvestors.some(
-    (li) =>
-      li.hasMultipleInterest &&
-      li.interestPeriods &&
-      li.interestPeriods.length > 0,
-  );
+  const schedule = buildLoanPaymentSchedule(loan);
 
-  if (hasAnyMultipleInterest) {
-    for (const li of loan.loanInvestors) {
-      if (
-        !li.hasMultipleInterest ||
-        !li.interestPeriods ||
-        li.interestPeriods.length === 0
-      ) {
-        continue;
-      }
-      const sortedPeriods = [...li.interestPeriods].sort(
-        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
-      );
-      for (let i = 0; i < sortedPeriods.length; i++) {
-        const period = sortedPeriods[i];
-        if (!isDateInSyncScope(period.dueDate, scope, todayKey)) continue;
-        const dateKey = toLocalDateString(period.dueDate);
-        const principal = parseFloat(li.amount);
-        const interest = periodInterest(
-          principal,
-          period.interestType,
-          period.interestRate,
-        );
-        const isLastPeriod = i === sortedPeriods.length - 1;
-        if (isLastPeriod) {
-          upsert({
-            key: calendarEventKey("due", dateKey, loan.id),
-            type: "due",
-            dateKey,
-            investors: [
-              { name: li.investor.name, amount: principal + interest },
-            ],
-            totalAmount: principal + interest,
-            totalPrincipal: principal,
-            totalInterest: interest,
-          });
-        } else {
-          upsert({
-            key: calendarEventKey("interest_due", dateKey, loan.id),
-            type: "interest_due",
-            dateKey,
-            investors: [{ name: li.investor.name, amount: interest }],
-            totalAmount: interest,
-            interest,
-          });
-        }
-      }
-    }
-  } else if (isDateInSyncScope(loan.dueDate, scope, todayKey)) {
-    const dateKey = toLocalDateString(loan.dueDate);
-    const investors = loan.loanInvestors.map((li) => {
-      const principal = parseFloat(li.amount);
-      const interest = periodInterest(
-        principal,
-        li.interestType,
-        li.interestRate,
-      );
-      return {
-        name: li.investor.name,
-        amount: principal + interest,
-        principal,
-        interest,
-      };
-    });
+  for (const due of schedule.dues) {
+    if (!isDateInSyncScope(due.dateKey, scope, todayKey)) continue;
     upsert({
-      key: calendarEventKey("due", dateKey, loan.id),
+      key: calendarEventKey("due", due.dateKey, loan.id),
       type: "due",
-      dateKey,
-      investors: investors.map((row) => ({
-        name: row.name,
-        amount: row.amount,
-      })),
-      totalAmount: investors.reduce((sum, row) => sum + row.amount, 0),
-      totalPrincipal: investors.reduce((sum, row) => sum + row.principal, 0),
-      totalInterest: investors.reduce((sum, row) => sum + row.interest, 0),
+      dateKey: due.dateKey,
+      investors: due.investors,
+      totalAmount: due.totalAmount,
+      totalPrincipal: due.totalPrincipal,
+      totalInterest: due.totalInterest,
+    });
+  }
+
+  for (const interest of schedule.interests) {
+    if (!isDateInSyncScope(interest.dateKey, scope, todayKey)) continue;
+    upsert({
+      key: calendarEventKey("interest_due", interest.dateKey, loan.id),
+      type: "interest_due",
+      dateKey: interest.dateKey,
+      investors: [
+        {
+          name: interest.loanInvestor.investor.name,
+          amount: interest.totalAmount,
+        },
+      ],
+      totalAmount: interest.totalAmount,
+      interest: interest.interest,
     });
   }
 

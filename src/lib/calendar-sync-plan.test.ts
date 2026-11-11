@@ -172,6 +172,57 @@ describe("planLoanCalendarEvents", () => {
     const events = planLoanCalendarEvents(multi, "upcoming", "2026-09-14");
     expect(events).toEqual([{ type: "due", dateKey: "2026-10-01" }]);
   });
+
+  it("drops overdue interest rows that roll into the due event", () => {
+    const multi = loan({
+      dueDate: new Date("2026-10-01T00:00:00.000Z"),
+      loanInvestors: [
+        {
+          id: 100,
+          loanId: 10,
+          investorId: 1,
+          amount: "100000",
+          interestRate: "10",
+          interestType: "rate",
+          sentDate: new Date("2026-08-01T00:00:00.000Z"),
+          isPaid: true,
+          hasMultipleInterest: true,
+          profitType: "rate",
+          profitValue: "0",
+          createdAt: new Date("2026-08-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-08-01T00:00:00.000Z"),
+          investor,
+          interestPeriods: [
+            {
+              id: 1,
+              loanInvestorId: 100,
+              dueDate: new Date("2026-09-01T00:00:00.000Z"),
+              interestRate: "5",
+              interestType: "rate",
+              status: "Overdue",
+              createdAt: new Date("2026-08-01T00:00:00.000Z"),
+              updatedAt: new Date("2026-08-01T00:00:00.000Z"),
+            },
+            {
+              id: 2,
+              loanInvestorId: 100,
+              dueDate: new Date("2026-10-01T00:00:00.000Z"),
+              interestRate: "5",
+              interestType: "rate",
+              status: "Overdue",
+              createdAt: new Date("2026-08-01T00:00:00.000Z"),
+              updatedAt: new Date("2026-08-01T00:00:00.000Z"),
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(planLoanCalendarEvents(multi, "all", "2026-11-12")).toEqual([
+      { type: "sent", dateKey: "2026-08-01" },
+      { type: "due", dateKey: "2026-10-01" },
+    ]);
+  });
 });
 
 describe("planLoansForSync", () => {

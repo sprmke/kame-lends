@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarEventSent } from "$lib/components/common/calendar/types";
-import type { Investor, LoanWithInvestors } from "$lib/types";
+import type {
+  InterestPeriod,
+  InterestPeriodStatus,
+  Investor,
+  LoanWithInvestors,
+} from "$lib/types";
 import {
   buildLoanCalendarEvents,
   sentInvestorLinesForCard,
@@ -76,6 +81,55 @@ function sentOn(loans: LoanWithInvestors[], day: number): CalendarEventSent {
   return event;
 }
 
+function interestPeriod(
+  id: number,
+  loanInvestorId: number,
+  dueDate: string,
+  status: InterestPeriodStatus,
+): InterestPeriod {
+  return {
+    id,
+    loanInvestorId,
+    dueDate: new Date(`${dueDate}T00:00:00.000Z`),
+    interestRate: "10",
+    interestType: "rate",
+    status,
+    createdAt: new Date("2026-09-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-09-01T00:00:00.000Z"),
+  };
+}
+
+function multiPeriodLoan(): LoanWithInvestors {
+  const periods = (loanInvestorId: number, startId: number) => [
+    interestPeriod(startId, loanInvestorId, "2026-09-27", "Overdue"),
+    interestPeriod(startId + 1, loanInvestorId, "2026-10-11", "Overdue"),
+    interestPeriod(startId + 2, loanInvestorId, "2026-10-25", "Overdue"),
+    interestPeriod(startId + 3, loanInvestorId, "2026-11-09", "Overdue"),
+  ];
+
+  return {
+    ...toyotaVios(),
+    id: 139,
+    loanName: "Agent Loan (Sep 13 - Nov 9)",
+    status: "Overdue",
+    dueDate: new Date("2026-11-09T00:00:00.000Z"),
+    loanInvestors: [
+      {
+        ...allocation(investorB, "350000", "2026-09-13"),
+        id: 630,
+        hasMultipleInterest: true,
+        interestPeriods: periods(630, 1272),
+      },
+      {
+        ...allocation(investorA, "130000", "2026-09-13"),
+        id: 631,
+        hasMultipleInterest: true,
+        interestPeriods: periods(631, 1276),
+      },
+    ],
+  };
+}
+
 describe("sentInvestorLinesForCard", () => {
   it("keeps the calendar cell to the lenders who sent that day", () => {
     const event = sentOn([toyotaVios()], 16);
@@ -106,5 +160,43 @@ describe("sentInvestorLinesForCard", () => {
       { name: "Arianna Perez", amount: 50000, note: undefined },
     ]);
     expect(event.totalAmount).toBe(350000);
+  });
+});
+
+describe("buildLoanCalendarEvents", () => {
+  it("merges a multi-period loan's due into one row with the full uncollected interest", () => {
+    const events = buildLoanCalendarEvents([multiPeriodLoan()]);
+    const dueEvents = events.filter((event) => event.type === "due");
+
+    expect(events.some((event) => event.type === "interest_due")).toBe(false);
+    expect(dueEvents).toHaveLength(1);
+    expect(dueEvents[0]).toMatchObject({
+      totalPrincipal: 480000,
+      totalInterest: 192000,
+      totalAmount: 672000,
+    });
+  });
+
+  it("keeps completed or upcoming interest as its own calendar event", () => {
+    const loan = multiPeriodLoan();
+    loan.loanInvestors[0]!.interestPeriods![0]!.status = "Completed";
+    loan.loanInvestors[0]!.interestPeriods![1]!.status = "Pending";
+
+    const events = buildLoanCalendarEvents([loan]);
+    const interestEvents = events.filter(
+      (event) => event.type === "interest_due",
+    );
+    const dueEvents = events.filter((event) => event.type === "due");
+
+    expect(interestEvents).toHaveLength(2);
+    expect(interestEvents.map((event) => event.totalAmount)).toEqual([
+      35000, 35000,
+    ]);
+    expect(dueEvents).toHaveLength(1);
+    expect(dueEvents[0]).toMatchObject({
+      totalPrincipal: 480000,
+      totalInterest: 122000,
+      totalAmount: 602000,
+    });
   });
 });

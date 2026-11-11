@@ -1,3 +1,4 @@
+import { buildLoanPaymentSchedule } from "$lib/loan-payment-schedule";
 import { toLocalDateString } from "$lib/date-utils";
 import type { LoanWithInvestors } from "$lib/types";
 
@@ -62,36 +63,16 @@ export function planLoanCalendarEvents(
     }
   }
 
-  const hasAnyMultipleInterest = loan.loanInvestors.some(
-    (li) =>
-      li.hasMultipleInterest &&
-      li.interestPeriods &&
-      li.interestPeriods.length > 0,
-  );
+  const schedule = buildLoanPaymentSchedule(loan);
 
-  if (hasAnyMultipleInterest) {
-    for (const li of loan.loanInvestors) {
-      if (
-        !li.hasMultipleInterest ||
-        !li.interestPeriods ||
-        li.interestPeriods.length === 0
-      ) {
-        continue;
-      }
-      const sortedPeriods = [...li.interestPeriods].sort(
-        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
-      );
-      for (let i = 0; i < sortedPeriods.length; i++) {
-        const period = sortedPeriods[i];
-        if (!isDateInSyncScope(period.dueDate, scope, todayKey)) continue;
-        events.push({
-          type: i === sortedPeriods.length - 1 ? "due" : "interest_due",
-          dateKey: toLocalDateString(period.dueDate),
-        });
-      }
-    }
-  } else if (isDateInSyncScope(loan.dueDate, scope, todayKey)) {
-    events.push({ type: "due", dateKey: toLocalDateString(loan.dueDate) });
+  for (const due of schedule.dues) {
+    if (!isDateInSyncScope(due.dateKey, scope, todayKey)) continue;
+    events.push({ type: "due", dateKey: due.dateKey });
+  }
+
+  for (const interest of schedule.interests) {
+    if (!isDateInSyncScope(interest.dateKey, scope, todayKey)) continue;
+    events.push({ type: "interest_due", dateKey: interest.dateKey });
   }
 
   const seen = new Set<string>();

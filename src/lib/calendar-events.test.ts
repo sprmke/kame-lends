@@ -8,7 +8,12 @@ import {
   nextDateKey,
   totalSummaryTitle,
 } from "./calendar-events";
-import type { Investor, LoanWithInvestors } from "./types";
+import type {
+  InterestPeriod,
+  InterestPeriodStatus,
+  Investor,
+  LoanWithInvestors,
+} from "./types";
 
 const investorA: Investor = {
   id: 1,
@@ -66,6 +71,24 @@ function loan(overrides: Partial<LoanWithInvestors> = {}): LoanWithInvestors {
     updatedAt: new Date("2026-09-01T00:00:00.000Z"),
     loanInvestors: [allocation(10, investorA, "100000", "2026-09-01")],
     ...overrides,
+  };
+}
+
+function interestPeriod(
+  id: number,
+  loanInvestorId: number,
+  dueDate: string,
+  status: InterestPeriodStatus,
+): InterestPeriod {
+  return {
+    id,
+    loanInvestorId,
+    dueDate: new Date(`${dueDate}T00:00:00.000Z`),
+    interestRate: "10",
+    interestType: "rate",
+    status,
+    createdAt: new Date("2026-09-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-09-01T00:00:00.000Z"),
   };
 }
 
@@ -142,5 +165,54 @@ describe("draftLoanGoogleEvents", () => {
       "2026-09-14",
     ]);
     expect(drafts.some((draft) => draft.dateKey === "2026-09-13")).toBe(false);
+  });
+
+  it("folds unpaid early interest into the due event and keeps paid interest separate", () => {
+    const periods = (loanInvestorId: number, startId: number) => [
+      interestPeriod(startId, loanInvestorId, "2026-09-27", "Overdue"),
+      interestPeriod(startId + 1, loanInvestorId, "2026-10-11", "Completed"),
+      interestPeriod(startId + 2, loanInvestorId, "2026-10-25", "Overdue"),
+      interestPeriod(startId + 3, loanInvestorId, "2026-11-09", "Overdue"),
+    ];
+    const multi = loan({
+      id: 139,
+      status: "Overdue",
+      dueDate: new Date("2026-11-09T00:00:00.000Z"),
+      loanInvestors: [
+        {
+          ...allocation(139, investorA, "350000", "2026-09-13"),
+          id: 630,
+          hasMultipleInterest: true,
+          interestPeriods: periods(630, 1272),
+        },
+        {
+          ...allocation(139, investorB, "130000", "2026-09-13"),
+          id: 631,
+          hasMultipleInterest: true,
+          interestPeriods: periods(631, 1276),
+        },
+      ],
+    });
+
+    const drafts = draftLoanGoogleEvents(multi, "all", "2026-11-12");
+    const due = drafts.find((draft) => draft.type === "due");
+    const interest = drafts.filter((draft) => draft.type === "interest_due");
+
+    expect(due).toMatchObject({
+      dateKey: "2026-11-09",
+      totalPrincipal: 480000,
+      totalInterest: 144000,
+      totalAmount: 624000,
+    });
+    expect(interest).toHaveLength(1);
+    expect(interest[0]).toMatchObject({
+      dateKey: "2026-10-11",
+      totalAmount: 48000,
+    });
+    expect(
+      drafts
+        .filter((draft) => draft.type !== "sent")
+        .reduce((sum, draft) => sum + draft.totalAmount, 0),
+    ).toBe(480000 + 192000);
   });
 });

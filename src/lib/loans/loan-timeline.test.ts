@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { Investor, LoanWithInvestors } from "$lib/types";
+import type {
+  InterestPeriod,
+  InterestPeriodStatus,
+  Investor,
+  LoanInvestor,
+  LoanWithInvestors,
+} from "$lib/types";
 import { buildLoanTimeline, timelinePartyLine } from "./loan-timeline";
 
 const investorA: Investor = {
@@ -58,6 +64,35 @@ function loan(overrides: Partial<LoanWithInvestors> = {}): LoanWithInvestors {
     updatedAt: new Date("2026-09-01T00:00:00.000Z"),
     loanInvestors: [allocation(10, investorA, "100000", "2026-09-01")],
     ...overrides,
+  };
+}
+
+function interestPeriod(
+  id: number,
+  loanInvestorId: number,
+  dueDate: string,
+  status: InterestPeriodStatus,
+): InterestPeriod {
+  return {
+    id,
+    loanInvestorId,
+    dueDate: new Date(`${dueDate}T00:00:00.000Z`),
+    interestRate: "10",
+    interestType: "rate",
+    status,
+    createdAt: new Date("2026-09-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-09-01T00:00:00.000Z"),
+  };
+}
+
+function allocationWithPeriods(
+  allocation: LoanInvestor & { investor: Investor },
+  interestPeriods: InterestPeriod[],
+): LoanInvestor & { investor: Investor } {
+  return {
+    ...allocation,
+    hasMultipleInterest: true,
+    interestPeriods,
   };
 }
 
@@ -163,6 +198,42 @@ describe("buildLoanTimeline", () => {
 
     expect(timeline.months).toEqual([]);
     expect(timeline.anchorKey).toBeNull();
+  });
+
+  it("carries unpaid interest into the loan due row instead of showing per-investor installments", () => {
+    const periods = (loanInvestorId: number, startId: number) => [
+      interestPeriod(startId, loanInvestorId, "2026-09-27", "Overdue"),
+      interestPeriod(startId + 1, loanInvestorId, "2026-10-11", "Overdue"),
+      interestPeriod(startId + 2, loanInvestorId, "2026-10-25", "Overdue"),
+      interestPeriod(startId + 3, loanInvestorId, "2026-11-09", "Overdue"),
+    ];
+    const reported = loan({
+      status: "Overdue",
+      dueDate: new Date("2026-11-09T00:00:00.000Z"),
+      loanInvestors: [
+        allocationWithPeriods(
+          allocation(10, investorA, "350000", "2026-09-13"),
+          periods(10, 1272),
+        ),
+        allocationWithPeriods(
+          allocation(20, investorB, "130000", "2026-09-13"),
+          periods(20, 1276),
+        ),
+      ],
+    });
+
+    const timeline = buildLoanTimeline([reported], {
+      from: "2026-11-01",
+      to: "2026-11-30",
+      today: new Date(2026, 11, 1),
+    });
+
+    const days = timeline.months.flatMap((month) => month.days);
+    expect(days.map((day) => day.dateKey)).toEqual(["2026-11-09"]);
+    expect(days[0]?.entries).toHaveLength(1);
+    expect(days[0]?.entries[0]?.amount).toBe(672000);
+    expect(days[0]?.inTotal).toBe(672000);
+    expect(timeline.inTotal).toBe(672000);
   });
 });
 
