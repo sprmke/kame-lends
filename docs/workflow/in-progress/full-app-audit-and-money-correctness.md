@@ -920,3 +920,14 @@ Closed the last structural, QA, and migration decisions.
 - **Local environment:** restored the prod snapshot again, applied 0039–0044, fixed one stray test user, cleaned a foreign `vite preview` process that held port 4174, and left the app healthy on the local snapshot.
 - **E2E fixture cleanup:** added secret-guarded `POST /api/e2e/cleanup` (404 without `E2E_AUTH_SECRET`, disabled in production) because saving a contact mirrors it into the other party tables and creates signing invitations that role-specific deletes cannot remove. It also hard-deletes the already-soft-deleted fixture loan and drops its queued `integration_jobs`, so calendar/push/email workers never run against missing rows. `multi-role-access` calls it before the role deletes and leaves zero party, user, invitation, loan, or job artifacts. Added an integration assertion for the guard.
 - **Gates:** check 0 errors, 631 unit tests, 57 integration tests, money-flows 4/4, multi-role 3/3, a11y 7/7, visual-parity 7/7, build success.
+
+### Released (2026-11-16)
+
+- **Backup:** `~/Backups/kame-lends/kame-lends-local-pre-deploy-20261116-025533.dump`, SHA-256 `26e406b419953f893845823f20d68dfab057c0986cb043768496aa1fb729ef7d`. Restored into a scratch database to verify: 42 tables, 130 loans, 12 users, 163 payments.
+- **PR:** #20, squash-merged to `main` as `170246e`.
+- **CI:** Quality, DB integration, E2E money, E2E smoke, Lighthouse, and Commitlint all pass. Two CI-only gaps were fixed before merge: empty-database bootstrap in `db:migrate:pending`, and the period-date unique rule in `schema.ts`.
+- **CD:** run `43752905373` succeeded on Quality, Migrate, and Deploy.
+- **Production migrations:** 0039–0044 applied, latest `0044`, 0 pending. `0042` skipped the unique period-date constraint because the 9 duplicate dates still exist.
+- **Production health:** `https://pawn-tracker.vercel.app/api/health` returns `ok`, `db: connected`, no missing columns. Root and `/signin` return 200.
+- **Visual baselines:** 13 snapshots refreshed from the clean prod snapshot; visual parity 7/7.
+- **Next:** `docs/workflow/planned/prod-data-repairs-and-release-verification.md` covers the owner decisions and the external delivery checks.
