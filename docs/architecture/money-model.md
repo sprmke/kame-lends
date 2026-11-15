@@ -121,6 +121,7 @@ A loan is **never** `Completed` while principal is outstanding (STAT-03).
 | D-11 | Extend interest is removed; a proper Extend term action is planned separately.          | route deleted                                             |
 | D-12 | Settings repair buttons are removed; a read-only Data health card replaces them.        | `routes/settings`, `api/admin/money-health`               |
 | D-13 | An unlinked payment is allowed and treated as principal/unallocated, never deleted.     | `ledger.ts`                                               |
+| D-15 | Data health status drift uses the ledger rule, not raw SQL per-allocation interest.     | `money/status-drift.ts`, `server/status-drift.ts`         |
 | D-14 | Payments apply to the oldest open interest first, then principal.                       | `ledger.ts`                                               |
 
 ## Invariants

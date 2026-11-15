@@ -66,6 +66,6 @@ Settings card showing AI calls, cost and fallback rate from `ai_usage_events`.
 
 📋 Production data repairs and release verification
 
-Decide and repair the remaining prod data anomalies (duplicate period dates, zero-capital fixed, receipt-less payments, unlinked payments, completed-underpaid periods, stale statuses) and finish calendar, Telegram, push, email, and device checks.
+Decide and repair the remaining prod data anomalies (duplicate period dates, zero-capital fixed, receipt-less payments, unlinked payments) and finish calendar, Telegram, push, email, and device checks.
 
 → **Plan:** [`../planned/prod-data-repairs-and-release-verification.md`](../planned/prod-data-repairs-and-release-verification.md)

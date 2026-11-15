@@ -86,6 +86,7 @@ Close each row when its task merges with tests. Set **Status** to `open`, `in-pr
 | DATA-12 | S2  | code     | Edit reconcile matched soft-deleted rows and inserted a duplicate on a stale id             | T3.2           | fixed   |
 | DATA-13 | S2  | code     | Debt schedule edit and debt consolidate hard-deleted payment history                        | T3.5, T2.9     | fixed   |
 | DATA-14 | S2  | code     | Status sweep counted soft-deleted loans and allocations                                     | T5.1, T5.2     | fixed   |
+| DATA-15 | S2  | code     | Data health status checks used the allocation base and ignored unlinked money               | T8.4           | fixed   |
 | CALC-01 | S2  | code     | Period interest base differs: one tranche vs the investor's total capital                   | T2.4           | fixed   |
 | CALC-02 | S2  | probe    | Investor totals merge all of an investor's loans into one group (18,000 vs 26,000)          | T2.5, T7.3     | fixed   |
 | CALC-03 | S2  | probe    | Floating-point money with no rounding policy; tolerance constants copied everywhere         | T2.1           | fixed   |
@@ -931,3 +932,12 @@ Closed the last structural, QA, and migration decisions.
 - **Production health:** `https://pawn-tracker.vercel.app/api/health` returns `ok`, `db: connected`, no missing columns. Root and `/signin` return 200.
 - **Visual baselines:** 13 snapshots refreshed from the clean prod snapshot; visual parity 7/7.
 - **Next:** `docs/workflow/planned/prod-data-repairs-and-release-verification.md` covers the owner decisions and the external delivery checks.
+
+### Data health and repair pass (2026-11-16)
+
+- **DATA-15:** the health report's `completed-underpaid`, `pending-overpaid`, and `overdue-without-overdue-periods` SQL checks used per-allocation interest and ignored unlinked payments, so they flagged rows the ledger already considered correct. The status sweep returned `updatedPeriods: 0` and `updatedLoans: 0` on the snapshot. Replaced all three with one ledger-based drift check (`period-status-drift`, `loan-status-drift`) shared by the sweep, the Settings card, and the CLI.
+- **Shared definitions:** the admin API and `db:health:money` had drifted into different check lists. Both now read `src/lib/money/health-checks.ts`; a unit test keeps the ids unique and blocks the old false checks from returning.
+- **Repair tool:** added `--source=prod` with a Neon-only guard, `--loan-id` scoping, detailed dry-run rows for every category, an `unlinked-payments` report, and an accurate zero-capital conversion count.
+- **Tests:** 8 unit cases for drift (unlinked money, total-capital base, overdue principal, manual override), 6 integration cases for the sweep/health, and 4 integration cases that run the real repair script against Postgres (duplicate merge and payment move, zero-capital conversion, read-only reports).
+- **Local snapshot:** the repair tests applied duplicates and zero-capital to the local copy, so local health now shows only 15 receipt-less and 4 unlinked payments. A pre-change backup exists.
+- **Production:** dry runs show 9 duplicate dates and 13 zero-capital rows; status drift is 0. The two safe repairs are ready to apply after a fresh backup.
