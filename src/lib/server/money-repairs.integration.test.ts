@@ -25,7 +25,11 @@ let fixture: LoanFixture;
 let backupId: string;
 
 function runRepair(category: string, apply = false): string {
-  const args = ["scripts/db/repair/money-repairs.ts", `--category=${category}`];
+  const args = [
+    "scripts/db/repair/money-repairs.ts",
+    `--category=${category}`,
+    `--loan-id=${fixture.loanId}`,
+  ];
   if (apply) args.push("--apply", `--backup-id=${backupId}`);
   return execFileSync("bun", args, {
     cwd: process.cwd(),
@@ -130,7 +134,7 @@ describe("money repairs", () => {
       .where(eq(loanInvestors.id, fixture.keepAllocationId));
 
     const dry = runRepair("zero-capital-fixed");
-    expect(dry).toContain("zero-capital fixed allocations: 1");
+    expect(dry).toContain("zero-capital conversion preview: 1");
 
     runRepair("zero-capital-fixed", true);
 
@@ -144,6 +148,33 @@ describe("money repairs", () => {
     expect(row.interestType).toBe("rate");
     // Keep allocation becomes 0, so the loan total is the 50000 drop row.
     expect(Number(row.interestRate)).toBeCloseTo(10, 2);
+  });
+
+  it("leaves a fixed amount that a rate cannot represent", async () => {
+    await db
+      .update(loanInvestors)
+      .set({ amount: "0", interestType: "fixed", interestRate: "10" })
+      .where(eq(loanInvestors.id, fixture.keepAllocationId));
+    await db
+      .update(loanInvestors)
+      .set({ amount: "500000" })
+      .where(eq(loanInvestors.id, fixture.dropAllocationId));
+
+    const preview = runRepair("zero-capital-fixed");
+    expect(preview).toContain('"convert":false');
+
+    const applied = runRepair("zero-capital-fixed", true);
+    expect(applied).toContain("skipped (leave fixed, needs review)");
+
+    const [row] = await db
+      .select({
+        interestType: loanInvestors.interestType,
+        interestRate: loanInvestors.interestRate,
+      })
+      .from(loanInvestors)
+      .where(eq(loanInvestors.id, fixture.keepAllocationId));
+    expect(row.interestType).toBe("fixed");
+    expect(Number(row.interestRate)).toBe(10);
   });
 
   it("reports receipt-less payments without writing", async () => {

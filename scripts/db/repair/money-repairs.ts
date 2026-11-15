@@ -183,13 +183,47 @@ async function run(
         and li.interest_type = 'fixed'
         ${scope}
     `;
-    printRows("zero-capital fixed allocations", rows);
-    if (!apply) return;
+    if (!apply) {
+      printRows(
+        "zero-capital conversion preview",
+        rows.map((row) => {
+          const total = Number(row.loan_total) || 0;
+          const rate =
+            total > 0
+              ? Math.round((Number(row.amount) / total) * 10000) / 100
+              : 0;
+          const preserved = (total * Number(rate.toFixed(2))) / 100;
+          return {
+            ...row,
+            rate: rate.toFixed(2),
+            preserved: preserved.toFixed(2),
+            convert:
+              total > 0 && Math.abs(preserved - Number(row.amount)) <= 0.02,
+          };
+        }),
+      );
+      return;
+    }
     let converted = 0;
+    const skipped: Array<Record<string, unknown>> = [];
     for (const row of rows) {
       const total = Number(row.loan_total) || 0;
-      if (total <= 0) continue;
-      const rate = ((Number(row.amount) / total) * 100).toFixed(2);
+      if (total <= 0) {
+        skipped.push({ ...row, reason: "loan total is zero" });
+        continue;
+      }
+      const rate = (
+        Math.round((Number(row.amount) / total) * 10000) / 100
+      ).toFixed(2);
+      const preserved = (total * Number(rate)) / 100;
+      if (Math.abs(preserved - Number(row.amount)) > 0.02) {
+        skipped.push({
+          ...row,
+          reason: "rate precision would change the amount",
+          preserved: preserved.toFixed(2),
+        });
+        continue;
+      }
       await sql`
         update loan_investors
         set interest_type = 'rate', interest_rate = ${rate}, updated_at = now()
@@ -199,6 +233,9 @@ async function run(
     }
     await audit(sql, "repair:zero-capital-fixed", converted);
     console.log(`converted ${converted} allocation(s) to rate`);
+    if (skipped.length > 0) {
+      printRows("skipped (leave fixed, needs review)", skipped);
+    }
     return;
   }
 

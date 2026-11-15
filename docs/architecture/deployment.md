@@ -143,4 +143,5 @@ bun run deploy:prod
 - Decision tree: app-only bug → Vercel rollback. Bad additive SQL → fix-forward new migration. Data corruption → Neon PITR/branch or `pg_restore` onto an isolated target, never edit shipped SQL.
 - Telegram webhook: after deploy, `bun run telegram:set-webhook` (needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `PUBLIC_APP_URL`)
 - Manual Neon backup: `bun run backup:neon` (uses `DATABASE_URL_PROD` when `DATABASE_URL` is local Docker)
+- Restore a Neon dump with `bun run db:local:sync-prod --from-dump <file>`. Neon adds a nonstandard per-column `pg_attver` option; the script strips those `ALTER` lines before `psql`, because a raw `pg_restore` into Postgres 17 rolls back the affected tables.
 - Agent rule: `.cursor/rules/deployment.mdc`

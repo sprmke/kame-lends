@@ -38,15 +38,20 @@ Close the remaining production data anomalies and finish the checks that need re
 
 # Tasks
 
-## P1 · Back up and dry run
+## P1 · Back up and dry run (done 2026-11-16)
 
-- Run `bun run backup:neon`; record the dump path and SHA-256.
+- Backup: `kame-lends-neon-20261116-052600.dump` (`73aa2942…`), verified by restore.
 - `bun scripts/db/repair/money-repairs.ts --category=duplicate-period-dates --source=prod`
 - `bun scripts/db/repair/money-repairs.ts --category=zero-capital-fixed --source=prod`
 - `bun scripts/db/repair/money-repairs.ts --category=receiptless-created-payments --source=prod`
 - `bun scripts/db/repair/money-repairs.ts --category=unlinked-payments --source=prod`
 
-## P2 · Apply the two safe repairs
+## P2 · Apply the two safe repairs (done 2026-11-16)
+
+- Nine duplicates merged; unique constraint added.
+- Twelve zero-capital rows converted with amount equality checked.
+- One ₱10 row left fixed because a rate would round it to zero.
+- Post-repair backup: `kame-lends-neon-20261116-054116.dump` (`f2fe276f…`).
 
 ```bash
 bun scripts/db/repair/money-repairs.ts \
