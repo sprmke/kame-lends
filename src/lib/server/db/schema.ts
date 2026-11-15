@@ -791,6 +791,11 @@ export const interestPeriods = pgTable(
     loanInvestorIdIdx: index("interest_periods_loan_investor_id_idx").on(
       table.loanInvestorId,
     ),
+    // The conditional constraint in 0042 is the production guard. Keeping it
+    // in schema.ts gives fresh databases (CI, local bootstrap) the same rule.
+    loanInvestorDueDateUnique: unique(
+      "interest_periods_loan_investor_due_date_unique",
+    ).on(table.loanInvestorId, table.dueDate),
   }),
 );
 
