@@ -53,3 +53,13 @@
 | List patch          | `src/lib/composables/refresh-loan-list.ts`                                                                                   |
 | Detail client cache | `src/lib/composables/loan-detail-client-cache.ts`                                                                            |
 | Shell               | `src/lib/components/Nav.svelte`, `src/lib/nav/app-nav.ts`                                                                    |
+
+## Money correctness (2026-11)
+
+- Create and edit validate with `src/lib/schemas/loan.ts` before any write. Amounts and rates must be finite; each period needs a rate or fixed amount greater than zero.
+- Edit is a diff-based reconcile in one transaction. Allocations, periods, and payments are matched by id and updated in place; payments keep their receipts and period links. Removing a row that still has payments returns **409** until the payments are removed or the removal is confirmed.
+- The client no longer sends loan status. The server derives it from payments, principal, and the Manila due date.
+- New loans start with an empty interest value. There is no hidden 10% default.
+- Multiple interest periods are generated from business date keys. Jan 1 to Apr 1 gives Jan 31, Feb 28, Mar 31, Apr 1. The final period is always the loan due date.
+- "Copy investor config" copies interest settings only, never payments or receipts.
+- Deleting a loan is a soft delete (`deleted_at`) with an audit event.

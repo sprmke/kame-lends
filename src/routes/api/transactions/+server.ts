@@ -3,6 +3,7 @@ import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import { transactions } from "$lib/server/db/schema";
 import { getSession } from "$lib/server/session";
+import { parseIdParam } from "$lib/server/route-params";
 import { getCachedTransactions } from "$lib/server/cached-data";
 import { invalidateTransactionData } from "$lib/server/cache-invalidation";
 import { workspaceAdminForbidden } from "$lib/server/workspace-admin";
@@ -19,7 +20,10 @@ export const GET: RequestHandler = async (event) => {
     const { searchParams } = new URL(request.url);
     const investorIdParam = searchParams.get("investorId");
 
-    const investorId = investorIdParam ? parseInt(investorIdParam, 10) : null;
+    const investorId = investorIdParam ? parseIdParam(investorIdParam) : null;
+    if (investorIdParam && investorId === null) {
+      return json({ error: "Invalid investor id" }, { status: 400 });
+    }
     return json(await getCachedTransactions(userId, investorId));
   } catch (error) {
     console.error("Error fetching transactions:", error);

@@ -19,6 +19,12 @@ import {
   applySecurityHeaders,
 } from "$lib/server/security-headers";
 
+/** Requests at or above this duration are logged as one structured line. */
+const SLOW_REQUEST_LOG_MS = (() => {
+  const parsed = Number(process.env.SLOW_REQUEST_LOG_MS);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 500;
+})();
+
 /** Auth.js and Drizzle both wrap errors; the connection failure is at the bottom. */
 function rootCauseMessage(error: unknown): string {
   let current: unknown = error;
@@ -102,11 +108,32 @@ const apiGuardAndHeaders: Handle = async ({ event, resolve }) => {
     }
   }
 
+  const startedAt = performance.now();
   const response = await resolve(event);
+  const durationMs = performance.now() - startedAt;
   applySecurityHeaders(response.headers);
+  response.headers.set("Server-Timing", `app;dur=${durationMs.toFixed(1)}`);
   if (pathname.startsWith("/api/")) {
     applyApiCacheHeaders(response.headers);
   }
+
+  // One structured line per slow request. Keep the threshold high enough that
+  // normal API traffic stays quiet, and never log bodies or query strings.
+  if (durationMs >= SLOW_REQUEST_LOG_MS) {
+    console.info(
+      JSON.stringify({
+        level: "info",
+        kind: "slow_request",
+        method,
+        path: pathname,
+        route: event.route.id ?? null,
+        status: response.status,
+        ms: Math.round(durationMs),
+        sha: process.env.VERCEL_GIT_COMMIT_SHA ?? "dev-local",
+      }),
+    );
+  }
+
   return response;
 };
 

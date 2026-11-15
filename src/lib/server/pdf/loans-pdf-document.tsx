@@ -24,6 +24,8 @@ import {
   calculateTotalPrincipal,
   calculateTotalInterest,
 } from "$lib/calculations";
+import { buildLoanLedger } from "$lib/money/ledger";
+import { centavosToPesos } from "$lib/money/centavos";
 import type {
   LoanWithInvestors,
   LoanStatus,
@@ -489,6 +491,7 @@ const LoanCard = ({
   isLast: boolean;
 }) => {
   const stats = calculateLoanStats(loan);
+  const ledger = buildLoanLedger(loan);
   const showFinancial = enabledSections.has("financial_summary");
   const showInvestors = enabledSections.has("investors");
   const showPeriods = enabledSections.has("interest_periods");
@@ -657,12 +660,29 @@ const LoanCard = ({
           <Text style={styles.sectionLabel}>Investor Breakdown</Text>
           {loan.loanInvestors.map((li, liIdx) => {
             const isLastInvestor = liIdx === loan.loanInvestors.length - 1;
-            const interest = calculateInterest(
-              li.amount,
-              li.interestRate,
-              li.interestType,
-            );
             const principal = parseFloat(li.amount) || 0;
+            const investorLedger = ledger.investors.find(
+              (investor) => investor.investorId === li.investorId,
+            );
+            // Multi-interest schedules belong to the investor, not one tranche.
+            // Split the ledger interest across tranches by capital so the
+            // breakdown sums to the loan total.
+            const interest =
+              investorLedger &&
+              li.hasMultipleInterest &&
+              investorLedger.capitalC > 0
+                ? centavosToPesos(
+                    Math.round(
+                      (investorLedger.interestExpectedC *
+                        Math.round(principal * 100)) /
+                        investorLedger.capitalC,
+                    ),
+                  )
+                : calculateInterest(
+                    li.amount,
+                    li.interestRate,
+                    li.interestType,
+                  );
             const total = principal + interest;
             const isFixed = li.interestType === "fixed";
             const hasPeriods =
@@ -674,9 +694,8 @@ const LoanCard = ({
             // For multi-interest investors, only show payments that are linked to a period
             // (interestPeriodId != null). Unlinked payments are orphaned/stale data.
             // For single-interest investors, show all payments.
-            const visiblePayments = (li.receivedPayments || []).filter((rp) =>
-              li.hasMultipleInterest ? rp.interestPeriodId != null : true,
-            );
+            // Unlinked payments are legitimate principal payments (D-13).
+            const visiblePayments = li.receivedPayments || [];
             const hasPayments = showPayments && visiblePayments.length > 0;
 
             return (

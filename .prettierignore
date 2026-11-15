@@ -11,3 +11,4 @@ bun.lockb
 _legacy-next-*/
 test-results/
 e2e/.auth/
+.cursor/commands/

@@ -1,4 +1,5 @@
 import { json } from "@sveltejs/kit";
+import { parseIdParam } from "$lib/server/route-params";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import { groupTelegramSettings } from "$lib/server/db/schema";
@@ -42,7 +43,11 @@ export const GET: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const groupId = parseInt(event.params.id);
+    const groupId = parseIdParam(event.params.id);
+
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupViewAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }
@@ -77,7 +82,11 @@ export const PUT: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const groupId = parseInt(event.params.id);
+    const groupId = parseIdParam(event.params.id);
+
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }
@@ -174,7 +183,11 @@ export const DELETE: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const groupId = parseInt(event.params.id);
+    const groupId = parseIdParam(event.params.id);
+
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }

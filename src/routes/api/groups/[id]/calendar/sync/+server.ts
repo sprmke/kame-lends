@@ -19,6 +19,7 @@ import {
   syncGroupSummaries,
 } from "$lib/server/group-calendar";
 import type { LoanWithInvestors } from "$lib/types";
+import { parseIdParam } from "$lib/server/route-params";
 
 export const config = {
   maxDuration: 60,
@@ -78,7 +79,11 @@ export const POST: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const groupId = parseInt(event.params.id);
+    const groupId = parseIdParam(event.params.id);
+
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }

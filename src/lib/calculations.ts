@@ -1,8 +1,23 @@
 /**
- * Business logic calculations for loans and investments
+ * Business logic calculations for loans and investments.
+ *
+ * These functions are thin adapters over `src/lib/money/ledger.ts`. New code
+ * should import `buildLoanLedger` directly; this module stays for the many
+ * existing imports.
  */
-
 import { computeTotalLot } from "./lot-utils";
+import {
+  centavosToPesos,
+  addC,
+  toCentavos,
+  AMOUNT_TOLERANCE_CENTAVOS,
+} from "./money/centavos";
+import { buildLoanLedger, type LedgerAllocationInput } from "./money/ledger";
+import {
+  formatDurationBetweenKeys,
+  todayKey,
+  toDateKey,
+} from "./dates/business-date";
 import type {
   LoanWithInvestors,
   InvestorWithLoans,
@@ -12,11 +27,63 @@ import type {
   Loan,
 } from "./types";
 
-function safeParseFloat(value: string | number | null | undefined): number {
-  if (value === null || value === undefined) return 0;
-  if (typeof value === "number") return Number.isNaN(value) ? 0 : value;
-  const n = parseFloat(value);
-  return Number.isNaN(n) ? 0 : n;
+/** Match received-payment APIs: amounts are stored to 2 decimal places. */
+export const LOAN_AMOUNT_TOLERANCE = AMOUNT_TOLERANCE_CENTAVOS / 100;
+
+const FAR_FUTURE = "9999-12-31";
+
+type AllocationLike = LedgerAllocationInput & {
+  loan?: { id?: number; dueDate?: Date | string } | null;
+};
+
+function asAllocations(
+  loanInvestors: Array<Record<string, unknown>>,
+): AllocationLike[] {
+  return loanInvestors as unknown as AllocationLike[];
+}
+
+function groupByLoanId(
+  allocations: AllocationLike[],
+): Map<string, AllocationLike[]> {
+  const groups = new Map<string, AllocationLike[]>();
+  const loanKeys = new WeakMap<object, number>();
+  let nextKey = 0;
+
+  for (const allocation of allocations) {
+    let key = "single";
+    if (allocation.loan) {
+      if (typeof allocation.loan.id === "number") {
+        key = `id:${allocation.loan.id}`;
+      } else {
+        let ref = loanKeys.get(allocation.loan);
+        if (ref === undefined) {
+          ref = nextKey++;
+          loanKeys.set(allocation.loan, ref);
+        }
+        key = `ref:${ref}`;
+      }
+    }
+    const group = groups.get(key);
+    if (group) group.push(allocation);
+    else groups.set(key, [allocation]);
+  }
+  return groups;
+}
+
+/**
+ * Sums expected interest for one loan, or for an investor across many loans.
+ * Grouping by loan is what fixes the old 18,000-vs-26,000 merge (CALC-02).
+ */
+function totalInterestCentavos(allocations: AllocationLike[]): number {
+  let total = 0;
+  for (const group of groupByLoanId(allocations).values()) {
+    const ledger = buildLoanLedger({
+      dueDate: group[0]?.loan?.dueDate ?? FAR_FUTURE,
+      loanInvestors: group,
+    });
+    total = addC(total, ledger.interestExpectedC);
+  }
+  return total;
 }
 
 /** Principal is still outstanding. Completed loans can be lent again. */
@@ -30,11 +97,14 @@ export function isOpenLoan(loan: { status: string }): boolean {
 export function calculateTotalPrincipal(
   loanInvestors: Array<{ amount: string }>,
 ): number {
-  return loanInvestors.reduce((sum, li) => sum + safeParseFloat(li.amount), 0);
+  return centavosToPesos(
+    addC(...loanInvestors.map((li) => toCentavos(li.amount))),
+  );
 }
 
 /**
- * Calculate total interest for a loan
+ * Calculate total interest for a loan (or for an investor across loans when
+ * rows carry a `loan` reference).
  */
 export function calculateTotalInterest(
   loanInvestors: Array<{
@@ -48,67 +118,10 @@ export function calculateTotalInterest(
     }>;
     investor?: { id: number };
     investorId?: number;
+    loan?: { id?: number; dueDate?: Date | string } | null;
   }>,
 ): number {
-  const loanTotalPrincipal = calculateTotalPrincipal(loanInvestors);
-
-  // Group by investor to handle multiple interest correctly
-  const investorGroups = new Map<number, typeof loanInvestors>();
-
-  loanInvestors.forEach((li) => {
-    const investorId = li.investor?.id || li.investorId;
-    if (investorId) {
-      const existing = investorGroups.get(investorId) || [];
-      existing.push(li);
-      investorGroups.set(investorId, existing);
-    }
-  });
-
-  let totalInterest = 0;
-
-  investorGroups.forEach((transactions) => {
-    const transactionWithPeriods = transactions.find(
-      (t) =>
-        t.hasMultipleInterest &&
-        t.interestPeriods &&
-        t.interestPeriods.length > 0,
-    );
-
-    const investorTotalCapital = transactions.reduce(
-      (sum, t) => sum + safeParseFloat(t.amount),
-      0,
-    );
-
-    if (transactionWithPeriods && transactionWithPeriods.interestPeriods) {
-      const investorInterest = transactionWithPeriods.interestPeriods.reduce(
-        (periodSum, period) => {
-          const rateValue = safeParseFloat(period.interestRate);
-          if (period.interestType === "fixed") return periodSum + rateValue;
-          const baseAmount =
-            investorTotalCapital === 0
-              ? loanTotalPrincipal
-              : investorTotalCapital;
-          return periodSum + baseAmount * (rateValue / 100);
-        },
-        0,
-      );
-
-      totalInterest += investorInterest;
-    } else {
-      transactions.forEach((li) => {
-        const capital = safeParseFloat(li.amount);
-        const rateValue = safeParseFloat(li.interestRate);
-        if (li.interestType === "fixed") {
-          totalInterest += rateValue;
-        } else {
-          const baseAmount = capital === 0 ? loanTotalPrincipal : capital;
-          totalInterest += baseAmount * (rateValue / 100);
-        }
-      });
-    }
-  });
-
-  return totalInterest;
+  return centavosToPesos(totalInterestCentavos(asAllocations(loanInvestors)));
 }
 
 /**
@@ -126,25 +139,31 @@ export function calculateTotalAmount(
     }>;
   }>,
 ): number {
-  const principal = calculateTotalPrincipal(loanInvestors);
-  const interest = calculateTotalInterest(loanInvestors);
-  return principal + interest;
+  const allocations = asAllocations(loanInvestors);
+  let principalC = 0;
+  let interestC = 0;
+  for (const group of groupByLoanId(allocations).values()) {
+    const ledger = buildLoanLedger({
+      dueDate: group[0]?.loan?.dueDate ?? FAR_FUTURE,
+      loanInvestors: group,
+    });
+    principalC = addC(principalC, ledger.principalC);
+    interestC = addC(interestC, ledger.interestExpectedC);
+  }
+  return centavosToPesos(addC(principalC, interestC));
 }
-
-/** Match received-payment APIs: amounts are stored to 2 decimal places. */
-export const LOAN_AMOUNT_TOLERANCE = 0.02;
 
 export function calculateTotalReceived(
   loanInvestors: Array<{
     receivedPayments?: Array<{ amount: string }>;
   }>,
 ): number {
-  return loanInvestors.reduce((sum, li) => {
-    const payments = li.receivedPayments ?? [];
-    return (
-      sum + payments.reduce((inner, rp) => inner + safeParseFloat(rp.amount), 0)
-    );
-  }, 0);
+  const receivedC = addC(
+    ...loanInvestors.flatMap((li) =>
+      (li.receivedPayments ?? []).map((rp) => toCentavos(rp.amount)),
+    ),
+  );
+  return centavosToPesos(receivedC);
 }
 
 /** True when received payments cover principal + interest. */
@@ -158,8 +177,8 @@ export function isLoanFullyReceived(
 
 /**
  * Calculate weighted average interest rate for a loan.
- * Only rate-based interest is used for the average; fixed-amount interest
- * from 0-capital investors is excluded to avoid misleading percentages.
+ * Includes fixed-amount interest; a fixed amount still raises the effective
+ * rate on the capital that earned it (CALC-08).
  */
 export function calculateAverageRate(
   loanInvestors: Array<{
@@ -173,13 +192,16 @@ export function calculateAverageRate(
     }>;
     investor?: { id: number };
     investorId?: number;
+    loan?: { id?: number; dueDate?: Date | string } | null;
   }>,
 ): number {
-  const totalPrincipal = calculateTotalPrincipal(loanInvestors);
-  if (totalPrincipal === 0) return 0;
-
-  const totalInterest = calculateTotalInterest(loanInvestors);
-  return (totalInterest / totalPrincipal) * 100;
+  const allocations = asAllocations(loanInvestors);
+  const totalPrincipalC = addC(
+    ...allocations.map((allocation) => toCentavos(allocation.amount)),
+  );
+  if (totalPrincipalC === 0) return 0;
+  const totalInterestC = totalInterestCentavos(allocations);
+  return (totalInterestC / totalPrincipalC) * 100;
 }
 
 /**
@@ -190,19 +212,57 @@ export function calculateInterest(
   interestRate: string | number,
   interestType?: string,
 ): number {
-  const capital = safeParseFloat(amount);
-  const rateValue = safeParseFloat(interestRate);
-
-  // If interestType is 'fixed', interestRate contains the fixed amount
-  // If interestType is 'rate' or undefined (backward compatibility), it's a percentage
-  return interestType === "fixed" ? rateValue : capital * (rateValue / 100);
+  if (interestType === "fixed") {
+    return centavosToPesos(toCentavos(interestRate));
+  }
+  return centavosToPesos(
+    Math.round((toCentavos(amount) * toCentavos(interestRate)) / 10000),
+  );
 }
 
 /**
- * Calculate the amount due on the loan's final due date.
- * - Multiple interest periods: capital + final period interest + any
- *   unpaid/overdue earlier period interest.
- * - Single interest: capital + total interest.
+ * Amount due for overdue loans (unpaid overdue items only).
+ *
+ * `dueDate` is the loan due date; when omitted the loan is treated as not
+ * past due. Pass `today` in tests so the answer never depends on the clock.
+ */
+export function calculateOverdueAmount(
+  loanInvestors: Array<{
+    amount: string;
+    interestRate: string;
+    interestType?: string;
+    hasMultipleInterest?: boolean;
+    interestPeriods?: Array<{
+      interestRate: string;
+      interestType?: string;
+      dueDate?: Date | string;
+      status?: string;
+    }>;
+    investor?: { id: number };
+    investorId?: number;
+    receivedPayments?: Array<{
+      amount: string;
+      interestPeriodId?: number | null;
+    }>;
+    loan?: { id?: number; dueDate?: Date | string } | null;
+  }>,
+  dueDate: Date | string = FAR_FUTURE,
+  today: string = todayKey(),
+): number {
+  const ledger = buildLoanLedger(
+    {
+      dueDate,
+      loanInvestors: asAllocations(loanInvestors),
+    },
+    { today },
+  );
+  return centavosToPesos(ledger.overdueC);
+}
+
+/**
+ * Amount due on the loan's final due date, using stored period statuses.
+ * @deprecated Not used by any screen; kept only for characterization tests.
+ * New code must use `buildLoanLedger().dueC` / `.balanceC`.
  */
 export function calculateAmountDueOnDate(
   loanInvestors: Array<{
@@ -220,185 +280,72 @@ export function calculateAmountDueOnDate(
     investorId?: number;
   }>,
 ): number {
-  const loanTotalPrincipal = calculateTotalPrincipal(loanInvestors);
-  const investorGroups = new Map<number, typeof loanInvestors>();
-
-  loanInvestors.forEach((li) => {
-    const investorId = li.investor?.id || li.investorId;
-    if (investorId) {
-      const existing = investorGroups.get(investorId) || [];
-      existing.push(li);
-      investorGroups.set(investorId, existing);
-    }
+  const groups = new Map<number, typeof loanInvestors>();
+  loanInvestors.forEach((li, index) => {
+    const investorId = li.investor?.id ?? li.investorId ?? index;
+    const group = groups.get(investorId);
+    if (group) group.push(li);
+    else groups.set(investorId, [li]);
   });
 
-  let totalAmount = 0;
-
-  investorGroups.forEach((transactions) => {
-    const investorTotalCapital = transactions.reduce(
-      (sum, t) => sum + safeParseFloat(t.amount),
-      0,
+  let totalC = 0;
+  for (const transactions of groups.values()) {
+    const capitalC = addC(
+      ...transactions.map((transaction) => toCentavos(transaction.amount)),
     );
-
-    const transactionWithPeriods = transactions.find(
-      (t) =>
-        t.hasMultipleInterest &&
-        t.interestPeriods &&
-        t.interestPeriods.length > 0,
+    const withPeriods = transactions.find(
+      (transaction) =>
+        transaction.hasMultipleInterest &&
+        (transaction.interestPeriods?.length ?? 0) > 0,
     );
-
-    if (transactionWithPeriods && transactionWithPeriods.interestPeriods) {
-      const periods = [...transactionWithPeriods.interestPeriods].sort(
-        (a, b) =>
-          new Date(a.dueDate || 0).getTime() -
-          new Date(b.dueDate || 0).getTime(),
+    if (withPeriods?.interestPeriods) {
+      const periods = [...withPeriods.interestPeriods].sort((a, b) =>
+        toDateKey(a.dueDate).localeCompare(toDateKey(b.dueDate)),
       );
       const finalPeriod = periods[periods.length - 1];
-      const base =
-        investorTotalCapital === 0 ? loanTotalPrincipal : investorTotalCapital;
-
-      let rolledInterest = 0;
-      periods.slice(0, -1).forEach((period) => {
+      const rolledC = periods.slice(0, -1).reduce((sum, period) => {
         if (period.status !== "Overdue" && period.status !== "Incomplete") {
-          return;
+          return sum;
         }
-        rolledInterest += calculateInterest(
-          base,
-          period.interestRate,
-          period.interestType,
+        return addC(
+          sum,
+          toCentavos(
+            calculateInterest(
+              centavosToPesos(capitalC),
+              period.interestRate,
+              period.interestType,
+            ),
+          ),
         );
-      });
-
-      const finalPeriodInterest =
+      }, 0);
+      const finalC =
         finalPeriod.status === "Completed"
           ? 0
-          : calculateInterest(
-              base,
-              finalPeriod.interestRate,
-              finalPeriod.interestType,
+          : toCentavos(
+              calculateInterest(
+                centavosToPesos(capitalC),
+                finalPeriod.interestRate,
+                finalPeriod.interestType,
+              ),
             );
-
-      totalAmount +=
-        investorTotalCapital + finalPeriodInterest + rolledInterest;
+      totalC = addC(totalC, capitalC, rolledC, finalC);
     } else {
-      const interest = transactions.reduce((sum, li) => {
-        const capital = safeParseFloat(li.amount);
-        const base = capital === 0 ? loanTotalPrincipal : capital;
-        return sum + calculateInterest(base, li.interestRate, li.interestType);
-      }, 0);
-
-      totalAmount += investorTotalCapital + interest;
-    }
-  });
-
-  return totalAmount;
-}
-
-/**
- * Calculate the amount due for overdue loans (unpaid overdue items only).
- * - Multiple interest periods: sum of interest for periods with status 'Overdue' only;
- *   capital is included only if the final period is overdue. Future pending balances are not included.
- * - Single interest: capital + total interest (one due date; when overdue, full amount is overdue).
- */
-export function calculateOverdueAmount(
-  loanInvestors: Array<{
-    amount: string;
-    interestRate: string;
-    interestType?: string;
-    hasMultipleInterest?: boolean;
-    interestPeriods?: Array<{
-      interestRate: string;
-      interestType?: string;
-      dueDate?: Date | string;
-      status?: string;
-    }>;
-    investor?: { id: number };
-    investorId?: number;
-  }>,
-): number {
-  const loanTotalPrincipal = calculateTotalPrincipal(loanInvestors);
-  const investorGroups = new Map<number, typeof loanInvestors>();
-
-  loanInvestors.forEach((li) => {
-    const investorId = li.investor?.id || li.investorId;
-    if (investorId) {
-      const existing = investorGroups.get(investorId) || [];
-      existing.push(li);
-      investorGroups.set(investorId, existing);
-    }
-  });
-
-  let totalAmount = 0;
-
-  investorGroups.forEach((transactions) => {
-    const investorTotalCapital = transactions.reduce(
-      (sum, t) => sum + safeParseFloat(t.amount),
-      0,
-    );
-
-    const transactionWithPeriods = transactions.find(
-      (t) =>
-        t.hasMultipleInterest &&
-        t.interestPeriods &&
-        t.interestPeriods.length > 0,
-    );
-
-    if (transactionWithPeriods && transactionWithPeriods.interestPeriods) {
-      const periods = [...transactionWithPeriods.interestPeriods].sort(
-        (a, b) =>
-          new Date(a.dueDate || 0).getTime() -
-          new Date(b.dueDate || 0).getTime(),
+      const interestC = addC(
+        ...transactions.map((transaction) =>
+          toCentavos(
+            calculateInterest(
+              transaction.amount,
+              transaction.interestRate,
+              transaction.interestType,
+            ),
+          ),
+        ),
       );
-      const overduePeriods = periods.filter(
-        (p) => p.status === "Overdue" || p.status === "Incomplete",
-      );
-
-      if (overduePeriods.length > 0) {
-        const finalPeriod = periods[periods.length - 1];
-        const isFinalPeriodOverdue =
-          finalPeriod.status === "Overdue" ||
-          finalPeriod.status === "Incomplete";
-        const base =
-          investorTotalCapital === 0
-            ? loanTotalPrincipal
-            : investorTotalCapital;
-
-        const overdueInterest = overduePeriods.reduce((sum, period) => {
-          return (
-            sum +
-            calculateInterest(base, period.interestRate, period.interestType)
-          );
-        }, 0);
-
-        totalAmount += isFinalPeriodOverdue
-          ? investorTotalCapital + overdueInterest
-          : overdueInterest;
-      }
-    } else {
-      const interest = transactions.reduce((sum, li) => {
-        const capital = safeParseFloat(li.amount);
-        const base = capital === 0 ? loanTotalPrincipal : capital;
-        return sum + calculateInterest(base, li.interestRate, li.interestType);
-      }, 0);
-
-      totalAmount += investorTotalCapital + interest;
+      totalC = addC(totalC, capitalC, interestC);
     }
-  });
+  }
 
-  return totalAmount;
-}
-
-/**
- * Calculate total for a single investment (amount + interest)
- */
-export function calculateInvestmentTotal(
-  amount: string | number,
-  interestRate: string | number,
-  interestType?: string,
-): number {
-  const capital = safeParseFloat(amount);
-  const interest = calculateInterest(amount, interestRate, interestType);
-  return capital + interest;
+  return centavosToPesos(totalC);
 }
 
 /**
@@ -440,6 +387,7 @@ export function calculateTransactionStats(
       interestRate: string;
       interestType?: string;
     }>;
+    loan?: { id?: number; dueDate?: Date | string } | null;
   }>,
 ): {
   totalPrincipal: number;
@@ -462,115 +410,16 @@ export function calculateTransactionStats(
 }
 
 /**
- * Calculate stats for grouped loan investor transactions (for a single investor within a loan)
- */
-export function calculateGroupedLoanInvestorStats(
-  transactions: Array<{
-    amount: string;
-    interestRate: string;
-    interestType?: string;
-    hasMultipleInterest?: boolean;
-    interestPeriods?: Array<{
-      interestRate: string;
-      interestType?: string;
-    }>;
-  }>,
-): {
-  totalPrincipal: number;
-  totalInterest: number;
-  averageRate: number;
-  total: number;
-} {
-  return calculateTransactionStats(transactions);
-}
-
-/**
- * Calculate loan duration from start date to due date
+ * Loan duration from start date to due date, using calendar months with
+ * month-end clamping (CALC-07). Jan 31 → Mar 31 is "2 Months".
  */
 export function calculateLoanDuration(
   dueDate: Date | string,
   startDate?: Date | string,
 ): string {
-  // If no start date provided, use today's date (for backward compatibility)
-  const start = startDate
-    ? typeof startDate === "string"
-      ? new Date(startDate)
-      : new Date(startDate)
-    : new Date();
-  start.setHours(0, 0, 0, 0); // Normalize to midnight
-
-  const due =
-    typeof dueDate === "string" ? new Date(dueDate) : new Date(dueDate);
-  due.setHours(0, 0, 0, 0); // Normalize to midnight
-
-  // Calculate the difference in months using calendar months
-  let months = 0;
-  let tempDate = new Date(start);
-
-  // Count full months
-  while (tempDate < due) {
-    const nextMonth = new Date(tempDate);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-    if (nextMonth <= due) {
-      months++;
-      tempDate = nextMonth;
-    } else {
-      break;
-    }
-  }
-
-  // Calculate remaining days after full months
-  const remainingTime = due.getTime() - tempDate.getTime();
-  const remainingDays = Math.round(remainingTime / (1000 * 60 * 60 * 24));
-
-  const weeks = Math.floor(remainingDays / 7);
-  const days = remainingDays % 7;
-
-  const parts = [];
-  if (months > 0) {
-    parts.push(`${months} ${months === 1 ? "Month" : "Months"}`);
-  }
-  if (weeks > 0) {
-    parts.push(`${weeks} ${weeks === 1 ? "Week" : "Weeks"}`);
-  }
-  if (days > 0) {
-    parts.push(`${days} ${days === 1 ? "Day" : "Days"}`);
-  }
-
-  return parts.length > 0 ? parts.join(", ") : "0 Days";
-}
-
-/**
- * Get balance status based on amount
- */
-export function getBalanceStatus(balance: number): {
-  status: string;
-  variant: "default" | "secondary" | "destructive";
-} {
-  if (balance > 100000) {
-    return { status: "Can invest", variant: "default" };
-  }
-  if (balance > 50000) {
-    return { status: "Low funds", variant: "secondary" };
-  }
-  return { status: "No funds", variant: "destructive" };
-}
-
-/**
- * Calculate the pending balance for a loan
- * Balance = Total Principal - Funded Capital (where isPaid is true)
- */
-export function calculateLoanBalance(
-  loanInvestors: Array<{ amount: string; isPaid: boolean }>,
-): number {
-  const totalPrincipal = calculateTotalPrincipal(loanInvestors);
-
-  const fundedCapital = loanInvestors.reduce((sum, li) => {
-    return li.isPaid ? sum + safeParseFloat(li.amount) : sum;
-  }, 0);
-
-  return totalPrincipal - fundedCapital;
+  const start = startDate ? toDateKey(startDate) : todayKey();
+  const due = toDateKey(dueDate);
+  return formatDurationBetweenKeys(start, due);
 }
 
 /**
@@ -592,10 +441,14 @@ export function calculateLoanStats(loan: LoanWithInvestors): {
   totalAmount: number;
   uniqueInvestors: number;
 } {
-  const totalPrincipal = calculateTotalPrincipal(loan.loanInvestors);
-  const totalInterest = calculateTotalInterest(loan.loanInvestors);
-  const avgRate = calculateAverageRate(loan.loanInvestors);
-  const totalAmount = totalPrincipal + totalInterest;
+  const ledger = buildLoanLedger(loan);
+  const totalPrincipal = centavosToPesos(ledger.principalC);
+  const totalInterest = centavosToPesos(ledger.interestExpectedC);
+  const avgRate =
+    ledger.principalC > 0
+      ? (ledger.interestExpectedC / ledger.principalC) * 100
+      : 0;
+  const totalAmount = centavosToPesos(ledger.dueC);
   const uniqueInvestors = countUniqueInvestors(loan.loanInvestors);
 
   return {
@@ -608,7 +461,10 @@ export function calculateLoanStats(loan: LoanWithInvestors): {
 }
 
 /**
- * Calculate comprehensive stats for an investor
+ * Calculate comprehensive stats for an investor.
+ *
+ * Allocations are grouped by loan first, so an investor with two tranches on
+ * one loan counts as one loan and gets that loan's schedule (CALC-02, CALC-09).
  */
 export function calculateInvestorStats(investor: InvestorWithLoans): {
   totalCapital: number;
@@ -618,51 +474,65 @@ export function calculateInvestorStats(investor: InvestorWithLoans): {
   totalLoans: number;
   completedLoans: number;
   overdueLoans: number;
+  /** @deprecated Use `totalWithInterest`; kept for existing call-sites. */
   totalGain: number;
+  totalWithInterest: number;
 } {
-  const openLoanInvestors = investor.loanInvestors.filter((li) =>
-    isOpenLoan(li.loan),
+  const rows = investor.loanInvestors as unknown as AllocationLike[];
+  const groups = [...groupByLoanId(rows).values()];
+  const openGroups = groups.filter((group) => {
+    const loan = group[0]?.loan as { status?: string } | null | undefined;
+    return isOpenLoan({ status: loan?.status ?? "Fully Funded" });
+  });
+
+  const totalCapitalC = addC(
+    ...openGroups.map((group) => {
+      const ledger = buildLoanLedger({
+        dueDate: group[0]?.loan?.dueDate ?? FAR_FUTURE,
+        loanInvestors: group,
+      });
+      return ledger.principalC;
+    }),
   );
-  const totalCapital = calculateTotalPrincipal(openLoanInvestors);
-  const totalInterest = calculateTotalInterest(openLoanInvestors);
+  const totalInterestC = addC(
+    ...openGroups.map((group) => {
+      const ledger = buildLoanLedger({
+        dueDate: group[0]?.loan?.dueDate ?? FAR_FUTURE,
+        loanInvestors: group,
+      });
+      return ledger.interestExpectedC;
+    }),
+  );
 
-  const activeLoans = investor.loanInvestors.filter(
-    (li) =>
-      li.loan.status === "Fully Funded" ||
-      li.loan.status === "Partially Funded",
-  ).length;
+  const distinctStatus = (status: string) =>
+    groups.filter((group) => {
+      const loan = group[0]?.loan as { status?: string } | null | undefined;
+      return loan?.status === status;
+    }).length;
 
-  const completedLoans = investor.loanInvestors.filter(
-    (li) => li.loan.status === "Completed",
-  ).length;
-
-  const overdueLoans = investor.loanInvestors.filter(
-    (li) => li.loan.status === "Overdue",
-  ).length;
-
-  // Get latest balance from transactions
-  const latestTransaction =
-    investor.transactions.length > 0
-      ? investor.transactions.sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-        )[0]
-      : null;
+  // Copy before sorting: the old version mutated the caller's array.
+  const latestTransaction = [...investor.transactions]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .at(0);
 
   const currentBalance = latestTransaction
-    ? safeParseFloat(latestTransaction.balance)
+    ? Number(latestTransaction.balance) || 0
     : 0;
 
-  const totalGain = totalCapital + totalInterest;
+  const totalCapital = centavosToPesos(totalCapitalC);
+  const totalInterest = centavosToPesos(totalInterestC);
 
   return {
     totalCapital,
     totalInterest,
-    activeLoans,
+    activeLoans:
+      distinctStatus("Fully Funded") + distinctStatus("Partially Funded"),
     currentBalance,
-    totalLoans: investor.loanInvestors.length,
-    completedLoans,
-    overdueLoans,
-    totalGain,
+    totalLoans: groups.length,
+    completedLoans: distinctStatus("Completed"),
+    overdueLoans: distinctStatus("Overdue"),
+    totalGain: totalCapital + totalInterest,
+    totalWithInterest: totalCapital + totalInterest,
   };
 }
 
@@ -686,18 +556,27 @@ export function calculateBorrowerStats(borrower: BorrowerWithLoans): {
   const openLoansList = loans.filter((loan) => isOpenLoan(loan));
   const overdueLoansList = loans.filter((loan) => loan.status === "Overdue");
 
-  let activePrincipal = 0;
-  let activeInterest = 0;
-  let overdueAmount = 0;
+  let activePrincipalC = 0;
+  let activeInterestC = 0;
+  let overdueC = 0;
 
   for (const loan of openLoansList) {
-    const investors = loan.loanInvestors ?? [];
-    activePrincipal += calculateTotalPrincipal(investors);
-    activeInterest += calculateTotalInterest(investors);
+    const ledger = buildLoanLedger({
+      dueDate: loan.dueDate,
+      loanInvestors: (loan.loanInvestors ?? []) as LedgerAllocationInput[],
+    });
+    activePrincipalC = addC(activePrincipalC, ledger.principalC);
+    activeInterestC = addC(activeInterestC, ledger.interestExpectedC);
   }
 
   for (const loan of overdueLoansList) {
-    overdueAmount += calculateOverdueAmount(loan.loanInvestors ?? []);
+    overdueC = addC(
+      overdueC,
+      buildLoanLedger({
+        dueDate: loan.dueDate,
+        loanInvestors: (loan.loanInvestors ?? []) as LedgerAllocationInput[],
+      }).overdueC,
+    );
   }
 
   const { totalLot, totalLotWithDepacto } = computeTotalLot(loans);
@@ -711,10 +590,10 @@ export function calculateBorrowerStats(borrower: BorrowerWithLoans): {
     ).length,
     overdueLoans: overdueLoansList.length,
     completedLoans: loans.filter((loan) => loan.status === "Completed").length,
-    activePrincipal,
-    activeInterest,
-    activeTotal: activePrincipal + activeInterest,
-    overdueAmount,
+    activePrincipal: centavosToPesos(activePrincipalC),
+    activeInterest: centavosToPesos(activeInterestC),
+    activeTotal: centavosToPesos(addC(activePrincipalC, activeInterestC)),
+    overdueAmount: centavosToPesos(overdueC),
     totalLot,
     totalLotWithDepacto,
   };

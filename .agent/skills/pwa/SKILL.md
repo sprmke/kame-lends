@@ -60,3 +60,10 @@ SW is **off in `vite dev`** (`register.ts` bails when `dev`). Test with preview 
 - [ ] Sign-out and account switch call **`purgeOfflineState()`**
 - [ ] Push sends use log dedupe; VAPID env vars documented in `.env.example`
 - [ ] Route guide updated if Settings or shell UX changed
+
+## Offline money views (2026-11)
+
+- The offline banner shows when data was last refreshed ("Saved data from …"). `PwaProvider` stores `kl-last-online`.
+- Every mutating money button is disabled or explained while offline; `OFFLINE_MUTATION_EVENT` handles the message.
+- Sign-out clears `kl-pages`, `kl-data`, the last-online stamp, and the push subscription.
+- Offline loan data is a cached read, never a source for a payment write.

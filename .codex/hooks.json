@@ -1,0 +1,54 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/michaelmanlulu/Projects/personal-projects/kame-lends/.codex/hooks/guard-shell.sh'",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/michaelmanlulu/Projects/personal-projects/kame-lends/.codex/hooks/guard-shipped-migrations.sh'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/michaelmanlulu/Projects/personal-projects/kame-lends/.codex/hooks/format-edited-file.sh'",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "'/Users/michaelmanlulu/Projects/personal-projects/kame-lends/.codex/hooks/check-stack-terminology.sh'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/michaelmanlulu/Projects/personal-projects/kame-lends/.codex/hooks/session-docs-sync-reminder.sh'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

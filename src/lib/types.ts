@@ -112,6 +112,7 @@ export interface Loan {
   userId: string;
   profitType: InterestType;
   profitValue: string;
+  statusOverride?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -336,7 +337,7 @@ export interface DebtInterestPeriod {
   debtId: number;
   periodNumber: number;
   dueDate: Date | string;
-  expectedInterest: string;
+  expectedInstallment: string;
   status: InterestPeriodStatus;
   createdAt: Date;
   updatedAt: Date;

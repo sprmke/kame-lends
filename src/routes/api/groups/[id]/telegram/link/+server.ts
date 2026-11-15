@@ -7,6 +7,7 @@ import { telegramLinkTokens } from "$lib/server/db/schema";
 import { getSession } from "$lib/server/session";
 import { hasGroupManageAccess } from "$lib/server/group-access";
 import { readTelegramConfig } from "$lib/server/telegram/config";
+import { parseIdParam } from "$lib/server/route-params";
 
 const TOKEN_TTL_MS = 30 * 60 * 1000;
 
@@ -17,7 +18,11 @@ export const POST: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const groupId = parseInt(event.params.id);
+    const groupId = parseIdParam(event.params.id);
+
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }

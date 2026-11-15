@@ -95,6 +95,26 @@ export default defineConfig({
       },
     },
     {
+      name: "money-flows",
+      testMatch: /money-flows\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: "a11y",
+      testMatch: /a11y\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
       name: "advanced-controls",
       testMatch: /advanced-controls\.spec\.ts/,
       dependencies: ["setup"],

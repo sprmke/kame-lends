@@ -1,6 +1,8 @@
 <script lang="ts">
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
 	import DetailModalHeader from '$lib/components/common/DetailModalHeader.svelte';
 	import FormHeader from '$lib/components/common/FormHeader.svelte';
 	import LoanContractDetailsModal from './LoanContractDetailsModal.svelte';
@@ -56,6 +58,7 @@
 	let showCompleteDialog = $state(false);
 	let isDeleting = $state(false);
 	let isCompleting = $state(false);
+	let completeReason = $state('');
 	let showContractDetailsModal = $state(false);
 	let quickPaymentKind = $state<LoanQuickPaymentKind | null>(null);
 	let investors = $state<Investor[]>([]);
@@ -280,22 +283,39 @@
 	}
 
 	async function handleComplete() {
-		if (!loan) return;
+		if (!loan || !completeReason.trim()) return;
 		isCompleting = true;
 		try {
 			const response = await fetch(`/api/loans/${loan.id}/status`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ status: 'Completed' })
+				body: JSON.stringify({ status: 'Completed', reason: completeReason.trim() })
 			});
 			if (!response.ok) throw new Error('Failed to complete loan');
 			showCompleteDialog = false;
+			completeReason = '';
 			await refreshLoan();
 		} catch (error) {
 			console.error('Error completing loan:', error);
 			toast.error('Failed to complete loan');
 		} finally {
 			isCompleting = false;
+		}
+	}
+
+	async function handleReopen() {
+		if (!loan) return;
+		try {
+			const response = await fetch(`/api/loans/${loan.id}/status`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ status: 'auto', reason: 'Reopened' })
+			});
+			if (!response.ok) throw new Error('Failed to reopen loan');
+			await refreshLoan();
+		} catch (error) {
+			console.error('Error reopening loan:', error);
+			toast.error('Failed to reopen loan');
 		}
 	}
 
@@ -335,6 +355,9 @@
 					>
 						{formatText(loan.loanName)}
 					</h2>
+					{#if !readOnly && loan.statusOverride === 'Completed'}
+						<Button variant="outline" size="sm" onclick={handleReopen}>Reopen</Button>
+					{/if}
 					<DetailModalHeader
 						onEdit={enterEditMode}
 						onDelete={() => (showDeleteDialog = true)}
@@ -458,15 +481,24 @@
 			<AlertDialog.Header>
 				<AlertDialog.Title>Complete Loan</AlertDialog.Title>
 				<AlertDialog.Description>
-					Are you sure you want to mark this loan as completed? This will change the loan status to
-					'Completed'.
+					Mark this loan as completed. Add a reason, especially if money is still owed
+					(waived or written off).
 				</AlertDialog.Description>
 			</AlertDialog.Header>
+			<div class="py-2">
+				<label class="mb-1 block text-sm font-medium" for="complete-reason">Reason</label>
+				<Input
+					id="complete-reason"
+					bind:value={completeReason}
+					placeholder="Waived balance, settled in cash, ..."
+					disabled={isCompleting}
+				/>
+			</div>
 			<AlertDialog.Footer>
 				<AlertDialog.Cancel disabled={isCompleting}>Cancel</AlertDialog.Cancel>
 				<AlertDialog.Action
 					class="bg-chart-2 text-white hover:bg-chart-2/90"
-					disabled={isCompleting}
+					disabled={isCompleting || !completeReason.trim()}
 					onclick={handleComplete}
 				>
 					{isCompleting ? 'Completing...' : 'Complete'}

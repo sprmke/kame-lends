@@ -8,6 +8,12 @@ import type {
   DebtInterestInterval,
   DebtInterestPeriodWithPayments,
 } from "$lib/types";
+import {
+  addDaysToKey,
+  addMonthsClamped,
+  dateKeyToUtcMidnight,
+  toDateKey,
+} from "$lib/dates/business-date";
 
 const PERIODS_PER_YEAR: Record<DebtInterestInterval, number> = {
   Daily: 365,
@@ -135,7 +141,7 @@ export function generateInterestSchedule(
   interval: DebtInterestInterval,
   periodCount = 12,
 ): InterestScheduleEntry[] {
-  const start = new Date(startDate);
+  const startKey = toDateKey(startDate);
   const principalAmount = safeParseFloat(principal);
   const rate = periodRateFromPercent(interestRate);
   const installment = calculateAmortizedPayment(
@@ -149,21 +155,17 @@ export function generateInterestSchedule(
   let remainingBalance = principalAmount;
 
   for (let i = 0; i < periodCount; i++) {
-    const date = new Date(start);
-    switch (interval) {
-      case "Daily":
-        date.setDate(date.getDate() + i);
-        break;
-      case "Weekly":
-        date.setDate(date.getDate() + i * 7);
-        break;
-      case "Monthly":
-        date.setMonth(date.getMonth() + i);
-        break;
-      case "Annually":
-        date.setFullYear(date.getFullYear() + i);
-        break;
-    }
+    // D-9: the first installment is one interval after the debt date.
+    const offset = i + 1;
+    const dateKey =
+      interval === "Daily"
+        ? addDaysToKey(startKey, offset)
+        : interval === "Weekly"
+          ? addDaysToKey(startKey, offset * 7)
+          : interval === "Monthly"
+            ? addMonthsClamped(startKey, offset)
+            : addMonthsClamped(startKey, offset * 12);
+    const date = dateKeyToUtcMidnight(dateKey);
 
     const isLastPeriod = i === periodCount - 1;
     const interest = roundMoney(remainingBalance * rate);
@@ -285,9 +287,7 @@ function normalizeDebtDate(date: Date | string): Date {
 }
 
 function toDebtDateString(date: Date | string): string {
-  return date instanceof Date
-    ? date.toISOString().split("T")[0]
-    : String(date).split("T")[0];
+  return date instanceof Date ? toDateKey(date) : String(date).split("T")[0];
 }
 
 const DEFAULT_DEBT_DURATION_MONTHS = 12;
@@ -314,18 +314,21 @@ export function getDebtEndDate(
   startDate: Date | string,
   durationMonths: number = DEFAULT_DEBT_DURATION_MONTHS,
 ): Date {
-  const end = new Date(startDate);
-  end.setMonth(end.getMonth() + Math.max(1, durationMonths));
-  end.setHours(0, 0, 0, 0);
-  return end;
+  const key = toDateKey(startDate);
+  return dateKeyToUtcMidnight(
+    addMonthsClamped(key, Math.max(1, durationMonths)),
+  );
 }
 
-/** Debt term has ended (start + duration is on or before today). */
-export function isCompletedDebt(
+/**
+ * The debt **term** has ended. This does not mean the debt is paid; use
+ * `isFullyPaidDebt` for "Paid" (DEBT-03).
+ */
+export function isDebtTermEnded(
   debt: { date: Date | string; durationMonths?: number },
   asOf: Date = new Date(),
 ): boolean {
-  const today = normalizeDebtDate(asOf);
+  const today = dateKeyToUtcMidnight(toDateKey(asOf));
   const end = getDebtEndDate(
     debt.date,
     debt.durationMonths ?? DEFAULT_DEBT_DURATION_MONTHS,
@@ -333,12 +336,20 @@ export function isCompletedDebt(
   return today >= end;
 }
 
-/** @deprecated Use {@link isCompletedDebt}. Kept for filter naming compatibility. */
+/** @deprecated Use {@link isDebtTermEnded}; the name implied "paid". */
+export function isCompletedDebt(
+  debt: { date: Date | string; durationMonths?: number },
+  asOf: Date = new Date(),
+): boolean {
+  return isDebtTermEnded(debt, asOf);
+}
+
+/** @deprecated Use {@link isDebtTermEnded}. */
 export function isPastDebt(
   debt: { date: Date | string; durationMonths?: number },
   asOf: Date = new Date(),
 ): boolean {
-  return isCompletedDebt(debt, asOf);
+  return isDebtTermEnded(debt, asOf);
 }
 
 function debtSummaryInput(debt: DebtLike) {

@@ -1,3 +1,8 @@
+---
+name: documentation-maintenance
+description: "Invoke before claiming any material change done. Mirrors `.cursor/rules/documentation-maintenance.mdc`."
+---
+
 # Documentation maintenance — Kame Lends
 
 Invoke before claiming any material change done. Mirrors `.cursor/rules/documentation-maintenance.mdc`.

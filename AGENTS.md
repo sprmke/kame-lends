@@ -1,0 +1,79 @@
+# AGENTS.md
+
+Guidance for Codex in **Kame Lends (PawnTracker)**. Mirrors `.cursor/rules/project-context.mdc` and doc-sync requirements.
+
+## What this is
+
+Loan management app: loans, investors, borrowers, debts, transactions, Google Calendar sync, investor portal. **SvelteKit 2** at repo root on branch `feat/sveltekit-migration` (legacy Next.js removed).
+
+Stack: **SvelteKit 2 + Svelte 5 + Vite + Neon + Drizzle + Auth.js + Vercel**.
+
+## Commands
+
+```bash
+bun install
+bun run setup:ai-tooling      # once after clone
+bun run check:ai-tooling-sync
+
+./dev.sh                    # Docker Postgres :5433 + schema bootstrap + Vite :3200
+./dev.sh --ui-only          # Vite only (DATABASE_URL from .env.local)
+bun run dev                 # Vite only; http://localhost:3200 (strictPort; frees ports first)
+bun run check
+bun run test
+bun run build
+
+# Database
+bun run db:generate
+bun run db:migrate:pending   # apply pending db/migrations/*.sql
+bun run backup:neon
+bun run backup:neon:branches
+```
+
+Production: push to **`main`** runs GitHub Actions CD (quality → migrate → Vercel). See `docs/architecture/deployment.md`.
+
+## Architecture
+
+```
+src/routes/             # SvelteKit file routes
+src/lib/                # Shared logic, components, server modules
+src/lib/server/db/      # Drizzle schema + client
+db/migrations/          # Shipped SQL migrations
+```
+
+Auth: `@auth/sveltekit` + Google + Drizzle adapter. Roles: `admin`, `investor`.
+
+PDF: server-only `@react-pdf/renderer` in `+server.ts` routes — do not remove React from PDF path.
+
+## Docs are the source of truth
+
+Before claiming any material task done:
+
+1. Follow **`documentation-maintenance`** skill.
+2. Route/page changes → **`route-guides`** skill.
+
+| Change                 | Update                    |
+| ---------------------- | ------------------------- |
+| Architecture, API, env | `docs/PROJECT.md`         |
+| Page UX in `src/`      | `docs/guides/routes/*.md` |
+
+## Plan mode / workflow
+
+Finished plans go to `docs/workflow/planned/<kebab-slug>.md` (frontmatter `title, status, tags, updated, stage, kind: plan`; sections Goal, Scope, Approach, Tasks with paths, Docs to update, Open questions) plus a row in `planned/README.md` and a 📋 item in `docs/workflow/intake/_to-plan.md`. Lifecycle: intake → planned → in-progress → for-testing → done (or wont-do). Move with `bash scripts/dev/workflow-move.sh start|for-testing|done|wont-do <slug>` and keep scratchpad emojis in sync. Skills: `workflow`, `workflow-intake-scratchpads`. Rules: `.cursor/rules/plan-mode.mdc`, `.cursor/rules/workflow-docs.mdc`.
+
+## AI session hygiene
+
+See `.cursor/rules/ai-usage.mdc`: one task per chat, no subagent swarms, prefer Sonnet for implementation.
+
+## Skills
+
+Canonical: `.agent/skills/<name>/SKILL.md` (symlinked to `.Codex/skills/`). Invoke `loan-domain`, `sveltekit-conventions`, `drizzle-neon`, `auth-js-sveltekit`, `overlay-performance`, `mobile-responsive`, `pwa`, `ai-platform` for domain work.
+
+## Don'ts
+
+- Next.js patterns in `src/` (use SvelteKit).
+- Edit shipped files in `db/migrations/` (add new migration).
+- Client-side React in SvelteKit (except server-only PDF).
+- Use kame-homes Supabase rules in this repo.
+- Bypass CD for routine prod releases (prefer merge to `main`).
+
+Index: `.Codex/README.md` · Rules: `.cursor/rules/README.md`

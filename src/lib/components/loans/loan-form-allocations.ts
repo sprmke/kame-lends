@@ -37,6 +37,7 @@ function mergeReceivedPaymentsForInvestor(
         seenDbIds.add(rp.id);
         merged.push({
           id: String(rp.id),
+          interestPeriodId: rp.interestPeriodId ?? null,
           amount: rp.amount,
           receivedDate: toLocalDateString(rp.receivedDate),
           receipts: normalizePaymentReceipts(rp),
@@ -46,6 +47,7 @@ function mergeReceivedPaymentsForInvestor(
       }
       merged.push({
         id: `rp-li-${li.id}-${merged.length}`,
+        interestPeriodId: rp.interestPeriodId ?? null,
         amount: rp.amount,
         receivedDate: toLocalDateString(rp.receivedDate),
         receipts: normalizePaymentReceipts(rp),

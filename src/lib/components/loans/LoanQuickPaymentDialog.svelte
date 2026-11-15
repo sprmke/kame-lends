@@ -16,6 +16,7 @@
 	import { toLocalDateString } from '$lib/date-utils';
 	import { formatCurrency, formatDate } from '$lib/format';
 	import { toast } from '$lib/toast';
+	import { DATA_CACHE } from '$lib/pwa/shared';
 	import type { LoanWithInvestors } from '$lib/types';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import type { ReceiptExtractedData } from '$lib/receipt-extraction-types';
@@ -36,6 +37,7 @@
 	} from '$lib/receipt-scan/rows';
 	import { findMatchingParty } from '$lib/receipt-scan/match-party';
 	import { suggestInterestPeriodId } from '$lib/receipt-scan/suggest-period';
+	import { todayKey } from '$lib/dates/business-date';
 
 	export type LoanQuickPaymentKind = 'payment' | 'received';
 
@@ -81,7 +83,7 @@
 			id: crypto.randomUUID(),
 			investorId: defaultInvestorId,
 			amount: '',
-			date: toLocalDateString(new Date()),
+			date: todayKey(),
 			dateTouched: false,
 			interestType: 'rate',
 			interestValue: '10',
@@ -181,7 +183,7 @@
 			...(base ?? newEntryFor(fields.investorId)),
 			investorId: fields.investorId !== null ? String(fields.investorId) : '',
 			amount: fields.amount,
-			date: fields.date || base?.date || toLocalDateString(new Date()),
+			date: fields.date || base?.date || todayKey(),
 			dateTouched: true,
 			interestPeriodId: fields.interestPeriodId ?? base?.interestPeriodId ?? 'general',
 			receipts: fields.receipts,
@@ -341,6 +343,10 @@
 		}
 
 		isSubmitting = true;
+		const batchKey =
+			typeof crypto !== 'undefined' && 'randomUUID' in crypto
+				? crypto.randomUUID()
+				: `payment-${Date.now()}`;
 		let savedCount = 0;
 		try {
 			for (const entry of entries) {
@@ -382,7 +388,10 @@
 
 				const response = await fetch(endpoint, {
 					method: isPeriodPayment ? 'PATCH' : 'POST',
-					headers: { 'Content-Type': 'application/json' },
+					headers: {
+						'Content-Type': 'application/json',
+						'Idempotency-Key': `${batchKey}-${entry.id}`
+					},
 					body: JSON.stringify(payload)
 				});
 				const result = await response.json().catch(() => null);
@@ -392,6 +401,9 @@
 				savedCount += 1;
 			}
 
+			if (typeof caches !== 'undefined') {
+				await caches.delete(DATA_CACHE).catch(() => {});
+			}
 			toast.success(
 				`${savedCount} ${isReceived ? 'received payment' : 'principal payment'}${savedCount === 1 ? '' : 's'} added.`
 			);

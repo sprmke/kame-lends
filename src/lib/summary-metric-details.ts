@@ -63,8 +63,8 @@ export const dashboardMetricDetails = {
   totalPrincipal:
     "The most principal owed on any one day. Money lent again later is not added twice.",
   active: "The most principal still owed on open loans at the same time.",
-  interestEstimate: "Interest on every loan, open and completed.",
-  interestEarned: "Interest on completed loans only.",
+  interestEstimate: "Interest scheduled on every loan, open and completed.",
+  interestEarned: "Cash received and applied to interest, across all loans.",
 } as const;
 
 export const investorOverviewDetails = {

@@ -5,6 +5,7 @@ import {
   calculateLoanDuration,
   groupByInvestor,
 } from "$lib/calculations";
+import { todayKey } from "$lib/dates/business-date";
 import type {
   InterestPeriod,
   Investor,
@@ -408,7 +409,7 @@ export function getLoanContractFilename(loan: LoanWithInvestors): string {
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "_")
     .slice(0, 40);
-  const dateStamp = new Date().toISOString().slice(0, 10);
+  const dateStamp = todayKey();
   return `loan-contract_${safeName || `loan-${loan.id}`}_${dateStamp}.pdf`;
 }
 

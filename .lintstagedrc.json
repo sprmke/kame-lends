@@ -1,5 +1,7 @@
 {
-  "*.{js,mjs,cjs,ts,css,md,json,mdc,yml,yaml}": ["prettier --write"],
+  "*.{js,mjs,cjs,ts,css,md,json,mdc,yml,yaml}": [
+    "bash scripts/dev/prettier-staged.sh"
+  ],
   "*.{js,mjs,cjs,ts,svelte}": ["eslint --fix"],
   "docs/workflow/intake/_to-{prompt,plan}.md": [
     "bash -c 'bash scripts/dev/check-workflow-scratchpads.sh'"

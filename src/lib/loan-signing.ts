@@ -46,6 +46,7 @@ export interface SigningInvitationSummary {
 const MAX_SIGNATURE_DATA_URL_LENGTH = 600_000;
 
 import { publicAppUrl } from "$lib/public-env";
+import { toDateKey } from "$lib/dates/business-date";
 
 export function buildAuthenticatedSigningUrl(
   loanId: number,
@@ -270,7 +271,7 @@ function findInvitationSignedDate(
       }
     }
     if (invitation.signedAt == null) continue;
-    return new Date(invitation.signedAt).toISOString().slice(0, 10);
+    return toDateKey(invitation.signedAt);
   }
   return undefined;
 }

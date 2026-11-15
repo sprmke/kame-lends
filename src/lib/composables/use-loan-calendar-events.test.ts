@@ -177,26 +177,47 @@ describe("buildLoanCalendarEvents", () => {
     });
   });
 
-  it("keeps completed or upcoming interest as its own calendar event", () => {
+  it("keeps paid interest on its own event and folds the rest into the due row", () => {
     const loan = multiPeriodLoan();
-    loan.loanInvestors[0]!.interestPeriods![0]!.status = "Completed";
-    loan.loanInvestors[0]!.interestPeriods![1]!.status = "Pending";
+    // Period status is now derived from money. Back the paid period with a
+    // payment instead of a stored "Completed" flag.
+    loan.loanInvestors[0]!.receivedPayments = [
+      {
+        id: 1,
+        loanInvestorId: 630,
+        interestPeriodId: 1272,
+        amount: "35000",
+        receivedDate: new Date("2026-09-27T00:00:00.000Z"),
+        createdAt: new Date("2026-09-27T00:00:00.000Z"),
+        updatedAt: new Date("2026-09-27T00:00:00.000Z"),
+      },
+    ] as never;
+    loan.loanInvestors[1]!.receivedPayments = [
+      {
+        id: 2,
+        loanInvestorId: 631,
+        interestPeriodId: 1276,
+        amount: "13000",
+        receivedDate: new Date("2026-09-27T00:00:00.000Z"),
+        createdAt: new Date("2026-09-27T00:00:00.000Z"),
+        updatedAt: new Date("2026-09-27T00:00:00.000Z"),
+      },
+    ] as never;
 
-    const events = buildLoanCalendarEvents([loan]);
+    const events = buildLoanCalendarEvents([loan], { today: "2026-11-12" });
     const interestEvents = events.filter(
       (event) => event.type === "interest_due",
     );
     const dueEvents = events.filter((event) => event.type === "due");
 
-    expect(interestEvents).toHaveLength(2);
-    expect(interestEvents.map((event) => event.totalAmount)).toEqual([
-      35000, 35000,
+    expect(interestEvents.map((event) => event.totalAmount).sort()).toEqual([
+      13000, 35000,
     ]);
     expect(dueEvents).toHaveLength(1);
     expect(dueEvents[0]).toMatchObject({
       totalPrincipal: 480000,
-      totalInterest: 122000,
-      totalAmount: 602000,
+      totalInterest: 144000,
+      totalAmount: 624000,
     });
   });
 });

@@ -1,3 +1,8 @@
+---
+name: sveltekit-conventions
+description: "Use for routes, loaders, forms, and server code in `src/`."
+---
+
 # SvelteKit conventions — Kame Lends
 
 Use for routes, loaders, forms, and server code in `src/`.
@@ -50,3 +55,12 @@ Keep existing URL paths (e.g. `/loans/[id]` → `src/routes/loans/[id]/`).
 
 - Add Next.js App Router patterns (`app/`, `use client`, `next/navigation`).
 - Use React components in `src/` except server-only PDF (`pdf-export` skill).
+
+## Money routes (2026-11)
+
+- Every mutating route parses its body with a schema in `src/lib/schemas/` before any write.
+- Never trust client `status`, totals, or derived fields. Compute them on the server with `buildLoanLedger` / `deriveLoanStatus`.
+- Use `parseIdParam` (`src/lib/server/route-params.ts`) instead of `parseInt(params.id)` and return 400 on a bad id.
+- Use `publicJsonError` for all 5xx responses; never return `error.message`.
+- Authorization helpers return 403/404 consistently; do not mix 401 for ownership.
+- Long reads that feed money screens should call `loadLoanLedger` once, not re-query per row.

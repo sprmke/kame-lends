@@ -29,6 +29,7 @@
 	import { toast } from '$lib/toast';
 	import { fetchSigningClient } from '$lib/composables/loan-detail-client-cache';
 	import { canShowMyCommissionCard } from '$lib/commission-edit-slot';
+	import { toDateKey } from '$lib/dates/business-date';
 
 	interface Props {
 		loan: LoanWithInvestors;
@@ -184,7 +185,7 @@
 						typeof rp.receivedDate === 'string'
 							? rp.receivedDate
 							: rp.receivedDate instanceof Date
-								? rp.receivedDate.toISOString().slice(0, 10)
+								? toDateKey(rp.receivedDate)
 								: String(rp.receivedDate)
 				}))
 			);

@@ -46,3 +46,10 @@ Any signed-in user. All-users backup is platform owner only.
 | Templates       | `src/lib/components/settings/LoanTemplatesManager.svelte`, `src/routes/api/loan-templates/` |
 | Backup API      | `src/routes/api/backup/+server.ts`, `src/lib/server/backup-data.ts`                         |
 | Due dates / fix | `SyncLoanDueDatesButton`, `FixReceivedPaymentsButton`                                       |
+
+## Data & maintenance (2026-11)
+
+- The one-click **Fix received payments** and **Sync loan due dates** buttons are gone. Their endpoints return **410 Gone**.
+- The platform owner sees a read-only **Data health** card backed by `GET /api/admin/money-health`. It reports counts only (no PII) for unlinked payments, receipt-less payments, underpaid completed periods, zero-allocation loans, zero-capital fixed rows, duplicate period dates, and debt orphan periods.
+- Downloading a backup is unchanged.
+- Signing out purges offline caches and the last-online timestamp.

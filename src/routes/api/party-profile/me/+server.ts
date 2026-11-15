@@ -5,6 +5,7 @@ import {
   loadPartyUserIdentityDocuments,
   savePartyUserIdentityDocuments,
 } from "$lib/server/party-profile";
+import { publicJsonError } from "$lib/server/http-error";
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -54,7 +55,15 @@ export const PUT: RequestHandler = async (event) => {
       error instanceof Error
         ? error.message
         : "Failed to save identity documents";
-    const status = message === "No linked contact records" ? 404 : 400;
-    return json({ error: message }, { status });
+    const missingContact = message === "No linked contact records";
+    return json(
+      publicJsonError(
+        missingContact
+          ? "No linked contact records"
+          : "Failed to save identity documents",
+        error,
+      ),
+      { status: missingContact ? 404 : 400 },
+    );
   }
 };

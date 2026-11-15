@@ -5,6 +5,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import ResponsiveModal from '$lib/components/common/ResponsiveModal.svelte';
 	import { toast } from '$lib/toast';
+	import ConfirmDeleteDialog from '$lib/components/common/ConfirmDeleteDialog.svelte';
 	import { formatCurrency, formatDateShort } from '$lib/format';
 	import { getInterestPeriodStatusBadge } from '$lib/badge-config';
 	import { toLocalDateString } from '$lib/date-utils';
@@ -13,6 +14,7 @@
 	import type { InterestScheduleEntry } from '$lib/debt-calculations';
 	import { cn } from '$lib/utils';
 	import { Calendar, Check, Loader2, Pencil, Trash2 } from 'lucide-svelte';
+	import { todayKey } from '$lib/dates/business-date';
 
 	interface CompleteModalState {
 		periodId: number;
@@ -69,7 +71,7 @@
 		completeModal = {
 			periodId,
 			amount: Math.max(0, suggestedPaymentAmount).toFixed(2),
-			receivedDate: toLocalDateString(new Date()),
+			receivedDate: todayKey(),
 			expectedAmount: periodDueAmount
 		};
 	}
@@ -130,7 +132,7 @@
 		periodDueAmount: number,
 		linkedRows: DebtInterestPeriodWithPayments['receivedPayments']
 	) {
-		const today = toLocalDateString(new Date());
+		const today = todayKey();
 		if (linkedRows.length === 0) {
 			editPaymentModal = {
 				periodId,
@@ -201,9 +203,13 @@
 		}
 	}
 
-	async function handleDeleteReceivedPayment(paymentId: number) {
-		if (!window.confirm('Remove this payment record?')) return;
+	let pendingDeletePaymentId = $state<number | null>(null);
 
+	function handleDeleteReceivedPayment(paymentId: number) {
+		pendingDeletePaymentId = paymentId;
+	}
+
+	async function performDeleteReceivedPayment(paymentId: number) {
 		deletingPaymentIds = new Set([...deletingPaymentIds, paymentId]);
 		try {
 			const response = await fetch(`/api/debt-received-payments/${paymentId}`, {
@@ -236,7 +242,7 @@
 			{@const period = periodByNumber.get(entry.period)}
 			{@const periodStatus = (period?.status ?? 'Pending') as InterestPeriodStatus}
 			{@const statusBadge = getInterestPeriodStatusBadge(periodStatus)}
-			{@const periodDueAmount = parseFloat(period?.expectedInterest ?? '') || entry.periodDue}
+			{@const periodDueAmount = parseFloat(period?.expectedInstallment ?? '') || entry.periodDue}
 			{@const paidLinked = sumLinkedPayments(period)}
 			{@const remainingDue = Math.max(0, periodDueAmount - paidLinked)}
 			{@const linkedRows = period?.receivedPayments ?? []}

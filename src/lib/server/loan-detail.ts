@@ -1,16 +1,18 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "$lib/server/db";
-import { loans, users } from "$lib/server/db/schema";
+import {
+  interestPeriods,
+  loanInvestors,
+  loans,
+  receivedPayments,
+  users,
+} from "$lib/server/db/schema";
 import { stripDataImageUrls } from "$lib/json-safe-images";
 import { computeLoanAccessContext } from "$lib/loan-access-compute";
 import type { LoanAccessContext } from "$lib/loan-access";
 import { listPaymentMethodsForBorrowerLoanView } from "$lib/server/payment-methods";
 import type { LoanWithInvestors, PaymentMethod } from "$lib/types";
-import {
-  calculateTotalAmount,
-  calculateTotalReceived,
-  isLoanFullyReceived,
-} from "$lib/calculations";
+import { buildLoanLedger } from "$lib/money/ledger";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import {
   finalizeLoansForViewer,
@@ -46,16 +48,17 @@ export async function loadLoanDetail(
       columns: { email: true },
     }),
     db.query.loans.findFirst({
-      where: eq(loans.id, loanId),
+      where: and(eq(loans.id, loanId), isNull(loans.deletedAt)),
       with: {
         borrower: {
           columns: { ...partyColumns, notes: true, borrowerUserId: true },
         },
         loanInvestors: {
+          where: isNull(loanInvestors.deletedAt),
           with: {
             investor: { columns: { ...partyColumns, investorUserId: true } },
             interestPeriods: true,
-            receivedPayments: true,
+            receivedPayments: { where: isNull(receivedPayments.deletedAt) },
           },
         },
         loanWitnesses: {
@@ -122,21 +125,12 @@ export async function loadLoanDetail(
     });
   }
 
-  let status = entity.status;
-  if (
-    status !== "Completed" &&
-    isLoanFullyReceived(
-      calculateTotalAmount(entity.loanInvestors),
-      calculateTotalReceived(entity.loanInvestors),
-    )
-  ) {
-    await db
-      .update(loans)
-      .set({ status: "Completed", updatedAt: new Date() })
-      .where(eq(loans.id, loanId));
-    status = "Completed";
-    invalidateLoanData();
-  }
+  // Reads never write status (STAT-08). The daily cron and the dashboard
+  // refresh keep the stored value aligned; this response always shows the
+  // engine's answer, including a manual Completed override.
+  const status = buildLoanLedger(entity, {
+    statusOverride: entity.statusOverride === "Completed" ? "Completed" : null,
+  }).status;
 
   const paymentMethods = access.memberships.includes("borrower")
     ? await listPaymentMethodsForBorrowerLoanView(entity.userId, access)

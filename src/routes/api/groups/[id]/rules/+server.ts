@@ -21,6 +21,7 @@ import {
 } from "$lib/server/cache-invalidation";
 import { enqueueJob } from "$lib/server/jobs/queue";
 import { scheduleDrain } from "$lib/server/jobs/after-response";
+import { parseIdParam } from "$lib/server/route-params";
 
 export const GET: RequestHandler = async (event) => {
   try {
@@ -28,7 +29,10 @@ export const GET: RequestHandler = async (event) => {
     if (!session?.user?.id) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
-    const groupId = parseInt(event.params.id);
+    const groupId = parseIdParam(event.params.id);
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupViewAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }
@@ -48,7 +52,10 @@ export const POST: RequestHandler = async (event) => {
     if (!session?.user?.id) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
-    const groupId = parseInt(event.params.id);
+    const groupId = parseIdParam(event.params.id);
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }

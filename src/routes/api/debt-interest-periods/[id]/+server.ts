@@ -1,4 +1,5 @@
 import { json } from "@sveltejs/kit";
+import { parseIdParam } from "$lib/server/route-params";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import {
@@ -9,7 +10,9 @@ import {
 import { eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateDebtData } from "$lib/server/cache-invalidation";
-import { hasDebtAccess } from "$lib/server/access-control";
+import { hasDebtAdminAccess } from "$lib/server/access-control";
+import { debtPeriodStatusSchema, firstDebtError } from "$lib/schemas/debt";
+import { recordMoneyAudit } from "$lib/server/money-audit";
 import {
   DEBT_AMOUNT_TOLERANCE,
   recalculateDebtInterestPeriodStatus,
@@ -24,8 +27,16 @@ export const PATCH: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const periodId = parseInt(id, 10);
-    const { status, receivedAmount, receivedDate } = await request.json();
+    const periodId = parseIdParam(id);
+    if (periodId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
+    const body = await request.json();
+    const parsedBody = debtPeriodStatusSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return json({ error: firstDebtError(parsedBody.error) }, { status: 400 });
+    }
+    const { status, receivedAmount, receivedDate } = body;
 
     if (!status || !["Pending", "Completed", "Overdue"].includes(status)) {
       return json(
@@ -49,12 +60,12 @@ export const PATCH: RequestHandler = async (event) => {
       return json({ error: "Interest period not found" }, { status: 404 });
     }
 
-    const hasAccess = await hasDebtAccess(period.debtId, session.user.id);
+    const hasAccess = await hasDebtAdminAccess(period.debtId, session.user.id);
     if (!hasAccess) {
-      return json({ error: "Unauthorized" }, { status: 401 });
+      return json({ error: "Interest period not found" }, { status: 404 });
     }
 
-    const expectedAmount = parseFloat(period.expectedInterest) || 0;
+    const expectedAmount = parseFloat(period.expectedInstallment) || 0;
     let responseStatus: string = status;
 
     if (status === "Completed") {

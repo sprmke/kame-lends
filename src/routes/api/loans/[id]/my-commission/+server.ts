@@ -8,6 +8,7 @@ import {
 } from "$lib/server/loan-user-commission";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import type { InterestType } from "$lib/types";
+import { parseIdParam } from "$lib/server/route-params";
 
 export const GET: RequestHandler = async (event) => {
   const session = await getSession(event);
@@ -15,7 +16,11 @@ export const GET: RequestHandler = async (event) => {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const loanId = Number.parseInt(event.params.id, 10);
+  const loanId = parseIdParam(event.params.id);
+
+  if (loanId === null) {
+    return json({ error: "Invalid id" }, { status: 400 });
+  }
   if (!Number.isFinite(loanId)) {
     return json({ error: "Invalid loan ID." }, { status: 400 });
   }
@@ -35,7 +40,11 @@ export const PATCH: RequestHandler = async (event) => {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const loanId = Number.parseInt(event.params.id, 10);
+  const loanId = parseIdParam(event.params.id);
+
+  if (loanId === null) {
+    return json({ error: "Invalid id" }, { status: 400 });
+  }
   if (!Number.isFinite(loanId)) {
     return json({ error: "Invalid loan ID." }, { status: 400 });
   }

@@ -112,7 +112,7 @@ describe("calculations", () => {
           loanName: "Toyota Fortuner",
           type: "OR/CR",
           status: "Overdue",
-          dueDate: new Date(),
+          dueDate: new Date("2020-01-01T00:00:00.000Z"),
           loanInvestors: [
             {
               amount: "50000",

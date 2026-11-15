@@ -1,8 +1,8 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { borrowers } from "$lib/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { borrowers, loans } from "$lib/server/db/schema";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import {
   normalizeValidIdUrl,
@@ -15,6 +15,7 @@ import {
 } from "$lib/server/party-directory";
 import { borrowerDetailLoansWith } from "$lib/server/borrower-detail-query";
 import { hasBorrowerContactViewAccess } from "$lib/server/access-control";
+import { parseIdParam } from "$lib/server/route-params";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -29,7 +30,10 @@ export const GET: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const borrowerId = parseInt(id, 10);
+    const borrowerId = parseIdParam(id);
+    if (borrowerId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (Number.isNaN(borrowerId)) {
       return json({ error: "Invalid borrower ID" }, { status: 400 });
     }
@@ -63,7 +67,10 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const borrowerId = parseInt(id, 10);
+    const borrowerId = parseIdParam(id);
+    if (borrowerId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (Number.isNaN(borrowerId)) {
       return json({ error: "Invalid borrower ID" }, { status: 400 });
     }
@@ -144,7 +151,10 @@ export const DELETE: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const borrowerId = parseInt(id, 10);
+    const borrowerId = parseIdParam(id);
+    if (borrowerId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (Number.isNaN(borrowerId)) {
       return json({ error: "Invalid borrower ID" }, { status: 400 });
     }
@@ -156,7 +166,7 @@ export const DELETE: RequestHandler = async (event) => {
       ),
       with: {
         loans: {
-          columns: { id: true },
+          columns: { id: true, deletedAt: true },
         },
       },
     });
@@ -165,15 +175,23 @@ export const DELETE: RequestHandler = async (event) => {
       return json({ error: "Borrower not found" }, { status: 404 });
     }
 
-    if (borrower.loans.length > 0) {
+    const activeLoans = borrower.loans.filter((loan) => !loan.deletedAt);
+    if (activeLoans.length > 0) {
       return json(
         {
           error: "Cannot delete borrower with existing loans",
-          details: `This borrower has ${borrower.loans.length} loan(s)`,
+          details: `This borrower has ${activeLoans.length} loan(s)`,
         },
         { status: 400 },
       );
     }
+
+    // Soft-deleted loans keep a restrict FK. They are already deleted, so
+    // detach them before removing the contact.
+    await db
+      .update(loans)
+      .set({ borrowerId: null })
+      .where(and(eq(loans.borrowerId, borrowerId), isNotNull(loans.deletedAt)));
 
     await db
       .delete(borrowers)

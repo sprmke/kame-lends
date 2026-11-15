@@ -32,6 +32,7 @@ import {
 import { isAutoAttachSignatureEnabled } from "$lib/server/signing/preferences";
 import type { LoanWithInvestors } from "$lib/types";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { todayKey } from "$lib/dates/business-date";
 
 const loanWithSigningGraph = {
   borrower: true,
@@ -51,7 +52,7 @@ const loanWithSigningGraph = {
 } as const;
 
 function todaySignedDateIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayKey();
 }
 
 function collectPartyUserIdsFromLoan(loan: LoanWithInvestors): Set<string> {

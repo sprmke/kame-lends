@@ -217,6 +217,14 @@ export const loans = pgTable(
       .default("0"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    /** Soft delete (D-8). Reads must filter `deleted_at IS NULL`. */
+    deletedAt: timestamp("deleted_at"),
+    /** Real completion date for capital reporting (RPT-02). */
+    completedAt: timestamp("completed_at"),
+    /** Manual override, currently only "Completed" with a reason (D-7). */
+    statusOverride: text("status_override"),
+    statusReason: text("status_reason"),
+    waivedAmount: decimal("waived_amount", { precision: 15, scale: 2 }),
   },
   (table) => ({
     userIdIdx: index("loans_user_id_idx").on(table.userId),
@@ -305,6 +313,8 @@ export const loanInvestors = pgTable(
     receiptExtractedData: jsonb(
       "receipt_extracted_data",
     ).$type<ReceiptExtractedData | null>(),
+    /** Soft delete (D-8). */
+    deletedAt: timestamp("deleted_at"),
     /** All fund-transfer receipts for this disbursement. First item mirrors the legacy columns. */
     receipts: jsonb("receipts")
       .$type<PaymentReceipt[]>()
@@ -815,6 +825,8 @@ export const receivedPayments = pgTable(
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    /** Soft delete (D-8). */
+    deletedAt: timestamp("deleted_at"),
   },
   (table) => ({
     loanInvestorIdIdx: index("received_payments_loan_investor_id_idx").on(
@@ -851,6 +863,8 @@ export const debts = pgTable(
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    /** Soft delete (D-8). */
+    deletedAt: timestamp("deleted_at"),
   },
   (table) => ({
     userIdIdx: index("debts_user_id_idx").on(table.userId),
@@ -868,7 +882,7 @@ export const debtInterestPeriods = pgTable(
       .notNull(),
     periodNumber: integer("period_number").notNull(),
     dueDate: timestamp("due_date").notNull(),
-    expectedInterest: decimal("expected_interest", {
+    expectedInstallment: decimal("expected_installment", {
       precision: 15,
       scale: 2,
     }).notNull(),
@@ -893,10 +907,66 @@ export const debtReceivedPayments = pgTable(
     receivedDate: timestamp("received_date").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    /** Soft delete (D-8). */
+    deletedAt: timestamp("deleted_at"),
   },
   (table) => ({
     periodIdIdx: index("debt_received_payments_period_id_idx").on(
       table.debtInterestPeriodId,
+    ),
+  }),
+);
+
+// Cross-instance cache epochs (PERF-02)
+export const cacheEpochs = pgTable("cache_epochs", {
+  key: text("key").primaryKey(),
+  version: integer("version").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// Idempotency keys for money-creating requests (DATA-09)
+export const idempotencyKeys = pgTable("idempotency_keys", {
+  key: text("key").primaryKey(),
+  userId: text("user_id").notNull(),
+  route: text("route").notNull(),
+  responseStatus: integer("response_status"),
+  responseBody: jsonb("response_body"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// Money audit events (DATA-07)
+export const moneyAuditEvents = pgTable(
+  "money_audit_events",
+  {
+    id: serial("id").primaryKey(),
+    at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    entityType: text("entity_type").notNull(),
+    entityId: integer("entity_id"),
+    loanId: integer("loan_id"),
+    action: text("action").notNull(),
+    before: jsonb("before"),
+    after: jsonb("after"),
+    reason: text("reason"),
+  },
+  (table) => ({
+    loanIdIdx: index("money_audit_events_loan_id_idx").on(
+      table.loanId,
+      table.at,
+    ),
+    entityIdx: index("money_audit_events_entity_idx").on(
+      table.entityType,
+      table.entityId,
+      table.at,
     ),
   }),
 );

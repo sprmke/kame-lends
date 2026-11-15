@@ -15,7 +15,7 @@ Create/edit copy uses **Create Bank Loan** / **Edit Bank Loan**. Detail back lab
 
 ## Permissions
 
-Workspace admin only. `requireWorkspaceAdminPage` redirects others to `/dashboard`.
+The list page is owner-only. `requireWorkspaceAdminPage` redirects other signed-in users to `/dashboard`. Linked investors reach their bank loan from the investor detail page instead; see `debts-detail.md` for read-only access.
 
 ## Load
 

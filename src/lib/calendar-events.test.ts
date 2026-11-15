@@ -184,12 +184,34 @@ describe("draftLoanGoogleEvents", () => {
           id: 630,
           hasMultipleInterest: true,
           interestPeriods: periods(630, 1272),
+          receivedPayments: [
+            {
+              id: 1,
+              loanInvestorId: 630,
+              interestPeriodId: 1273,
+              amount: "35000",
+              receivedDate: new Date("2026-10-11T00:00:00.000Z"),
+              createdAt: new Date("2026-10-11T00:00:00.000Z"),
+              updatedAt: new Date("2026-10-11T00:00:00.000Z"),
+            },
+          ],
         },
         {
           ...allocation(139, investorB, "130000", "2026-09-13"),
           id: 631,
           hasMultipleInterest: true,
           interestPeriods: periods(631, 1276),
+          receivedPayments: [
+            {
+              id: 2,
+              loanInvestorId: 631,
+              interestPeriodId: 1277,
+              amount: "13000",
+              receivedDate: new Date("2026-10-11T00:00:00.000Z"),
+              createdAt: new Date("2026-10-11T00:00:00.000Z"),
+              updatedAt: new Date("2026-10-11T00:00:00.000Z"),
+            },
+          ],
         },
       ],
     });

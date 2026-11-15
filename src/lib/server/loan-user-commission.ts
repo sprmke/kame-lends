@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "$lib/server/db";
+import { buildLoanLedger } from "$lib/money/ledger";
 import { loanUserCommissions } from "$lib/server/db/schema";
 import type { LoanAccessContext } from "$lib/loan-access";
 import type {
@@ -143,6 +144,15 @@ export async function finalizeLoansForViewer<T extends LoanWithInvestors>(
   return loans.map((loan) => {
     const stripped = stripLegacyCommissionFields(loan);
     const myCommission = commissionMap.get(loan.id) ?? null;
-    return { ...stripped, myCommission };
+    // Lists read the same engine status as detail, even if the daily cron has
+    // not run yet (STAT-01/STAT-08).
+    const status = buildLoanLedger(loan, {
+      statusOverride:
+        (loan as { statusOverride?: string | null }).statusOverride ===
+        "Completed"
+          ? "Completed"
+          : null,
+    }).status;
+    return { ...stripped, myCommission, status };
   });
 }

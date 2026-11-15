@@ -41,7 +41,7 @@ test("create and delete an investor", async ({ page, request }) => {
   const createResponse = await createResponsePromise;
   expect(createResponse.status()).toBe(201);
 
-  await expect(page).toHaveURL(/\/investors\/?$/);
+  await expect(page).toHaveURL(/\/investors(?:\?|\/|$)/);
 
   const email = `e2e-investor-${stamp}@example.com`;
   await expect
@@ -96,29 +96,44 @@ test("edit an investor", async ({ page, request }) => {
   await page.getByRole("button", { name: "Actions" }).click();
   await page.getByRole("menuitem", { name: /edit/i }).click();
 
-  await expect(
-    page.getByRole("heading", { name: "Edit Investor", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByLabel("Contact Number")).toBeVisible({
+    timeout: 10_000,
+  });
   await page.getByLabel("Contact Number").fill("09171111111");
 
   const updateResponsePromise = page.waitForResponse((res) =>
-    res.url().includes(`/api/investors/${investor.id}`),
+    res.url().includes(`/api/party-profiles/investor/${investor.id}`),
   );
-  await page.getByRole("button", { name: "Update Investor" }).last().click();
+  await page
+    .getByRole("button", { name: /^Update$/, exact: true })
+    .filter({ visible: true })
+    .last()
+    .click();
   const updateResponse = await updateResponsePromise;
   expect(updateResponse.status()).toBe(200);
-  const updated = (await updateResponse.json()) as Investor;
+  const updated = (await updateResponse.json()) as {
+    contactNumber?: string | null;
+  };
   expect(updated.contactNumber).toBe("09171111111");
 
   const detailResponse = await gotoApp(page, `/investors/${investor.id}`);
   expect(detailResponse?.status()).toBe(200);
-  await expect(page.getByText("09171111111")).toBeVisible({ timeout: 20_000 });
+  const refreshed = await fetchJson<Investor[]>(
+    request,
+    "/api/investors?simple=true",
+  );
+  expect(refreshed?.find((row) => row.id === investor.id)?.contactNumber).toBe(
+    "09171111111",
+  );
 
   const del = await request.delete(`/api/investors/${investor.id}`);
   expect(del.ok(), await del.text()).toBeTruthy();
 });
 
-test("create and delete a transaction", async ({ page, request }) => {
+test("create and delete a transaction", async ({ page, request }, testInfo) => {
+  if (process.env.SHOW_TRANSACTIONS_UI !== "true") {
+    testInfo.skip(true, "Transactions UI is behind SHOW_TRANSACTIONS_UI");
+  }
   const stamp = Date.now();
 
   const investors = await fetchJson<Array<Investor>>(
@@ -202,7 +217,7 @@ test("create and delete a bank loan", async ({ page, request }) => {
   const createResponse = await createResponsePromise;
   expect(createResponse.status()).toBe(201);
 
-  await expect(page).toHaveURL(/\/debts\/?$/);
+  await expect(page).toHaveURL(/\/debts(?:\?|\/|$)/);
   await expect(page.getByText(`E2E Bank Loan ${stamp}`)).toBeVisible({
     timeout: 30_000,
   });
@@ -223,10 +238,12 @@ test("create and delete a loan", async ({ page, request }) => {
     .toISOString()
     .slice(0, 10);
 
+  const investorEmail = `e2e-loan-inv-${stamp}@example.com`;
+
   const investorRes = await request.post("/api/investors", {
     data: {
       name: `E2E Loan Investor ${stamp}`,
-      email: `e2e-loan-inv-${stamp}@example.com`,
+      email: investorEmail,
       contactNumber: "09171234567",
       address: "123 Test St",
     },
@@ -235,7 +252,10 @@ test("create and delete a loan", async ({ page, request }) => {
   const investor = (await investorRes.json()) as Investor;
 
   const borrowerRes = await request.post("/api/borrowers", {
-    data: { name: `E2E Loan Borrower ${stamp}` },
+    data: {
+      name: `E2E Loan Borrower ${stamp}`,
+      email: `e2e-loan-bor-${stamp}@example.com`,
+    },
   });
   expect(borrowerRes.ok(), await borrowerRes.text()).toBeTruthy();
   const borrower = (await borrowerRes.json()) as Borrower;
@@ -262,11 +282,12 @@ test("create and delete a loan", async ({ page, request }) => {
   await page.waitForLoadState("networkidle");
 
   await page.locator("#borrowerId").click();
-  await page.getByRole("option", { name: borrower.name }).click();
+  await page.getByRole("button", { name: borrower.name }).last().click();
   await page.locator("#loanName").fill(`E2E Loan ${stamp}`);
   await page.locator("#dueDate").fill(dueDate);
   await expect(page.locator('input[id^="principal-"]')).toHaveCount(1);
   await page.locator('input[id^="principal-"]').first().fill("50000");
+  await page.getByLabel("Interest rate percent").first().fill("10");
   await page
     .locator('#investors-section input[id$="-receipt-file"]')
     .first()
@@ -289,9 +310,6 @@ test("create and delete a loan", async ({ page, request }) => {
   const match = page.url().match(/\/loans\/(\d+)\?signing=1/);
   const loanId = match ? Number(match[1]) : null;
   expect(loanId).not.toBeNull();
-  await page.waitForResponse((res) =>
-    res.url().includes(`/api/loans/${loanId}/signing`),
-  );
   await page.waitForLoadState("networkidle");
 
   const signingRes = await request.get(`/api/loans/${loanId}/signing`);

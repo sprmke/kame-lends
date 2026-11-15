@@ -1,10 +1,9 @@
 import type { LoanStatus, Investor } from "$lib/types";
 import type { LoanContractDraftInput } from "$lib/loan-contract-data";
-import type {
-  LoanFormTransaction,
-  SelectedInvestorAllocation,
-} from "$lib/components/loans/loan-form-types";
+import type { SelectedInvestorAllocation } from "$lib/components/loans/loan-form-types";
 import type { InvestorWithTransactions } from "./investor-transactions-helpers";
+import { buildFormLedger, formPreviewRows } from "$lib/loans/form-to-ledger";
+import { centavosToPesos } from "$lib/money/centavos";
 
 export interface LoanPreviewItem {
   investor: Investor;
@@ -45,51 +44,28 @@ export function getTotalPrincipal(
 
 export function calculateLoanPreview(
   selectedInvestors: SelectedInvestorAllocation[],
+  options: { dueDate?: string; today?: string } = {},
 ): LoanPreviewItem[] {
+  const rows = formPreviewRows(selectedInvestors, options);
   const result: LoanPreviewItem[] = [];
-  const totalPrincipal = getTotalPrincipal(selectedInvestors);
 
-  for (const si of selectedInvestors) {
-    for (const transaction of si.transactions) {
-      const capital = parseFloat(transaction.amount) || 0;
-      let interest = 0;
-      let interestRate = 0;
-
-      if (si.hasMultipleInterest && si.interestPeriods.length > 0) {
-        for (const period of si.interestPeriods) {
-          if (period.interestType === "rate") {
-            const rate = parseFloat(period.interestRate) || 0;
-            const baseAmount = capital === 0 ? totalPrincipal : capital;
-            interest += baseAmount * (rate / 100);
-          } else {
-            interest += parseFloat(period.interestAmount) || 0;
-          }
-        }
-
-        if (capital > 0) {
-          interestRate = (interest / capital) * 100;
-        } else if (totalPrincipal > 0) {
-          interestRate = (interest / totalPrincipal) * 100;
-        }
-      } else if (transaction.interestType === "rate") {
-        interestRate = parseFloat(transaction.interestRate) || 0;
-        const baseAmount = capital === 0 ? totalPrincipal : capital;
-        interest = baseAmount * (interestRate / 100);
-      } else {
-        interest = parseFloat(transaction.interestAmount) || 0;
-        if (capital > 0) interestRate = (interest / capital) * 100;
-      }
-
-      result.push({
-        investor: si.investor,
-        sentDate: transaction.sentDate,
-        isPaid: transaction.isPaid,
-        capital,
-        interest,
-        interestRate,
-        total: capital + interest,
-      });
-    }
+  for (const row of rows) {
+    const si = selectedInvestors.find(
+      (investor) => investor.investor.id === row.investorId,
+    );
+    const transaction = si?.transactions.find(
+      (item) => item.id === row.transactionId,
+    );
+    if (!si || !transaction) continue;
+    result.push({
+      investor: si.investor,
+      sentDate: transaction.sentDate,
+      isPaid: transaction.isPaid,
+      capital: row.capital,
+      interest: row.interest,
+      interestRate: row.interestRate,
+      total: row.total,
+    });
   }
 
   return result;
@@ -97,26 +73,28 @@ export function calculateLoanPreview(
 
 export function calculateLoanFormSummary(
   selectedInvestors: SelectedInvestorAllocation[],
-  calculateLoanStatus: () => LoanStatus,
+  options: { dueDate?: string; today?: string } = {},
 ): LoanFormSummary {
-  const preview = calculateLoanPreview(selectedInvestors);
-  const totalCapital = preview.reduce((sum, p) => sum + p.capital, 0);
-  const totalInterest = preview.reduce((sum, p) => sum + p.interest, 0);
-  const totalAmount = totalCapital + totalInterest;
-  const totalReceived = selectedInvestors.reduce(
+  const ledger = buildFormLedger(selectedInvestors, options);
+  const totalCapital = centavosToPesos(ledger.principalC);
+  const totalInterest = centavosToPesos(ledger.interestExpectedC);
+  const totalAmount = centavosToPesos(ledger.dueC);
+  const totalReceived = centavosToPesos(ledger.receivedC);
+  const totalBalance = centavosToPesos(ledger.balanceC);
+  const averageRate =
+    ledger.principalC > 0
+      ? (ledger.interestExpectedC / ledger.principalC) * 100
+      : 0;
+  const fundedCapital = selectedInvestors.reduce(
     (sum, si) =>
       sum +
-      si.receivedPayments.reduce(
-        (inner, rp) => inner + (parseFloat(rp.amount) || 0),
+      si.transactions.reduce(
+        (inner, transaction) =>
+          transaction.isPaid
+            ? inner + (Number(transaction.amount) || 0)
+            : inner,
         0,
       ),
-    0,
-  );
-  const totalBalance = totalAmount - totalReceived;
-  const averageRate =
-    totalCapital > 0 ? (totalInterest / totalCapital) * 100 : 0;
-  const fundedCapital = preview.reduce(
-    (sum, p) => (p.isPaid ? sum + p.capital : sum),
     0,
   );
 
@@ -128,7 +106,7 @@ export function calculateLoanFormSummary(
     totalBalance,
     averageRate,
     uniqueInvestors: selectedInvestors.length,
-    status: calculateLoanStatus(),
+    status: ledger.status,
     fundedCapital,
     balance: totalCapital - fundedCapital,
   };
@@ -197,8 +175,6 @@ export function buildInvestorsWithTransactionsForPreview(
     investorMap.set(item.investor.id, existing);
   }
 
-  const totalPrincipal = getTotalPrincipal(selectedInvestors);
-
   return Array.from(investorMap.values()).map((transactions) => {
     const investorId = transactions[0].investor.id;
     const investorData = selectedInvestors.find(
@@ -220,20 +196,16 @@ export function buildInvestorsWithTransactionsForPreview(
         const originalTransaction = investorData?.transactions.find(
           (ot) => ot.sentDate === t.sentDate,
         );
-        const isZeroCapitalWithRate =
-          t.capital === 0 && originalTransaction?.interestType === "rate";
 
         return {
           id: `preview-${t.investor.id}-${index}`,
           amount: t.capital.toString(),
-          interestRate: isZeroCapitalWithRate
-            ? t.interest.toString()
-            : originalTransaction?.interestType === "fixed"
+          interestRate:
+            originalTransaction?.interestType === "fixed"
               ? originalTransaction.interestAmount
-              : t.interestRate.toString(),
-          interestType: isZeroCapitalWithRate
-            ? "fixed"
-            : originalTransaction?.interestType || "rate",
+              : (originalTransaction?.interestRate ??
+                t.interestRate.toString()),
+          interestType: originalTransaction?.interestType || "rate",
           sentDate: t.sentDate,
           isPaid: t.isPaid,
           receipts: originalTransaction?.receipts ?? [],
@@ -242,35 +214,15 @@ export function buildInvestorsWithTransactionsForPreview(
       }),
       hasMultipleInterest: investorData?.hasMultipleInterest || false,
       interestPeriods:
-        investorData?.interestPeriods.map((period) => {
-          const investorTotalCapital = investorData.transactions.reduce(
-            (sum, t) => sum + (parseFloat(t.amount) || 0),
-            0,
-          );
-          const isZeroPeriodCapitalWithRate =
-            investorTotalCapital === 0 && period.interestType === "rate";
-
-          if (isZeroPeriodCapitalWithRate) {
-            const rate = parseFloat(period.interestRate) || 0;
-            const calculatedInterest = totalPrincipal * (rate / 100);
-            return {
-              id: period.id,
-              dueDate: period.dueDate,
-              interestRate: calculatedInterest.toString(),
-              interestType: "fixed" as const,
-            };
-          }
-
-          return {
-            id: period.id,
-            dueDate: period.dueDate,
-            interestRate:
-              period.interestType === "fixed"
-                ? period.interestAmount
-                : period.interestRate,
-            interestType: period.interestType,
-          };
-        }) ?? [],
+        investorData?.interestPeriods.map((period) => ({
+          id: period.id,
+          dueDate: period.dueDate,
+          interestRate:
+            period.interestType === "fixed"
+              ? period.interestAmount
+              : period.interestRate,
+          interestType: period.interestType,
+        })) ?? [],
     };
   });
 }

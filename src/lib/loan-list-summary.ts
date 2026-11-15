@@ -4,6 +4,8 @@ import {
   calculateTotalPrincipal,
   isOpenLoan,
 } from "$lib/calculations";
+import { buildLoanLedger } from "$lib/money/ledger";
+import { centavosToPesos } from "$lib/money/centavos";
 import {
   type CapitalInterval,
   computePeakConcurrentFromIntervals,
@@ -89,7 +91,9 @@ function buildLoanCapitalLiquidityEvents(
     if (returned > 0) {
       events.push({
         kind: "return",
-        dayKey: toCapitalDayKey(loan.updatedAt),
+        dayKey: toCapitalDayKey(
+          (loan as { completedAt?: Date | null }).completedAt ?? loan.updatedAt,
+        ),
         amount: returned,
       });
     }
@@ -119,7 +123,10 @@ function buildInvestorCapitalLiquidityEvents(
     if (returned > 0) {
       events.push({
         kind: "return",
-        dayKey: toCapitalDayKey(allocation.loan.updatedAt),
+        dayKey: toCapitalDayKey(
+          (allocation.loan as { completedAt?: Date | null }).completedAt ??
+            allocation.loan.updatedAt,
+        ),
         amount: returned,
       });
     }
@@ -248,10 +255,40 @@ function getInvestorAllocationInterval(
   const startKey = toCapitalDayKey(allocation.sentDate);
   const endKey = isOpenLoan(allocation.loan)
     ? toCapitalDayKey(allocation.loan.dueDate)
-    : toCapitalDayKey(allocation.loan.updatedAt);
+    : toCapitalDayKey(
+        (allocation.loan as { completedAt?: Date | null }).completedAt ??
+          allocation.loan.updatedAt,
+      );
 
   if (startKey > endKey) return null;
   return { startKey, endKey, principal };
+}
+
+/**
+ * Interest actually collected (cash received and applied to interest), grouped
+ * by loan so two loans never share a schedule. This is the "Interest Earned"
+ * number; scheduled interest stays in `interestEstimate`.
+ */
+function sumLoanInterestCollected(
+  allocations: InvestorLoanAllocation[],
+): number {
+  const byLoanId = new Map<number, InvestorLoanAllocation[]>();
+  for (const allocation of allocations) {
+    const existing = byLoanId.get(allocation.loanId) ?? [];
+    existing.push(allocation);
+    byLoanId.set(allocation.loanId, existing);
+  }
+  let total = 0;
+  for (const loanAllocations of byLoanId.values()) {
+    const loan = loanAllocations[0]?.loan;
+    if (!loan) continue;
+    const ledger = buildLoanLedger({
+      dueDate: loan.dueDate,
+      loanInvestors: loanAllocations,
+    });
+    total += centavosToPesos(ledger.interestPaidC);
+  }
+  return total;
 }
 
 function sumAllocationInterest(allocations: InvestorLoanAllocation[]): number {
@@ -318,10 +355,9 @@ export function computePortfolioCapitalStats(
   let interestEarned = 0;
 
   for (const loan of loans) {
-    interestEstimate += calculateTotalInterest(loan.loanInvestors);
-  }
-  for (const loan of completedLoans) {
-    interestEarned += calculateTotalInterest(loan.loanInvestors);
+    const ledger = buildLoanLedger(loan);
+    interestEstimate += centavosToPesos(ledger.interestExpectedC);
+    interestEarned += centavosToPesos(ledger.interestPaidC);
   }
 
   return {
@@ -373,7 +409,7 @@ export function computeInvestorPortfolioCapitalStats(
   );
 
   const interestEstimate = sumAllocationInterest(allocations);
-  const interestEarned = sumAllocationInterest(completedAllocations);
+  const interestEarned = sumLoanInterestCollected(allocations);
 
   return {
     totalCapital: computePeakConcurrentInvestorPrincipal(allocations, from, to),
@@ -413,10 +449,9 @@ export function computeLoanListSummaryStats(
   let interestEarned = 0;
 
   for (const loan of loans) {
-    interestEstimate += calculateTotalInterest(loan.loanInvestors);
-    if (!isOpenLoan(loan)) {
-      interestEarned += calculateTotalInterest(loan.loanInvestors);
-    }
+    const ledger = buildLoanLedger(loan);
+    interestEstimate += centavosToPesos(ledger.interestExpectedC);
+    interestEarned += centavosToPesos(ledger.interestPaidC);
   }
 
   return {
@@ -510,89 +545,5 @@ export function computePartyCommissionStats(
     totalProfitScheduled: profitEstimate + profitEarned,
     completedCount: completedLoans.length,
     totalLoanCount: loansWithCommission.length,
-  };
-}
-
-export function computeBorrowerProfitStats(
-  loans: LoanWithInvestors[],
-  from: string | null = null,
-  to: string | null = null,
-): ProfitStats {
-  const openLoans = loans.filter(isOpenLoan);
-  const completedLoans = loans.filter((loan) => !isOpenLoan(loan));
-
-  const profitFor = (loan: LoanWithInvestors) =>
-    calculateInterest(
-      calculateTotalPrincipal(loan.loanInvestors),
-      loan.profitValue,
-      loan.profitType,
-    );
-
-  const profitEstimate = openLoans.reduce(
-    (sum, loan) => sum + profitFor(loan),
-    0,
-  );
-  const profitEarned = completedLoans.reduce(
-    (sum, loan) => sum + profitFor(loan),
-    0,
-  );
-
-  return {
-    totalPrincipal: computePeakConcurrentPrincipal(loans, from, to),
-    profitEstimate,
-    profitEarned,
-    totalProfitScheduled: profitEstimate + profitEarned,
-    completedCount: completedLoans.length,
-    totalLoanCount: loans.length,
-  };
-}
-
-export type WitnessLoanAllocation = LoanWitness & { loan: LoanWithInvestors };
-
-/**
- * Profit stats for a witness across the loans they witness.
- * Estimate = open loans, Earned = completed loans — same split as investor interest.
- */
-export function computeWitnessProfitStats(
-  allocations: WitnessLoanAllocation[],
-  from: string | null = null,
-  to: string | null = null,
-): ProfitStats {
-  const openAllocations = allocations.filter((allocation) =>
-    isOpenLoan(allocation.loan),
-  );
-  const completedAllocations = allocations.filter(
-    (allocation) => !isOpenLoan(allocation.loan),
-  );
-
-  const profitFor = (allocation: WitnessLoanAllocation) =>
-    calculateInterest(
-      calculateTotalPrincipal(allocation.loan.loanInvestors),
-      allocation.profitValue,
-      allocation.profitType,
-    );
-
-  const profitEstimate = openAllocations.reduce(
-    (sum, allocation) => sum + profitFor(allocation),
-    0,
-  );
-  const profitEarned = completedAllocations.reduce(
-    (sum, allocation) => sum + profitFor(allocation),
-    0,
-  );
-
-  const uniqueLoans = [
-    ...new Map(
-      allocations.map((allocation) => [allocation.loanId, allocation.loan]),
-    ).values(),
-  ];
-
-  return {
-    totalPrincipal: computePeakConcurrentPrincipal(uniqueLoans, from, to),
-    profitEstimate,
-    profitEarned,
-    totalProfitScheduled: profitEstimate + profitEarned,
-    completedCount: completedAllocations.length,
-    totalLoanCount: allocations.length,
   };
 }

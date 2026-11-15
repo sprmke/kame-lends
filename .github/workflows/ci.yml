@@ -26,6 +26,8 @@ jobs:
         run: bun run lint:js
       - name: Unit tests
         run: bun run test:unit
+      - name: Coverage gate (money engine)
+        run: bun run test:coverage
       - name: AI tooling sync
         run: bun run check:ai-tooling-sync
       - name: AI gateway guard
@@ -37,6 +39,110 @@ jobs:
       - name: Dependency audit
         # braces@3.0.3 via lint-staged has no patched release (GHSA-vfj7-8cjw-p6xm).
         run: bun audit --audit-level=high --ignore GHSA-vfj7-8cjw-p6xm
+
+  lighthouse:
+    name: Lighthouse (non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: kame_lends
+          POSTGRES_PASSWORD: kame_lends
+          POSTGRES_DB: kame_lends
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U kame_lends"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://kame_lends:kame_lends@127.0.0.1:5433/kame_lends
+      E2E_AUTH_SECRET: lighthouse-local-secret
+      E2E_USER_EMAIL: e2e@example.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Apply migrations
+        run: bun run db:migrate:pending --yes
+      - name: Seed
+        run: bun scripts/db/seed-e2e.ts
+      - name: Lighthouse
+        run: bun run perf:lighthouse
+
+  e2e-money:
+    name: E2E money
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: kame_lends
+          POSTGRES_PASSWORD: kame_lends
+          POSTGRES_DB: kame_lends
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U kame_lends"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://kame_lends:kame_lends@127.0.0.1:5433/kame_lends
+      E2E_AUTH_SECRET: e2e-ci-secret
+      E2E_USER_EMAIL: e2e@example.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Apply migrations
+        run: bun run db:migrate:pending --yes
+      - name: Seed
+        run: bun scripts/db/seed-e2e.ts
+      - name: Install Playwright Chromium
+        run: bun x playwright install --with-deps chromium
+      - name: Money and accessibility journeys
+        run: bun run test:e2e -- --project=setup --project=money-flows --project=a11y
+      - name: Money health authorization
+        run: bun run test:e2e -- --project=setup --project=multi-role -g "money health"
+      - name: Loan create journey
+        run: bun run test:e2e -- --project=setup --project=crud-flows -g "create and delete a loan"
+
+  integration:
+    name: DB integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: kame_lends
+          POSTGRES_PASSWORD: kame_lends
+          POSTGRES_DB: kame_lends
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U kame_lends"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://kame_lends:kame_lends@127.0.0.1:5433/kame_lends
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Apply migrations
+        run: bun run db:migrate:pending --yes
+      - name: Integration tests
+        run: bun run test:integration
+      - name: Timezone matrix
+        run: bun run test:unit:tz
 
   e2e-smoke:
     name: E2E smoke

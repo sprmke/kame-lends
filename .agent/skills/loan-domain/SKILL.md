@@ -1,3 +1,8 @@
+---
+name: loan-domain
+description: "Use when changing loans, investors, interest periods, payments, debts, or the investor portal."
+---
+
 # Loan domain — Kame Lends / PawnTracker
 
 Use when changing loans, investors, interest periods, payments, debts, or the investor portal.
@@ -5,21 +10,27 @@ Use when changing loans, investors, interest periods, payments, debts, or the in
 ## Loan types
 
 - **Lot Title**, **OR/CR**, **Agent** — each has type-specific fields and contract templates.
-- Status flow: `Completed` when received payments cover principal + interest (`isLoanFullyReceived`). Overdue is derived from due dates and period state only while a balance remains. Manual complete still exists for overdue unpaid loans.
+- Status is **derived** by `src/lib/money/status.ts`: Completed when balance ≤ 0 (principal and interest), Overdue when anything is past due, Partially Funded when a disbursement is unpaid, otherwise Fully Funded. Overdue starts the **day after** the due date in Asia/Manila.
+- A manual `Completed` is the only override. It requires a reason and stores `status_override`, `status_reason`, `completed_at`, and an optional `waived_amount` (D-7).
 
 ## Interest periods
 
 - Loans can have **multiple interest periods** per investor allocation.
-- Periods link to received payments; `interest_incomplete` flags partial collection.
-- **Extend interest** creates a new period; **consolidate payment** rolls periods on debts.
-- Money math lives in `src/lib/calculations.ts` and `src/lib/debt-calculations.ts` — never duplicate formulas in UI.
+- Periods link to received payments. Status is derived from the linked sum: Completed, Incomplete, Pending, or Overdue.
+- **Consolidate payment** replaces the linked rows in one transaction and keeps prior receipts. **Extend interest** was removed (D-11); plan a proper Extend term action instead.
+- Money math lives in `src/lib/money/` only. `src/lib/calculations.ts` and `src/lib/loan-payment-schedule.ts` are thin adapters over `buildLoanLedger`.
+- Calendar, timeline, Google Calendar, Telegram, and daily summary amounts come from `buildLoanPaymentSchedule`, which is a view over the ledger. Unpaid/overdue interest rolls into the loan due row; paid or future interest keeps its own date.
+- Reverting a paid period never deletes payments. Delete the payment explicitly (D-10).
+- Read `docs/architecture/money-model.md` before changing any formula.
 
 ## Investors
 
 - **Admin** sees full workspace and can create, edit, and delete.
 - **Investor / borrower / witness** memberships are links on one Auth user (Google email), not separate accounts.
-- Per-investor: principal disbursement, received payments (cannot exceed disbursed principal), rates, schedules. Only the workspace admin records payments.
-- Copy investor / copy period modals duplicate configuration across loans.
+- Per-investor: principal disbursement, received payments, rates, schedules. Only the workspace admin records payments.
+- An investor's totals are grouped **by loan, then by investor**. Two loans never share a schedule (CALC-02).
+- A zero-capital (agent) allocation earns its rate on the loan principal (D-1).
+- Copy investor / copy period duplicates interest configuration only. It never copies payments or receipts.
 
 ## Borrowers & debts
 
@@ -53,9 +64,18 @@ Use when changing loans, investors, interest periods, payments, debts, or the in
 | Concern        | Path                                                                |
 | -------------- | ------------------------------------------------------------------- |
 | Schema         | `src/lib/server/db/schema.ts`                                       |
-| Calculations   | `src/lib/calculations.ts`, `src/lib/loan-status.ts`                 |
+| Money engine   | `src/lib/money/` (`ledger.ts`, `centavos.ts`, `status.ts`)          |
+| Money spec     | `docs/architecture/money-model.md`                                  |
 | Access control | `src/lib/server/access-control.ts`                                  |
 | Feature flag   | `src/lib/feature-flags.ts`                                          |
 | Calendar       | `src/lib/server/group-calendar.ts`, `src/lib/calendar-summaries.ts` |
 
-Preserve behavior exactly; add Vitest coverage for calculation changes.
+## Invariants
+
+1. Balances, schedules, and status come from `buildLoanLedger`.
+2. Payments are never re-created by an edit; ids, receipts, and period links survive.
+3. Money writes run in `db.transaction` and write `money_audit_events`.
+4. A loan is never Completed while principal is outstanding.
+5. Overdue is the day after the due date, in Manila.
+
+Add Vitest coverage (golden + property + timezone) for any money change.

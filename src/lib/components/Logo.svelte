@@ -56,6 +56,6 @@
 		/>
 	{/if}
 	<span class="leading-none">
-		{brandPrimary}{#if brandAccent}<span class="text-primary"> {brandAccent}</span>{/if}
+		{brandPrimary}{#if brandAccent}<span class="text-primary-strong"> {brandAccent}</span>{/if}
 	</span>
 </span>

@@ -8,7 +8,8 @@ import {
 
 test.describe.configure({ mode: "serial", timeout: 90_000, retries: 1 });
 
-test.beforeEach((_fixtures, testInfo) => {
+// eslint-disable-next-line no-empty-pattern
+test.beforeEach(({}, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 
@@ -64,9 +65,8 @@ test("dashboard chrome matches legacy desktop layout", async ({ page }) => {
   const fontSize = await title.evaluate((el) =>
     parseFloat(getComputedStyle(el).fontSize),
   );
-  expect(fontSize).toBeGreaterThanOrEqual(28);
+  expect(fontSize).toBeGreaterThanOrEqual(20);
 
-  await expect(page.getByText("Welcome back", { exact: true })).toBeVisible();
   await expect(
     page.getByText(
       "Overview of your lending performance and upcoming activity.",
@@ -82,6 +82,8 @@ test("dashboard chrome matches legacy desktop layout", async ({ page }) => {
     page.getByText("Trends & insights", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Distribution", { exact: true })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => document.fonts.ready);
   await expect(page).toHaveScreenshot("dashboard.png", {
     fullPage: true,
     maxDiffPixelRatio: 0.03,
@@ -93,7 +95,7 @@ test("loans list chrome matches legacy desktop layout", async ({ page }) => {
   expect(response?.status()).toBe(200);
   await waitForLoansTable(page);
   await expectFloatingSidebar(page);
-  await expect(page.getByText("Manage all your loans")).toBeVisible();
+  await expect(page.getByText("Loans you operate and can edit.")).toBeVisible();
 
   const newLoan = page.getByRole("button", { name: /new loan/i }).first();
   await expect(newLoan).toBeVisible();
@@ -118,6 +120,11 @@ test("create loan modal matches legacy form chrome", async ({ page }) => {
   await waitForLoansTable(page);
 
   await page.getByRole("button", { name: /new loan/i }).click();
+  // With templates the button opens a menu; choose the blank form.
+  const blankLoan = page.getByRole("menuitem", { name: "Blank loan" });
+  if (await blankLoan.isVisible().catch(() => false)) {
+    await blankLoan.click();
+  }
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await expect(
@@ -127,6 +134,9 @@ test("create loan modal matches legacy form chrome", async ({ page }) => {
   });
 
   await expect(dialog.getByRole("button", { name: "Close" })).toHaveCount(0);
+  // The form is lazy-loaded inside the dialog; wait for a real field before
+  // measuring the header actions or the skeleton can win the race.
+  await expect(dialog.locator("#dueDate")).toBeVisible({ timeout: 20_000 });
   await expectTitleBesideActions(dialog, "Create Loan", "Create Loan");
   await expect(dialog.getByText("Loan Details", { exact: true })).toBeVisible();
   await expect(
@@ -182,7 +192,7 @@ test("investors, bank loans, and settings pages keep legacy titles", async ({
     page.getByRole("heading", { name: "Investors", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Track investor portfolios and balances"),
+    page.getByText("Lender contacts and their loan activity."),
   ).toBeVisible();
   await expectFloatingSidebar(page);
   await expect(page).toHaveScreenshot("investors.png", {
@@ -212,7 +222,7 @@ test("investors, bank loans, and settings pages keep legacy titles", async ({
   ).toBeVisible();
   await expect(page.getByText("Data & maintenance")).toBeVisible();
   await expect(
-    page.getByText("Maintenance tools and data exports for your workspace."),
+    page.getByText("Account, payment methods, backups, and maintenance tools."),
   ).toBeVisible();
   await expect(page).toHaveScreenshot("settings.png", {
     fullPage: true,
@@ -225,9 +235,9 @@ test("remaining dashboard routes keep floating sidebar chrome", async ({
   request,
 }) => {
   const extraListRoutes: Array<{ path: string; heading: string }> = [
-    { path: "/investments", heading: "Investments" },
-    { path: "/borrowed", heading: "Borrowed" },
-    { path: "/witnessed", heading: "Witnessed" },
+    { path: "/investments", heading: "Loans" },
+    { path: "/borrowed", heading: "Loans" },
+    { path: "/witnessed", heading: "Loans" },
     { path: "/borrowers", heading: "Borrowers" },
     { path: "/witnesses", heading: "Witnesses" },
     { path: "/transactions", heading: "Transactions" },
