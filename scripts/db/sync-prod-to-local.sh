@@ -76,14 +76,19 @@ wipe_local_schema() {
 
 run_pg_restore() {
   local dump_file="$1"
-  if command -v pg_restore >/dev/null 2>&1; then
-    pg_restore --no-owner --no-acl --dbname="$LOCAL_URL" "$dump_file"
+  # Neon adds a nonstandard per-column `pg_attver` option. pg_restore 17
+  # replays it as `SET (pg_attver=...)`, which a standard Postgres 17 rejects,
+  # rolling back the CREATE TABLE for that table. Strip only those ALTER lines;
+  # COPY data is untouched.
+  if command -v pg_restore >/dev/null 2>&1 && command -v psql >/dev/null 2>&1; then
+    pg_restore --no-owner --no-acl -f - "$dump_file" \
+      | grep -v 'SET (pg_attver' \
+      | psql "$LOCAL_URL" -v ON_ERROR_STOP=1
   elif command -v docker >/dev/null 2>&1; then
     docker run --rm \
       -v "$(dirname "$dump_file"):/backup:ro" \
       postgres:17 \
-      pg_restore --no-owner --no-acl \
-      --dbname="$LOCAL_DOCKER_URL" "/backup/$(basename "$dump_file")"
+      sh -c "pg_restore --no-owner --no-acl -f - \"/backup/$(basename "$dump_file")\" | grep -v 'SET (pg_attver' | psql \"$LOCAL_DOCKER_URL\" -v ON_ERROR_STOP=1"
   else
     die "Install PostgreSQL client tools or Docker to run pg_restore."
   fi
@@ -155,8 +160,8 @@ else
   run_pg_restore "$DUMP_PATH"
 fi
 
-echo "→ Applying schema drift (drizzle push to local only)..."
-bash "$ROOT/scripts/db/local-db-push.sh"
+echo "→ Applying pending migrations to local Postgres..."
+DATABASE_URL="$LOCAL_URL" bun run db:migrate:pending --yes
 
 echo "✓ Local Postgres now mirrors the restored snapshot."
 print_counts | while read -r line; do [[ -n "$line" ]] && echo "  $line"; done

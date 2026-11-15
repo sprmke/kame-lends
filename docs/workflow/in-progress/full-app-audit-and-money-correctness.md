@@ -941,3 +941,12 @@ Closed the last structural, QA, and migration decisions.
 - **Tests:** 8 unit cases for drift (unlinked money, total-capital base, overdue principal, manual override), 6 integration cases for the sweep/health, and 4 integration cases that run the real repair script against Postgres (duplicate merge and payment move, zero-capital conversion, read-only reports).
 - **Local snapshot:** the repair tests applied duplicates and zero-capital to the local copy, so local health now shows only 15 receipt-less and 4 unlinked payments. A pre-change backup exists.
 - **Production:** dry runs show 9 duplicate dates and 13 zero-capital rows; status drift is 0. The two safe repairs are ready to apply after a fresh backup.
+
+### Production repairs (2026-11-16)
+
+- **Pre-repair backup:** `~/Backups/kame-lends/kame-lends-neon-20261116-052600.dump`, SHA-256 `73aa2942dbb93fc91927650729ae95353f7114001c9bfed988cf43be53748f26`. Verified by restoring into a scratch database.
+- **Duplicate period dates:** 9 merged into the keeper, payments reassigned, duplicates deleted. The unique `(loan_investor_id, due_date)` constraint now exists in production. Health: 0.
+- **Zero-capital fixed:** 12 converted to the equivalent rate. Amount equality verified before/after (max difference ₱0.00). One row remains fixed: allocation 444, ₱10.00 on a ₱500,000 loan, because a 0.002% rate rounds to 0.00% and would lose the amount. It has an audit row (`repair:zero-capital-fixed:reverted-rounding-loss`).
+- **Post-repair backup:** `~/Backups/kame-lends/kame-lends-neon-20261116-054116.dump`, SHA-256 `f2fe276fb6fe72719881f3ada44b53c4c58edb70037cdf5ed2471a4d488ce4ec`. Restored into local Docker with the fixed path; local now mirrors production.
+- **Restore fix:** Neon adds a nonstandard `pg_attver` column option that Postgres 17 rejects. `sync-prod-to-local.sh` now strips those `ALTER` lines and applies migrations instead of an interactive schema push.
+- **Remaining:** 15 receipt-less payments and 4 unlinked payments need owner review. External calendar/Telegram/push/email delivery and the physical-device pass are still open in the planned follow-up.

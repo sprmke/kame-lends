@@ -81,4 +81,4 @@ else
 fi
 
 echo "✓ Backup saved: $OUT"
-echo "  Restore (dev only): pg_restore --clean --if-exists --no-owner --dbname=\$TARGET_URL $OUT"
+echo "  Restore (dev only): bun run db:local:sync-prod --from-dump $OUT"
