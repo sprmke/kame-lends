@@ -50,6 +50,6 @@ Any signed-in user. All-users backup is platform owner only.
 ## Data & maintenance (2026-11)
 
 - The one-click **Fix received payments** and **Sync loan due dates** buttons are gone. Their endpoints return **410 Gone**.
-- The platform owner sees a read-only **Data health** card backed by `GET /api/admin/money-health`. It reports counts only (no PII) for unlinked payments, receipt-less payments, underpaid completed periods, zero-allocation loans, zero-capital fixed rows, duplicate period dates, and debt orphan periods.
+- The platform owner sees a read-only **Data health** card backed by `GET /api/admin/money-health`. It reports counts only (no PII) for unlinked payments, receipt-less payments, missing interest periods, zero-allocation loans, zero-capital fixed rows, duplicate period dates, periods or payments left on removed allocations, completed loans with a balance, debt orphan periods, and period/loan status drift against the ledger. Status drift is computed by the same rule as the daily sweep, so already-paid periods are never reported as underpaid.
 - Downloading a backup is unchanged.
 - Signing out purges offline caches and the last-online timestamp.

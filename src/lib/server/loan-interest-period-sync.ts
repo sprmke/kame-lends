@@ -12,7 +12,10 @@ import {
 import { eq, inArray, sql, and, isNull } from "drizzle-orm";
 import type { InterestPeriodStatus, LoanStatus } from "$lib/types";
 import { loadLoanLedger } from "$lib/server/loan-ledger";
-import { buildLoanLedger } from "$lib/money/ledger";
+import {
+  loadStatusDriftLoans,
+  statusDriftForLoans,
+} from "$lib/server/status-drift";
 
 export async function recalculateInterestPeriodStatusFromLinkedPayments(
   periodId: number,
@@ -133,47 +136,21 @@ export async function syncLoanStatuses(
     userId?: string;
   } = {},
 ): Promise<LoanStatusSyncResult> {
-  const rows = await db.query.loans.findMany({
-    where: options.userId
-      ? and(eq(loans.userId, options.userId), isNull(loans.deletedAt))
-      : isNull(loans.deletedAt),
-    with: {
-      loanInvestors: {
-        // Soft-deleted rows are not part of the loan any more. Counting them
-        // here would make the cron disagree with the detail page.
-        where: isNull(loanInvestors.deletedAt),
-        with: {
-          interestPeriods: true,
-          receivedPayments: { where: isNull(receivedPayments.deletedAt) },
-        },
-      },
-    },
-  });
+  const rows = await loadStatusDriftLoans(options.userId);
+  const drift = statusDriftForLoans(rows);
 
   const periodIdsByStatus = new Map<InterestPeriodStatus, number[]>();
   const loanIdsByStatus = new Map<LoanStatus, number[]>();
 
-  for (const loan of rows) {
-    const override =
-      loan.statusOverride === "Completed" ? ("Completed" as const) : null;
-    const ledger = buildLoanLedger(loan, { statusOverride: override });
-    for (const period of ledger.investors.flatMap(
-      (investor) => investor.periods,
-    )) {
-      if (period.id == null) continue;
-      const stored = loan.loanInvestors
-        .flatMap((allocation) => allocation.interestPeriods ?? [])
-        .find((row) => row.id === period.id)?.status;
-      if (stored === period.status) continue;
-      const ids = periodIdsByStatus.get(period.status) ?? [];
-      ids.push(period.id);
-      periodIdsByStatus.set(period.status, ids);
-    }
-    if (loan.status !== ledger.status) {
-      const ids = loanIdsByStatus.get(ledger.status) ?? [];
-      ids.push(loan.id);
-      loanIdsByStatus.set(ledger.status, ids);
-    }
+  for (const period of drift.periods) {
+    const ids = periodIdsByStatus.get(period.derived) ?? [];
+    ids.push(period.periodId);
+    periodIdsByStatus.set(period.derived, ids);
+  }
+  for (const loan of drift.loans) {
+    const ids = loanIdsByStatus.get(loan.derived) ?? [];
+    ids.push(loan.loanId);
+    loanIdsByStatus.set(loan.derived, ids);
   }
 
   const now = new Date();
