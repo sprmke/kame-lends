@@ -11,7 +11,9 @@
 #
 # Bootstrap: if schema_migrations is empty but the DB already looks current
 # (loans.profit_type exists), record every migration file present on disk as
-# applied without re-running older patches. Fresh databases run every file.
+# applied without re-running older patches. A completely empty database gets
+# the current schema from schema.ts first, then the same journal bootstrap.
+# The historical chain is not self-contained from zero.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -62,6 +64,10 @@ if [[ "$DATABASE_URL" == *"neon.tech"* && "$YES" -ne 1 ]]; then
   fi
 fi
 
+# Local Docker URL may target a scratch database; honor its name.
+LOCAL_DB_NAME="${DATABASE_URL##*/}"
+LOCAL_DB_NAME="${LOCAL_DB_NAME%%\?*}"
+
 run_psql() {
   local sql="$1"
   if command -v psql >/dev/null 2>&1; then
@@ -71,7 +77,7 @@ run_psql() {
       echo "Local Postgres is not running. Start it with: bun run db:local:start" >&2
       exit 1
     fi
-    docker compose exec -T db psql -U kame_lends -d kame_lends -v ON_ERROR_STOP=1 -c "$sql"
+    docker compose exec -T db psql -U kame_lends -d "$LOCAL_DB_NAME" -v ON_ERROR_STOP=1 -c "$sql"
   elif command -v docker >/dev/null 2>&1; then
     printf '%s\n' "$sql" | docker run --rm -i -e DATABASE_URL postgres:17 \
       sh -c 'psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f -'
@@ -86,7 +92,7 @@ run_psql_file() {
   if command -v psql >/dev/null 2>&1; then
     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
   elif [[ "$DATABASE_URL" == *"127.0.0.1:5433"* || "$DATABASE_URL" == *"localhost:5433"* ]]; then
-    docker compose exec -T db psql -U kame_lends -d kame_lends -v ON_ERROR_STOP=1 -f - <"$file"
+    docker compose exec -T db psql -U kame_lends -d "$LOCAL_DB_NAME" -v ON_ERROR_STOP=1 -f - <"$file"
   elif command -v docker >/dev/null 2>&1; then
     docker run --rm -i -e DATABASE_URL postgres:17 \
       sh -c 'psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f -' <"$file"
@@ -101,7 +107,7 @@ query_psql() {
   if command -v psql >/dev/null 2>&1; then
     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -c "$sql"
   elif [[ "$DATABASE_URL" == *"127.0.0.1:5433"* || "$DATABASE_URL" == *"localhost:5433"* ]]; then
-    docker compose exec -T db psql -U kame_lends -d kame_lends -v ON_ERROR_STOP=1 -At -c "$sql"
+    docker compose exec -T db psql -U kame_lends -d "$LOCAL_DB_NAME" -v ON_ERROR_STOP=1 -At -c "$sql"
   elif command -v docker >/dev/null 2>&1; then
     printf '%s\n' "$sql" | docker run --rm -i -e DATABASE_URL postgres:17 \
       sh -c 'psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -f -'
@@ -120,15 +126,6 @@ file_checksum() {
   fi
 }
 
-run_psql "$(cat <<'SQL'
-CREATE TABLE IF NOT EXISTS schema_migrations (
-  filename text PRIMARY KEY,
-  applied_at timestamptz NOT NULL DEFAULT now(),
-  checksum text
-);
-SQL
-)"
-
 PENDING=0
 FILE_COUNT=0
 for path in db/migrations/*.sql; do
@@ -138,6 +135,37 @@ done
 
 if [[ "$FILE_COUNT" -eq 0 ]]; then
   echo "No migration files found."
+  exit 0
+fi
+
+PUBLIC_TABLES="$(query_psql "
+  SELECT count(*) FROM information_schema.tables
+  WHERE table_schema = 'public';
+" | tr -d '[:space:]')"
+
+# Brand-new database. The old migration files assume the legacy baseline, so
+# create the current schema from schema.ts before the journal exists (drizzle
+# push would otherwise prompt about the unknown schema_migrations table).
+if [[ "$PUBLIC_TABLES" == "0" ]]; then
+  echo "Empty database — creating the current schema from schema.ts."
+  if ! command -v bun >/dev/null 2>&1; then
+    echo "Bun is required to bootstrap an empty database. Install Bun or push the schema first." >&2
+    exit 1
+  fi
+  DATABASE_URL="$DATABASE_URL" bun x drizzle-kit push --force
+fi
+
+run_psql "CREATE TABLE IF NOT EXISTS schema_migrations (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now(), checksum text);"
+
+if [[ "$PUBLIC_TABLES" == "0" ]]; then
+  for path in db/migrations/*.sql; do
+    [[ -f "$path" ]] || continue
+    file="$(basename "$path")"
+    checksum="$(file_checksum "$path")"
+    run_psql "INSERT INTO schema_migrations (filename, checksum) VALUES ('${file//\'/\'\'}', '${checksum}') ON CONFLICT (filename) DO NOTHING;"
+    echo "  recorded $file"
+  done
+  echo "Bootstrap complete. Future pushes will apply only new files."
   exit 0
 fi
 
