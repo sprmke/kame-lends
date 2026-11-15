@@ -1,6 +1,6 @@
 /**
- * Recalculate one interest period's status from linked received_payments rows,
- * then align loan.status with all periods (same rules as interest-periods PATCH).
+ * Recalculate interest period statuses and the loan status from the single
+ * money engine. Stored statuses are never trusted; linked payments decide.
  */
 import { db } from "$lib/server/db";
 import {
@@ -9,20 +9,10 @@ import {
   loans,
   receivedPayments,
 } from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
-import {
-  calculateInterest,
-  calculateTotalAmount,
-  calculateTotalReceived,
-  isLoanFullyReceived,
-} from "$lib/calculations";
-import {
-  deriveLoanStatusFromPeriods,
-  interestPeriodStatusFlags,
-} from "$lib/loan-status";
-import type { LoanStatus } from "$lib/types";
-
-const AMOUNT_TOLERANCE = 0.02;
+import { eq, inArray, sql, and, isNull } from "drizzle-orm";
+import type { InterestPeriodStatus, LoanStatus } from "$lib/types";
+import { loadLoanLedger } from "$lib/server/loan-ledger";
+import { buildLoanLedger } from "$lib/money/ledger";
 
 export async function recalculateInterestPeriodStatusFromLinkedPayments(
   periodId: number,
@@ -40,111 +30,178 @@ export async function recalculateInterestPeriodStatusFromLinkedPayments(
 
   if (!period) return null;
 
-  const linkedRows = await db.query.receivedPayments.findMany({
-    where: eq(receivedPayments.interestPeriodId, periodId),
-  });
+  const loanId = period.loanInvestor.loanId;
+  const ledger = await loadLoanLedger(loanId);
+  if (!ledger) return null;
 
-  const priorTotal = linkedRows.reduce(
-    (s, rp) => s + (parseFloat(rp.amount) || 0),
-    0,
-  );
-
-  const coInvestors = await db.query.loanInvestors.findMany({
-    where: eq(loanInvestors.loanId, period.loanInvestor.loanId),
-  });
-  const loanTotalPrincipal = coInvestors.reduce(
-    (s, li) => s + (parseFloat(li.amount) || 0),
-    0,
-  );
-  const investorPrincipal = parseFloat(period.loanInvestor.amount) || 0;
-  const principalBase =
-    investorPrincipal === 0 ? loanTotalPrincipal : investorPrincipal;
-  const expectedInterest = calculateInterest(
-    principalBase,
-    period.interestRate,
-    period.interestType,
-  );
-
-  let newStatus: "Pending" | "Overdue" | "Incomplete" | "Completed";
-  if (priorTotal <= AMOUNT_TOLERANCE) {
-    const now = new Date();
-    const due = new Date(period.dueDate);
-    newStatus = now > due ? "Overdue" : "Pending";
-  } else if (priorTotal + AMOUNT_TOLERANCE >= expectedInterest) {
-    newStatus = "Completed";
-  } else {
-    newStatus = "Incomplete";
-  }
+  const derived = ledger.investors
+    .flatMap((investor) => investor.periods)
+    .find((row) => row.id === periodId)?.status;
+  if (!derived) return { loanId };
 
   await db
     .update(interestPeriods)
-    .set({ status: newStatus, updatedAt: new Date() })
+    .set({ status: derived, updatedAt: new Date() })
     .where(eq(interestPeriods.id, periodId));
 
-  return { loanId: period.loanInvestor.loanId };
+  return { loanId };
 }
 
+/**
+ * Align every stored period status and the loan status with the ledger.
+ * One read, then grouped updates instead of one UPDATE per row.
+ */
 export async function syncLoanStatusFromInterestPeriods(loanId: number) {
-  const allLoanInvestors = await db.query.loanInvestors.findMany({
+  const ledger = await loadLoanLedger(loanId);
+  if (!ledger) return;
+
+  const currentPeriods = await db.query.loanInvestors.findMany({
     where: eq(loanInvestors.loanId, loanId),
+    with: { interestPeriods: true },
+  });
+  const storedById = new Map(
+    currentPeriods.flatMap((allocation) =>
+      (allocation.interestPeriods ?? []).map((period) => [
+        period.id,
+        period.status as InterestPeriodStatus,
+      ]),
+    ),
+  );
+
+  const byStatus = new Map<InterestPeriodStatus, number[]>();
+  for (const period of ledger.investors.flatMap(
+    (investor) => investor.periods,
+  )) {
+    if (period.id == null) continue;
+    if (storedById.get(period.id) === period.status) continue;
+    const ids = byStatus.get(period.status) ?? [];
+    ids.push(period.id);
+    byStatus.set(period.status, ids);
+  }
+
+  const now = new Date();
+  for (const [status, ids] of byStatus) {
+    if (ids.length === 0) continue;
+    await db
+      .update(interestPeriods)
+      .set({ status, updatedAt: now })
+      .where(inArray(interestPeriods.id, ids));
+  }
+
+  const currentLoan = await db.query.loans.findFirst({
+    where: eq(loans.id, loanId),
+    columns: {
+      id: true,
+      status: true,
+      completedAt: true,
+      statusOverride: true,
+    },
+  });
+  if (!currentLoan) return;
+
+  const override =
+    currentLoan.statusOverride === "Completed" ? ("Completed" as const) : null;
+  const nextStatus = override ?? ledger.status;
+
+  if (currentLoan.status !== nextStatus) {
+    await db
+      .update(loans)
+      .set({
+        status: nextStatus,
+        updatedAt: now,
+        ...(nextStatus === "Completed" && !currentLoan.completedAt
+          ? { completedAt: now }
+          : {}),
+      })
+      .where(eq(loans.id, loanId));
+  }
+}
+
+export interface LoanStatusSyncResult {
+  loans: number;
+  updatedLoans: number;
+  updatedPeriods: number;
+}
+
+/**
+ * Recompute period and loan statuses from the ledger for one user or for every
+ * loan. Used by the dashboard safety net and the daily cron. Updates are
+ * grouped by status, so a run costs a handful of UPDATEs, not one per row.
+ */
+export async function syncLoanStatuses(
+  options: {
+    userId?: string;
+  } = {},
+): Promise<LoanStatusSyncResult> {
+  const rows = await db.query.loans.findMany({
+    where: options.userId
+      ? and(eq(loans.userId, options.userId), isNull(loans.deletedAt))
+      : isNull(loans.deletedAt),
     with: {
-      interestPeriods: true,
-      receivedPayments: true,
+      loanInvestors: {
+        // Soft-deleted rows are not part of the loan any more. Counting them
+        // here would make the cron disagree with the detail page.
+        where: isNull(loanInvestors.deletedAt),
+        with: {
+          interestPeriods: true,
+          receivedPayments: { where: isNull(receivedPayments.deletedAt) },
+        },
+      },
     },
   });
 
-  const fullyReceived = isLoanFullyReceived(
-    calculateTotalAmount(allLoanInvestors),
-    calculateTotalReceived(allLoanInvestors),
-  );
+  const periodIdsByStatus = new Map<InterestPeriodStatus, number[]>();
+  const loanIdsByStatus = new Map<LoanStatus, number[]>();
 
-  const now = new Date();
-  if (!fullyReceived) {
-    for (const li of allLoanInvestors) {
-      if (li.hasMultipleInterest && li.interestPeriods) {
-        for (const p of li.interestPeriods) {
-          const periodDueDate = new Date(p.dueDate);
-          if (p.status === "Pending" && now > periodDueDate) {
-            await db
-              .update(interestPeriods)
-              .set({ status: "Overdue", updatedAt: now })
-              .where(eq(interestPeriods.id, p.id));
-          }
-        }
-      }
+  for (const loan of rows) {
+    const override =
+      loan.statusOverride === "Completed" ? ("Completed" as const) : null;
+    const ledger = buildLoanLedger(loan, { statusOverride: override });
+    for (const period of ledger.investors.flatMap(
+      (investor) => investor.periods,
+    )) {
+      if (period.id == null) continue;
+      const stored = loan.loanInvestors
+        .flatMap((allocation) => allocation.interestPeriods ?? [])
+        .find((row) => row.id === period.id)?.status;
+      if (stored === period.status) continue;
+      const ids = periodIdsByStatus.get(period.status) ?? [];
+      ids.push(period.id);
+      periodIdsByStatus.set(period.status, ids);
+    }
+    if (loan.status !== ledger.status) {
+      const ids = loanIdsByStatus.get(ledger.status) ?? [];
+      ids.push(loan.id);
+      loanIdsByStatus.set(ledger.status, ids);
     }
   }
 
-  const updatedLoanInvestors = fullyReceived
-    ? allLoanInvestors
-    : await db.query.loanInvestors.findMany({
-        where: eq(loanInvestors.loanId, loanId),
-        with: {
-          interestPeriods: true,
-          receivedPayments: true,
-        },
-      });
+  const now = new Date();
+  let updatedPeriods = 0;
+  for (const [status, ids] of periodIdsByStatus) {
+    if (ids.length === 0) continue;
+    await db
+      .update(interestPeriods)
+      .set({ status, updatedAt: now })
+      .where(inArray(interestPeriods.id, ids));
+    updatedPeriods += ids.length;
+  }
 
-  const flags = interestPeriodStatusFlags(updatedLoanInvestors);
-  const currentLoan = await db.query.loans.findFirst({
-    where: eq(loans.id, loanId),
-  });
-
-  if (!currentLoan) return;
-
-  const newLoanStatus = deriveLoanStatusFromPeriods({
-    currentStatus: currentLoan.status as LoanStatus,
-    fullyReceived,
-    hasOverduePeriod: flags.hasOverduePeriod,
-    hasIncompletePeriod: flags.hasIncompletePeriod,
-    allPeriodsCompleted: flags.allPeriodsCompleted,
-    allDisbursementsPaid: updatedLoanInvestors.every((li) => li.isPaid),
-  });
-
-  if (newLoanStatus !== currentLoan.status) {
+  let updatedLoans = 0;
+  for (const [status, ids] of loanIdsByStatus) {
+    if (ids.length === 0) continue;
     await db
       .update(loans)
-      .set({ status: newLoanStatus, updatedAt: new Date() })
-      .where(eq(loans.id, loanId));
+      .set({
+        status,
+        updatedAt: now,
+        ...(status === "Completed"
+          ? { completedAt: sql`COALESCE(${loans.completedAt}, now())` }
+          : {}),
+      })
+      .where(inArray(loans.id, ids));
+    updatedLoans += ids.length;
   }
+
+  return { loans: rows.length, updatedLoans, updatedPeriods };
 }

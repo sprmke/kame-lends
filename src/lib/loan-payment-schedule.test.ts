@@ -49,6 +49,15 @@ function allocation(
   amount: string,
   sentDate: string,
   interestPeriods: InterestPeriod[] = [],
+  receivedPayments: Array<{
+    id: number;
+    loanInvestorId: number;
+    interestPeriodId?: number | null;
+    amount: string;
+    receivedDate: Date;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [],
 ): LoanInvestor & { investor: Investor } {
   return {
     id,
@@ -65,6 +74,7 @@ function allocation(
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     interestPeriods,
+    receivedPayments,
     investor,
   };
 }
@@ -130,16 +140,33 @@ describe("buildLoanPaymentSchedule", () => {
   it("keeps paid and upcoming interest on their own dates and rolls only overdue interest", () => {
     const single = loan(
       [
-        allocation(700, investorA, "100000", "2026-08-01", [
-          period(1, 700, "2026-09-01", "Completed"),
-          period(2, 700, "2026-10-01", "Overdue"),
-          period(3, 700, "2026-11-01", "Pending"),
-        ]),
+        allocation(
+          700,
+          investorA,
+          "100000",
+          "2026-08-01",
+          [
+            period(1, 700, "2026-09-01", "Completed"),
+            period(2, 700, "2026-10-01", "Overdue"),
+            period(3, 700, "2026-11-01", "Pending"),
+          ],
+          [
+            {
+              id: 1,
+              loanInvestorId: 700,
+              interestPeriodId: 1,
+              amount: "10000",
+              receivedDate: new Date("2026-09-01T00:00:00.000Z"),
+              createdAt: new Date("2026-09-01T00:00:00.000Z"),
+              updatedAt: new Date("2026-09-01T00:00:00.000Z"),
+            },
+          ],
+        ),
       ],
       "2026-11-01",
     );
 
-    const schedule = buildLoanPaymentSchedule(single);
+    const schedule = buildLoanPaymentSchedule(single, { today: "2026-10-15" });
 
     expect(schedule.interests).toHaveLength(1);
     expect(schedule.interests[0]).toMatchObject({
@@ -164,10 +191,27 @@ describe("buildLoanPaymentSchedule", () => {
   it("does not duplicate an investor's copied period schedule across disbursement rows", () => {
     const repeated = loan(
       [
-        allocation(800, investorA, "60000", "2026-08-01", [
-          period(10, 800, "2026-09-01", "Completed"),
-          period(11, 800, "2026-10-01", "Overdue"),
-        ]),
+        allocation(
+          800,
+          investorA,
+          "60000",
+          "2026-08-01",
+          [
+            period(10, 800, "2026-09-01", "Completed"),
+            period(11, 800, "2026-10-01", "Overdue"),
+          ],
+          [
+            {
+              id: 10,
+              loanInvestorId: 800,
+              interestPeriodId: 10,
+              amount: "10000",
+              receivedDate: new Date("2026-09-01T00:00:00.000Z"),
+              createdAt: new Date("2026-09-01T00:00:00.000Z"),
+              updatedAt: new Date("2026-09-01T00:00:00.000Z"),
+            },
+          ],
+        ),
         allocation(801, investorA, "40000", "2026-08-15", [
           period(12, 801, "2026-09-01", "Completed"),
           period(13, 801, "2026-10-01", "Overdue"),
@@ -176,7 +220,9 @@ describe("buildLoanPaymentSchedule", () => {
       "2026-10-01",
     );
 
-    const schedule = buildLoanPaymentSchedule(repeated);
+    const schedule = buildLoanPaymentSchedule(repeated, {
+      today: "2026-09-15",
+    });
 
     expect(schedule.interests).toHaveLength(1);
     expect(schedule.interests[0]?.totalAmount).toBe(10000);
@@ -192,15 +238,43 @@ describe("buildLoanPaymentSchedule", () => {
   it("keeps a completed final interest on its own row so the due row is principal only", () => {
     const completedFinal = loan(
       [
-        allocation(1200, investorA, "100000", "2026-08-01", [
-          period(40, 1200, "2026-09-01", "Completed"),
-          period(41, 1200, "2026-10-01", "Completed"),
-        ]),
+        allocation(
+          1200,
+          investorA,
+          "100000",
+          "2026-08-01",
+          [
+            period(40, 1200, "2026-09-01", "Completed"),
+            period(41, 1200, "2026-10-01", "Completed"),
+          ],
+          [
+            {
+              id: 40,
+              loanInvestorId: 1200,
+              interestPeriodId: 40,
+              amount: "10000",
+              receivedDate: new Date("2026-09-01T00:00:00.000Z"),
+              createdAt: new Date("2026-09-01T00:00:00.000Z"),
+              updatedAt: new Date("2026-09-01T00:00:00.000Z"),
+            },
+            {
+              id: 41,
+              loanInvestorId: 1200,
+              interestPeriodId: 41,
+              amount: "10000",
+              receivedDate: new Date("2026-10-01T00:00:00.000Z"),
+              createdAt: new Date("2026-10-01T00:00:00.000Z"),
+              updatedAt: new Date("2026-10-01T00:00:00.000Z"),
+            },
+          ],
+        ),
       ],
       "2026-10-01",
     );
 
-    const schedule = buildLoanPaymentSchedule(completedFinal);
+    const schedule = buildLoanPaymentSchedule(completedFinal, {
+      today: "2026-09-15",
+    });
 
     expect(schedule.interests.map((row) => row.totalAmount)).toEqual([
       10000, 10000,

@@ -1,6 +1,7 @@
 import { toLocalDateString } from "$lib/date-utils";
 import { normalizeInterestRate } from "$lib/debt-calculations";
 import type { DebtInterestInterval, DebtWithInvestor } from "$lib/types";
+import { todayKey } from "$lib/dates/business-date";
 
 export interface DebtFeeEntry {
   id: string;
@@ -39,7 +40,7 @@ export function makeDebtEntry(id: string): DebtFormEntry {
     id,
     name: "",
     amount: "",
-    debtDate: toLocalDateString(new Date()),
+    debtDate: todayKey(),
     interestRate: "",
     interestInterval: "Monthly",
     durationMonths: "12",

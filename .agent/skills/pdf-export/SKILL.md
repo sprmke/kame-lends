@@ -1,3 +1,8 @@
+---
+name: pdf-export
+description: "**Intentional exception:** SvelteKit keeps `@react-pdf/renderer` as a **server-only** dependency for loan, investor, transaction, and contract PDFs."
+---
+
 # PDF export — server-only @react-pdf/renderer
 
 **Intentional exception:** SvelteKit keeps `@react-pdf/renderer` as a **server-only** dependency for loan, investor, transaction, and contract PDFs.

@@ -1,3 +1,8 @@
+---
+name: auth-js-sveltekit
+description: "Use when touching sign-in, sessions, or route protection."
+---
+
 # Auth.js + SvelteKit — Kame Lends
 
 Use when touching sign-in, sessions, or route protection.

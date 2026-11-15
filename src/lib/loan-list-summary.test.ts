@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  computeBorrowerProfitStats,
   computeCurrentCapital,
   computeInvestorPortfolioCapitalStats,
   computeLoanListSummaryStats,
@@ -10,7 +9,6 @@ import {
   computePeakConcurrentInvestorPrincipal,
   computePeakConcurrentPrincipal,
   computePortfolioCapitalStats,
-  computeWitnessProfitStats,
 } from "$lib/loan-list-summary";
 import type { LoanWithInvestors } from "$lib/types";
 
@@ -23,6 +21,7 @@ function loanFixture(input: {
   updatedAt?: string;
   profitType?: "rate" | "fixed";
   profitValue?: string;
+  receivedAmount?: string;
 }): LoanWithInvestors {
   return {
     status: input.status,
@@ -43,6 +42,16 @@ function loanFixture(input: {
         isPaid: true,
         profitType: "rate",
         profitValue: "0",
+        receivedPayments: input.receivedAmount
+          ? [
+              {
+                id: 1,
+                loanInvestorId: 1,
+                amount: input.receivedAmount,
+                receivedDate: new Date(input.sentDate),
+              },
+            ]
+          : [],
       },
     ],
   } as unknown as LoanWithInvestors;
@@ -195,12 +204,14 @@ describe("computePortfolioCapitalStats", () => {
         amount: "100000",
         sentDate: "2025-01-01",
         dueDate: "2025-01-10",
+        receivedAmount: "10000",
       }),
       loanFixture({
         status: "Completed",
         amount: "100000",
         sentDate: "2025-01-11",
         dueDate: "2025-01-20",
+        receivedAmount: "10000",
       }),
       loanFixture({
         status: "Fully Funded",
@@ -338,6 +349,7 @@ describe("computeLoanListSummaryStats", () => {
           amount: "200000",
           sentDate: "2026-08-01",
           dueDate: "2026-08-31",
+          receivedAmount: "20000",
         }),
       ],
       "2026-09-01",
@@ -430,96 +442,5 @@ describe("computePartyCommissionStats", () => {
     expect(stats.totalLoanCount).toBe(1);
     expect(stats.completedCount).toBe(0);
     expect(stats.profitEstimate).toBe(10000);
-  });
-});
-
-describe("computeBorrowerProfitStats", () => {
-  it("splits rate-based profit into estimate vs earned by loan status", () => {
-    const stats = computeBorrowerProfitStats([
-      loanFixture({
-        status: "Fully Funded",
-        amount: "100000",
-        sentDate: "2026-09-01",
-        dueDate: "2026-09-30",
-        profitType: "rate",
-        profitValue: "10",
-      }),
-      loanFixture({
-        status: "Completed",
-        amount: "200000",
-        sentDate: "2026-08-01",
-        dueDate: "2026-08-31",
-        profitType: "rate",
-        profitValue: "5",
-      }),
-    ]);
-
-    expect(stats.profitEstimate).toBe(10000);
-    expect(stats.profitEarned).toBe(10000);
-    expect(stats.totalProfitScheduled).toBe(20000);
-    expect(stats.completedCount).toBe(1);
-    expect(stats.totalLoanCount).toBe(2);
-  });
-
-  it("treats fixed profit as a flat amount regardless of principal", () => {
-    const stats = computeBorrowerProfitStats([
-      loanFixture({
-        status: "Overdue",
-        amount: "500000",
-        sentDate: "2026-09-01",
-        dueDate: "2026-09-30",
-        profitType: "fixed",
-        profitValue: "2500",
-      }),
-    ]);
-
-    expect(stats.profitEstimate).toBe(2500);
-    expect(stats.profitEarned).toBe(0);
-  });
-});
-
-describe("computeWitnessProfitStats", () => {
-  it("splits witness profit into estimate vs earned by the loan's status", () => {
-    const openLoan = loanFixture({
-      status: "Fully Funded",
-      amount: "100000",
-      sentDate: "2026-09-01",
-      dueDate: "2026-09-30",
-    });
-    const completedLoan = loanFixture({
-      status: "Completed",
-      amount: "200000",
-      sentDate: "2026-08-01",
-      dueDate: "2026-08-31",
-    });
-
-    const stats = computeWitnessProfitStats([
-      {
-        id: 1,
-        loanId: 1,
-        witnessId: 1,
-        profitType: "rate",
-        profitValue: "10",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        witness: {} as never,
-        loan: openLoan,
-      },
-      {
-        id: 2,
-        loanId: 2,
-        witnessId: 1,
-        profitType: "fixed",
-        profitValue: "3000",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        witness: {} as never,
-        loan: completedLoan,
-      },
-    ]);
-
-    expect(stats.profitEstimate).toBe(10000);
-    expect(stats.profitEarned).toBe(3000);
-    expect(stats.totalProfitScheduled).toBe(13000);
   });
 });

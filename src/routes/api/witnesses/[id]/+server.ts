@@ -14,6 +14,7 @@ import {
   upsertWorkspacePartyContact,
 } from "$lib/server/party-directory";
 import { hasWitnessContactViewAccess } from "$lib/server/access-control";
+import { parseIdParam } from "$lib/server/route-params";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -62,7 +63,10 @@ export const GET: RequestHandler = async (event) => {
   }
 
   const { id } = params;
-  const witnessId = Number.parseInt(id, 10);
+  const witnessId = parseIdParam(id);
+  if (witnessId === null) {
+    return json({ error: "Invalid id" }, { status: 400 });
+  }
   if (!Number.isFinite(witnessId)) {
     return json({ error: "Invalid witness ID" }, { status: 400 });
   }
@@ -87,7 +91,10 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const witnessId = Number.parseInt(id, 10);
+    const witnessId = parseIdParam(id);
+    if (witnessId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (
       !Number.isFinite(witnessId) ||
       !(await getOwnedWitness(witnessId, session.user.id))
@@ -154,7 +161,10 @@ export const DELETE: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const witnessId = Number.parseInt(id, 10);
+    const witnessId = parseIdParam(id);
+    if (witnessId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     const witness = await getOwnedWitness(witnessId, session.user.id);
     if (!Number.isFinite(witnessId) || !witness) {
       return json({ error: "Witness not found" }, { status: 404 });

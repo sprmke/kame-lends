@@ -1,4 +1,5 @@
 import { toLocalDateString } from "$lib/date-utils";
+import { dateKeyToUtcMidnight } from "$lib/dates/business-date";
 import { buildLoanPaymentSchedule } from "$lib/loan-payment-schedule";
 import type { LoanWithInvestors } from "$lib/types";
 import type {
@@ -77,6 +78,7 @@ export function sentInvestorLinesForCard(
 
 export function buildLoanCalendarEvents(
   loans: LoanWithInvestors[],
+  options: { today?: string } = {},
 ): CalendarEvent[] {
   const events: CalendarEvent[] = [];
 
@@ -104,14 +106,16 @@ export function buildLoanCalendarEvents(
       events.push({
         type: "sent",
         loan,
-        date: new Date(`${dateKey}T00:00:00`),
+        date: dateKeyToUtcMidnight(dateKey),
         investors,
         totalAmount,
         hasUnpaidTransactions,
       } satisfies CalendarEventSent);
     });
 
-    const schedule = buildLoanPaymentSchedule(loan);
+    const schedule = buildLoanPaymentSchedule(loan, {
+      today: options.today,
+    });
 
     schedule.dues.forEach((due) => {
       events.push({

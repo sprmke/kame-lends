@@ -75,3 +75,12 @@ Admin and party sessions can open `/dashboard`. Data is scoped to the signed-in 
 | Query            | `src/lib/server/dashboard-data.ts`                                            |
 | Due-date windows | `src/lib/loan-due-date.ts`                                                    |
 | Nav progress     | `src/lib/components/common/NavigationProgress.svelte`                         |
+
+## Metric definitions (2026-11)
+
+- **Total Principal** and **Active**: peak concurrent principal, unchanged.
+- **Interest Estimate**: scheduled interest on every loan, open and completed (`interestExpected`).
+- **Interest Collected**: cash received and applied to interest (`interestPaid`), across all loans. This replaces the old "Interest Earned", which counted scheduled interest on completed loans.
+- **Overdue amount** comes from the ledger: unpaid overdue period interest plus unpaid principal when the loan due date has passed. Partial payments reduce it.
+- The dashboard refresh calls `/api/loans/check-overdue`, which recomputes statuses for the owner with the single rule. The daily cron is the primary writer.
+- No card may show `₱NaN`; non-finite money renders as `₱0.00`.

@@ -6,6 +6,10 @@ import type {
 } from "$lib/components/common/calendar/types";
 import { buildLoanCalendarEvents } from "$lib/composables/use-loan-calendar-events";
 import { fromLocalDateString } from "$lib/date-utils";
+import {
+  toDateKey,
+  todayKey as businessTodayKey,
+} from "$lib/dates/business-date";
 import type { LoanWithInvestors } from "$lib/types";
 
 export type TimelineDirection = "in" | "out";
@@ -210,12 +214,12 @@ export function buildLoanTimeline(
 ): LoanTimeline {
   const from = options.from ?? null;
   const to = options.to ?? null;
-  const todayKey = options.today ? localDayKey(options.today) : null;
+  const todayKey = options.today ? businessTodayKey(options.today) : null;
   const taken = new Map<string, number>();
   const byDay = new Map<string, TimelineEntry[]>();
 
   for (const event of buildLoanCalendarEvents(loans)) {
-    const dateKey = localDayKey(event.date);
+    const dateKey = toDateKey(event.date);
     if (!dayInRange(dateKey, from, to)) continue;
     const entry = entryFromEvent(event, dateKey, taken);
     if (!entry) continue;

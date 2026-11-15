@@ -17,7 +17,6 @@
 		isOverdueLoanForDashboard
 	} from '$lib/loan-due-date';
 	import DetailHeader from '$lib/components/common/DetailHeader.svelte';
-	import SummaryCard from '$lib/components/common/SummaryCard.svelte';
 	import SearchFilter from '$lib/components/common/SearchFilter.svelte';
 	import MultiSelectFilter from '$lib/components/common/MultiSelectFilter.svelte';
 	import RangeFilter from '$lib/components/common/RangeFilter.svelte';
@@ -25,7 +24,7 @@
 	import MoreFiltersSurface from '$lib/components/common/MoreFiltersSurface.svelte';
 	import LoanListMoreFiltersPanel from '$lib/components/common/LoanListMoreFiltersPanel.svelte';
 	import ExportButton from '$lib/components/common/ExportButton.svelte';
-	import DashboardActivityCards from '$lib/components/common/DashboardActivityCards.svelte';
+	import InvestorOverviewTab from '$lib/components/investors/InvestorOverviewTab.svelte';
 	import LoansTable from '$lib/components/loans/LoansTable.svelte';
 	import LoanListSummaryCards from '$lib/components/loans/LoanListSummaryCards.svelte';
 	import LoanBulkActionBar from '$lib/components/loans/LoanBulkActionBar.svelte';
@@ -53,9 +52,7 @@
 	} from '$lib/loan-list-summary';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import type { GroupsIndexItem } from '$lib/groups/loan-group-filter';
-	import { computeTotalLot, buildTotalLotMetric } from '$lib/lot-utils';
-	import { investorOverviewDetails } from '$lib/summary-metric-details';
-	import { INVESTOR_DETAIL_SUMMARY_GRID } from '$lib/summary-grid';
+	import { computeTotalLot } from '$lib/lot-utils';
 	import { formatCurrency } from '$lib/format';
 	import { downloadLoansPdf } from '$lib/pdf-download';
 	import { loanPDFSections } from '$lib/pdf-sections';
@@ -557,81 +554,15 @@
 		</Tabs.List>
 
 		<Tabs.Content value="overview" class="mt-6 space-y-6">
-			<SummaryCard
-				class={INVESTOR_DETAIL_SUMMARY_GRID}
-				metrics={[
-					{
-						label: 'Total Capital',
-						detail: investorOverviewDetails.totalCapital,
-						amount: overviewStats.totalCapital,
-						subCount: overviewStats.totalLoanCount,
-						subCountSuffix: ' loans'
-					},
-					{
-						label: 'Active',
-						detail: investorOverviewDetails.active,
-						amount: overviewStats.activeCapital,
-						subCount: overviewStats.activeLoansCount,
-						subCountSuffix: ' loans'
-					},
-					...(showBorrowings
-						? [
-								{
-									label: 'Active Bank Loans',
-									detail: investorOverviewDetails.activeBankLoans,
-									amount: debtStats.activePrincipal,
-									subCount: debtStats.activeCount,
-									subCountSuffix: ' bank loans',
-									empty: debtStats.totalCount === 0
-								},
-								{
-									label: 'Bank Loan Cost Paid',
-									detail: investorOverviewDetails.bankLoanCostPaid,
-									amount: debtStats.interestPaid,
-									subValue: 'Interest and fees paid',
-									empty: debtStats.totalCount === 0
-								}
-							]
-						: []),
-					...(showInterestStats
-						? [
-								{
-									label: 'Interest Estimate',
-									detail: investorOverviewDetails.interestEstimate,
-									amount: overviewStats.interestEstimate
-								},
-								{
-									label: 'Interest Earned',
-									detail: investorOverviewDetails.interestEarned,
-									amount: overviewStats.interestEarned,
-									subValue: 'Completed loans',
-									valueClassName: 'text-chart-2'
-								},
-								{
-									label: 'Net Earnings',
-									detail:
-										debtStats.totalCount > 0
-											? investorOverviewDetails.netWithBank
-											: investorOverviewDetails.netWithoutBank,
-									amount: overviewStats.netEarnings,
-									subValue:
-										debtStats.totalCount > 0
-											? 'Loan interest - Bank loan cost'
-											: 'Loan interest scheduled',
-									valueClassName:
-										overviewStats.netEarnings >= 0 ? undefined : 'text-chart-3'
-								}
-							]
-						: []),
-					buildTotalLotMetric(overviewStats.totalLot, overviewStats.totalLotWithDepacto)
-				]}
-			/>
-
-			<DashboardActivityCards
-				completedLoans={completedLoans}
-				overdueLoans={overdueLoans}
-				pendingDisbursements={pendingDisbursements}
-				upcomingPaymentsDue={maturingLoans}
+			<InvestorOverviewTab
+				{showBorrowings}
+				{showInterestStats}
+				{overviewStats}
+				{debtStats}
+				{completedLoans}
+				{overdueLoans}
+				{pendingDisbursements}
+				{maturingLoans}
 			/>
 		</Tabs.Content>
 

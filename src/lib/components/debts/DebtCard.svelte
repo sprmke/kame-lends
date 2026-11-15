@@ -6,6 +6,7 @@
 	import { formatCurrency, formatDateShort, formatText } from '$lib/format';
 	import { calculateDebtSummary, calculatePerPeriodInterest } from '$lib/debt-calculations';
 	import type { DebtWithInvestor } from '$lib/types';
+	import { toDateKey } from '$lib/dates/business-date';
 
 	interface Props {
 		debt: DebtWithInvestor;
@@ -33,7 +34,7 @@
 	const perPeriodInterest = $derived(calculatePerPeriodInterest(debt.amount, debt.interestRate));
 	const debtDate = $derived(
 		debt.date instanceof Date
-			? debt.date.toISOString().split('T')[0]
+			? toDateKey(debt.date)
 			: String(debt.date).split('T')[0]
 	);
 	const totalInterest = $derived(

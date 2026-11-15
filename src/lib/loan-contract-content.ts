@@ -3,6 +3,7 @@ import { coerceToDate, formatContractDate } from "./loan-contract-data";
 import { calculateLoanDuration } from "./calculations";
 import type { ContractCustomization } from "./loan-contract-customization";
 import type { LoanType } from "./types";
+import { todayKey } from "$lib/dates/business-date";
 
 export const CONTRACT_DISPUTE_VENUE = "Pampanga, Philippines";
 
@@ -200,7 +201,7 @@ export interface SignaturePartyDetails {
 export function dateToIsoDateString(date: Date | string): string {
   const parsed = coerceToDate(date);
   if (!parsed) {
-    return new Date().toISOString().slice(0, 10);
+    return todayKey();
   }
   const year = parsed.getFullYear();
   const month = String(parsed.getMonth() + 1).padStart(2, "0");

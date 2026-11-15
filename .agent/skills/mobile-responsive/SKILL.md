@@ -59,3 +59,9 @@ Filter popovers (`MultiSelectFilter`, `DateRangeFilter`, `SearchableSelect`) are
 - Rule: `.cursor/rules/mobile-native-ui.mdc`
 - Plan: `docs/workflow/in-progress/mobile-native-redesign.md`
 - Overlay jank: `overlay-performance` skill
+
+## Money inputs (2026-11)
+
+- Money inputs use `inputmode="decimal"`, `type="number"`, and a sticky submit control in sheets.
+- Long money values must wrap on KPI cards; never truncate a total.
+- Destructive money actions use `ConfirmDeleteDialog` with the amount and a one-line warning.

@@ -1,8 +1,9 @@
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "$lib/server/db";
 import { stripDataImageUrls } from "$lib/json-safe-images";
 import { uniquePartiesByName } from "$lib/party-name";
 import { remember } from "$lib/server/memory-cache";
+import { cacheEpoch } from "$lib/server/cache-epoch";
 import {
   loadInvestmentLoanIds,
   loadLinkedInvestorContactIds,
@@ -113,8 +114,12 @@ export async function getCachedLoans(
   userId: string,
   mode: LoanCacheMode = "full",
 ) {
-  const cacheKey = mode === "list" ? `loans:list:${userId}` : `loans:${userId}`;
-  return remember(cacheKey, () => loadLoans(userId, mode, "all"));
+  const epoch = await cacheEpoch("loans");
+  const cacheKey =
+    mode === "list"
+      ? `loans:list:v${epoch}:${userId}`
+      : `loans:v${epoch}:${userId}`;
+  return remember(cacheKey, () => loadLoans(userId, mode, "all"), 5_000);
 }
 
 export async function getCachedLoansByScope(
@@ -122,8 +127,11 @@ export async function getCachedLoansByScope(
   scope: LoanListScope,
   mode: LoanCacheMode = "list",
 ) {
-  return remember(`loans:${scope}:${mode}:${userId}`, () =>
-    loadLoans(userId, mode, scope),
+  const epoch = await cacheEpoch("loans");
+  return remember(
+    `loans:${scope}:${mode}:v${epoch}:${userId}`,
+    () => loadLoans(userId, mode, scope),
+    5_000,
   );
 }
 
@@ -133,8 +141,11 @@ export async function getCachedLoansByIds(
 ) {
   const sorted = [...new Set(ids)].sort((a, b) => a - b);
   if (sorted.length === 0) return [];
-  return remember(`loans:by-ids:${mode}:${sorted.join(",")}`, () =>
-    loadLoansByIds(sorted, mode),
+  const epoch = await cacheEpoch("loans");
+  return remember(
+    `loans:by-ids:${mode}:v${epoch}:${sorted.join(",")}`,
+    () => loadLoansByIds(sorted, mode),
+    5_000,
   );
 }
 
@@ -143,11 +154,11 @@ async function loadLoansByIds(ids: number[], mode: LoanCacheMode) {
   const rows =
     mode === "list"
       ? await db.query.loans.findMany({
-          where: inArray(loans.id, ids),
+          where: and(inArray(loans.id, ids), isNull(loans.deletedAt)),
           with: listRelations,
         })
       : await db.query.loans.findMany({
-          where: inArray(loans.id, ids),
+          where: and(inArray(loans.id, ids), isNull(loans.deletedAt)),
           with: fullRelations,
         });
   return stripDataImageUrls(
@@ -159,7 +170,7 @@ async function loadOwnedLoanIds(userId: string) {
   const rows = await db
     .select({ id: loans.id })
     .from(loans)
-    .where(eq(loans.userId, userId));
+    .where(and(eq(loans.userId, userId), isNull(loans.deletedAt)));
   return rows.map((r) => r.id);
 }
 
@@ -173,7 +184,9 @@ async function loadBorrowedLoanIds(userId: string) {
   const rows = await db
     .select({ id: loans.id })
     .from(loans)
-    .where(inArray(loans.borrowerId, borrowerIds));
+    .where(
+      and(inArray(loans.borrowerId, borrowerIds), isNull(loans.deletedAt)),
+    );
   return rows.map((r) => r.id);
 }
 
@@ -264,7 +277,8 @@ export async function getCachedInvestors(
 ) {
   const resolved: InvestorCacheMode =
     typeof mode === "boolean" ? (mode ? "simple" : "full") : mode;
-  return remember(`investors:${userId}:${resolved}`, () =>
+  const investorsEpoch = await cacheEpoch("investors");
+  return remember(`investors:${userId}:${resolved}:v${investorsEpoch}`, () =>
     loadInvestors(userId, resolved),
   );
 }
@@ -376,118 +390,134 @@ export async function getCachedBorrowers(
   userId: string,
   mode: "simple" | "list" | "full" = "full",
 ) {
-  return remember(`borrowers:${userId}:${mode}`, async () => {
-    const rows = await db.query.borrowers.findMany({
-      where: or(
-        eq(borrowers.userId, userId),
-        eq(borrowers.borrowerUserId, userId),
-      ),
-      orderBy: (table, { asc }) => [asc(table.name)],
-      columns:
-        mode === "list"
-          ? {
-              id: true,
-              name: true,
-              email: true,
-              contactNumber: true,
-              address: true,
-              notes: true,
-              createdAt: true,
-              updatedAt: true,
-            }
-          : undefined,
-      with:
-        mode === "simple"
-          ? undefined
-          : {
-              loans: {
-                columns: {
-                  id: true,
-                  loanName: true,
-                  type: true,
-                  status: true,
-                  dueDate: true,
+  const borrowersEpoch = await cacheEpoch("borrowers");
+  return remember(
+    `borrowers:${userId}:${mode}:v${borrowersEpoch}`,
+    async () => {
+      const rows = await db.query.borrowers.findMany({
+        where: or(
+          eq(borrowers.userId, userId),
+          eq(borrowers.borrowerUserId, userId),
+        ),
+        orderBy: (table, { asc }) => [asc(table.name)],
+        columns:
+          mode === "list"
+            ? {
+                id: true,
+                name: true,
+                email: true,
+                contactNumber: true,
+                address: true,
+                notes: true,
+                createdAt: true,
+                updatedAt: true,
+              }
+            : undefined,
+        with:
+          mode === "simple"
+            ? undefined
+            : {
+                loans: {
+                  columns: {
+                    id: true,
+                    loanName: true,
+                    type: true,
+                    status: true,
+                    dueDate: true,
+                  },
                 },
               },
-            },
-    });
-    return stripDataImageUrls(uniquePartiesByName(rows));
-  });
+      });
+      return stripDataImageUrls(uniquePartiesByName(rows));
+    },
+  );
 }
 
 export async function getCachedWitnesses(
   userId: string,
   mode: "simple" | "list" | "full" = "full",
 ) {
-  return remember(`witnesses:${userId}:${mode}`, async () => {
-    const rows = await db.query.witnesses.findMany({
-      where: or(
-        eq(witnesses.userId, userId),
-        eq(witnesses.witnessUserId, userId),
-      ),
-      orderBy: (table, { asc }) => [asc(table.name)],
-      columns:
-        mode === "list"
-          ? {
-              id: true,
-              name: true,
-              email: true,
-              contactNumber: true,
-              address: true,
-              createdAt: true,
-              updatedAt: true,
-            }
-          : undefined,
-      with:
-        mode === "simple"
-          ? undefined
-          : {
-              signingInvitations: {
-                columns: {
-                  id: true,
-                  partyRole: true,
-                  signedAt: true,
-                },
-                with: {
-                  loan: {
-                    columns: {
-                      id: true,
-                      loanName: true,
-                      type: true,
-                      status: true,
-                      dueDate: true,
+  const witnessesEpoch = await cacheEpoch("witnesses");
+  return remember(
+    `witnesses:${userId}:${mode}:v${witnessesEpoch}`,
+    async () => {
+      const rows = await db.query.witnesses.findMany({
+        where: or(
+          eq(witnesses.userId, userId),
+          eq(witnesses.witnessUserId, userId),
+        ),
+        orderBy: (table, { asc }) => [asc(table.name)],
+        columns:
+          mode === "list"
+            ? {
+                id: true,
+                name: true,
+                email: true,
+                contactNumber: true,
+                address: true,
+                createdAt: true,
+                updatedAt: true,
+              }
+            : undefined,
+        with:
+          mode === "simple"
+            ? undefined
+            : {
+                signingInvitations: {
+                  columns: {
+                    id: true,
+                    partyRole: true,
+                    signedAt: true,
+                  },
+                  with: {
+                    loan: {
+                      columns: {
+                        id: true,
+                        loanName: true,
+                        type: true,
+                        status: true,
+                        dueDate: true,
+                      },
                     },
                   },
                 },
               },
-            },
-    });
-    return stripDataImageUrls(uniquePartiesByName(rows));
-  });
+      });
+      return stripDataImageUrls(uniquePartiesByName(rows));
+    },
+  );
 }
 
 export async function getCachedDebts(
   userId: string,
   investorId: number | null,
 ) {
-  return remember(`debts:${userId}:${investorId ?? "all"}`, async () => {
-    const linkedInvestorIds = await loadLinkedInvestorContactIds(userId);
+  const debtsEpoch = await cacheEpoch("debts");
+  return remember(
+    `debts:${userId}:${investorId ?? "all"}:v${debtsEpoch}`,
+    async () => {
+      const linkedInvestorIds = await loadLinkedInvestorContactIds(userId);
 
-    return stripDataImageUrls(
-      await db.query.debts.findMany({
-        where: investorId
-          ? and(eq(debts.userId, userId), eq(debts.investorId, investorId))
-          : linkedInvestorIds.length > 0
-            ? or(
-                eq(debts.userId, userId),
-                inArray(debts.investorId, linkedInvestorIds),
-              )
-            : eq(debts.userId, userId),
-        orderBy: (table, { desc }) => [desc(table.date)],
-        with: { investor: { columns: partyContactColumns } },
-      }),
-    );
-  });
+      return stripDataImageUrls(
+        await db.query.debts.findMany({
+          where: and(
+            isNull(debts.deletedAt),
+            investorId
+              ? and(eq(debts.userId, userId), eq(debts.investorId, investorId))
+              : linkedInvestorIds.length > 0
+                ? or(
+                    eq(debts.userId, userId),
+                    inArray(debts.investorId, linkedInvestorIds),
+                  )
+                : eq(debts.userId, userId),
+          ),
+          orderBy: (table, { desc }) => [desc(table.date)],
+          with: { investor: { columns: partyContactColumns } },
+        }),
+      );
+    },
+    5_000,
+  );
 }
 
 const groupRelations = {

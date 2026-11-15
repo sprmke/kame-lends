@@ -30,6 +30,7 @@
 	import { toast } from '$lib/toast';
 	import type { LoanType } from '$lib/types';
 	import { Pencil, Plus, Trash2, X } from 'lucide-svelte';
+	import { todayKey } from '$lib/dates/business-date';
 
 	interface BorrowerOption {
 		id: number;
@@ -79,7 +80,7 @@
 	const namePreview = $derived.by(() => {
 		const pattern = loanName.trim();
 		if (!loanNameHasDateTokens(pattern)) return '';
-		const today = toLocalDateString(new Date());
+		const today = todayKey();
 		const days = Number(termDays);
 		const span = Number.isInteger(days) && days > 0 ? days : DEFAULT_TEMPLATE_TERM_DAYS;
 		return resolveLoanNamePattern(pattern, today, addIsoDays(today, span));

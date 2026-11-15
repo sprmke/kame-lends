@@ -4,6 +4,7 @@ import { db } from "$lib/server/db";
 import { transactions } from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
+import { parseIdParam } from "$lib/server/route-params";
 import { hasTransactionAccess } from "$lib/server/access-control";
 import { invalidateTransactionData } from "$lib/server/cache-invalidation";
 
@@ -16,7 +17,10 @@ export const GET: RequestHandler = async (event) => {
     }
 
     const { id: paramId } = await params;
-    const id = parseInt(paramId);
+    const id = parseIdParam(paramId);
+    if (id === null) {
+      return json({ error: "Invalid transaction id" }, { status: 400 });
+    }
 
     // Check if user has access to this transaction
     const hasAccess = await hasTransactionAccess(id, session.user.id);
@@ -51,7 +55,10 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     const { id: paramId } = await params;
-    const id = parseInt(paramId);
+    const id = parseIdParam(paramId);
+    if (id === null) {
+      return json({ error: "Invalid transaction id" }, { status: 400 });
+    }
     const body = await request.json();
 
     // Check if user has access to this transaction
@@ -108,7 +115,10 @@ export const DELETE: RequestHandler = async (event) => {
     }
 
     const { id: paramId } = await params;
-    const id = parseInt(paramId);
+    const id = parseIdParam(paramId);
+    if (id === null) {
+      return json({ error: "Invalid transaction id" }, { status: 400 });
+    }
 
     // Check if user has access to this transaction
     const hasAccess = await hasTransactionAccess(id, session.user.id);

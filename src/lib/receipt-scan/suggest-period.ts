@@ -1,4 +1,4 @@
-import { calculateInterest } from "$lib/calculations";
+import { mulRate, toCentavos } from "$lib/money/centavos";
 
 export interface SuggestablePeriod {
   id: number;
@@ -8,7 +8,7 @@ export interface SuggestablePeriod {
   status: string;
 }
 
-const TOLERANCE = 0.02;
+const TOLERANCE_CENTAVOS = 2;
 
 /**
  * Conservative: picks an interest period only when the received amount equals that
@@ -26,12 +26,13 @@ export function suggestInterestPeriodId(
   const match = periods
     .filter((period) => period.status !== "Completed")
     .filter((period) => {
-      const due = calculateInterest(
-        investorCapital,
-        period.interestRate,
-        period.interestType ?? undefined,
+      const dueC =
+        period.interestType === "fixed"
+          ? toCentavos(period.interestRate)
+          : mulRate(toCentavos(investorCapital), period.interestRate);
+      return (
+        dueC > 0 && Math.abs(dueC - toCentavos(amount)) <= TOLERANCE_CENTAVOS
       );
-      return due > 0 && Math.abs(due - amount) <= TOLERANCE;
     })
     .sort(
       (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),

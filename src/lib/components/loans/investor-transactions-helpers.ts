@@ -1,4 +1,6 @@
 import { calculateInterest } from "$lib/calculations";
+import { buildLoanLedger } from "$lib/money/ledger";
+import { centavosToPesos } from "$lib/money/centavos";
 import {
   formatCurrency,
   formatDate,
@@ -143,6 +145,7 @@ export interface InvestorMetrics {
   periodPrincipalBase: number;
   sortedPeriodsForMatch: InterestPeriodDisplay[];
   periodReceivedDateById: Map<number, string>;
+  periodExpectedById: Map<number, number>;
   receivedPayments: ReceivedPaymentDisplay[];
 }
 
@@ -152,33 +155,55 @@ export function computeInvestorMetrics(
 ): InvestorMetrics {
   const { transactions } = item;
 
-  const totalCapital = transactions.reduce(
-    (sum, t) => sum + (parseFloat(t.amount) || 0),
-    0,
-  );
-
   const hasMultiplePeriods =
     !!item.hasMultipleInterest &&
     !!item.interestPeriods &&
     item.interestPeriods.length > 1;
 
-  const totalInterest =
-    hasMultiplePeriods && item.interestPeriods
-      ? item.interestPeriods.reduce((sum, p) => {
-          const rv = parseFloat(p.interestRate) || 0;
-          if (p.interestType === "fixed") return sum + rv;
-          const base = totalCapital === 0 ? loanTotalPrincipal : totalCapital;
-          return sum + base * (rv / 100);
-        }, 0)
-      : transactions.reduce((sum, t) => {
-          const capital = parseFloat(t.amount) || 0;
-          const rv = parseFloat(t.interestRate) || 0;
-          if (t.interestType === "fixed") return sum + rv;
-          const base = capital === 0 ? loanTotalPrincipal : capital;
-          return sum + base * (rv / 100);
-        }, 0);
-
-  const grandTotal = totalCapital + totalInterest;
+  // One engine: the investor's schedule, grouped within this loan.
+  const ledger = buildLoanLedger({
+    dueDate: "9999-12-31",
+    loanInvestors: transactions.map((transaction, index) => ({
+      id: typeof transaction.id === "number" ? transaction.id : undefined,
+      investorId: item.investor.id,
+      investor: item.investor,
+      amount: transaction.amount,
+      interestRate:
+        transaction.interestType === "fixed"
+          ? transaction.interestRate
+          : transaction.interestRate,
+      interestType: transaction.interestType === "fixed" ? "fixed" : "rate",
+      sentDate: transaction.sentDate,
+      isPaid: transaction.isPaid,
+      hasMultipleInterest: item.hasMultipleInterest,
+      interestPeriods:
+        index === 0 && item.interestPeriods
+          ? item.interestPeriods.map((period) => ({
+              id: typeof period.id === "number" ? period.id : undefined,
+              dueDate: period.dueDate,
+              interestRate:
+                period.interestType === "fixed"
+                  ? (period.interestAmount ?? period.interestRate)
+                  : period.interestRate,
+              interestType: period.interestType === "fixed" ? "fixed" : "rate",
+              status: period.status ?? undefined,
+            }))
+          : [],
+      receivedPayments:
+        index === 0
+          ? (item.receivedPayments ?? []).map((payment) => ({
+              id: payment.id,
+              interestPeriodId: payment.interestPeriodId ?? null,
+              amount: payment.amount,
+              receivedDate: payment.receivedDate,
+            }))
+          : [],
+    })),
+  });
+  const investorLedger = ledger.investors[0];
+  const totalCapital = centavosToPesos(investorLedger?.capitalC ?? 0);
+  const totalInterest = centavosToPesos(investorLedger?.interestExpectedC ?? 0);
+  const grandTotal = centavosToPesos(investorLedger?.dueC ?? 0);
 
   const anyFixed = hasMultiplePeriods
     ? (item.interestPeriods ?? []).some((p) => p.interestType === "fixed")
@@ -196,12 +221,10 @@ export function computeInvestorMetrics(
   }
 
   const receivedPayments = item.receivedPayments ?? [];
-  const totalReceived = receivedPayments.reduce(
-    (sum, rp) => sum + (parseFloat(rp.amount) || 0),
-    0,
-  );
-  const balance = grandTotal - totalReceived;
-  const isFullyReceived = balance <= 0.01 && totalReceived > 0;
+  const totalReceived = centavosToPesos(investorLedger?.receivedC ?? 0);
+  const balance = centavosToPesos(investorLedger?.balanceC ?? 0);
+  const isFullyReceived =
+    (investorLedger?.balanceC ?? 0) <= 0 && totalReceived > 0;
   const receivedCount = receivedPayments.length;
   const principalCount = transactions.length;
   const periodCount = item.interestPeriods?.length ?? 0;
@@ -215,6 +238,15 @@ export function computeInvestorMetrics(
             new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
         )
       : [];
+
+  const periodExpectedById = new Map<number, number>(
+    (investorLedger?.periods ?? [])
+      .filter((period) => period.id != null)
+      .map((period) => [
+        period.id as number,
+        centavosToPesos(period.expectedC),
+      ]),
+  );
 
   const periodReceivedDateById =
     hasMultiplePeriods && sortedPeriodsForMatch.length > 0
@@ -241,6 +273,7 @@ export function computeInvestorMetrics(
     periodPrincipalBase,
     sortedPeriodsForMatch,
     periodReceivedDateById,
+    periodExpectedById,
     receivedPayments,
   };
 }

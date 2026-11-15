@@ -1,3 +1,8 @@
+---
+name: drizzle-neon
+description: "Use for schema, queries, and migrations."
+---
+
 # Drizzle + Neon — Kame Lends
 
 Use for schema, queries, and migrations.
@@ -49,3 +54,12 @@ Local Postgres guide: `docs/archive/operations/local-development-database.md`.
 ## MCP
 
 Neon MCP (`https://mcp.neon.tech/mcp`) can list branches and run read-only SQL — prefer QA/dev scope for exploration.
+
+## Money persistence (2026-11)
+
+- Any write that touches more than one money table runs in `db.transaction`. See `src/routes/api/loans/[id]/+server.ts`.
+- Never delete and re-create rows that payments reference. Match by stable id and update in place.
+- Soft delete (`deleted_at`) on `loans`, `loan_investors`, `received_payments`, `debts`, and `debt_received_payments`. Reads must filter it (the ledger does).
+- Add CHECK constraints `NOT VALID` for new money columns first; validate after the health report shows zero violations.
+- Every money mutation calls `recordMoneyAudit(tx, …)` (`src/lib/server/money-audit.ts`).
+- New migrations: add a numbered file in `db/migrations/`; never edit a shipped file.

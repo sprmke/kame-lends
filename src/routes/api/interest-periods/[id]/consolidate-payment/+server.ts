@@ -5,15 +5,12 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import {
-  interestPeriods,
-  loanInvestors,
-  receivedPayments,
-} from "$lib/server/db/schema";
-import { eq } from "drizzle-orm";
+import { interestPeriods, receivedPayments } from "$lib/server/db/schema";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
-import { calculateInterest } from "$lib/calculations";
+import { centavosToPesos, toCentavos } from "$lib/money/centavos";
+import { expectedInterestC, loadLoanLedger } from "$lib/server/loan-ledger";
 import {
   recalculateInterestPeriodStatusFromLinkedPayments,
   syncLoanStatusFromInterestPeriods,
@@ -22,10 +19,17 @@ import {
   hasPaymentReceipt,
   receiptColumnsFromInput,
   RECEIPT_REQUIRED_ERROR,
+  uniqueReceipts,
 } from "$lib/payment-receipts";
 import { parseOptionalPaymentNotes } from "$lib/payment-notes";
+import { parseIdParam } from "$lib/server/route-params";
+import { recordMoneyAudit } from "$lib/server/money-audit";
+import {
+  consolidatePaymentSchema,
+  firstSchemaError,
+} from "$lib/schemas/payment";
 
-const AMOUNT_TOLERANCE = 0.02;
+const AMOUNT_TOLERANCE_CENTAVOS = 0;
 
 export const POST: RequestHandler = async (event) => {
   const { params, request } = event;
@@ -35,13 +39,21 @@ export const POST: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const periodId = parseInt(id, 10);
-    if (!Number.isFinite(periodId)) {
+    const actorUserId = session.user.id;
+    const periodId = parseIdParam(params.id);
+    if (periodId === null) {
       return json({ error: "Invalid period id" }, { status: 400 });
     }
 
     const body = await request.json();
+    const parsedBody = consolidatePaymentSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return json(
+        { error: firstSchemaError(parsedBody.error) },
+        { status: 400 },
+      );
+    }
+
     const rawAmt = body.amount;
     const receivedDateRaw = body.receivedDate;
     const parsedAmount =
@@ -86,30 +98,23 @@ export const POST: RequestHandler = async (event) => {
       return json({ error: "Interest period not found" }, { status: 404 });
     }
 
-    if (period.loanInvestor.loan.userId !== session.user.id) {
-      return json({ error: "Unauthorized" }, { status: 401 });
+    if (period.loanInvestor.loan.userId !== actorUserId) {
+      return json({ error: "Interest period not found" }, { status: 404 });
     }
     if (!hasPaymentReceipt(body)) {
       return json({ error: RECEIPT_REQUIRED_ERROR }, { status: 400 });
     }
 
-    const coInvestors = await db.query.loanInvestors.findMany({
-      where: eq(loanInvestors.loanId, period.loanInvestor.loanId),
-    });
-    const loanTotalPrincipal = coInvestors.reduce(
-      (s, li) => s + (parseFloat(li.amount) || 0),
-      0,
-    );
-    const investorPrincipal = parseFloat(period.loanInvestor.amount) || 0;
-    const principalBase =
-      investorPrincipal === 0 ? loanTotalPrincipal : investorPrincipal;
-    const expectedInterest = calculateInterest(
-      principalBase,
-      period.interestRate,
-      period.interestType,
-    );
+    const ledger = await loadLoanLedger(period.loanInvestor.loanId);
+    const expectedInterestCents = ledger
+      ? (expectedInterestC(ledger, periodId) ?? 0)
+      : 0;
+    const expectedInterest = centavosToPesos(expectedInterestCents);
 
-    if (parsedAmount > expectedInterest + AMOUNT_TOLERANCE) {
+    if (
+      toCentavos(parsedAmount) >
+      expectedInterestCents + AMOUNT_TOLERANCE_CENTAVOS
+    ) {
       return json(
         {
           error: `Amount cannot exceed the interest due for this period (${expectedInterest.toFixed(2)}).`,
@@ -120,17 +125,74 @@ export const POST: RequestHandler = async (event) => {
 
     const loanId = period.loanInvestor.loanId;
 
-    await db
-      .delete(receivedPayments)
-      .where(eq(receivedPayments.interestPeriodId, periodId));
+    // One transaction: a failure after the delete must not leave the period
+    // with no payment at all. Prior receipts are carried onto the merged row
+    // so evidence is never dropped.
+    //
+    // Soft delete only (D-8): the first linked row is updated in place, so its
+    // id and audit trail survive; extra rows are marked deleted instead of
+    // being destroyed.
+    await db.transaction(async (tx) => {
+      const priorRows = await tx.query.receivedPayments.findMany({
+        where: and(
+          eq(receivedPayments.interestPeriodId, periodId),
+          isNull(receivedPayments.deletedAt),
+        ),
+        orderBy: (table, { asc }) => [asc(table.id)],
+      });
 
-    await db.insert(receivedPayments).values({
-      loanInvestorId: period.loanInvestor.id,
-      interestPeriodId: periodId,
-      amount: String(parsedAmount),
-      receivedDate: receivedDateObj,
-      notes: notesParsed.notes,
-      ...receiptColumnsFromInput(body),
+      const mergedReceipts = uniqueReceipts([
+        ...priorRows.flatMap((row) => row.receipts ?? []),
+        ...receiptColumnsFromInput(body).receipts,
+      ]);
+      const priorNotes =
+        priorRows
+          .map((row) => row.notes?.trim())
+          .filter((note): note is string => Boolean(note))
+          .join("\n") || null;
+
+      const mergedValues = {
+        loanInvestorId: period.loanInvestor.id,
+        interestPeriodId: periodId,
+        amount: String(parsedAmount),
+        receivedDate: receivedDateObj,
+        notes: notesParsed.notes ?? priorNotes,
+        ...receiptColumnsFromInput({
+          ...body,
+          receipts: mergedReceipts,
+        }),
+        updatedAt: new Date(),
+      };
+
+      const keep = priorRows[0];
+      if (keep) {
+        await tx
+          .update(receivedPayments)
+          .set(mergedValues)
+          .where(eq(receivedPayments.id, keep.id));
+        const extraIds = priorRows.slice(1).map((row) => row.id);
+        if (extraIds.length > 0) {
+          await tx
+            .update(receivedPayments)
+            .set({ deletedAt: new Date(), updatedAt: new Date() })
+            .where(inArray(receivedPayments.id, extraIds));
+        }
+      } else {
+        await tx.insert(receivedPayments).values(mergedValues);
+      }
+
+      await recordMoneyAudit(tx, {
+        actorUserId,
+        entityType: "interest_period",
+        entityId: periodId,
+        loanId,
+        action: "consolidate",
+        before: {
+          amount: expectedInterest,
+          linkedPayments: priorRows.map((row) => row.amount),
+        },
+        after: { amount: parsedAmount, keptPaymentId: keep?.id ?? null },
+      });
     });
 
     await recalculateInterestPeriodStatusFromLinkedPayments(periodId);

@@ -6,6 +6,7 @@ import {
   upsertUserCommission,
 } from "$lib/server/loan-user-commission";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { parseIdParam } from "$lib/server/route-params";
 
 /** @deprecated Use PATCH /api/loans/[id]/my-commission */
 export const PATCH: RequestHandler = async (event) => {
@@ -16,7 +17,11 @@ export const PATCH: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const loanId = Number.parseInt(params.id, 10);
+    const loanId = parseIdParam(params.id);
+
+    if (loanId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!Number.isFinite(loanId)) {
       return json({ error: "Invalid loan ID." }, { status: 400 });
     }

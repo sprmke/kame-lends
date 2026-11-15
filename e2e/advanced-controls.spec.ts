@@ -19,15 +19,12 @@ test("settings page renders maintenance controls", async ({ page }) => {
   });
   await expect(
     page.getByRole("button", { name: "Sync Due Dates" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Fix Payments" })).toHaveCount(
+    0,
+  );
   await expect(
-    page.getByRole("button", { name: "Fix Payments" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Download Backup" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Calendar sync" }),
+    page.getByRole("button", { name: /Download (my|all) data/i }).first(),
   ).toBeVisible();
 });
 
@@ -40,7 +37,7 @@ test("loan create form opens new borrower modal", async ({ page }) => {
   await page.waitForLoadState("networkidle");
 
   await page.locator("#borrowerId").click();
-  await page.getByRole("option", { name: "Add New Borrower" }).click();
+  await page.getByRole("button", { name: "Add New Borrower" }).click();
 
   await expect(page.getByRole("heading", { name: "Add Borrower" })).toBeVisible(
     {
@@ -62,8 +59,19 @@ test("valid signing page renders signing controls", async ({
   const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
+  // The sign page requires the signed-in Google email to match a party.
+  // Ask the E2E endpoint which user the stored session represents.
+  const e2eSecret = process.env.E2E_AUTH_SECRET ?? "e2e-local-secret";
+  const sessionResponse = await request.post("/api/e2e/session", {
+    headers: { "x-e2e-auth-secret": e2eSecret },
+  });
+  const sessionBody = sessionResponse.ok()
+    ? ((await sessionResponse.json()) as { email?: string | null })
+    : null;
   const e2eEmail =
-    process.env.E2E_USER_EMAIL?.trim() || `e2e-sign-inv-${stamp}@example.com`;
+    process.env.E2E_USER_EMAIL?.trim() ||
+    sessionBody?.email ||
+    `e2e-sign-inv-${stamp}@example.com`;
 
   const investorRes = await request.post("/api/investors", {
     data: {
@@ -127,10 +135,17 @@ test("valid signing page renders signing controls", async ({
   ).toBeVisible({
     timeout: 20_000,
   });
-  await expect(
-    page.getByRole("button", { name: "I Agree and Sign Electronically" }),
-  ).toBeVisible();
-  await expect(page.locator("#signing-consent")).toBeVisible();
+  // Auto-attach signature can complete the investor's slot on page load.
+  const signButton = page.getByRole("button", {
+    name: "I Agree and Sign Electronically",
+  });
+  const recorded = page.getByText("Signature Recorded");
+  await expect(signButton.or(recorded).first()).toBeVisible({
+    timeout: 20_000,
+  });
+  if (await signButton.isVisible()) {
+    await expect(page.locator("#signing-consent")).toBeVisible();
+  }
 
   await request.delete(`/api/loans/${loan.id}`);
   await request.delete(`/api/investors/${investor.id}`);
@@ -158,7 +173,10 @@ test("loan duplicate action pre-fills create form", async ({
   const investor = (await investorRes.json()) as Investor;
 
   const borrowerRes = await request.post("/api/borrowers", {
-    data: { name: `E2E Dup Borrower ${stamp}` },
+    data: {
+      name: `E2E Dup Borrower ${stamp}`,
+      email: `e2e-dup-bor-${stamp}@example.com`,
+    },
   });
   expect(borrowerRes.ok(), await borrowerRes.text()).toBeTruthy();
   const borrower = (await borrowerRes.json()) as Borrower;

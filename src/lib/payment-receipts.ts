@@ -104,12 +104,29 @@ function isPositiveAmount(amount: unknown): boolean {
   return Number.isFinite(parsed) && parsed > 0;
 }
 
-/** Principal rows on create and edit. Null when every row has a receipt. */
-export function disbursementReceiptError(investorData: unknown): string | null {
+function numericRowId(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+/**
+ * Principal rows on create and edit. Null when every row has a receipt.
+ *
+ * Existing rows may keep an empty receipt field: legacy loans were saved
+ * before receipts were required, and blocking their edit would trap the money.
+ * The caller must pass the ids that really belong to the loan, so a client
+ * cannot invent an id to skip the check.
+ */
+export function disbursementReceiptError(
+  investorData: unknown,
+  options: { existingIds?: Set<number> } = {},
+): string | null {
   if (!Array.isArray(investorData)) return null;
-  const missing = investorData.some(
-    (row) => !hasPaymentReceipt(row as ReceiptInput),
-  );
+  const missing = investorData.some((row) => {
+    const id = numericRowId((row as { id?: unknown })?.id);
+    if (id !== null && options.existingIds?.has(id)) return false;
+    return !hasPaymentReceipt(row as ReceiptInput);
+  });
   return missing ? "Upload a receipt for each principal disbursement." : null;
 }
 
@@ -117,7 +134,10 @@ export function disbursementReceiptError(investorData: unknown): string | null {
  * Received-payment rows with an amount. Blank rows are ignored.
  * Create and edit both require a receipt once the amount is positive.
  */
-export function receivedPaymentReceiptError(entries: unknown): string | null {
+export function receivedPaymentReceiptError(
+  entries: unknown,
+  options: { existingIds?: Set<number> } = {},
+): string | null {
   if (!Array.isArray(entries)) return null;
   for (const entry of entries) {
     if (!entry || typeof entry !== "object") continue;
@@ -125,8 +145,17 @@ export function receivedPaymentReceiptError(entries: unknown): string | null {
     if (!Array.isArray(payments)) continue;
     for (const payment of payments) {
       if (!payment || typeof payment !== "object") continue;
-      const row = payment as ReceiptInput & { amount?: unknown };
+      const row = payment as ReceiptInput & {
+        amount?: unknown;
+        id?: unknown;
+      };
       if (!isPositiveAmount(row.amount)) continue;
+      if (
+        numericRowId(row.id) !== null &&
+        options.existingIds?.has(numericRowId(row.id)!)
+      ) {
+        continue;
+      }
       if (!hasPaymentReceipt(row)) {
         return "Upload a receipt for each received payment.";
       }

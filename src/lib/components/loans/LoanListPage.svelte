@@ -84,6 +84,7 @@
 		type LoanListPageScope
 	} from '$lib/components/loans/loan-list-page-config';
 	import LoanScopeTabs from '$lib/components/loans/LoanScopeTabs.svelte';
+	import { toDateKey } from '$lib/dates/business-date';
 
 	type GroupListContext = { groupId: number };
 
@@ -581,7 +582,7 @@
 			if (statusFilter.length && !statusFilter.includes(loan.status)) return false;
 			if (typeFilter.length && !typeFilter.includes(loan.type)) return false;
 			if (dueDateFilter) {
-				const loanDue = new Date(loan.dueDate).toISOString().split('T')[0];
+				const loanDue = toDateKey(loan.dueDate);
 				if (loanDue !== dueDateFilter) return false;
 			}
 

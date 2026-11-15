@@ -1,6 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { stripDataImageUrls } from "$lib/json-safe-images";
+import { publicJsonError } from "$lib/server/http-error";
 import type { ContractCustomization } from "$lib/loan-contract-customization";
 import {
   applyContractCustomization,
@@ -184,15 +185,9 @@ export const POST: RequestHandler = async (event) => {
     );
     return pdfResponse(buffer, loanContractPdfFilename(loan));
   } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : String(error ?? "unknown");
-    console.error("Error generating loan contract PDF:", detail, error);
-    return json(
-      {
-        error: "Failed to generate contract PDF",
-        detail,
-      },
-      { status: 500 },
-    );
+    console.error("Error generating loan contract PDF:", error);
+    return json(publicJsonError("Failed to generate contract PDF", error), {
+      status: 500,
+    });
   }
 };

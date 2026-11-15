@@ -12,7 +12,7 @@ import {
   loanGroupLoans,
   loanGroupMembers,
 } from "$lib/server/db/schema";
-import { eq, and, or, isNotNull, inArray } from "drizzle-orm";
+import { eq, and, or, isNotNull, inArray, isNull } from "drizzle-orm";
 import { loadLinkedInvestorContactIds } from "$lib/server/party-investor-links";
 import { emailsMatch, normalizeEmail } from "$lib/loan-signing";
 import type { LoanAccessContext, LoanMembership } from "$lib/loan-access";
@@ -227,24 +227,6 @@ export async function hasBorrowerProfitWriteAccess(
   return hasMyCommissionAccess(loanId, userId);
 }
 
-/** @deprecated Commission is private per user via loan_user_commissions */
-export async function resolveWitnessProfitWriteAccess(
-  _loanId: number,
-  _userId: string,
-  _witnessLoanId: number,
-): Promise<boolean> {
-  return false;
-}
-
-/** @deprecated Commission is private per user via loan_user_commissions */
-export async function resolveInvestorCommissionWriteAccess(
-  _loanId: number,
-  _userId: string,
-  _loanInvestorId: number,
-): Promise<boolean> {
-  return false;
-}
-
 /** True when this witness contact was created by (and thus is manageable by) this workspace owner. */
 export async function isOwnedWitness(
   witnessId: number,
@@ -451,6 +433,30 @@ export async function hasDebtAccess(
       and(
         eq(debts.id, debtId),
         or(eq(debts.userId, userId), isNotNull(investors.id)),
+      ),
+    )
+    .limit(1);
+
+  return rows.length > 0;
+}
+
+/**
+ * Debt view access includes the linked investor (read-only). Mutations use
+ * this narrower check so a party account can never edit or delete the owner's
+ * bank loan.
+ */
+export async function hasDebtAdminAccess(
+  debtId: number,
+  userId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: debts.id })
+    .from(debts)
+    .where(
+      and(
+        eq(debts.id, debtId),
+        eq(debts.userId, userId),
+        isNull(debts.deletedAt),
       ),
     )
     .limit(1);

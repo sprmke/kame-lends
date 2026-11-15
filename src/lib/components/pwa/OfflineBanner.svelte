@@ -3,9 +3,10 @@
 
 	interface Props {
 		offline: boolean;
+		asOf?: string | null;
 	}
 
-	let { offline }: Props = $props();
+	let { offline, asOf = null }: Props = $props();
 </script>
 
 {#if offline}
@@ -16,6 +17,6 @@
 		)}
 		role="status"
 	>
-		Offline. Showing saved data.
+		{asOf ? `Offline. Saved data from ${asOf}.` : 'Offline. Showing saved data.'}
 	</div>
 {/if}

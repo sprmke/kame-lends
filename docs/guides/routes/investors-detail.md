@@ -58,7 +58,14 @@ Admin workspace owners can edit. Linked party users can view the same CRM page r
 | --------------- | ----------------------------------------------------------- |
 | Page            | `src/routes/investors/[id]/+page.svelte`                    |
 | Content         | `src/lib/components/investors/InvestorDetailContent.svelte` |
+| Overview tab    | `src/lib/components/investors/InvestorOverviewTab.svelte`   |
 | Activity cards  | `src/lib/components/common/DashboardActivityCards.svelte`   |
 | Edit form       | `src/lib/components/party/PartyUserEditForm.svelte`         |
 | Loan capital    | `src/lib/loan-list-summary.ts`                              |
 | Bank loan stats | `src/lib/debt-calculations.ts`                              |
+
+## Money correctness (2026-11)
+
+- Capital and interest come from per-loan ledgers, so the detail page matches the investors list and PDF/CSV.
+- A zero-capital agent allocation earns on the loan principal and is shown as a rate.
+- Overdue amounts use ledger overdue rules (partial payments reduce them; overdue starts the day after the due date).

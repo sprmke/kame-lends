@@ -61,7 +61,7 @@
 					amount: summary.interestEstimate
 				},
 				{
-					label: 'Interest Earned',
+					label: 'Interest Collected',
 					detail: dashboardMetricDetails.interestEarned,
 					amount: summary.interestEarned,
 					valueClassName: 'text-chart-2'

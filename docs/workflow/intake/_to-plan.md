@@ -2,7 +2,7 @@
 title: "To plan"
 status: active
 tags: [planning]
-updated: 2026-10-27
+updated: 2026-11-16
 ---
 
 **Status legend:** ❌ cancelled / won't do · ✅ done · 🧪 for testing · 📋 planned (plan doc written) · 🚧 in progress · 🔵 pending / open
@@ -22,6 +22,14 @@ Integrate AI the same way Kame Homes / Kame Ops do, but harden it (gateway, usag
 Group Telegram templates are one line and skip borrower, investors, due date, and amount. Give each reminder, digest, and loan action a detailed default, with placeholders the owner can still insert.
 
 → **For testing:** [`../for-testing/telegram-message-templates.md`](../for-testing/telegram-message-templates.md)
+
+===
+
+🚧 Full app audit + money correctness
+
+Review every page, section, feature, and calculation end to end, acting as developer, QA, PM, and user. Money must be 100% correct; adding and editing loans with multiple interests behaves strangely. List every finding, fix them one by one, and add the tests that keep them fixed (unit, property, timezone, DB integration, E2E, reconciliation). Also cover UX, speed, PWA, security, and code health.
+
+→ **Plan:** [`../in-progress/full-app-audit-and-money-correctness.md`](../in-progress/full-app-audit-and-money-correctness.md)
 
 ===
 
@@ -54,3 +62,10 @@ Accept bank statement / receipt PDFs in the receipt scanner (Gemini only; no Gro
 🔵 AI usage dashboard
 
 Settings card showing AI calls, cost and fallback rate from `ai_usage_events`.
+===
+
+📋 Production data repairs and release verification
+
+Decide and repair the remaining prod data anomalies (duplicate period dates, zero-capital fixed, receipt-less payments, unlinked payments, completed-underpaid periods, stale statuses) and finish calendar, Telegram, push, email, and device checks.
+
+→ **Plan:** [`../planned/prod-data-repairs-and-release-verification.md`](../planned/prod-data-repairs-and-release-verification.md)

@@ -1,15 +1,16 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
+import type { InterestPeriodStatus } from "$lib/types";
 import { db } from "$lib/server/db";
-import {
-  interestPeriods,
-  loanInvestors,
-  receivedPayments,
-} from "$lib/server/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { interestPeriods, receivedPayments } from "$lib/server/db/schema";
+import { eq, desc, isNull } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
-import { calculateInterest } from "$lib/calculations";
+import { centavosToPesos, toCentavos } from "$lib/money/centavos";
+import { expectedInterestC, loadLoanLedger } from "$lib/server/loan-ledger";
+import { parseIdParam } from "$lib/server/route-params";
+import { recordMoneyAudit } from "$lib/server/money-audit";
+import { periodPaymentSchema, firstSchemaError } from "$lib/schemas/payment";
 import {
   hasPaymentReceipt,
   receiptColumnsFromInput,
@@ -18,19 +19,30 @@ import {
 import { syncLoanStatusFromInterestPeriods } from "$lib/server/loan-interest-period-sync";
 import { parseOptionalPaymentNotes } from "$lib/payment-notes";
 
-const AMOUNT_TOLERANCE = 0.02;
+const AMOUNT_TOLERANCE_CENTAVOS = 0;
 
 export const PATCH: RequestHandler = async (event) => {
   const { params, request } = event;
   try {
     const session = await getSession(event);
-    if (!session?.user?.id) {
+    const actorUserId = session?.user?.id;
+    if (!actorUserId) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const periodId = parseInt(id);
+    const periodId = parseIdParam(params.id);
+    if (periodId === null) {
+      return json({ error: "Invalid period id" }, { status: 400 });
+    }
     const body = await request.json();
+    const parsedBody = periodPaymentSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return json(
+        { error: firstSchemaError(parsedBody.error) },
+        { status: 400 },
+      );
+    }
+
     const {
       status,
       receivedAmount,
@@ -61,6 +73,7 @@ export const PATCH: RequestHandler = async (event) => {
           with: {
             loan: true,
             receivedPayments: {
+              where: isNull(receivedPayments.deletedAt),
               orderBy: [desc(receivedPayments.createdAt)],
             },
           },
@@ -72,8 +85,8 @@ export const PATCH: RequestHandler = async (event) => {
       return json({ error: "Interest period not found" }, { status: 404 });
     }
 
-    if (period.loanInvestor.loan.userId !== session.user.id) {
-      return json({ error: "Unauthorized" }, { status: 401 });
+    if (period.loanInvestor.loan.userId !== actorUserId) {
+      return json({ error: "Interest period not found" }, { status: 404 });
     }
 
     const wasCompleted = period.status === "Completed";
@@ -82,25 +95,19 @@ export const PATCH: RequestHandler = async (event) => {
       (wasCompleted || wasIncomplete) &&
       (status === "Pending" || status === "Overdue");
 
-    const loanIdForPrincipal = period.loanInvestor.loanId;
-    const coInvestors = await db.query.loanInvestors.findMany({
-      where: eq(loanInvestors.loanId, loanIdForPrincipal),
-    });
-    const loanTotalPrincipal = coInvestors.reduce(
-      (s, li) => s + (parseFloat(li.amount) || 0),
-      0,
-    );
-    const investorPrincipal = parseFloat(period.loanInvestor.amount) || 0;
-    const principalBase =
-      investorPrincipal === 0 ? loanTotalPrincipal : investorPrincipal;
-    const expectedInterest = calculateInterest(
-      principalBase,
-      period.interestRate,
-      period.interestType,
-    );
+    // Expected interest comes from the single engine, using the investor's
+    // total capital for this loan (CALC-01).
+    const loanIdForLedger = period.loanInvestor.loanId;
+    const ledger = await loadLoanLedger(loanIdForLedger);
+    const expectedInterestCents = ledger
+      ? (expectedInterestC(ledger, periodId) ?? 0)
+      : 0;
+    const expectedInterest = centavosToPesos(expectedInterestCents);
 
     /** Response status may differ from request (e.g. Incomplete vs Completed). */
     let responseStatus: string = status;
+    let pendingPeriodStatus: InterestPeriodStatus | null = null;
+    let pendingPayment: typeof receivedPayments.$inferInsert | null = null;
 
     if (status === "Completed") {
       if (period.status === "Completed") {
@@ -145,39 +152,39 @@ export const PATCH: RequestHandler = async (event) => {
       const linkedBefore = (period.loanInvestor.receivedPayments || []).filter(
         (rp) => rp.interestPeriodId === periodId,
       );
-      const priorTotal = linkedBefore.reduce(
-        (s, rp) => s + (parseFloat(rp.amount) || 0),
+      const priorTotalCents = linkedBefore.reduce(
+        (sum, rp) => sum + toCentavos(rp.amount),
         0,
       );
+      const receivedCents = toCentavos(parsedAmount);
 
-      if (priorTotal + AMOUNT_TOLERANCE >= expectedInterest) {
+      if (
+        priorTotalCents + AMOUNT_TOLERANCE_CENTAVOS >=
+        expectedInterestCents
+      ) {
         return json(
           { error: "This period is already fully paid." },
           { status: 400 },
         );
       }
 
-      const newTotal = priorTotal + parsedAmount;
-      if (newTotal > expectedInterest + AMOUNT_TOLERANCE) {
+      const newTotalCents = priorTotalCents + receivedCents;
+      if (newTotalCents > expectedInterestCents + AMOUNT_TOLERANCE_CENTAVOS) {
         return json(
           {
-            error: `This payment would exceed the interest due for this period (${expectedInterest.toFixed(2)}). Remaining: ${(expectedInterest - priorTotal).toFixed(2)}.`,
+            error: `This payment would exceed the interest due for this period (${expectedInterest.toFixed(2)}). Remaining: ${centavosToPesos(Math.max(expectedInterestCents - priorTotalCents, 0)).toFixed(2)}.`,
           },
           { status: 400 },
         );
       }
 
       const newPeriodStatus =
-        newTotal + AMOUNT_TOLERANCE >= expectedInterest
+        newTotalCents + AMOUNT_TOLERANCE_CENTAVOS >= expectedInterestCents
           ? "Completed"
           : "Incomplete";
 
-      await db
-        .update(interestPeriods)
-        .set({ status: newPeriodStatus, updatedAt: new Date() })
-        .where(eq(interestPeriods.id, periodId));
-
-      await db.insert(receivedPayments).values({
+      pendingPeriodStatus = newPeriodStatus;
+      pendingPayment = {
         loanInvestorId: period.loanInvestor.id,
         interestPeriodId: periodId,
         amount: String(parsedAmount),
@@ -188,43 +195,56 @@ export const PATCH: RequestHandler = async (event) => {
           receiptImageUrl,
           receiptExtractedData,
         }),
-      });
-
+      };
       responseStatus = newPeriodStatus;
     } else if (isReverting) {
-      await db
-        .update(interestPeriods)
-        .set({ status, updatedAt: new Date() })
-        .where(eq(interestPeriods.id, periodId));
+      const linkedPayments = (
+        period.loanInvestor.receivedPayments || []
+      ).filter((rp) => rp.interestPeriodId === periodId);
 
-      const removed = await db
-        .delete(receivedPayments)
-        .where(eq(receivedPayments.interestPeriodId, periodId))
-        .returning();
-
-      if (removed.length === 0) {
-        const existingPayments = period.loanInvestor.receivedPayments || [];
-        const matchingPayment =
-          existingPayments.find(
-            (rp) =>
-              Math.abs((parseFloat(rp.amount) || 0) - expectedInterest) <=
-              AMOUNT_TOLERANCE,
-          ) ?? existingPayments[0];
-
-        if (matchingPayment) {
-          await db
-            .delete(receivedPayments)
-            .where(eq(receivedPayments.id, matchingPayment.id));
-        }
+      // Money is never deleted as a side effect of changing a status. If the
+      // period is backed by payments, the status is a function of those rows;
+      // the user must delete the payment itself (D-10).
+      if (linkedPayments.length > 0) {
+        return json(
+          {
+            error:
+              "This period has recorded payments. Delete the payment instead of reverting the period.",
+          },
+          { status: 409 },
+        );
       }
+
+      pendingPeriodStatus = status;
     } else {
-      await db
-        .update(interestPeriods)
-        .set({ status, updatedAt: new Date() })
-        .where(eq(interestPeriods.id, periodId));
+      pendingPeriodStatus = status;
     }
 
     const loanId = period.loanInvestor.loanId;
+
+    // Status change, payment row, and audit event land together. A failed
+    // insert must not leave a "Completed" period with no payment behind.
+    await db.transaction(async (tx) => {
+      if (pendingPeriodStatus) {
+        await tx
+          .update(interestPeriods)
+          .set({ status: pendingPeriodStatus, updatedAt: new Date() })
+          .where(eq(interestPeriods.id, periodId));
+      }
+      if (pendingPayment) {
+        await tx.insert(receivedPayments).values(pendingPayment);
+      }
+      await recordMoneyAudit(tx, {
+        actorUserId,
+        entityType: "interest_period",
+        entityId: periodId,
+        loanId,
+        action: status === "Completed" ? "payment" : "revert",
+        before: { status: period.status },
+        after: { status: responseStatus },
+      });
+    });
+
     await syncLoanStatusFromInterestPeriods(loanId);
 
     invalidateLoanData();

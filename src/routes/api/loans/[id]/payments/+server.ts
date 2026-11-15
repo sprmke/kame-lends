@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { db } from "$lib/server/db";
 import { loanInvestors, loans, investors } from "$lib/server/db/schema";
-import { hasLoanAdminAccess } from "$lib/server/access-control";
+import { assertLoanAdmin } from "$lib/server/route-auth";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import { toLocalDateString } from "$lib/date-utils";
 import {
@@ -13,6 +13,17 @@ import {
   RECEIPT_REQUIRED_ERROR,
 } from "$lib/payment-receipts";
 import { parseOptionalPaymentNotes } from "$lib/payment-notes";
+import { parseIdParam } from "$lib/server/route-params";
+import { disbursementSchema, firstSchemaError } from "$lib/schemas/payment";
+import { recordMoneyAudit } from "$lib/server/money-audit";
+import {
+  claimIdempotencyKey,
+  findIdempotentResponse,
+  idempotencyKeyOf,
+  rememberIdempotentResponse,
+} from "$lib/server/idempotency";
+import { idempotencyKeys } from "$lib/server/db/schema";
+import { syncLoanStatusFromInterestPeriods } from "$lib/server/loan-interest-period-sync";
 
 async function investorName(investorId: number): Promise<string> {
   const row = await db.query.investors.findFirst({
@@ -26,20 +37,43 @@ export const POST: RequestHandler = async (event) => {
   const { params, request } = event;
   try {
     const session = await getSession(event);
-    if (!session?.user?.id) {
+    const userId = session?.user?.id;
+    if (!userId) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const loanId = Number.parseInt(id, 10);
-    if (!Number.isFinite(loanId)) {
+    const loanId = parseIdParam(params.id);
+    if (loanId === null) {
       return json({ error: "Invalid loan ID." }, { status: 400 });
     }
     const body = await request.json();
-    const investorId = Number.parseInt(String(body.investorId), 10);
-    if (!(await hasLoanAdminAccess(loanId, session.user.id))) {
-      return json({ error: "Forbidden" }, { status: 403 });
+    const parsedBody = disbursementSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return json(
+        { error: firstSchemaError(parsedBody.error) },
+        { status: 400 },
+      );
     }
+
+    const investorId = Number.parseInt(String(body.investorId), 10);
+    const authError = await assertLoanAdmin(loanId, userId);
+    if (authError) return authError;
+
+    const idempotencyKey = idempotencyKeyOf(request);
+    const idempotencyRoute = `POST /api/loans/${loanId}/payments`;
+    if (idempotencyKey) {
+      const replay = await findIdempotentResponse(
+        idempotencyKey,
+        userId,
+        idempotencyRoute,
+      );
+      if (replay) {
+        return json(replay.body as Record<string, unknown>, {
+          status: replay.status,
+        });
+      }
+    }
+
     const amount = Number.parseFloat(String(body.amount));
     const interestType = body.interestType === "fixed" ? "fixed" : "rate";
     const interestValue = Number.parseFloat(String(body.interestValue ?? 0));
@@ -91,40 +125,68 @@ export const POST: RequestHandler = async (event) => {
         payment.hasMultipleInterest && payment.interestPeriods.length > 0,
     );
 
-    await db.insert(loanInvestors).values({
-      loanId,
-      investorId,
-      amount: String(amount),
-      interestType: scheduleSource?.interestType ?? interestType,
-      interestRate: scheduleSource?.interestRate ?? String(interestValue || 0),
-      sentDate,
-      isPaid,
-      hasMultipleInterest: Boolean(scheduleSource),
-      notes: notesParsed.notes,
-      ...receiptColumnsFromInput(body),
-    });
+    if (idempotencyKey) {
+      const claimed = await claimIdempotencyKey(
+        idempotencyKey,
+        userId,
+        idempotencyRoute,
+      );
+      if (!claimed) {
+        const replay = await findIdempotentResponse(
+          idempotencyKey,
+          userId,
+          idempotencyRoute,
+        );
+        return replay
+          ? json(replay.body as Record<string, unknown>, {
+              status: replay.status,
+            })
+          : json(
+              { error: "This request is already in progress." },
+              { status: 409 },
+            );
+      }
+    }
 
-    const allPayments = await db.query.loanInvestors.findMany({
-      where: eq(loanInvestors.loanId, loanId),
-    });
-    const hasUnpaid = allPayments.some((payment) => !payment.isPaid);
-    const loan = await db.query.loans.findFirst({
-      where: eq(loans.id, loanId),
-    });
-
-    if (loan && loan.status !== "Completed") {
-      const nextStatus = hasUnpaid
-        ? "Partially Funded"
-        : loan.status === "Partially Funded"
-          ? "Fully Funded"
-          : loan.status;
-      await db
-        .update(loans)
-        .set({
-          status: nextStatus,
-          updatedAt: new Date(),
+    await db.transaction(async (tx) => {
+      const inserted = await tx
+        .insert(loanInvestors)
+        .values({
+          loanId,
+          investorId,
+          amount: String(amount),
+          interestType: scheduleSource?.interestType ?? interestType,
+          interestRate:
+            scheduleSource?.interestRate ?? String(interestValue || 0),
+          sentDate,
+          isPaid,
+          hasMultipleInterest: Boolean(scheduleSource),
+          notes: notesParsed.notes,
+          ...receiptColumnsFromInput(body),
         })
-        .where(eq(loans.id, loanId));
+        .returning();
+
+      await recordMoneyAudit(tx, {
+        actorUserId: userId,
+        entityType: "allocation",
+        entityId: inserted[0]?.id,
+        loanId,
+        action: "create",
+        after: { investorId, amount, sentDate, isPaid },
+      });
+    });
+
+    // A new disbursement can re-open a Completed loan; the engine decides.
+    await syncLoanStatusFromInterestPeriods(loanId);
+
+    if (idempotencyKey) {
+      await rememberIdempotentResponse(
+        idempotencyKey,
+        userId,
+        idempotencyRoute,
+        201,
+        { success: true },
+      );
     }
 
     invalidateLoanData();
@@ -150,6 +212,14 @@ export const POST: RequestHandler = async (event) => {
     return json({ success: true }, { status: 201 });
   } catch (error) {
     console.error("Error adding principal payment:", error);
+    try {
+      const key = idempotencyKeyOf(event.request);
+      if (key) {
+        await db.delete(idempotencyKeys).where(eq(idempotencyKeys.key, key));
+      }
+    } catch {
+      /* cleanup is best-effort */
+    }
     return json({ error: "Failed to add principal payment." }, { status: 500 });
   }
 };

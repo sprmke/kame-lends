@@ -1,6 +1,8 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { getSession } from "$lib/server/session";
+import { parseIdParam } from "$lib/server/route-params";
+import { publicJsonError } from "$lib/server/http-error";
 import { parsePartyEntityType } from "$lib/party-profile";
 import {
   loadPartyProfileForEntity,
@@ -8,8 +10,7 @@ import {
 } from "$lib/server/party-profile";
 
 function parseEntityId(raw: string | undefined): number | null {
-  const id = Number.parseInt(raw ?? "", 10);
-  return Number.isFinite(id) ? id : null;
+  return parseIdParam(raw);
 }
 
 export const GET: RequestHandler = async (event) => {
@@ -88,8 +89,8 @@ export const PUT: RequestHandler = async (event) => {
     return json(profile);
   } catch (error) {
     console.error("Error saving party profile:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to save profile";
-    return json({ error: message }, { status: 400 });
+    return json(publicJsonError("Failed to save profile", error), {
+      status: 400,
+    });
   }
 };

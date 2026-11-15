@@ -22,6 +22,8 @@
 	let { userId = null, children }: Props = $props();
 
 	const pwa = createPwaState();
+	let lastOnlineAt = $state<string | null>(null);
+	const LAST_ONLINE_KEY = 'kl-last-online';
 	let cleanup: (() => void) | null = null;
 
 	async function installApp(): Promise<boolean> {
@@ -41,9 +43,30 @@
 
 	$effect(() => {
 		if (!browser) return;
+		const rememberOnline = () => {
+			const stamp = new Date().toLocaleString('en-PH', {
+				timeZone: 'Asia/Manila',
+				month: 'short',
+				day: 'numeric',
+				hour: 'numeric',
+				minute: '2-digit'
+			});
+			try {
+				localStorage.setItem(LAST_ONLINE_KEY, stamp);
+			} catch {
+				/* storage may be unavailable */
+			}
+			lastOnlineAt = stamp;
+		};
 		const syncOffline = () => {
 			pwa.offline = !navigator.onLine;
+			if (!pwa.offline) rememberOnline();
 		};
+		try {
+			lastOnlineAt = localStorage.getItem(LAST_ONLINE_KEY);
+		} catch {
+			lastOnlineAt = null;
+		}
 		syncOffline();
 		document.documentElement.dataset.pwaReady = '1';
 		window.addEventListener('online', syncOffline);
@@ -93,6 +116,6 @@
 	{@render children()}
 {/if}
 
-<OfflineBanner offline={pwa.offline} />
+<OfflineBanner offline={pwa.offline} asOf={lastOnlineAt} />
 <UpdatePrompt updateReady={pwa.updateReady} />
 <InstallPrompt installAvailable={pwa.installAvailable && !pwa.updateReady} />

@@ -11,8 +11,9 @@ kind: reference
 
 Plans with work started. Move to [`../for-testing/`](../for-testing/) when only manual QA remains.
 
-| Plan                                                     | Status      | Summary                                                                           |
-| -------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------- |
-| [loan-templates.md](./loan-templates.md)                 | In progress | Per-user loan templates in Settings, applied when creating a loan                 |
-| [mobile-native-redesign.md](./mobile-native-redesign.md) | In progress | Native mobile shell: bottom tabs, bottom sheets, safe areas, list→detail on phone |
-| [sveltekit-parity-audit.md](./sveltekit-parity-audit.md) | In progress | Feature parity audit against the legacy Next.js app                               |
+| Plan                                                                                 | Status      | Summary                                                                                         |
+| ------------------------------------------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------- |
+| [loan-templates.md](./loan-templates.md)                                             | In progress | Per-user loan templates in Settings, applied when creating a loan                               |
+| [mobile-native-redesign.md](./mobile-native-redesign.md)                             | In progress | Native mobile shell: bottom tabs, bottom sheets, safe areas, list→detail on phone               |
+| [sveltekit-parity-audit.md](./sveltekit-parity-audit.md)                             | In progress | Feature parity audit against the legacy Next.js app                                             |
+| [full-app-audit-and-money-correctness.md](./full-app-audit-and-money-correctness.md) | In progress | App-wide money correctness: one engine, safe saves, audit, status, timezones, tests, QA scripts |

@@ -1,8 +1,8 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { investors } from "$lib/server/db/schema";
-import { eq, and } from "drizzle-orm";
+import { debts, loanInvestors, loans, investors } from "$lib/server/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import {
   normalizeValidIdUrl,
@@ -14,6 +14,7 @@ import {
   upsertWorkspacePartyContact,
 } from "$lib/server/party-directory";
 import { hasInvestorContactViewAccess } from "$lib/server/access-control";
+import { parseIdParam } from "$lib/server/route-params";
 
 export const GET: RequestHandler = async (event) => {
   const { params, request } = event;
@@ -24,8 +25,10 @@ export const GET: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const investorId = parseInt(id);
-
+    const investorId = parseIdParam(id);
+    if (investorId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasInvestorContactViewAccess(investorId, session.user.id))) {
       return json({ error: "Investor not found" }, { status: 404 });
     }
@@ -64,7 +67,10 @@ export const PUT: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const investorId = parseInt(id);
+    const investorId = parseIdParam(id);
+    if (investorId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     const body = await request.json();
 
     // Verify ownership
@@ -114,8 +120,10 @@ export const DELETE: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const investorId = parseInt(id);
-
+    const investorId = parseIdParam(id);
+    if (investorId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     // Check if investor has any loans or transactions and verify ownership
     const investor = await db.query.investors.findFirst({
       where: and(
@@ -133,9 +141,27 @@ export const DELETE: RequestHandler = async (event) => {
       return json({ error: "Investor not found" }, { status: 404 });
     }
 
-    const debtCount = investor.debts?.length ?? 0;
+    // Soft-deleted loans and debts no longer block contact deletion.
+    const [activeLoans, activeDebts] = await Promise.all([
+      db
+        .select({ id: loanInvestors.id })
+        .from(loanInvestors)
+        .innerJoin(loans, eq(loans.id, loanInvestors.loanId))
+        .where(
+          and(
+            eq(loanInvestors.investorId, investor.id),
+            isNull(loanInvestors.deletedAt),
+            isNull(loans.deletedAt),
+          ),
+        ),
+      db
+        .select({ id: debts.id })
+        .from(debts)
+        .where(and(eq(debts.investorId, investor.id), isNull(debts.deletedAt))),
+    ]);
+    const debtCount = activeDebts.length;
     if (
-      investor.loanInvestors.length > 0 ||
+      activeLoans.length > 0 ||
       investor.transactions.length > 0 ||
       debtCount > 0
     ) {

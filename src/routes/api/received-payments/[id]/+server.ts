@@ -6,17 +6,24 @@ import {
   interestPeriods,
   loanInvestors,
 } from "$lib/server/db/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, isNull } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
-import { calculateInterest } from "$lib/calculations";
+import { centavosToPesos, toCentavos } from "$lib/money/centavos";
+import { expectedInterestC, loadLoanLedger } from "$lib/server/loan-ledger";
+import { parseIdParam } from "$lib/server/route-params";
+import { recordMoneyAudit } from "$lib/server/money-audit";
+import {
+  receivedPaymentPatchSchema,
+  firstSchemaError,
+} from "$lib/schemas/payment";
 import { parseOptionalPaymentNotes } from "$lib/payment-notes";
 import {
   recalculateInterestPeriodStatusFromLinkedPayments,
   syncLoanStatusFromInterestPeriods,
 } from "$lib/server/loan-interest-period-sync";
 
-const AMOUNT_TOLERANCE = 0.02;
+const AMOUNT_TOLERANCE_CENTAVOS = 0;
 
 export const PATCH: RequestHandler = async (event) => {
   const { params, request } = event;
@@ -26,13 +33,20 @@ export const PATCH: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const paymentId = parseInt(id, 10);
-    if (!Number.isFinite(paymentId)) {
+    const paymentId = parseIdParam(params.id);
+    if (paymentId === null) {
       return json({ error: "Invalid id" }, { status: 400 });
     }
 
     const body = await request.json();
+    const parsedBody = receivedPaymentPatchSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return json(
+        { error: firstSchemaError(parsedBody.error) },
+        { status: 400 },
+      );
+    }
+
     const rawAmt = body.amount;
     const receivedDate = body.receivedDate;
     const parsedAmount =
@@ -82,7 +96,7 @@ export const PATCH: RequestHandler = async (event) => {
     }
 
     if (rp.loanInvestor.loan.userId !== session.user.id) {
-      return json({ error: "Unauthorized" }, { status: 401 });
+      return json({ error: "Received payment not found" }, { status: 404 });
     }
 
     const periodId = rp.interestPeriodId;
@@ -93,13 +107,14 @@ export const PATCH: RequestHandler = async (event) => {
         where: and(
           eq(receivedPayments.interestPeriodId, periodId),
           ne(receivedPayments.id, paymentId),
+          isNull(receivedPayments.deletedAt),
         ),
       });
-      const otherSum = others.reduce(
-        (s, row) => s + (parseFloat(row.amount) || 0),
+      const otherSumCents = others.reduce(
+        (sum, row) => sum + toCentavos(row.amount),
         0,
       );
-      const newTotal = otherSum + parsedAmount;
+      const newTotalCents = otherSumCents + toCentavos(parsedAmount);
 
       const period = await db.query.interestPeriods.findFirst({
         where: eq(interestPeriods.id, periodId),
@@ -115,41 +130,44 @@ export const PATCH: RequestHandler = async (event) => {
         return json({ error: "Interest period not found" }, { status: 400 });
       }
 
-      const coInvestors = await db.query.loanInvestors.findMany({
-        where: eq(loanInvestors.loanId, period.loanInvestor.loanId),
-      });
-      const loanTotalPrincipal = coInvestors.reduce(
-        (s, li) => s + (parseFloat(li.amount) || 0),
-        0,
-      );
-      const investorPrincipal = parseFloat(period.loanInvestor.amount) || 0;
-      const principalBase =
-        investorPrincipal === 0 ? loanTotalPrincipal : investorPrincipal;
-      const expectedInterest = calculateInterest(
-        principalBase,
-        period.interestRate,
-        period.interestType,
-      );
+      const ledger = await loadLoanLedger(period.loanInvestor.loanId);
+      const expectedInterestCents = ledger
+        ? (expectedInterestC(ledger, periodId) ?? 0)
+        : 0;
+      const expectedInterest = centavosToPesos(expectedInterestCents);
 
-      if (newTotal > expectedInterest + AMOUNT_TOLERANCE) {
+      if (newTotalCents > expectedInterestCents + AMOUNT_TOLERANCE_CENTAVOS) {
         return json(
           {
-            error: `Amount would exceed the interest due for this period (${expectedInterest.toFixed(2)}). Maximum for this line: ${(expectedInterest - otherSum).toFixed(2)}.`,
+            error: `Amount would exceed the interest due for this period (${expectedInterest.toFixed(2)}). Maximum for this line: ${centavosToPesos(Math.max(expectedInterestCents - otherSumCents, 0)).toFixed(2)}.`,
           },
           { status: 400 },
         );
       }
     }
 
-    await db
-      .update(receivedPayments)
-      .set({
-        amount: String(parsedAmount),
-        receivedDate: receivedDateObj,
-        updatedAt: new Date(),
-        ...notesPatch,
-      })
-      .where(eq(receivedPayments.id, paymentId));
+    const actorUserId = session.user.id;
+    await db.transaction(async (tx) => {
+      await tx
+        .update(receivedPayments)
+        .set({
+          amount: String(parsedAmount),
+          receivedDate: receivedDateObj,
+          updatedAt: new Date(),
+          ...notesPatch,
+        })
+        .where(eq(receivedPayments.id, paymentId));
+
+      await recordMoneyAudit(tx, {
+        actorUserId,
+        entityType: "received_payment",
+        entityId: paymentId,
+        loanId,
+        action: "update",
+        before: { amount: rp.amount, receivedDate: rp.receivedDate },
+        after: { amount: parsedAmount, receivedDate: receivedDateObj },
+      });
+    });
 
     if (periodId != null) {
       await recalculateInterestPeriodStatusFromLinkedPayments(periodId);
@@ -176,9 +194,8 @@ export const DELETE: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const paymentId = parseInt(id, 10);
-    if (!Number.isFinite(paymentId)) {
+    const paymentId = parseIdParam(params.id);
+    if (paymentId === null) {
       return json({ error: "Invalid id" }, { status: 400 });
     }
 
@@ -198,13 +215,29 @@ export const DELETE: RequestHandler = async (event) => {
     }
 
     if (rp.loanInvestor.loan.userId !== session.user.id) {
-      return json({ error: "Unauthorized" }, { status: 401 });
+      return json({ error: "Received payment not found" }, { status: 404 });
     }
 
     const periodId = rp.interestPeriodId;
     const loanId = rp.loanInvestor.loanId;
 
-    await db.delete(receivedPayments).where(eq(receivedPayments.id, paymentId));
+    const actorUserId = session.user.id;
+    await db.transaction(async (tx) => {
+      await tx
+        .update(receivedPayments)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(receivedPayments.id, paymentId));
+
+      await recordMoneyAudit(tx, {
+        actorUserId,
+        entityType: "received_payment",
+        entityId: paymentId,
+        loanId,
+        action: "delete",
+        before: { amount: rp.amount, receivedDate: rp.receivedDate },
+        reason: "payment deleted",
+      });
+    });
 
     if (periodId != null) {
       await recalculateInterestPeriodStatusFromLinkedPayments(periodId);

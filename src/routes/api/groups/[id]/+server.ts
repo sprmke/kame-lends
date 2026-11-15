@@ -12,6 +12,7 @@ import {
 import { parseJsonBody, updateGroupBodySchema } from "$lib/group-validation";
 import { enqueueJob } from "$lib/server/jobs/queue";
 import { scheduleDrain } from "$lib/server/jobs/after-response";
+import { parseIdParam } from "$lib/server/route-params";
 
 export const GET: RequestHandler = async (event) => {
   const { params } = event;
@@ -21,7 +22,11 @@ export const GET: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const groupId = parseInt(params.id);
+    const groupId = parseIdParam(params.id);
+
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupViewAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }
@@ -85,7 +90,11 @@ export const PUT: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const groupId = parseInt(params.id);
+    const groupId = parseIdParam(params.id);
+
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }
@@ -167,7 +176,11 @@ export const DELETE: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const groupId = parseInt(params.id);
+    const groupId = parseIdParam(params.id);
+
+    if (groupId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }

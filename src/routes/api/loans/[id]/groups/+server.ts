@@ -14,6 +14,7 @@ import {
 } from "$lib/server/cache-invalidation";
 import { enqueueJob } from "$lib/server/jobs/queue";
 import { scheduleDrain } from "$lib/server/jobs/after-response";
+import { parseIdParam } from "$lib/server/route-params";
 
 export const PUT: RequestHandler = async (event) => {
   try {
@@ -22,7 +23,11 @@ export const PUT: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const loanId = parseInt(event.params.id);
+    const loanId = parseIdParam(event.params.id);
+
+    if (loanId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!(await hasLoanAdminAccess(loanId, session.user.id))) {
       return json({ error: "Loan not found" }, { status: 404 });
     }

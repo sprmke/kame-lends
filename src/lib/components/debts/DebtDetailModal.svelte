@@ -12,6 +12,7 @@
 	import type { DebtWithInvestorAndPeriods } from '$lib/types';
 	import { ODD_LAST_TWO_COL_GRID } from '$lib/summary-grid';
 	import { cn } from '$lib/utils';
+	import { toDateKey } from '$lib/dates/business-date';
 
 	interface Props {
 		debt: DebtWithInvestorAndPeriods | null;
@@ -59,7 +60,7 @@
 
 	const debtDate = $derived(
 		debt?.date instanceof Date
-			? debt.date.toISOString().split('T')[0]
+			? toDateKey(debt.date)
 			: String(debt?.date ?? '').split('T')[0]
 	);
 

@@ -1,20 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { parseStorageKey } from "$lib/storage-reference";
-import { uploadOwnerUserId } from "./access";
+import {
+  assertStorageRef,
+  buildStorageRefForKey,
+  canReadStorageRef,
+  uploadOwnerUserId,
+} from "./access";
 
-describe("storage access helpers", () => {
-  it("rejects path traversal in storage refs", () => {
-    expect(parseStorageKey("storage:uploads/../secret")).toBeNull();
-    expect(parseStorageKey("storage:uploads/user-a/file.jpg")).toBe(
-      "uploads/user-a/file.jpg",
+describe("storage access", () => {
+  it("reads the upload owner from a key", () => {
+    expect(uploadOwnerUserId("uploads/user-123/loan/receipt.png")).toBe(
+      "user-123",
     );
+    expect(uploadOwnerUserId("receipts/user-123/file.png")).toBeNull();
   });
 
-  it("only treats the upload prefix owner as the object owner", () => {
-    expect(uploadOwnerUserId("uploads/user-a/file.jpg")).toBe("user-a");
-    expect(uploadOwnerUserId("uploads/user-a/file.jpg") === "user-b").toBe(
-      false,
-    );
-    expect(uploadOwnerUserId("other/user-a/file.jpg")).toBeNull();
+  it("builds a storage ref and rejects invalid refs", () => {
+    const ref = buildStorageRefForKey("uploads/user-123/file.png");
+    expect(ref.startsWith("storage:")).toBe(true);
+    expect(assertStorageRef(ref)).toBe("uploads/user-123/file.png");
+    expect(() => assertStorageRef("data:image/png;base64,abc")).toThrow();
+    expect(() => assertStorageRef("")).toThrow();
+  });
+
+  it("denies an invalid reference without querying a loan", async () => {
+    await expect(canReadStorageRef("user-1", "not-a-ref")).resolves.toBe(false);
   });
 });

@@ -25,15 +25,32 @@ import {
   loanPaymentNotesError,
   optionalPaymentNotes,
 } from "$lib/payment-notes";
+import {
+  firstLoanWriteError,
+  loanWriteErrorMap,
+  loanWriteSchema,
+} from "$lib/schemas/loan";
+import { syncLoanStatusFromInterestPeriods } from "$lib/server/loan-interest-period-sync";
+import { publicJsonError } from "$lib/server/http-error";
+import { recordMoneyAudit } from "$lib/server/money-audit";
+import {
+  claimIdempotencyKey,
+  findIdempotentResponse,
+  idempotencyKeyOf,
+  rememberIdempotentResponse,
+} from "$lib/server/idempotency";
+import { idempotencyKeys } from "$lib/server/db/schema";
+import type { ContractCustomization } from "$lib/loan-contract-customization";
 
 export const GET: RequestHandler = async (event) => {
   try {
     const session = await getSession(event);
-    if (!session?.user?.id) {
+    const userId = session?.user?.id;
+    if (!userId) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    return json(await getCachedLoans(session.user.id, "list"));
+    return json(await getCachedLoans(userId, "list"));
   } catch (error) {
     console.error("Error fetching loans:", error);
     return json({ error: "Failed to fetch loans" }, { status: 500 });
@@ -44,150 +61,211 @@ export const POST: RequestHandler = async (event) => {
   const request = event.request;
   try {
     const session = await getSession(event);
-    if (!session?.user?.id) {
+    const userId = session?.user?.id;
+    if (!userId) {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
+    const idempotencyKey = idempotencyKeyOf(request);
+    const idempotencyRoute = "POST /api/loans";
+    if (idempotencyKey) {
+      const replay = await findIdempotentResponse(
+        idempotencyKey,
+        userId,
+        idempotencyRoute,
+      );
+      if (replay) {
+        return json(replay.body as Record<string, unknown>, {
+          status: replay.status,
+        });
+      }
+    }
+
     const body = await request.json();
+    const parsed = loanWriteSchema.safeParse(body);
+    if (!parsed.success) {
+      return json(
+        {
+          error: firstLoanWriteError(parsed.error),
+          fieldErrors: loanWriteErrorMap(parsed.error),
+        },
+        { status: 400 },
+      );
+    }
     const {
       loanData,
       investorData,
-      receivedPaymentsByInvestor = [],
-      contractCustomization = null,
-      groupIds: requestedGroupIds = [],
-    } = body;
+      receivedPaymentsByInvestor,
+      contractCustomization,
+      groupIds: requestedGroupIds,
+    } = parsed.data;
 
-    const investorIds = Array.isArray(investorData)
-      ? investorData.map((inv: { investorId?: unknown }) =>
-          Number(inv.investorId),
-        )
-      : [];
-    const crmCheck = await validateLoanCrmOwnership(session.user.id, {
-      borrowerId: loanData.borrowerId ? Number(loanData.borrowerId) : null,
-      investorIds,
+    const crmCheck = await validateLoanCrmOwnership(userId, {
+      borrowerId: loanData.borrowerId,
+      investorIds: investorData.map((investor) => investor.investorId),
     });
     if (!crmCheck.ok) {
       return json({ error: crmCheck.message }, { status: crmCheck.status });
     }
 
-    const disbursementReceiptMessage = disbursementReceiptError(investorData);
+    const disbursementReceiptMessage = disbursementReceiptError(
+      body.investorData,
+    );
     if (disbursementReceiptMessage) {
       return json({ error: disbursementReceiptMessage }, { status: 400 });
     }
     const receivedReceiptMessage = receivedPaymentReceiptError(
-      receivedPaymentsByInvestor,
+      body.receivedPaymentsByInvestor ?? [],
     );
     if (receivedReceiptMessage) {
       return json({ error: receivedReceiptMessage }, { status: 400 });
     }
     const notesMessage = loanPaymentNotesError({
-      investorData,
-      receivedPaymentsByInvestor,
+      investorData: body.investorData,
+      receivedPaymentsByInvestor: body.receivedPaymentsByInvestor ?? [],
     });
     if (notesMessage) {
       return json({ error: notesMessage }, { status: 400 });
     }
 
-    // Convert date strings to Date objects and ensure proper types
-    const processedLoanData = {
-      userId: session.user.id,
-      borrowerId: loanData.borrowerId ? Number(loanData.borrowerId) : null,
-      loanName: loanData.loanName,
-      type: loanData.type,
-      status: loanData.status,
-      dueDate: new Date(loanData.dueDate),
-      freeLotSqm: loanData.freeLotSqm ? Number(loanData.freeLotSqm) : null,
-      notes: loanData.notes || null,
-      profitType: "rate" as const,
-      profitValue: "0",
-    };
-
-    // Insert loan
-    const newLoan = await db
-      .insert(loans)
-      .values(processedLoanData)
-      .returning();
-    const loanId = newLoan[0].id;
-
-    // Insert loan investors with proper date conversion
-    const loanInvestorData = investorData.map((inv: any) => ({
-      loanId,
-      investorId: Number(inv.investorId),
-      amount: String(inv.amount),
-      interestRate: inv.interestRate ? String(inv.interestRate) : "0",
-      // Explicitly check for 'fixed' to ensure proper enum value is saved
-      interestType: inv.interestType === "fixed" ? "fixed" : "rate",
-      sentDate: new Date(inv.sentDate),
-      isPaid: inv.isPaid ?? true, // Default to true for backward compatibility
-      hasMultipleInterest: inv.hasMultipleInterest || false,
-      notes: optionalPaymentNotes(inv.notes),
-      ...receiptColumnsFromInput(inv),
-    }));
-
-    const insertedLoanInvestors = await db
-      .insert(loanInvestors)
-      .values(loanInvestorData)
-      .returning();
-    // Insert interest periods if any
-    // Group by investor to avoid inserting periods multiple times for the same investor
-    const processedInvestors = new Set<number>();
-
-    for (let i = 0; i < investorData.length; i++) {
-      const inv = investorData[i];
-      const investorId = Number(inv.investorId);
-
-      // Only insert interest periods once per investor (skip if already processed)
-      if (
-        !processedInvestors.has(investorId) &&
-        inv.hasMultipleInterest &&
-        inv.interestPeriods &&
-        inv.interestPeriods.length > 0
-      ) {
-        const loanInvestorId = insertedLoanInvestors[i].id;
-        const periodData = inv.interestPeriods.map((period: any) => ({
-          loanInvestorId,
-          dueDate: new Date(period.dueDate),
-          interestRate: String(period.interestRate),
-          // Explicitly check for 'fixed' to ensure proper enum value is saved
-          interestType: period.interestType === "fixed" ? "fixed" : "rate",
-        }));
-
-        await db.insert(interestPeriods).values(periodData);
-        processedInvestors.add(investorId);
-      }
-    }
-
-    // Map each investor to their first loan_investor id and insert received payments
-    const investorToLoanInvestorId = new Map<number, number>();
-    for (let i = 0; i < investorData.length; i++) {
-      const investorId = Number(investorData[i].investorId);
-      if (!investorToLoanInvestorId.has(investorId)) {
-        investorToLoanInvestorId.set(investorId, insertedLoanInvestors[i].id);
-      }
-    }
-    for (const entry of receivedPaymentsByInvestor) {
-      const loanInvestorId = investorToLoanInvestorId.get(
-        Number(entry.investorId),
+    if (idempotencyKey) {
+      const claimed = await claimIdempotencyKey(
+        idempotencyKey,
+        userId,
+        idempotencyRoute,
       );
-      if (
-        !loanInvestorId ||
-        !entry.receivedPayments ||
-        !Array.isArray(entry.receivedPayments)
-      ) {
-        continue;
-      }
-      const receivedPayload = entry.receivedPayments.map((rp: any) => ({
-        loanInvestorId,
-        amount: String(rp.amount),
-        receivedDate: new Date(rp.receivedDate),
-        notes: optionalPaymentNotes(rp.notes),
-        ...receiptColumnsFromInput(rp),
-      }));
-      if (receivedPayload.length > 0) {
-        await db.insert(receivedPayments).values(receivedPayload);
+      if (!claimed) {
+        const replay = await findIdempotentResponse(
+          idempotencyKey,
+          userId,
+          idempotencyRoute,
+        );
+        return replay
+          ? json(replay.body as Record<string, unknown>, {
+              status: replay.status,
+            })
+          : json(
+              { error: "This request is already in progress." },
+              { status: 409 },
+            );
       }
     }
 
-    // Fetch the complete loan with investors
+    // Every write for one loan happens in one transaction: a failure part-way
+    // leaves no orphan loan, allocations, periods, or payments behind.
+    const loanId = await db.transaction(async (tx) => {
+      const newLoan = await tx
+        .insert(loans)
+        .values({
+          userId,
+          borrowerId: loanData.borrowerId,
+          loanName: loanData.loanName,
+          type: loanData.type,
+          // Status is derived on the server after the rows exist (DATA-08).
+          status: investorData.some((investor) => investor.isPaid === false)
+            ? "Partially Funded"
+            : "Fully Funded",
+          dueDate: loanData.dueDate,
+          freeLotSqm: loanData.freeLotSqm,
+          notes: loanData.notes,
+          profitType: "rate",
+          profitValue: "0",
+        })
+        .returning();
+      const createdLoanId = newLoan[0].id;
+
+      const insertedLoanInvestors = await tx
+        .insert(loanInvestors)
+        .values(
+          investorData.map((investor, index) => ({
+            loanId: createdLoanId,
+            investorId: investor.investorId,
+            amount: String(investor.amount),
+            interestRate: String(investor.interestRate),
+            interestType: investor.interestType,
+            sentDate: investor.sentDate,
+            isPaid: investor.isPaid,
+            hasMultipleInterest: investor.hasMultipleInterest,
+            notes: optionalPaymentNotes(
+              (body.investorData as Array<{ notes?: unknown }>)[index]?.notes,
+            ),
+            ...receiptColumnsFromInput(
+              (body.investorData as Array<Record<string, unknown>>)[index] ??
+                {},
+            ),
+          })),
+        )
+        .returning();
+
+      const processedInvestors = new Set<number>();
+      for (let index = 0; index < investorData.length; index++) {
+        const investor = investorData[index];
+        if (
+          processedInvestors.has(investor.investorId) ||
+          !investor.hasMultipleInterest ||
+          investor.interestPeriods.length === 0
+        ) {
+          continue;
+        }
+        const firstRow = investorData.findIndex(
+          (row) => row.investorId === investor.investorId,
+        );
+        const loanInvestorId = insertedLoanInvestors[firstRow].id;
+        await tx.insert(interestPeriods).values(
+          investor.interestPeriods.map((period) => ({
+            loanInvestorId,
+            dueDate: period.dueDate,
+            interestRate: String(period.interestRate),
+            interestType: period.interestType,
+          })),
+        );
+        processedInvestors.add(investor.investorId);
+      }
+
+      const investorToLoanInvestorId = new Map<number, number>();
+      for (let index = 0; index < investorData.length; index++) {
+        const investorId = investorData[index].investorId;
+        if (!investorToLoanInvestorId.has(investorId)) {
+          investorToLoanInvestorId.set(
+            investorId,
+            insertedLoanInvestors[index].id,
+          );
+        }
+      }
+
+      for (const entry of receivedPaymentsByInvestor) {
+        const loanInvestorId = investorToLoanInvestorId.get(entry.investorId);
+        if (!loanInvestorId || entry.receivedPayments.length === 0) continue;
+        await tx.insert(receivedPayments).values(
+          entry.receivedPayments.map((payment) => ({
+            loanInvestorId,
+            amount: String(payment.amount),
+            receivedDate: payment.receivedDate,
+            notes: optionalPaymentNotes(payment.notes),
+            ...receiptColumnsFromInput(payment),
+          })),
+        );
+      }
+
+      await recordMoneyAudit(tx, {
+        actorUserId: userId,
+        entityType: "loan",
+        entityId: createdLoanId,
+        loanId: createdLoanId,
+        action: "create",
+        after: {
+          loanName: loanData.loanName,
+          dueDate: loanData.dueDate,
+          principal: investorData.reduce(
+            (sum, investor) => sum + investor.amount,
+            0,
+          ),
+          allocations: investorData.length,
+        },
+      });
+
+      return createdLoanId;
+    });
+
     const completeLoan = await db.query.loans.findFirst({
       where: eq(loans.id, loanId),
       with: {
@@ -202,12 +280,16 @@ export const POST: RequestHandler = async (event) => {
       },
     });
 
+    await syncLoanStatusFromInterestPeriods(loanId).catch((syncError) => {
+      console.error("[loans] status sync failed after create", syncError);
+    });
+
     let signingInvitations: ReturnType<typeof toSigningInvitationSummary>[] =
       [];
     if (completeLoan) {
       const { invitations } = await saveLoanContractAndInvitations(
         completeLoan,
-        contractCustomization,
+        contractCustomization as ContractCustomization | null | undefined,
       );
       const origin = resolveAppUrl();
       signingInvitations = invitations.map((invitation) =>
@@ -244,19 +326,15 @@ export const POST: RequestHandler = async (event) => {
         const { scheduleDrain } =
           await import("$lib/server/jobs/after-response");
 
-        const manualGroupIds = Array.isArray(requestedGroupIds)
-          ? requestedGroupIds
-              .map((id: unknown) => Number(id))
-              .filter(Number.isFinite)
-          : [];
+        const manualGroupIds = requestedGroupIds.filter(Number.isFinite);
         if (manualGroupIds.length > 0) {
           await attachLoanToGroups({
             loanId: completeLoan.id,
             groupIds: manualGroupIds,
-            addedByUserId: session.user.id,
+            addedByUserId: userId,
           });
         }
-        await applyGroupRulesForLoan(completeLoan.id, session.user.id);
+        await applyGroupRulesForLoan(completeLoan.id, userId);
         try {
           const { applyGroupDefaultWitnessesToLoan } =
             await import("$lib/server/groups/apply-default-witnesses");
@@ -318,20 +396,31 @@ export const POST: RequestHandler = async (event) => {
       }
     }
 
-    return json({ ...completeLoan, signingInvitations }, { status: 201 });
+    const responseBody = { ...completeLoan, signingInvitations };
+    if (idempotencyKey) {
+      await rememberIdempotentResponse(
+        idempotencyKey,
+        userId,
+        idempotencyRoute,
+        201,
+        responseBody,
+      );
+    }
+    return json(responseBody, { status: 201 });
   } catch (error) {
     console.error("Error creating loan:", error);
-    // Log the full error details for debugging
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+    try {
+      const key = event.request.headers.get("idempotency-key");
+      if (key) {
+        await db
+          .delete(idempotencyKeys)
+          .where(eq(idempotencyKeys.key, key.trim()));
+      }
+    } catch {
+      /* cleanup is best-effort */
     }
-    return json(
-      {
-        error: "Failed to create loan",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    );
+    return json(publicJsonError("Failed to create loan", error), {
+      status: 500,
+    });
   }
 };

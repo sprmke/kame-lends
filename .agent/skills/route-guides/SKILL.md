@@ -1,3 +1,8 @@
+---
+name: route-guides
+description: "Invoke for every route/page/section change in `src/`. Mirrors `.cursor/rules/route-guides.mdc`."
+---
+
 # Route guides — Kame Lends (SvelteKit)
 
 Invoke for every route/page/section change in `src/`. Mirrors `.cursor/rules/route-guides.mdc`.

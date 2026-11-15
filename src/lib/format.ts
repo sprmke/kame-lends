@@ -2,7 +2,7 @@
  * Formatting utilities for consistent display across the application
  */
 
-import { getTodayAtMidnight, normalizeToMidnight } from "./date-utils";
+import { BUSINESS_TZ, toDateKey, todayKey } from "./dates/business-date";
 import {
   isSensitiveDataHidden,
   HIDDEN_CURRENCY_DISPLAY,
@@ -38,7 +38,7 @@ export function formatCurrency(amount: string | number): string {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
     currency: "PHP",
-  }).format(numAmount);
+  }).format(Number.isFinite(numAmount) ? numAmount : 0);
 }
 
 /**
@@ -53,7 +53,7 @@ export function formatCurrencyCompact(amount: string | number): string {
     currency: "PHP",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(numAmount);
+  }).format(Number.isFinite(numAmount) ? numAmount : 0);
 }
 
 function trimShortAmountDecimals(formatted: string): string {
@@ -110,10 +110,12 @@ export function formatChartAxis(amount: string | number): string {
  */
 export function formatDate(date: Date | string): string {
   const dateObj = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(dateObj.getTime())) return "—";
   return dateObj.toLocaleDateString("en-PH", {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: BUSINESS_TZ,
   });
 }
 
@@ -122,10 +124,12 @@ export function formatDate(date: Date | string): string {
  */
 export function formatDateShort(date: Date | string): string {
   const dateObj = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(dateObj.getTime())) return "—";
   return dateObj.toLocaleDateString("en-PH", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: BUSINESS_TZ,
   });
 }
 
@@ -134,9 +138,11 @@ export function formatDateShort(date: Date | string): string {
  */
 export function formatDateVeryShort(date: Date | string): string {
   const dateObj = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(dateObj.getTime())) return "—";
   return dateObj.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    timeZone: BUSINESS_TZ,
   });
 }
 
@@ -145,9 +151,9 @@ export function formatDateVeryShort(date: Date | string): string {
  * Uses normalized date comparison for consistency across the app
  */
 export function isFutureDate(date: Date | string): boolean {
-  const today = getTodayAtMidnight();
-  const checkDate = normalizeToMidnight(date);
-  return checkDate > today;
+  const today = todayKey();
+  const checkDate = toDateKey(date);
+  return checkDate !== "" && checkDate > today;
 }
 
 /**

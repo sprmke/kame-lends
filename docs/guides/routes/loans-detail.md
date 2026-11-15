@@ -66,3 +66,15 @@ No view access returns 404 and renders `+error.svelte` ("Loan not available"). `
 | Loan form wiring                       | `src/lib/components/loans/LoanForm.svelte` (`transactionAdapter`, `receivedAdapter`) |
 | API                                    | `src/routes/api/ai/receipt-extraction/+server.ts`, `api/ai/status`                   |
 | E2E                                    | `e2e/receipt-scan.spec.ts`                                                           |
+
+## Money correctness (2026-11)
+
+- Every total on the page comes from `buildLoanLedger` (via the loan detail payload / detail components). There is no separate interest formula in the UI.
+- Recording a payment checks the period's expected interest from the engine (the investor's total capital for this loan, not one tranche).
+- Reverting a paid period never deletes payments. If the period has linked payments the API returns **409**; delete the payment instead.
+- Consolidating partial payments runs in one transaction and keeps prior receipts. The first linked payment is updated in place (its id survives); any extra rows are soft-deleted, not destroyed.
+- A loan edit matches disbursements, periods, and payments by id in one transaction. Rows are never re-created, a soft-deleted row is never revived, and an id that no longer exists returns **409** ("changed or removed in another session") instead of inserting a duplicate.
+- Removing an investor in the edit form soft-deletes their disbursement and its periods. Their payments block the save with **409** unless the removal is confirmed; with confirmation the payments are soft-deleted too.
+- **Complete loan** requires a reason and writes `status_override`, `status_reason`, and `completed_at`. Clearing the override recomputes the derived status.
+- Deleting a payment soft-deletes it and writes an audit event.
+- The dashboard/cron status sweep uses the same rule: overdue starts the day after the due date.

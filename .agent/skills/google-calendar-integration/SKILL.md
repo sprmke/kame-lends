@@ -1,3 +1,8 @@
+---
+name: google-calendar-integration
+description: "Use when changing calendar sync, event shapes, or group settings UI."
+---
+
 # Google Calendar integration — Kame Lends
 
 Use when changing calendar sync, event shapes, or group settings UI.

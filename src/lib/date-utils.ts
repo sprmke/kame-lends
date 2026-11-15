@@ -1,15 +1,28 @@
+import {
+  addMonthsClamped,
+  dateKeyToUtcMidnight,
+  toDateKey,
+  todayKey,
+} from "$lib/dates/business-date";
+
 /**
- * Converts a Date object to a date string in YYYY-MM-DD format
- * Uses UTC methods to ensure consistency since dates are stored as UTC midnight
- * This prevents timezone-related date shifts when converting dates for form inputs
+ * Converts a value to a `YYYY-MM-DD` business date key (Asia/Manila).
+ *
+ * Historically this read UTC fields, which shifted local-midnight dates back a
+ * day (FORM-03/DATE-05). Stored UTC-midnight values still resolve to the same
+ * day because Manila is UTC+8.
  */
 export function toLocalDateString(date: Date | string): string {
+  return toDateKey(date);
+}
+
+/** Explicit UTC date key, for values knowingly stored at UTC midnight. */
+export function toUtcDateKey(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  // Use UTC methods to extract the date since dates are stored as midnight UTC
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    d.getUTCDate(),
+  ).padStart(2, "0")}`;
 }
 
 /**
@@ -151,71 +164,35 @@ export function generateDefaultInterestPeriods(
   sentDate: Date | string,
   dueDate: Date | string,
 ): Array<{ dueDate: Date; monthNumber: number }> {
-  const start =
-    typeof sentDate === "string"
-      ? fromLocalDateString(sentDate)
-      : normalizeToMidnight(sentDate);
-  const end =
-    typeof dueDate === "string"
-      ? fromLocalDateString(dueDate)
-      : normalizeToMidnight(dueDate);
-
-  const periods: Array<{ dueDate: Date; monthNumber: number }> = [];
-
-  // Calculate the number of full months between the dates
-  const months = getMonthsBetweenDates(start, end);
-
-  // If there are no full months, just return the final due date
-  if (months === 0) {
-    periods.push({
-      dueDate: end,
-      monthNumber: 1,
-    });
-    return periods;
+  const startKey = toDateKey(sentDate);
+  const endKey = toDateKey(dueDate);
+  if (!startKey || !endKey) return [];
+  if (endKey <= startKey) {
+    return [{ dueDate: dateKeyToUtcMidnight(endKey), monthNumber: 1 }];
   }
 
-  // Generate periods by adding months to the sent date
-  // Start from month 0 (current month) to include the first period
-  let monthsToAdd = 0;
+  const [startYear, startMonth, startDay] = startKey.split("-").map(Number);
+  const periods: Array<{ dueDate: Date; monthNumber: number }> = [];
   let periodNumber = 1;
 
-  while (true) {
-    // Calculate the target date by adding months to the sent date
-    const targetDate = new Date(start);
-    targetDate.setMonth(start.getMonth() + monthsToAdd);
+  for (let offset = 0; offset <= 120; offset++) {
+    const baseKey = addMonthsClamped(startKey, offset);
+    const [year, month] = baseKey.split("-").map(Number);
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const day = startDay === 1 ? lastDay : Math.min(startDay, lastDay);
+    const key = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-    const targetYear = targetDate.getFullYear();
-    const targetMonth = targetDate.getMonth();
-
-    // Calculate the appropriate day for this period
-    const periodDay = calculatePeriodDay(start, targetMonth, targetYear);
-
-    const periodDueDate = normalizeToMidnight(
-      new Date(targetYear, targetMonth, periodDay),
-    );
-
-    // Only add the period if it's after the sent date and before the due date
-    if (periodDueDate > start && periodDueDate < end) {
+    if (key > startKey && key < endKey) {
       periods.push({
-        dueDate: periodDueDate,
+        dueDate: dateKeyToUtcMidnight(key),
         monthNumber: periodNumber++,
       });
     }
-
-    // If we've reached or passed the due date, stop
-    if (periodDueDate >= end) {
-      break;
-    }
-
-    monthsToAdd++;
-
-    // Safety check to prevent infinite loop
-    if (monthsToAdd > 120) break; // Max 10 years
+    if (key >= endKey) break;
   }
 
-  // Always add the final period (the actual loan due date)
   periods.push({
-    dueDate: end,
+    dueDate: dateKeyToUtcMidnight(endKey),
     monthNumber: periodNumber,
   });
 
@@ -227,18 +204,15 @@ export function generateDefaultInterestPeriods(
  * This creates a new Date object to avoid mutating the original
  */
 export function normalizeToMidnight(date: Date | string): Date {
-  const d = typeof date === "string" ? new Date(date) : new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const key = toDateKey(date);
+  return key ? dateKeyToUtcMidnight(key) : new Date(Number.NaN);
 }
 
 /**
  * Get today's date normalized to midnight
  */
 export function getTodayAtMidnight(): Date {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
+  return dateKeyToUtcMidnight(todayKey());
 }
 
 /**

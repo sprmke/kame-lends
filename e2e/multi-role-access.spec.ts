@@ -14,7 +14,10 @@ import type {
 
 test.describe.configure({ mode: "serial", timeout: 180_000 });
 
-test.beforeEach((_fixtures, testInfo) => {
+const e2eSecret = process.env.E2E_AUTH_SECRET ?? "e2e-local-secret";
+
+// eslint-disable-next-line no-empty-pattern
+test.beforeEach(({}, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 
@@ -26,10 +29,21 @@ async function cleanup(
     borrowerId?: number;
     witnessId?: number;
   },
+  emails: string[] = [],
 ) {
   const request = page.request;
   await switchE2ESession(request, undefined, page.context());
   if (ids.loanId) await request.delete(`/api/loans/${ids.loanId}`);
+  // Run the fixture cleanup before deleting the role rows: it needs the
+  // borrower link to hard-delete the soft-deleted loan, and it removes the
+  // mirrored party rows, invitations, users, and queued integration jobs.
+  if (emails.length > 0) {
+    const response = await request.post("/api/e2e/cleanup", {
+      headers: { "x-e2e-auth-secret": e2eSecret },
+      data: { emails },
+    });
+    expect(response.ok(), await response.text()).toBeTruthy();
+  }
   if (ids.investorId) await request.delete(`/api/investors/${ids.investorId}`);
   if (ids.borrowerId) await request.delete(`/api/borrowers/${ids.borrowerId}`);
   if (ids.witnessId) await request.delete(`/api/witnesses/${ids.witnessId}`);
@@ -101,6 +115,7 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
         },
       ],
       contractCustomization: {
+        includeWitnesses: true,
         witness1Id: witness.id,
         witness1Name: witness.name,
         witness1Email: witnessEmail,
@@ -109,6 +124,13 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
   });
   expect(loanRes.ok(), await loanRes.text()).toBeTruthy();
   const loan = (await loanRes.json()) as LoanWithInvestors;
+
+  // The create payload does not attach witnesses; add one so the witness
+  // party gets loan view access through loan_witnesses.
+  const witAttach = await request.post(`/api/loans/${loan.id}/witnesses`, {
+    data: { witnessId: witness.id },
+  });
+  expect(witAttach.ok(), await witAttach.text()).toBeTruthy();
 
   try {
     const adminPut = await request.put(`/api/loans/${loan.id}`, {
@@ -166,7 +188,7 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
         ],
       },
     });
-    expect(invPut.status(), await invPut.text()).toBe(403);
+    expect(invPut.status(), await invPut.text()).toBe(404);
 
     const invPay = await request.post(`/api/loans/${loan.id}/payments`, {
       data: {
@@ -177,7 +199,7 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
         sentDate: dueDate,
       },
     });
-    expect(invPay.status(), await invPay.text()).toBe(403);
+    expect(invPay.status(), await invPay.text()).toBe(404);
 
     const invCreate = await request.post("/api/loans", {
       data: {
@@ -187,25 +209,43 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
           status: "Fully Funded",
           dueDate,
         },
-        investorData: [],
+        // Reusing the owner's investor is rejected by the CRM ownership check.
+        investorData: [
+          {
+            investorId: investor.id,
+            amount: 1,
+            interestRate: 10,
+            sentDate: new Date().toISOString().slice(0, 10),
+            receipts: [e2ePaymentReceipt],
+          },
+        ],
       },
     });
     expect(invCreate.status(), await invCreate.text()).toBe(403);
 
     const borrowedEmpty = await gotoApp(page, "/borrowed");
     expect(borrowedEmpty?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: /borrowed/i })).toBeVisible({
-      timeout: 20_000,
-    });
+    // /borrowed redirects to the Borrowed tab on /loans.
+    await expect(page.getByRole("tab", { name: "Borrowed" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+      { timeout: 20_000 },
+    );
 
     const invPage = await gotoApp(page, "/investments");
     expect(invPage?.status()).toBe(200);
+    await expect(page.getByRole("tab", { name: "Invested" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+      { timeout: 20_000 },
+    );
+    // The list defaults to the current month's due-date range, so open the
+    // loan directly to prove the party can see it.
+    const invDetail = await gotoApp(page, `/loans/${loan.id}`);
+    expect(invDetail?.status()).toBe(200);
     await expect(
-      page.getByRole("heading", { name: /investments/i }),
+      page.getByRole("heading", { name: new RegExp(`E2E MR Loan ${stamp}`) }),
     ).toBeVisible({
-      timeout: 20_000,
-    });
-    await expect(page.getByText(`E2E MR Loan ${stamp}`)).toBeVisible({
       timeout: 20_000,
     });
 
@@ -246,7 +286,7 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
         ],
       },
     });
-    expect(borPut.status(), await borPut.text()).toBe(403);
+    expect(borPut.status(), await borPut.text()).toBe(404);
 
     const borPay = await request.post(
       `/api/loans/${loan.id}/received-payments`,
@@ -262,10 +302,19 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
 
     const borPage = await gotoApp(page, "/borrowed");
     expect(borPage?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: /borrowed/i })).toBeVisible({
-      timeout: 20_000,
-    });
-    await expect(page.getByText(`E2E MR Loan ${stamp}`)).toBeVisible({
+    // /borrowed redirects to the Borrowed tab on /loans.
+    await expect(page.getByRole("tab", { name: "Borrowed" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+      { timeout: 20_000 },
+    );
+    // The list defaults to the current month's due-date range, so open the
+    // loan directly to prove the party can see it.
+    const borDetail = await gotoApp(page, `/loans/${loan.id}`);
+    expect(borDetail?.status()).toBe(200);
+    await expect(
+      page.getByRole("heading", { name: new RegExp(`E2E MR Loan ${stamp}`) }),
+    ).toBeVisible({
       timeout: 20_000,
     });
 
@@ -298,16 +347,22 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
         ],
       },
     });
-    expect(witPut.status(), await witPut.text()).toBe(403);
+    expect(witPut.status(), await witPut.text()).toBe(404);
 
     const witPage = await gotoApp(page, "/witnessed");
     expect(witPage?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: /witnessed/i })).toBeVisible(
-      {
-        timeout: 20_000,
-      },
+    await expect(page.getByRole("tab", { name: "Witnessed" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+      { timeout: 20_000 },
     );
-    await expect(page.getByText(`E2E MR Loan ${stamp}`)).toBeVisible({
+    // The list defaults to the current month's due-date range, so open the
+    // loan directly to prove the party can see it.
+    const witDetail = await gotoApp(page, `/loans/${loan.id}`);
+    expect(witDetail?.status()).toBe(200);
+    await expect(
+      page.getByRole("heading", { name: new RegExp(`E2E MR Loan ${stamp}`) }),
+    ).toBeVisible({
       timeout: 20_000,
     });
 
@@ -319,11 +374,38 @@ test("multi-role parties can view loan; non-owners cannot edit shell", async ({
       timeout: 20_000,
     });
   } finally {
-    await cleanup(page, {
-      loanId: loan.id,
-      investorId: investor.id,
-      borrowerId: borrower.id,
-      witnessId: witness.id,
-    });
+    await cleanup(
+      page,
+      {
+        loanId: loan.id,
+        investorId: investor.id,
+        borrowerId: borrower.id,
+        witnessId: witness.id,
+      },
+      [investorEmail, borrowerEmail, witnessEmail],
+    );
+  }
+});
+
+test("money health is owner-only and repair endpoints are gone", async ({
+  page,
+}) => {
+  const request = page.request;
+  await switchE2ESession(request, undefined, page.context());
+
+  const health = await request.get("/api/admin/money-health");
+  expect([200, 403]).toContain(health.status());
+  if (health.ok()) {
+    const body = (await health.json()) as { checks?: unknown[] };
+    expect(Array.isArray(body.checks)).toBe(true);
+  }
+
+  for (const path of [
+    "fix-received-payments",
+    "cleanup-orphaned-payments",
+    "sync-due-dates",
+  ]) {
+    const response = await request.post(`/api/loans/${path}`);
+    expect(response.status(), path).toBe(410);
   }
 });

@@ -41,3 +41,9 @@ Access failures render `+error.svelte`, not a bare 404: no signature slot for th
 - Page: `src/routes/loans/[id]/sign/`
 - API: `src/routes/api/loans/[id]/sign/`
 - Helpers: `src/lib/server/loan-signing-server.ts`, `src/lib/loan-signing.ts`
+
+## Money correctness (2026-11)
+
+- Contract amounts and duration text come from the ledger and business dates. Jan 31 to Mar 31 reads "2 Months".
+- Totals shown to a signer must match the loan detail, list, and PDF.
+- Status is informational on this page; it is derived on the server.

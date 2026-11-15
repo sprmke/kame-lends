@@ -4,7 +4,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Textarea } from '$lib/components/ui/textarea';
 	import PaymentNotesField from '$lib/components/payments/PaymentNotesField.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Select from '$lib/components/ui/select';
@@ -48,7 +47,10 @@
 	import { toast } from '$lib/toast';
 	import { formatCurrency } from '$lib/format';
 	import { getTodayAtMidnight, normalizeToMidnight, toLocalDateString } from '$lib/date-utils';
-	import { hasDuplicateInterestDueDates } from '$lib/components/loans/multiple-interest-types';
+	import {
+		hasDuplicateInterestDueDates,
+		hasPeriodValue
+	} from '$lib/components/loans/multiple-interest-types';
 	import type {
 		LoanFormReceivedPayment,
 		LoanFormTransaction,
@@ -56,8 +58,7 @@
 	} from '$lib/components/loans/loan-form-types';
 	import type { DuplicateLoanData } from '$lib/loan-duplicate';
 	import type { Borrower, Investor, LoanStatus, LoanType, LoanWithInvestors } from '$lib/types';
-	import { isLoanFullyReceived } from '$lib/calculations';
-	import { ChevronDown, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-svelte';
+		import { ChevronDown, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-svelte';
 	import ReceiptUploadField from '$lib/components/common/ReceiptUploadField.svelte';
 	import ReceiptIntake from '$lib/components/receipt-scan/ReceiptIntake.svelte';
 	import ScanRowActions from '$lib/components/receipt-scan/ScanRowActions.svelte';
@@ -74,6 +75,14 @@
 	} from '$lib/loan-form-focus';
 	import { scrollFieldIntoView } from '$lib/scroll-field';
 	import type { ReceiptScanContext } from '$lib/receipt-extraction-client';
+	import { todayKey } from '$lib/dates/business-date';
+	import { formInvestorDue } from '$lib/loans/form-to-ledger';
+	import {
+		buildInvestorPayload as buildInvestorPayloadFromForm,
+		buildReceivedPaymentsPayload as buildReceivedPaymentsPayloadFromForm,
+		validateLoanForm
+	} from '$lib/loans/loan-form-payload';
+	import { DATA_CACHE } from '$lib/pwa/shared';
 	import {
 		groupScannedReceipts,
 		type ProposedTransaction,
@@ -88,7 +97,7 @@
 	import { findMatchingParty } from '$lib/receipt-scan/match-party';
 	import { useAiStatus } from '$lib/ai-status.svelte';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
-	import LoanFormGroupsField from '$lib/components/loans/LoanFormGroupsField.svelte';
+	import LoanBasicsSection from '$lib/components/loans/LoanBasicsSection.svelte';
 	import { page } from '$app/state';
 	import { loanGroupIds, type GroupsIndexItem } from '$lib/groups/loan-group-filter';
 	import {
@@ -154,13 +163,19 @@
 	let formRef = $state<HTMLFormElement | null>(null);
 	const loanTypes: LoanType[] = ['Lot Title', 'OR/CR', 'Agent'];
 	let defaultInterestType = $state<'rate' | 'fixed'>('rate');
-	let defaultInterestValue = $state('10');
+	let defaultInterestValue = $state('');
+	let formDirty = $state(false);
+	let submitIdempotencyKey = $state(
+		typeof crypto !== 'undefined' && 'randomUUID' in crypto
+			? crypto.randomUUID()
+			: `loan-${Date.now()}`
+	);
 
 	function createReceivedPayment(): LoanFormReceivedPayment {
 		return {
 			id: `rp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
 			amount: '',
-			receivedDate: toLocalDateString(new Date()),
+			receivedDate: todayKey(),
 			receipts: [],
 			notes: ''
 		};
@@ -171,7 +186,7 @@
 		return {
 			id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
 			amount: '',
-			sentDate: toLocalDateString(new Date()),
+			sentDate: todayKey(),
 			interestType: defaultInterestType,
 			interestRate: defaultInterestType === 'rate' ? value : '',
 			interestAmount: defaultInterestType === 'fixed' ? value : '',
@@ -217,7 +232,7 @@
 			? toLocalDateString(existingLoan.dueDate)
 			: duplicateData?.dueDate
 				? toLocalDateString(duplicateData.dueDate)
-				: toLocalDateString(new Date())
+				: todayKey()
 	);
 	let freeLotSqm = $state(
 		existingLoan?.freeLotSqm
@@ -268,7 +283,7 @@
 		...loanTemplates.map((template) => ({ value: String(template.id), label: template.name }))
 	]);
 	const templateSentDate = $derived(
-		selectedInvestors[0]?.transactions[0]?.sentDate || toLocalDateString(new Date())
+		selectedInvestors[0]?.transactions[0]?.sentDate || todayKey()
 	);
 
 	$effect(() => {
@@ -330,7 +345,7 @@
 			return;
 		}
 
-		const today = toLocalDateString(new Date());
+		const today = todayKey();
 		const due = template.termDays ? addIsoDays(today, template.termDays) : dueDate;
 		const interestValue = formatInterestInput(template.interestValue);
 		defaultInterestType = template.interestType;
@@ -400,8 +415,15 @@
 	const selectedBorrower = $derived(
 		borrowerList.find((borrower) => String(borrower.id) === borrowerId) ?? null
 	);
-	const loanPreview = $derived(calculateLoanPreview(selectedInvestors));
-	const loanSummary = $derived(calculateLoanFormSummary(selectedInvestors, calculateLoanStatus));
+	const loanPreview = $derived(
+		calculateLoanPreview(selectedInvestors, { dueDate: dueDate || undefined, today: todayKey() })
+	);
+	const loanSummary = $derived(
+		calculateLoanFormSummary(selectedInvestors, {
+			dueDate: dueDate || undefined,
+			today: todayKey()
+		})
+	);
 	const investorsWithTransactions = $derived(
 		buildInvestorsWithTransactionsForPreview(loanPreview, selectedInvestors)
 	);
@@ -492,42 +514,10 @@
 	);
 
 	function estimateInvestorTotal(si: SelectedInvestorAllocation): number {
-		const principal = si.transactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-		if (si.hasMultipleInterest && si.interestPeriods.length > 0) {
-			let interest = 0;
-			for (const period of si.interestPeriods) {
-				if (period.interestType === 'fixed') {
-					interest += parseFloat(period.interestAmount) || 0;
-				} else {
-					interest += principal * ((parseFloat(period.interestRate) || 0) / 100);
-				}
-			}
-			return principal + interest;
-		}
-		const transaction = si.transactions[0];
-		if (!transaction) return principal;
-		if (transaction.interestType === 'fixed') {
-			return principal + (parseFloat(transaction.interestAmount) || 0);
-		}
-		return principal + principal * ((parseFloat(transaction.interestRate) || 0) / 100);
-	}
-
-	function calculateLoanStatus(): LoanStatus {
-		const hasUnpaidTransactions = selectedInvestors.some((si) =>
-			si.transactions.some((t) => !t.isPaid)
-		);
-		if (hasUnpaidTransactions) return 'Partially Funded';
-
-		const totalAmount = selectedInvestors.reduce((sum, si) => sum + estimateInvestorTotal(si), 0);
-		if (isLoanFullyReceived(totalAmount, totalReceived)) return 'Completed';
-
-		if (dueDate) {
-			const today = getTodayAtMidnight();
-			const due = normalizeToMidnight(dueDate);
-			if (today >= due) return 'Overdue';
-		}
-
-		return 'Fully Funded';
+		return formInvestorDue(selectedInvestors, si.investor.id, {
+			dueDate: dueDate || undefined,
+			today: todayKey()
+		});
 	}
 
 	function addInvestor(investorId: string, interestValue?: string) {
@@ -597,10 +587,9 @@
 			...transaction,
 			id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 		}));
-		const clonedReceivedPayments = sourceInvestor.receivedPayments.map((payment) => ({
-			...payment,
-			id: `temp-rp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-		}));
+		// Copy the interest configuration only. Payments and receipts are
+		// evidence for the source investor and must never be duplicated.
+		const clonedReceivedPayments: LoanFormReceivedPayment[] = [];
 		const clonedInterestPeriods = sourceInvestor.interestPeriods.map((period) => ({
 			...period,
 			id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -783,7 +772,7 @@
 				return {
 					...(base ?? fresh),
 					amount: fields.amount,
-					sentDate: fields.date || base?.sentDate || toLocalDateString(new Date()),
+					sentDate: fields.date || base?.sentDate || todayKey(),
 					dateTouched: true,
 					receipts: fields.receipts,
 					scan: fields.scan
@@ -805,7 +794,7 @@
 			write: (base, fields) => ({
 				...(base ?? createReceivedPayment()),
 				amount: fields.amount,
-				receivedDate: fields.date || base?.receivedDate || toLocalDateString(new Date()),
+				receivedDate: fields.date || base?.receivedDate || todayKey(),
 				receipts: fields.receipts,
 				scan: fields.scan
 			})
@@ -986,74 +975,12 @@
 	}
 
 	function collectFieldErrors() {
-		const next: Record<string, string> = {};
-		if (!loanName.trim()) next.loanName = 'Loan name is required';
-		if (!dueDate) next.dueDate = 'Due date is required';
-		if (!borrowerId) next.borrowerId = 'Borrower is required';
-		if (selectedInvestors.length === 0) next.investors = 'At least one investor is required';
-
-		let missingDisbursementReceipt = false;
-		let missingReceivedReceipt = false;
-
-		for (const si of selectedInvestors) {
-			if (si.transactions.length === 0) {
-				next.investors = `Add a principal disbursement for ${si.investor.name}.`;
-				missingDisbursementReceipt = true;
-			}
-			for (const transaction of si.transactions) {
-				const amountText = String(transaction.amount).trim();
-				const interestRateText = String(transaction.interestRate).trim();
-				const interestAmountText = String(transaction.interestAmount).trim();
-				if (!amountText || Number(amountText) < 0) {
-					next.investors = 'Each transaction needs a valid principal amount';
-					break;
-				}
-				if (transaction.interestType === 'rate' && !interestRateText) {
-					next.investors = 'Each transaction needs an interest rate or fixed amount';
-					break;
-				}
-				if (transaction.interestType === 'fixed' && !interestAmountText) {
-					next.investors = 'Each transaction needs an interest rate or fixed amount';
-					break;
-				}
-				if (!hasPaymentReceipt(transaction)) {
-					next[`receipt-tx-${transaction.id}`] = RECEIPT_REQUIRED_ERROR;
-					missingDisbursementReceipt = true;
-				}
-			}
-			for (const rp of si.receivedPayments) {
-				const amount = Number.parseFloat(rp.amount);
-				if (!Number.isFinite(amount) || amount <= 0) continue;
-				if (!hasPaymentReceipt(rp)) {
-					next[`receipt-rp-${rp.id}`] = RECEIPT_REQUIRED_ERROR;
-					missingReceivedReceipt = true;
-				}
-			}
-			if (si.hasMultipleInterest) {
-				if (si.interestPeriods.length === 0) {
-					next.investors = 'Multiple interest periods are required';
-					break;
-				}
-				if (hasDuplicateInterestDueDates(si.interestPeriods)) {
-					next.investors = 'Interest periods cannot share the same due date';
-					break;
-				}
-			}
-		}
-
-		if (selectedInvestors.some((si) => receivedExceedsMax(si))) {
-			next.investors = 'Total received payments cannot exceed total amount due per investor';
-		}
-
-		if (!next.investors && missingDisbursementReceipt && missingReceivedReceipt) {
-			next.investors = 'Upload a receipt for each disbursement and received payment.';
-		} else if (!next.investors && missingDisbursementReceipt) {
-			next.investors = 'Upload a receipt for each principal disbursement.';
-		} else if (!next.investors && missingReceivedReceipt) {
-			next.investors = 'Upload a receipt for each received payment.';
-		}
-
-		return next;
+		return validateLoanForm({
+			loanName,
+			dueDate,
+			borrowerId,
+			selectedInvestors
+		});
 	}
 
 	const fieldErrors = $derived.by(() => collectFieldErrors());
@@ -1100,84 +1027,6 @@
 		void revealInvalidField(fieldErrors);
 	});
 
-	function buildInvestorPayload() {
-		const investorData: Array<{
-			investorId: number;
-			amount: string;
-			interestRate: string;
-			interestType: 'rate' | 'fixed';
-			sentDate: string;
-			isPaid: boolean;
-			hasMultipleInterest: boolean;
-			receipts: PaymentReceipt[];
-			notes: string;
-			interestPeriods?: Array<{
-				dueDate: string;
-				interestRate: string;
-				interestType: 'rate' | 'fixed';
-			}>;
-		}> = [];
-
-		for (const si of selectedInvestors) {
-			const investorTotalCapital = si.transactions.reduce(
-				(sum, t) => sum + (parseFloat(t.amount) || 0),
-				0
-			);
-
-			const interestPeriods = si.hasMultipleInterest
-				? si.interestPeriods.map((period) => {
-						const isZeroPeriodCapitalWithRate =
-							investorTotalCapital === 0 && period.interestType === 'rate';
-						if (isZeroPeriodCapitalWithRate) {
-							const rate = parseFloat(period.interestRate) || 0;
-							const calculatedInterest = totalPrincipal * (rate / 100);
-							return {
-								dueDate: period.dueDate,
-								interestRate: calculatedInterest.toFixed(2),
-								interestType: 'fixed' as const
-							};
-						}
-						return {
-							dueDate: period.dueDate,
-							interestRate:
-								period.interestType === 'fixed' ? period.interestAmount : period.interestRate,
-							interestType: period.interestType
-						};
-					})
-				: undefined;
-
-			for (const transaction of si.transactions) {
-				const amount = parseFloat(transaction.amount) || 0;
-				let interestRate = transaction.interestRate;
-				let interestType: 'rate' | 'fixed' = 'rate';
-
-				if (transaction.interestType === 'fixed') {
-					interestRate = transaction.interestAmount;
-					interestType = 'fixed';
-				} else if (amount === 0 && transaction.interestType === 'rate') {
-					const rate = parseFloat(transaction.interestRate) || 0;
-					interestRate = (totalPrincipal * (rate / 100)).toFixed(2);
-					interestType = 'fixed';
-				}
-
-				investorData.push({
-					investorId: si.investor.id,
-					amount: transaction.amount,
-					interestRate,
-					interestType,
-					sentDate: transaction.sentDate,
-					isPaid: transaction.isPaid,
-					hasMultipleInterest: si.hasMultipleInterest,
-					receipts: transaction.receipts,
-					notes: transaction.notes,
-					interestPeriods
-				});
-			}
-		}
-
-		return investorData;
-	}
-
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		if (Object.keys(fieldErrors).length > 0) {
@@ -1195,30 +1044,24 @@
 
 			const response = await fetch(url, {
 				method,
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					'Idempotency-Key': submitIdempotencyKey
+				},
 				body: JSON.stringify({
 					groupIds: SHOW_GROUPS_UI && !isEditMode ? selectedGroupIds : undefined,
 					loanData: {
 						borrowerId: Number(borrowerId),
 						loanName: loanName.trim(),
 						type,
-						status: calculateLoanStatus(),
 						dueDate,
 						freeLotSqm: freeLotSqm ? Number(freeLotSqm) : null,
 						notes: notes.trim() || null
 					},
-					investorData: buildInvestorPayload(),
-					receivedPaymentsByInvestor: selectedInvestors.map((si) => ({
-						investorId: si.investor.id,
-						receivedPayments: si.receivedPayments
-							.filter((rp) => Number.parseFloat(rp.amount) > 0)
-							.map((rp) => ({
-								amount: rp.amount,
-								receivedDate: rp.receivedDate,
-								receipts: rp.receipts,
-								notes: rp.notes
-							}))
-					})),
+					investorData: buildInvestorPayloadFromForm(selectedInvestors),
+					receivedPaymentsByInvestor: buildReceivedPaymentsPayloadFromForm(
+						selectedInvestors
+					),
 					contractCustomization: contractCustomization ?? null
 				})
 			});
@@ -1230,7 +1073,9 @@
 
 			const savedLoan = await response.json();
 
-			if (SHOW_GROUPS_UI && selectedGroupIds.length > 0) {
+			// Create sends groups in the POST body. Only edits need the
+			// separate groups write, and its failure must be visible.
+			if (SHOW_GROUPS_UI && isEditMode) {
 				const loanId = (savedLoan as { id: number }).id;
 				const groupsRes = await fetch(`/api/loans/${loanId}/groups`, {
 					method: 'PUT',
@@ -1244,23 +1089,28 @@
 							'Loan saved, but groups could not be updated'
 					);
 				}
-			} else if (SHOW_GROUPS_UI && isEditMode) {
-				const loanId = (savedLoan as { id: number }).id;
-				await fetch(`/api/loans/${loanId}/groups`, {
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ groupIds: selectedGroupIds })
-				});
 			}
 
+			formDirty = false;
+			if (typeof caches !== 'undefined') {
+				await caches.delete(DATA_CACHE).catch(() => {});
+			}
+			submitIdempotencyKey =
+				typeof crypto !== 'undefined' && 'randomUUID' in crypto
+					? crypto.randomUUID()
+					: `loan-${Date.now()}`;
 			if (!isEditMode) {
-				try {
-					await downloadLoanContractPdf(savedLoan.id);
-					toast.success('Loan created and contract PDF downloaded.');
-				} catch (contractError) {
-					console.error('Error generating loan contract PDF:', contractError);
-					toast.success('Loan created.');
-					toast.error('Contract PDF could not be generated. Download it from the loan details.');
+				toast.success('Loan created.');
+				const wantsContract = window.confirm(
+					'Download the contract PDF now? You can also download it later from the loan details.'
+				);
+				if (wantsContract) {
+					try {
+						await downloadLoanContractPdf(savedLoan.id);
+					} catch (contractError) {
+						console.error('Error generating loan contract PDF:', contractError);
+						toast.error('Contract PDF could not be generated. Download it from the loan details.');
+					}
 				}
 			} else {
 				toast.success('Loan updated');
@@ -1283,7 +1133,19 @@
 		}
 	}
 
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		const onBeforeUnload = (event: BeforeUnloadEvent) => {
+			if (!formDirty || isSubmitting) return;
+			event.preventDefault();
+			event.returnValue = '';
+		};
+		window.addEventListener('beforeunload', onBeforeUnload);
+		return () => window.removeEventListener('beforeunload', onBeforeUnload);
+	});
+
 	function handleCancel() {
+		if (formDirty && !window.confirm('Discard your unsaved changes?')) return;
 		if (onCancel) {
 			onCancel();
 			return;
@@ -1392,6 +1254,8 @@
 		id={formId}
 		class={cn('dashboard-form w-full min-w-0', isModalMode ? 'max-w-none' : 'max-w-4xl')}
 		onsubmit={handleSubmit}
+		oninput={() => (formDirty = true)}
+		onchange={() => (formDirty = true)}
 	>
 	{#if showFormHeader}
 		<FormHeader
@@ -1409,155 +1273,33 @@
 		/>
 	{/if}
 
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Loan Details</Card.Title>
-		</Card.Header>
-		<Card.Content class="space-y-4">
-			<div class="grid gap-4 sm:grid-cols-2">
-				{#if !isEditMode && !duplicateData && loanTemplates.length > 0}
-					<div class="space-y-2 sm:col-span-2">
-						<Label for="loanTemplate">Template</Label>
-						<SearchableSelect
-							id="loanTemplate"
-							options={templateOptions}
-							value={selectedTemplateId}
-							onValueChange={applyLoanTemplate}
-							placeholder="None"
-							searchPlaceholder="Search templates..."
-							searchable={loanTemplates.length > 8}
-							disabled={isSubmitting}
-							triggerClassName="w-full"
-						/>
-					</div>
-				{/if}
-				<div id="field-borrower" class="scroll-mt-24 space-y-2">
-					<Label for={useTemplateBorrowers ? undefined : 'borrowerId'}>Borrower *</Label>
-					{#if useTemplateBorrowers && templateBorrowerChoices.length > 0}
-						<ul class="space-y-2">
-							{#each templateBorrowerChoices as borrower (borrower.id)}
-								{@const selected = borrowerId === String(borrower.id)}
-								<li>
-									<label
-										class={cn(
-											'flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border bg-card px-3',
-											selected
-												? 'border-primary/45 bg-primary/[0.06]'
-												: 'border-border/60'
-										)}
-									>
-										<span class="min-w-0 flex-1 truncate text-sm font-medium">{borrower.name}</span>
-										<Checkbox
-											checked={selected}
-											disabled={isSubmitting}
-											aria-label={borrower.name}
-											onCheckedChange={(checked) => setTemplateBorrower(borrower.id, checked)}
-										/>
-									</label>
-								</li>
-							{/each}
-						</ul>
-					{:else}
-						<SearchableSelect
-							id="borrowerId"
-							options={borrowerOptions}
-							value={borrowerId}
-							onValueChange={handleBorrowerSelect}
-							placeholder="Select a borrower..."
-							searchPlaceholder="Search borrowers..."
-							searchable={true}
-							disabled={isSubmitting}
-							triggerClassName="w-full"
-						>
-							{#snippet header({ select })}
-								<button
-									type="button"
-									class="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-primary hover:bg-accent"
-									onclick={() => select('new')}
-								>
-									<UserPlus class="h-4 w-4" />
-									Add New Borrower
-								</button>
-								{#if borrowerList.length > 0}
-									<div class="my-1 h-px bg-border"></div>
-								{/if}
-							{/snippet}
-						</SearchableSelect>
-					{/if}
-					{#if errors.borrowerId}<p id="borrower-error" class="text-sm font-medium text-destructive" role="alert">{errors.borrowerId}</p>{/if}
-				</div>
-				<div id="field-loan-name" class="scroll-mt-24 space-y-2">
-					<Label for="loanName">Loan Name / Label *</Label>
-					<Input
-						id="loanName"
-						value={loanName}
-						oninput={(event) => handleLoanNameInput(event.currentTarget.value)}
-						disabled={isSubmitting}
-						placeholder="e.g., Mexico, Pampanga"
-						required
-						aria-invalid={errors.loanName ? 'true' : undefined}
-						aria-describedby={errors.loanName ? 'loan-name-error' : undefined}
-					/>
-					{#if errors.loanName}<p id="loan-name-error" class="text-sm font-medium text-destructive" role="alert">{errors.loanName}</p>{/if}
-				</div>
-				<div class="space-y-2">
-					<Label for="type">Type *</Label>
-					<Select.Root type="single" bind:value={type} disabled={isSubmitting}>
-						<Select.Trigger id="type" class="w-full">{type}</Select.Trigger>
-						<Select.Content>
-							{#each loanTypes as loanType}
-								<Select.Item value={loanType}>{loanType}</Select.Item>
-							{/each}
-						</Select.Content>
-					</Select.Root>
-				</div>
-				<div id="field-due-date" class="scroll-mt-24 space-y-2">
-					<Label for="dueDate">Due Date *</Label>
-					<Input
-						id="dueDate"
-						type="date"
-						bind:value={dueDate}
-						disabled={isSubmitting}
-						aria-invalid={errors.dueDate ? 'true' : undefined}
-						aria-describedby={errors.dueDate ? 'due-date-error' : undefined}
-					/>
-					{#if errors.dueDate}<p id="due-date-error" class="text-sm font-medium text-destructive" role="alert">{errors.dueDate}</p>{/if}
-				</div>
-				{#if type === 'Lot Title'}
-					<div class="space-y-2">
-						<Label for="freeLotSqm">Free Lot (sqm)</Label>
-						<Input
-							id="freeLotSqm"
-							type="number"
-							min="0"
-							bind:value={freeLotSqm}
-							disabled={isSubmitting}
-							placeholder="Optional"
-						/>
-					</div>
-				{/if}
-			</div>
-
-			<div class="space-y-2">
-				<Label for="notes">Notes</Label>
-				<Textarea
-					id="notes"
-					bind:value={notes}
-					disabled={isSubmitting}
-					placeholder="Additional notes..."
-					rows={3}
-				/>
-			</div>
-
-			{#if showGroupsField}
-				<LoanFormGroupsField
-					groups={groupsIndex}
-					bind:selectedGroupIds
-					disabled={isSubmitting}
-				/>
-			{/if}
-		</Card.Content>
-	</Card.Root>
+	<LoanBasicsSection
+		{isEditMode}
+		hasDuplicateData={Boolean(duplicateData)}
+		{isSubmitting}
+		{loanTemplates}
+		{templateOptions}
+		{selectedTemplateId}
+		onTemplateChange={applyLoanTemplate}
+		{useTemplateBorrowers}
+		{templateBorrowerChoices}
+		{borrowerId}
+		{borrowerOptions}
+		{borrowerList}
+		onBorrowerSelect={handleBorrowerSelect}
+		onTemplateBorrower={setTemplateBorrower}
+		{loanName}
+		onLoanNameInput={handleLoanNameInput}
+		{errors}
+		bind:type
+		{loanTypes}
+		bind:dueDate
+		bind:freeLotSqm
+		bind:notes
+		{showGroupsField}
+		{groupsIndex}
+		bind:selectedGroupIds
+	/>
 
 	<Card.Root id="investors-section" class="scroll-mt-24">
 		<Card.Header>
@@ -1751,6 +1493,11 @@
 														e.currentTarget.value
 													)}
 											/>
+											{#if (Number(transaction.amount) || 0) === 0 && transaction.interestType === 'rate'}
+												<p class="text-xs text-muted-foreground">
+													Agent: interest is computed on the loan principal.
+												</p>
+											{/if}
 										</div>
 										<div class="min-w-0 space-y-2">
 											<Label for={`sent-date-${transaction.id}`}>Sent Date</Label>
@@ -1908,21 +1655,22 @@
 									amount={String(
 										si.transactions.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
 									)}
-									defaultInterestRate={primaryTransaction.interestRate || '10'}
+									defaultInterestRate={primaryTransaction.interestRate}
 									defaultInterestType={primaryTransaction.interestType}
-									initialMode={si.hasMultipleInterest ? 'multiple' : 'single'}
-									initialPeriods={si.interestPeriods}
-									onModeChange={(mode) => {
-										selectedInvestors = selectedInvestors.map((row) =>
-											row.investor.id === si.investor.id
-												? { ...row, hasMultipleInterest: mode === 'multiple' }
-												: row
-										);
-									}}
+									periods={si.interestPeriods}
+									mode={si.hasMultipleInterest ? 'multiple' : 'single'}
+									isEditing={isEditMode}
 									onPeriodsChange={(periods) => {
 										selectedInvestors = selectedInvestors.map((row) =>
 											row.investor.id === si.investor.id
 												? { ...row, interestPeriods: periods }
+												: row
+										);
+									}}
+									onModeChange={(mode) => {
+										selectedInvestors = selectedInvestors.map((row) =>
+											row.investor.id === si.investor.id
+												? { ...row, hasMultipleInterest: mode === 'multiple' }
 												: row
 										);
 									}}

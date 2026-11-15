@@ -39,6 +39,8 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-ink: var(--primary-ink);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
@@ -83,7 +85,11 @@
 
   /* Brand orange (#fb9f44); nav/landing gradients keep separate stops */
   --primary: #fb9f44;
-  --primary-foreground: oklch(0.99 0 0);
+  /* Dark ink on orange: 7.5:1, so buttons and avatars pass WCAG AA. */
+  --primary-foreground: #2b2118;
+  --primary-ink: #2b2118;
+  /* Orange dark enough for text/icons on white: 5:1. */
+  --primary-strong: #b45309;
 
   --secondary: oklch(0.96 0.01 70);
   --secondary-foreground: oklch(0.28 0.03 55);
@@ -111,7 +117,7 @@
   --sidebar: oklch(0.99 0.005 70);
   --sidebar-foreground: oklch(0.22 0.02 55);
   --sidebar-primary: #fb9f44;
-  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-primary-foreground: #2b2118;
   --sidebar-accent: oklch(0.96 0.012 65);
   --sidebar-accent-foreground: oklch(0.28 0.03 55);
   --sidebar-border: oklch(0.925 0.008 70);
@@ -146,7 +152,9 @@
   --popover-foreground: oklch(0.985 0 0);
 
   --primary: #fb9f44;
-  --primary-foreground: oklch(0.99 0 0);
+  --primary-foreground: #2b2118;
+  --primary-ink: #2b2118;
+  --primary-strong: #fbbf24;
 
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -173,7 +181,7 @@
   --sidebar: oklch(0.18 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: #fb9f44;
-  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-primary-foreground: #2b2118;
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);

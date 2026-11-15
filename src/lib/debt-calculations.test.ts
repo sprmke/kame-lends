@@ -3,6 +3,9 @@ import {
   calculateAmortizedPayment,
   calculateDebtSummary,
   calculatePerPeriodInterest,
+  generateInterestSchedule,
+  isDebtTermEnded,
+  isFullyPaidDebt,
   normalizeInterestRate,
 } from "$lib/debt-calculations";
 
@@ -33,5 +36,47 @@ describe("debt-calculations", () => {
     expect(summary.schedule.length).toBeGreaterThan(0);
     expect(summary.totalInterestIncludingFees).toBeGreaterThan(0);
     expect(summary.totalRepayment).toBeGreaterThan(100000);
+  });
+});
+
+describe("debt dates (DEBT-01/02/03)", () => {
+  it("starts the first installment one interval after the debt date", () => {
+    const schedule = generateInterestSchedule(
+      "2026-01-15",
+      100000,
+      3,
+      "Monthly",
+      3,
+    );
+    expect(
+      schedule.map((entry) => entry.date.toISOString().slice(0, 10)),
+    ).toEqual(["2026-02-15", "2026-03-15", "2026-04-15"]);
+  });
+
+  it("clamps month-end dates instead of overflowing", () => {
+    const schedule = generateInterestSchedule(
+      "2026-01-31",
+      100000,
+      3,
+      "Monthly",
+      3,
+    );
+    expect(
+      schedule.map((entry) => entry.date.toISOString().slice(0, 10)),
+    ).toEqual(["2026-02-28", "2026-03-31", "2026-04-30"]);
+  });
+
+  it("separates term ended from paid", () => {
+    const debt = { date: "2025-01-01", durationMonths: 1, amount: "100000" };
+    expect(isDebtTermEnded(debt, new Date("2026-01-01"))).toBe(true);
+    // No recorded payments, so the term ending does not make it paid.
+    expect(
+      isFullyPaidDebt({
+        ...debt,
+        interestRate: "3",
+        interestInterval: "Monthly",
+        interestPeriods: [],
+      }),
+    ).toBe(false);
   });
 });

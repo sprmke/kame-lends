@@ -3,8 +3,8 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import DownloadBackupButton from '$lib/components/common/DownloadBackupButton.svelte';
-	import FixReceivedPaymentsButton from '$lib/components/common/FixReceivedPaymentsButton.svelte';
-	import SyncLoanDueDatesButton from '$lib/components/common/SyncLoanDueDatesButton.svelte';
+	import DataHealthCard from '$lib/components/settings/DataHealthCard.svelte';
+	import RecentlyDeletedCard from '$lib/components/settings/RecentlyDeletedCard.svelte';
 	import LoanTemplatesManager from '$lib/components/settings/LoanTemplatesManager.svelte';
 	import PaymentMethodsManager from '$lib/components/settings/PaymentMethodsManager.svelte';
 	import PartyIdentityDocumentsManager from '$lib/components/settings/PartyIdentityDocumentsManager.svelte';
@@ -62,6 +62,11 @@
 
 	<PaymentMethodsManager initialMethods={data.paymentMethods ?? []} />
 
+	{#if data.isPlatformOwner}
+		<DataHealthCard />
+		<RecentlyDeletedCard />
+	{/if}
+
 	<InstallAppCard />
 	<PushNotificationsCard initialPreferences={data.pushPreferences} />
 
@@ -70,8 +75,6 @@
 			<Card.Title>Data & maintenance</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-wrap gap-2 max-lg:flex-col max-lg:*:w-full">
-			<SyncLoanDueDatesButton />
-			<FixReceivedPaymentsButton />
 			<DownloadBackupButton downloadLabel="Download my data" />
 			{#if data.isPlatformOwner}
 				<DownloadBackupButton

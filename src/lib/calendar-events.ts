@@ -144,7 +144,7 @@ export function draftLoanGoogleEvents(
     });
   }
 
-  const schedule = buildLoanPaymentSchedule(loan);
+  const schedule = buildLoanPaymentSchedule(loan, { today: todayKey });
 
   for (const due of schedule.dues) {
     if (!isDateInSyncScope(due.dateKey, scope, todayKey)) continue;

@@ -9,6 +9,7 @@ import {
   isOwnedWitness,
 } from "$lib/server/access-control";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
+import { parseIdParam } from "$lib/server/route-params";
 
 export const PATCH: RequestHandler = async (event) => {
   const { params, request } = event;
@@ -18,8 +19,15 @@ export const PATCH: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const loanId = Number.parseInt(params.id, 10);
-    const witnessLoanId = Number.parseInt(params.witnessLoanId, 10);
+    const loanId = parseIdParam(params.id);
+
+    if (loanId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
+    const witnessLoanId = parseIdParam(params.witnessLoanId);
+    if (witnessLoanId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!Number.isFinite(loanId) || !Number.isFinite(witnessLoanId)) {
       return json({ error: "Invalid ID." }, { status: 400 });
     }
@@ -87,8 +95,15 @@ export const DELETE: RequestHandler = async (event) => {
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const loanId = Number.parseInt(params.id, 10);
-    const witnessLoanId = Number.parseInt(params.witnessLoanId, 10);
+    const loanId = parseIdParam(params.id);
+
+    if (loanId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
+    const witnessLoanId = parseIdParam(params.witnessLoanId);
+    if (witnessLoanId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!Number.isFinite(loanId) || !Number.isFinite(witnessLoanId)) {
       return json({ error: "Invalid ID." }, { status: 400 });
     }

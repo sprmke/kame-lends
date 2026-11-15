@@ -20,6 +20,8 @@ export interface LoanFormTransaction {
 
 export interface LoanFormReceivedPayment {
   id: string;
+  /** Existing DB id, when the row came from a saved payment. */
+  interestPeriodId?: number | null;
   amount: string;
   receivedDate: string;
   receipts: PaymentReceipt[];

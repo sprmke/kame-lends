@@ -1,4 +1,5 @@
 import { json } from "@sveltejs/kit";
+import { parseIdParam } from "$lib/server/route-params";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
 import {
@@ -8,7 +9,9 @@ import {
 import { eq, and, ne } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { invalidateDebtData } from "$lib/server/cache-invalidation";
-import { hasDebtAccess } from "$lib/server/access-control";
+import { hasDebtAdminAccess } from "$lib/server/access-control";
+import { debtPaymentSchema, firstDebtError } from "$lib/schemas/debt";
+import { recordMoneyAudit } from "$lib/server/money-audit";
 import {
   DEBT_AMOUNT_TOLERANCE,
   recalculateDebtInterestPeriodStatus,
@@ -23,12 +26,19 @@ export const PATCH: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const paymentId = parseInt(id, 10);
+    const paymentId = parseIdParam(id);
+    if (paymentId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!Number.isFinite(paymentId)) {
       return json({ error: "Invalid id" }, { status: 400 });
     }
 
     const body = await request.json();
+    const parsedBody = debtPaymentSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return json({ error: firstDebtError(parsedBody.error) }, { status: 400 });
+    }
     const parsedAmount = parseFloat(String(body.amount ?? ""));
     const dateStr = String(body.receivedDate ?? "").trim();
 
@@ -60,9 +70,9 @@ export const PATCH: RequestHandler = async (event) => {
     }
 
     const period = payment.debtInterestPeriod;
-    const hasAccess = await hasDebtAccess(period.debtId, session.user.id);
+    const hasAccess = await hasDebtAdminAccess(period.debtId, session.user.id);
     if (!hasAccess) {
-      return json({ error: "Unauthorized" }, { status: 401 });
+      return json({ error: "Received payment not found" }, { status: 404 });
     }
 
     const others = await db.query.debtReceivedPayments.findMany({
@@ -76,7 +86,7 @@ export const PATCH: RequestHandler = async (event) => {
       0,
     );
     const newTotal = otherSum + parsedAmount;
-    const expectedAmount = parseFloat(period.expectedInterest) || 0;
+    const expectedAmount = parseFloat(period.expectedInstallment) || 0;
 
     if (newTotal > expectedAmount + DEBT_AMOUNT_TOLERANCE) {
       return json(
@@ -98,6 +108,16 @@ export const PATCH: RequestHandler = async (event) => {
 
     await recalculateDebtInterestPeriodStatus(period.id);
 
+    await recordMoneyAudit(db, {
+      actorUserId: session.user.id,
+      entityType: "debt_payment",
+      entityId: paymentId,
+      loanId: period.debtId,
+      action: "update",
+      before: { amount: payment.amount, receivedDate: payment.receivedDate },
+      after: { amount: parsedAmount, receivedDate: receivedDateObj },
+    });
+
     invalidateDebtData();
     return json({ success: true });
   } catch (error) {
@@ -118,7 +138,10 @@ export const DELETE: RequestHandler = async (event) => {
     }
 
     const { id } = params;
-    const paymentId = parseInt(id, 10);
+    const paymentId = parseIdParam(id);
+    if (paymentId === null) {
+      return json({ error: "Invalid id" }, { status: 400 });
+    }
     if (!Number.isFinite(paymentId)) {
       return json({ error: "Invalid id" }, { status: 400 });
     }
@@ -137,14 +160,28 @@ export const DELETE: RequestHandler = async (event) => {
     }
 
     const period = payment.debtInterestPeriod;
-    const hasAccess = await hasDebtAccess(period.debtId, session.user.id);
+    const hasAccess = await hasDebtAdminAccess(period.debtId, session.user.id);
     if (!hasAccess) {
-      return json({ error: "Unauthorized" }, { status: 401 });
+      return json({ error: "Received payment not found" }, { status: 404 });
     }
 
-    await db
-      .delete(debtReceivedPayments)
-      .where(eq(debtReceivedPayments.id, paymentId));
+    const actorUserId = session.user.id;
+    await db.transaction(async (tx) => {
+      await tx
+        .update(debtReceivedPayments)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(debtReceivedPayments.id, paymentId));
+
+      await recordMoneyAudit(tx, {
+        actorUserId,
+        entityType: "debt_payment",
+        entityId: paymentId,
+        loanId: period.debtId,
+        action: "delete",
+        before: { amount: payment.amount, receivedDate: payment.receivedDate },
+        reason: "payment deleted",
+      });
+    });
 
     await recalculateDebtInterestPeriodStatus(period.id);
 

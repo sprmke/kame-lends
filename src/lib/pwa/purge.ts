@@ -6,6 +6,12 @@ export async function purgeOfflineState(): Promise<void> {
 
   await Promise.all([caches.delete(PAGES_CACHE), caches.delete(DATA_CACHE)]);
 
+  try {
+    localStorage.removeItem("kl-last-online");
+  } catch {
+    /* storage may be unavailable */
+  }
+
   const registration = await navigator.serviceWorker?.getRegistration();
   registration?.active?.postMessage({ type: SW_MESSAGE.PURGE_OFFLINE });
 

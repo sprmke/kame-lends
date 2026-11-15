@@ -15,3 +15,10 @@
 | ------- | -------------------------------------------------------------- |
 | Page    | `src/routes/investors/+page.svelte`                            |
 | Filter  | `src/lib/list-filters.ts` (`matchesParticipantExposureFilter`) |
+
+## Money correctness (2026-11)
+
+- Investor totals are grouped **by loan, then by investor**. Two loans for the same person never share one schedule.
+- Allocations with the same investor on one loan count as one loan and use that investor's total capital for rate periods.
+- The list, cards, detail, PDF, CSV, and dashboard chart use the same ledger aggregates. If they disagree, the screen is wrong.
+- `totalGain` is kept for compatibility but means capital + interest; new code uses `totalWithInterest`.

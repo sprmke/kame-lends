@@ -12,6 +12,7 @@
 	import { toast } from '$lib/toast';
 	import { toLocalDateString } from '$lib/date-utils';
 	import type { Investor } from '$lib/types';
+	import { todayKey } from '$lib/dates/business-date';
 
 	interface Props {
 		investors?: Investor[];
@@ -37,7 +38,7 @@
 	let name = $state('');
 	let direction = $state<'In' | 'Out'>('In');
 	let amount = $state('');
-	let transactionDate = $state(toLocalDateString(new Date()));
+	let transactionDate = $state(todayKey());
 	let investorId = $state(preselectedInvestorId ? String(preselectedInvestorId) : '');
 	let notes = $state('');
 	let errors = $state<Record<string, string>>({});

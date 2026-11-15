@@ -28,7 +28,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 	import { isMobileShellViewport } from '$lib/composables/use-media-query.svelte';
-	import { isCompletedDebt } from '$lib/debt-calculations';
+	import { isDebtTermEnded } from '$lib/debt-calculations';
 	import { toast } from '$lib/toast';
 	import {
 		DEBT_INTERVAL_FILTER_OPTIONS,
@@ -205,7 +205,7 @@
 				}
 			}
 
-			if (!showPastDebts && isCompletedDebt(debt)) return false;
+			if (!showPastDebts && isDebtTermEnded(debt)) return false;
 
 			if (intervalFilter.length > 0 && !intervalFilter.includes(debt.interestInterval)) {
 				return false;

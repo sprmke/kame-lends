@@ -51,9 +51,11 @@ export async function waitForLoansTable(page: Page) {
   await expect(
     page.getByRole("heading", { name: "Loans", exact: true }),
   ).toBeVisible();
-  const emptyState = page.getByText("No loans found");
-  const interestHeader = page.getByRole("button", { name: /^interest$/i });
-  await expect(emptyState.or(interestHeader)).toBeVisible({ timeout: 20_000 });
+  const table = page.locator("table").first();
+  const emptyState = page.getByText(
+    /No (loans|investments|borrowed|commissioned|witnessed)/i,
+  );
+  await expect(table.or(emptyState)).toBeVisible({ timeout: 20_000 });
   return !(await emptyState.isVisible());
 }
 
