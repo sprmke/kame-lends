@@ -959,4 +959,4 @@ Closed the last structural, QA, and migration decisions.
 - **Unlinked payments:** the loan detail now shows each period's ledger-paid amount (including unlinked money) and a separate **Unlinked payments** block. Completed periods with one linked payment no longer hide the payment and receipt.
 - **Unlinked decisions:** four remain, all correctly applied by the ledger. Loans 8 and 19 are partial/overdue; loan 118 is fully paid. See the planned follow-up for the owner decision on interest-versus-principal intent.
 - **Tests:** placeholder unit test, 6 repair integration tests (including placeholder attach and re-run idempotence), 4 unlinked allocation unit tests, visual parity, money-flow, and a11y.
-- **Deploy note:** Vercel free-plan upload quota blocked the docs-only deploy; production remains on `8bd60bc`. The UI change ships with the next successful CD run.
+- **Deployed:** PR #23 (`8c1331ab`) shipped the receipt placeholders and unlinked-payment UI. The earlier docs-only deploy failed on Vercel’s free-plan upload quota, then the next CD run succeeded. Production health is `ok` with 0 pending migrations.
