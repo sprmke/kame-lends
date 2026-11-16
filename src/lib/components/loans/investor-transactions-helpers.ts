@@ -146,7 +146,10 @@ export interface InvestorMetrics {
   sortedPeriodsForMatch: InterestPeriodDisplay[];
   periodReceivedDateById: Map<number, string>;
   periodExpectedById: Map<number, number>;
+  /** Ledger-paid amount per period, including unlinked money allocated to it. */
+  periodPaidById: Map<number, number>;
   receivedPayments: ReceivedPaymentDisplay[];
+  unlinkedPayments: ReceivedPaymentDisplay[];
 }
 
 export function computeInvestorMetrics(
@@ -248,6 +251,16 @@ export function computeInvestorMetrics(
       ]),
   );
 
+  const periodPaidById = new Map<number, number>(
+    (investorLedger?.periods ?? [])
+      .filter((period) => period.id != null)
+      .map((period) => [period.id as number, centavosToPesos(period.paidC)]),
+  );
+
+  const unlinkedPayments = receivedPayments.filter(
+    (payment) => payment.interestPeriodId == null,
+  );
+
   const periodReceivedDateById =
     hasMultiplePeriods && sortedPeriodsForMatch.length > 0
       ? matchReceivedDatesToCompletedPeriods(
@@ -274,7 +287,9 @@ export function computeInvestorMetrics(
     sortedPeriodsForMatch,
     periodReceivedDateById,
     periodExpectedById,
+    periodPaidById,
     receivedPayments,
+    unlinkedPayments,
   };
 }
 

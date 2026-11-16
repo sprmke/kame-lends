@@ -951,3 +951,12 @@ Closed the last structural, QA, and migration decisions.
 - **Restore fix:** Neon adds a nonstandard `pg_attver` column option that Postgres 17 rejects. `sync-prod-to-local.sh` now strips those `ALTER` lines and applies migrations instead of an interactive schema push.
 - **Deployed:** the rounding guard and restore fix shipped in PR #22 (`8bd60bc`); CD run succeeded. Local Docker was rebuilt from the post-repair dump and now mirrors production.
 - **Remaining:** 15 receipt-less payments and 4 unlinked payments need owner review. External calendar/Telegram/push/email delivery and the physical-device pass are still open in the planned follow-up.
+
+### Receipt placeholders and unlinked UI (2026-11-16)
+
+- **Receipt-less payments:** the 15 flagged rows were kept and marked with a generated `NO RECEIPT ON FILE` PNG data URL, a note, and one audit row each (`repair:receiptless-placeholder`). Health now reports 0 receipt-less matches.
+- **Broader legacy set:** 65 other active payments also have no receipt but do not match a period amount/date, so the health check does not flag them. They were left untouched; the same placeholder category can mark them on request.
+- **Unlinked payments:** the loan detail now shows each period's ledger-paid amount (including unlinked money) and a separate **Unlinked payments** block. Completed periods with one linked payment no longer hide the payment and receipt.
+- **Unlinked decisions:** four remain, all correctly applied by the ledger. Loans 8 and 19 are partial/overdue; loan 118 is fully paid. See the planned follow-up for the owner decision on interest-versus-principal intent.
+- **Tests:** placeholder unit test, 6 repair integration tests (including placeholder attach and re-run idempotence), 4 unlinked allocation unit tests, visual parity, money-flow, and a11y.
+- **Deploy note:** Vercel free-plan upload quota blocked the docs-only deploy; production remains on `8bd60bc`. The UI change ships with the next successful CD run.

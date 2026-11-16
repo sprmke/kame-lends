@@ -123,7 +123,10 @@
 						{@const pid = typeof period.id === 'number' ? period.id : null}
 						{@const paidLinked =
 							pid != null ? sumLinkedPaymentsForPeriod(metrics.receivedPayments, pid) : 0}
-						{@const remainingDue = Math.max(0, periodInterest - paidLinked)}
+						{@const paidAllocated =
+							pid != null ? (metrics.periodPaidById.get(pid) ?? paidLinked) : paidLinked}
+						{@const unlinkedContribution = Math.max(0, paidAllocated - paidLinked)}
+						{@const remainingDue = Math.max(0, periodInterest - paidAllocated)}
 						{@const linkedRowsForPeriod =
 							pid != null
 								? [...metrics.receivedPayments]
@@ -147,11 +150,13 @@
 						{@const receivedDateLabel =
 							linkedRowsForPeriod.length > 0
 								? formatReceivedDatesCommaSeparated(linkedRowsForPeriod)
-								: periodStatus === 'Completed' || periodStatus === 'Incomplete'
-									? legacyMatch
-										? formatDate(legacyMatch)
-										: '—'
-									: '—'}
+								: unlinkedContribution > 0
+									? 'Unlinked'
+									: periodStatus === 'Completed' || periodStatus === 'Incomplete'
+										? legacyMatch
+											? formatDate(legacyMatch)
+											: '—'
+										: '—'}
 						<div class="rounded-lg border border-border/60 bg-card px-3 py-3 shadow-sm">
 							<div class="mb-1.5 flex items-center justify-between">
 								<span class="text-xs font-semibold text-muted-foreground">
@@ -194,7 +199,9 @@
 									<p
 										class={cn(
 											'font-medium text-balance tabular-nums',
-											linkedRowsForPeriod.length > 0 || legacyMatch
+											linkedRowsForPeriod.length > 0 ||
+											unlinkedContribution > 0 ||
+											legacyMatch
 												? 'text-foreground'
 												: 'text-muted-foreground'
 										)}
@@ -203,12 +210,12 @@
 									</p>
 								</div>
 							</div>
-							{#if periodStatus !== 'Completed' || linkedRowsForPeriod.length > 1}
+							{#if paidAllocated > 0 || linkedRowsForPeriod.length > 0}
 								<div class="mt-2 space-y-2 border-t border-border/50 pt-2">
-									{#if paidLinked > 0}
+									{#if paidAllocated > 0}
 										<p class="text-[11px] text-muted-foreground">
 											<span class="font-medium text-foreground tabular-nums">
-												{formatCurrency(paidLinked)}
+												{formatCurrency(paidAllocated)}
 											</span>
 											paid ·
 											<span class="font-medium text-foreground tabular-nums">
@@ -218,6 +225,11 @@
 											<span class="text-muted-foreground/90">
 												(of {formatCurrency(periodInterest)} due for this period)
 											</span>
+											{#if unlinkedContribution > 0}
+												<span class="text-muted-foreground/90">
+													· {formatCurrency(unlinkedContribution)} from unlinked payments
+												</span>
+											{/if}
 										</p>
 									{/if}
 									{#if linkedRowsForPeriod.length > 0}
@@ -312,6 +324,58 @@
 							{/if}
 						</div>
 					{/each}
+
+					{#if metrics.unlinkedPayments.length > 0}
+						<div class="mt-2 space-y-2 border-t border-border/50 pt-2">
+							<p
+								class="text-[11px] font-bold tracking-wider text-muted-foreground uppercase"
+							>
+								Unlinked payments
+							</p>
+							<p class="text-[11px] text-muted-foreground">
+								Applied to the oldest open interest first, then principal.
+							</p>
+							{#each metrics.unlinkedPayments as rp, i (typeof rp.id === 'number' ? `unlinked-${rp.id}` : `unlinked-${i}`)}
+								<div class="space-y-1.5">
+									<div
+										class="flex items-center gap-2 rounded-md border border-sky-200/70 bg-background px-2 py-1.5 text-xs dark:border-sky-900/45"
+									>
+										<div class="flex min-w-0 flex-1 justify-between gap-2">
+											<span class="truncate text-muted-foreground">
+												{formatDate(rp.receivedDate)}
+											</span>
+											<span class="shrink-0 font-semibold tabular-nums">
+												{formatCurrency(parseFloat(rp.amount) || 0)}
+											</span>
+										</div>
+										{#if canMutate && typeof rp.id === 'number' && loanId}
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												class="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+												aria-label="Remove unlinked payment"
+												disabled={deletingPaymentIds.has(rp.id)}
+												onclick={() => onDeletePayment(rp.id!)}
+											>
+												{#if deletingPaymentIds.has(rp.id)}
+													<Loader2 class="h-3.5 w-3.5 animate-spin" />
+												{:else}
+													<Trash2 class="h-3.5 w-3.5" />
+												{/if}
+											</Button>
+										{/if}
+									</div>
+									<ReceiptThumbnails receipts={rp.receipts ?? []} />
+									{#if rp.notes?.trim()}
+										<p class="whitespace-pre-wrap px-1 text-xs text-muted-foreground">
+											{formatText(rp.notes)}
+										</p>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			</Collapsible.Content>
 		</Collapsible.Root>
