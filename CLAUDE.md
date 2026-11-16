@@ -77,3 +77,13 @@ Canonical: `.agent/skills/<name>/SKILL.md` (symlinked to `.claude/skills/`). Inv
 - Bypass CD for routine prod releases (prefer merge to `main`).
 
 Index: `.claude/README.md` · Rules: `.cursor/rules/README.md`
+
+<!-- global-agent-skills -->
+
+## Global agent skills
+
+This machine has 159 shared skills in `~/.agents/skill-library` (Claude Code, Cursor,
+Codex and OpenCode all read them). Only five behaviour skills are always visible.
+For anything else, open `~/.agents/skill-library/agent-skills-index/SKILL.md`, find the
+skill that fits, then read `~/.agents/skill-library/<skill>/SKILL.md`.
+Manage with `~/.agents/bin/agent-stack.sh`. Repo skills and rules always win.
