@@ -199,6 +199,52 @@ describe("money repairs", () => {
     expect(stillThere.id).toBe(payment.id);
   });
 
+  it("marks a receipt-less payment with the labeled placeholder", async () => {
+    const [payment] = await db
+      .insert(receivedPayments)
+      .values({
+        loanInvestorId: fixture.keepAllocationId,
+        interestPeriodId: fixture.keepPeriodId,
+        amount: "5000",
+        receivedDate: new Date("2026-06-30T00:00:00.000Z"),
+      })
+      .returning();
+
+    const preview = runRepair("receiptless-placeholder");
+    expect(preview).toContain(String(payment.id));
+
+    const applied = runRepair("receiptless-placeholder", true);
+    expect(applied).toContain("attached placeholder to 1 payment(s)");
+
+    const [row] = await db
+      .select({
+        receiptImageUrl: receivedPayments.receiptImageUrl,
+        receipts: receivedPayments.receipts,
+        receiptExtractedData: receivedPayments.receiptExtractedData,
+        notes: receivedPayments.notes,
+      })
+      .from(receivedPayments)
+      .where(eq(receivedPayments.id, payment.id));
+    expect(row.receiptImageUrl).toMatch(/^data:image\/png;base64,/);
+    expect(row.receipts).toHaveLength(1);
+    expect(row.receipts?.[0]?.imageUrl).toBe(row.receiptImageUrl);
+    expect(row.receiptExtractedData).toBeNull();
+    expect(row.notes).toContain("No receipt on file");
+
+    const after = runRepair("receiptless-placeholder");
+    expect(after).toContain(
+      "receipt-less payments to mark with a placeholder: 0",
+    );
+
+    const audit = await db
+      .select({ reason: moneyAuditEvents.reason })
+      .from(moneyAuditEvents)
+      .where(
+        sql`${moneyAuditEvents.reason} = ${"repair:receiptless-placeholder"}`,
+      );
+    expect(audit.length).toBeGreaterThan(0);
+  });
+
   it("reports unlinked payments without writing", async () => {
     const [payment] = await db
       .insert(receivedPayments)

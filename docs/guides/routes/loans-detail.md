@@ -52,6 +52,12 @@ Full loan detail for any party with membership (owner, investor, borrower, witne
 
 No view access returns 404 and renders `+error.svelte` ("Loan not available"). `?edit=1` without admin rights returns 403 ("View only access") with a link to the read-only page. See [errors.md](./errors.md).
 
+## Unlinked payments and legacy receipts
+
+- A received payment with no interest period is allowed. The ledger applies it to the oldest open interest first, then principal (D-14).
+- The investor interest section now shows the ledger-paid amount per period, including unlinked money, and a separate **Unlinked payments** block with date, amount, receipts, and notes.
+- Legacy payments marked by the repair show a **NO RECEIPT ON FILE** placeholder image. It is a label, not evidence; the record and its audit trail are preserved.
+
 ## Implementation map (receipt scanning)
 
 | Piece                                  | File                                                                                 |

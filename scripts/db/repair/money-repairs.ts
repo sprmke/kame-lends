@@ -9,6 +9,8 @@
  *     --loan-id=19
  *   bun scripts/db/repair/money-repairs.ts --category=duplicate-period-dates \
  *     --source=prod
+ *   bun scripts/db/repair/money-repairs.ts --category=receiptless-placeholder \
+ *     --source=prod --apply --backup-id=...
  *
  * Rules:
  * - never runs without `--apply` and a backup id;
@@ -18,6 +20,10 @@
  */
 import { readFileSync } from "node:fs";
 import postgres from "postgres";
+import {
+  NO_RECEIPT_NOTE,
+  NO_RECEIPT_PLACEHOLDER_DATA_URL,
+} from "$lib/no-receipt-placeholder";
 
 const args = process.argv.slice(2);
 const category = args.find((a) => a.startsWith("--category="))?.split("=")[1];
@@ -53,7 +59,7 @@ function envValue(key: string): string | undefined {
 async function main() {
   if (!category) {
     console.error(
-      "Pass --category=duplicate-period-dates|zero-capital-fixed|receiptless-created-payments|unlinked-payments",
+      "Pass --category=duplicate-period-dates|zero-capital-fixed|receiptless-created-payments|receiptless-placeholder|unlinked-payments",
     );
     process.exit(1);
   }
@@ -114,6 +120,40 @@ async function audit(sql: postgres.Sql, action: string, count: number) {
 function printRows(label: string, rows: readonly Record<string, unknown>[]) {
   console.log(`${label}: ${rows.length}`);
   for (const row of rows) console.log(`  ${JSON.stringify(row)}`);
+}
+
+function loadReceiptlessRows(
+  sql: postgres.Sql,
+  scope: postgres.PendingQuery<postgres.Row[]>,
+) {
+  return sql`
+    with base as (
+      select li.id as li_id, li.amount::numeric as li_amount,
+             sum(li.amount::numeric) over (partition by li.loan_id) as loan_total
+      from loan_investors li where li.deleted_at is null
+    ),
+    expected as (
+      select ip.id as period_id, ip.due_date,
+             case when ip.interest_type = 'fixed' then ip.interest_rate::numeric
+                  else (case when b.li_amount = 0 then b.loan_total else b.li_amount end)
+                       * ip.interest_rate::numeric / 100 end as expected
+      from interest_periods ip join base b on b.li_id = ip.loan_investor_id
+    )
+    select rp.id, rp.loan_investor_id, li.investor_id, li.loan_id,
+           l.loan_name, rp.interest_period_id, rp.amount,
+           rp.received_date::date
+    from received_payments rp
+    join loan_investors li on li.id = rp.loan_investor_id
+    join loans l on l.id = li.loan_id
+    join expected e on e.period_id = rp.interest_period_id
+    where rp.deleted_at is null and li.deleted_at is null and l.deleted_at is null
+      and coalesce(jsonb_array_length(rp.receipts), 0) = 0
+      and rp.receipt_image_url is null
+      and abs(rp.amount::numeric - e.expected) <= 0.02
+      and rp.received_date::date = e.due_date::date
+      ${scope}
+    order by rp.id
+  `;
 }
 
 async function run(
@@ -240,39 +280,51 @@ async function run(
   }
 
   if (category === "receiptless-created-payments") {
-    const rows = await sql`
-      with base as (
-        select li.id as li_id, li.amount::numeric as li_amount,
-               sum(li.amount::numeric) over (partition by li.loan_id) as loan_total
-        from loan_investors li where li.deleted_at is null
-      ),
-      expected as (
-        select ip.id as period_id, ip.due_date,
-               case when ip.interest_type = 'fixed' then ip.interest_rate::numeric
-                    else (case when b.li_amount = 0 then b.loan_total else b.li_amount end)
-                         * ip.interest_rate::numeric / 100 end as expected
-        from interest_periods ip join base b on b.li_id = ip.loan_investor_id
-      )
-      select rp.id, rp.loan_investor_id, li.investor_id, li.loan_id,
-             l.loan_name, rp.interest_period_id, rp.amount,
-             rp.received_date::date
-      from received_payments rp
-      join loan_investors li on li.id = rp.loan_investor_id
-      join loans l on l.id = li.loan_id
-      join expected e on e.period_id = rp.interest_period_id
-      where rp.deleted_at is null and li.deleted_at is null and l.deleted_at is null
-        and coalesce(jsonb_array_length(rp.receipts), 0) = 0
-        and rp.receipt_image_url is null
-        and abs(rp.amount::numeric - e.expected) <= 0.02
-        and rp.received_date::date = e.due_date::date
-        ${scope}
-      order by rp.id
-    `;
+    const rows = await loadReceiptlessRows(sql, scope);
     printRows(
       "receipt-less payments that may have been created by the removed button",
       rows,
     );
-    console.log("No automatic action: confirm each row with the owner first.");
+    console.log(
+      "No automatic action: use receiptless-placeholder to mark them, or confirm each row with the owner.",
+    );
+    return;
+  }
+
+  if (category === "receiptless-placeholder") {
+    const rows = await loadReceiptlessRows(sql, scope);
+    printRows("receipt-less payments to mark with a placeholder", rows);
+    if (!apply) return;
+    const receipts = [
+      { imageUrl: NO_RECEIPT_PLACEHOLDER_DATA_URL, extractedData: null },
+    ];
+    for (const row of rows) {
+      await sql`
+        update received_payments
+        set receipt_image_url = ${NO_RECEIPT_PLACEHOLDER_DATA_URL},
+            receipt_extracted_data = null,
+            receipts = ${sql.json(receipts)},
+            notes = coalesce(nullif(trim(notes), ''), ${NO_RECEIPT_NOTE}),
+            updated_at = now()
+        where id = ${row.id}
+      `;
+      await sql`
+        insert into money_audit_events (
+          entity_type, entity_id, loan_id, action, before, after, reason
+        ) values (
+          'received_payment', ${row.id}, ${row.loan_id}, 'update',
+          ${sql.json({ receipt_image_url: null, receipts: [] })},
+          ${sql.json({
+            receipt_image_url: "placeholder",
+            receipts: [
+              { imageUrl: "no-receipt-placeholder", extractedData: null },
+            ],
+          })},
+          'repair:receiptless-placeholder'
+        )
+      `;
+    }
+    console.log(`attached placeholder to ${rows.length} payment(s)`);
     return;
   }
 
