@@ -3,11 +3,11 @@
 # READ-ONLY against the source. Writes only to local Postgres.
 #
 # Usage:
-#   bun run db:local:sync-prod              # pg_dump from DATABASE_URL_PROD
-#   bun run db:local:sync-prod --from-dump    # restore latest ~/Backups/kame-lends/*.dump
+#   bun run db:local:sync-prod --confirm-prod   # pg_dump from DATABASE_URL_PROD (egress)
+#   bun run db:local:sync-prod --from-dump      # restore latest ~/Backups/kame-lends/*.dump
 #   bun run db:local:sync-prod --from-dump /path/to/file.dump
 #
-# Dumps DATABASE_URL_PROD (Neon) read-only, restores into 127.0.0.1:5433 only.
+# Live dumps require --confirm-prod. Prefer --from-dump to avoid Neon transfer burn.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -112,9 +112,11 @@ print_counts() {
 
 FROM_DUMP=""
 DUMP_PATH=""
+CONFIRM_PROD=0
 for arg in "$@"; do
   case "$arg" in
     --from-dump) FROM_DUMP=1 ;;
+    --confirm-prod) CONFIRM_PROD=1 ;;
     --help|-h)
       sed -n '2,12p' "$0"
       exit 0
@@ -143,6 +145,9 @@ if [[ -n "$FROM_DUMP" ]]; then
   wipe_local_schema
   run_pg_restore "$DUMP_PATH"
 else
+  if [[ "$CONFIRM_PROD" -ne 1 ]]; then
+    die "Live Neon dump requires --confirm-prod (egress counts toward network transfer). Or use: bun run db:local:sync-prod --from-dump"
+  fi
   SOURCE_URL="$(load_env_var DATABASE_URL_PROD .env.local || true)"
   [[ -n "${SOURCE_URL:-}" ]] || die "Set DATABASE_URL_PROD in .env.local to the Neon connection string."
   assert_neon_source "$SOURCE_URL"

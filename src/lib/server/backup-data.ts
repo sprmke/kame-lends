@@ -19,6 +19,10 @@ import {
   loanTemplates,
   paymentMethods,
 } from "$lib/server/db/schema";
+import {
+  leanLoanInvestorNestUnderInvestor,
+  leanLoanInvestorNestUnderLoan,
+} from "$lib/server/payment-select";
 import { loadWorkspaceDataOwnerUsers } from "$lib/server/workspace-owner";
 import { eq } from "drizzle-orm";
 
@@ -63,13 +67,8 @@ export interface BackupData {
   };
 }
 
-const LOAN_INVESTOR_NESTED = {
-  with: {
-    investor: true,
-    interestPeriods: true,
-    receivedPayments: true,
-  },
-} as const;
+/** Nested allocations without receipt image blobs (Neon egress control). */
+const LOAN_INVESTOR_NESTED = leanLoanInvestorNestUnderLoan;
 
 /**
  * Fetches all lending business data visible to this user (same scope as dashboard).
@@ -106,13 +105,7 @@ export async function fetchBackupDataForUser(options: {
     db.query.investors.findMany({
       where: eq(investors.userId, userId),
       with: {
-        loanInvestors: {
-          with: {
-            loan: true,
-            interestPeriods: true,
-            receivedPayments: true,
-          },
-        },
+        loanInvestors: leanLoanInvestorNestUnderInvestor,
         transactions: {
           orderBy: (t, { desc }) => [desc(t.date)],
         },
@@ -176,13 +169,7 @@ export async function fetchBackupDataForUser(options: {
                   with: {
                     investor: {
                       with: {
-                        loanInvestors: {
-                          with: {
-                            loan: true,
-                            interestPeriods: true,
-                            receivedPayments: true,
-                          },
-                        },
+                        loanInvestors: leanLoanInvestorNestUnderInvestor,
                         transactions: {
                           orderBy: (t, { desc }) => [desc(t.date)],
                         },
@@ -275,6 +262,7 @@ export async function fetchBackupDataForUser(options: {
       "integration_jobs",
       "telegram_link_tokens",
       "group_notification_log",
+      "receipt_image_url / receipts / receipt_extracted_data (use R2 + Neon PITR)",
     ],
     data: {
       investors: allInvestors,

@@ -6,6 +6,10 @@ import { eq, inArray } from "drizzle-orm";
 import { stripDataImageUrls } from "$lib/json-safe-images";
 import { requireUserSession } from "$lib/server/request-auth";
 import { hasInvestorContactViewAccess } from "$lib/server/access-control";
+import {
+  leanLoanInvestorColumns,
+  leanReceivedPaymentColumns,
+} from "$lib/server/payment-select";
 
 async function fetchOne(id: number) {
   return db.query.investors.findFirst({
@@ -47,10 +51,11 @@ async function fetchInvestorLoans(loanIds: number[]) {
     with: {
       borrower: true,
       loanInvestors: {
+        columns: leanLoanInvestorColumns,
         with: {
           investor: true,
           interestPeriods: true,
-          receivedPayments: true,
+          receivedPayments: { columns: leanReceivedPaymentColumns },
         },
       },
     },

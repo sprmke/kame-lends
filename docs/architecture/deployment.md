@@ -137,11 +137,13 @@ bun run deploy:prod
 
 ## Related
 
-- Cron backup: `/api/cron/backup` at 06:00 UTC (`vercel.json`). Requires `Authorization: Bearer CRON_SECRET` (fail closed).
+- Cron backup: `/api/cron/backup` weekly Sunday 06:00 UTC (`vercel.json`). Workspace owner only; receipt blobs omitted. Requires `Authorization: Bearer CRON_SECRET` (fail closed).
+- Neon transfer alert: `/api/cron/neon-usage` weekly Monday 07:00 UTC. Needs Vercel env `NEON_API_KEY`, `NEON_PROJECT_ID` (optional `NEON_TRANSFER_ALERT_BYTES`).
+- If sign-in shows `Configuration` / `/api/health` reports `db: unavailable` with Neon SQLSTATE `53000`, check **network transfer** (or compute) quota first. Do not chase Auth.js config until Neon accepts connections.
 - Groups cron: `/api/cron/groups` at 00:00 UTC (membership, ACL, Telegram due reminders, job drain). Requires `CRON_SECRET`.
 - Signing reminders: `/api/cron/signing-reminders` at 00:00 UTC (08:00 Manila). Each group sends only on its configured interval. Requires `CRON_SECRET`. Hobby cron jobs cannot run more than once a day, so this is daily.
 - Decision tree: app-only bug → Vercel rollback. Bad additive SQL → fix-forward new migration. Data corruption → Neon PITR/branch or `pg_restore` onto an isolated target, never edit shipped SQL.
 - Telegram webhook: after deploy, `bun run telegram:set-webhook` (needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `PUBLIC_APP_URL`)
-- Manual Neon backup: `bun run backup:neon` (uses `DATABASE_URL_PROD` when `DATABASE_URL` is local Docker)
+- Manual Neon backup: `bun run backup:neon --confirm-prod` (uses `DATABASE_URL_PROD` when `DATABASE_URL` is local Docker; refuses without the flag because dumps burn transfer quota)
 - Restore a Neon dump with `bun run db:local:sync-prod --from-dump <file>`. Neon adds a nonstandard per-column `pg_attver` option; the script strips those `ALTER` lines before `psql`, because a raw `pg_restore` into Postgres 17 rolls back the affected tables.
 - Agent rule: `.cursor/rules/deployment.mdc`

@@ -16,11 +16,12 @@ All signed-in users get:
 - **Install app** — shown only when this browser can install. **Chromium:** after `beforeinstallprompt`, the sidebar, account sheet (`InstallAppNavButton`), and this card run the browser install dialog. **iOS:** those same controls open an in-app sheet (Share → Add to Home Screen). Hidden when already installed, and hidden in browsers that will not offer install (desktop Safari, Firefox, or Chromium before the prompt). No Settings redirect.
 - **Notifications** — per-device Web Push opt-in, reminder/activity/signing preferences, **Send test** when subscribed.
 - **Contract signing** — checkbox **Auto attach my signature on loans** (`PUT /api/signing/preferences`). Requires a saved e-signature (identity documents or linked party rows). When turned on, unsigned slots on existing loans where you are borrower, lender, or witness are signed with your saved signature; new and updated loans do the same for parties with this setting. Turning it off does not remove signatures already recorded.
-- **Data & maintenance** — sync loan due dates, fix received payments, **Download my data** (`GET /api/backup?download=true`).
+- **Data & maintenance** — **Download my data** (`GET /api/backup?download=true`). JSON omits receipt image blobs (amounts/dates remain). Rate-limited.
 
 Platform owner email only:
 
 - **Download all data** (`GET /api/backup?download=true&scope=all`).
+- Weekly email backup cron (`/api/cron/backup`) also goes to the owner only (thin payload). Full Postgres dumps: `bun run backup:neon --confirm-prod`.
 
 Party users with linked CRM rows also get **Identity documents** (valid ID and e-signature via `/api/party-profile/me`).
 
@@ -51,5 +52,6 @@ Any signed-in user. All-users backup is platform owner only.
 
 - The one-click **Fix received payments** and **Sync loan due dates** buttons are gone. Their endpoints return **410 Gone**.
 - The platform owner sees a read-only **Data health** card backed by `GET /api/admin/money-health`. It reports counts only (no PII) for unlinked payments, receipt-less payments, missing interest periods, zero-allocation loans, zero-capital fixed rows, duplicate period dates, periods or payments left on removed allocations, completed loans with a balance, debt orphan periods, and period/loan status drift against the ledger. Status drift is computed by the same rule as the daily sweep, so already-paid periods are never reported as underpaid.
-- Downloading a backup is unchanged.
+- Downloading a backup omits receipt image columns; loan detail still loads receipts when needed.
+- Automated email backup is weekly (not daily) and owner-only to limit Neon egress.
 - Signing out purges offline caches and the last-online timestamp.

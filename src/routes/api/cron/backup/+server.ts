@@ -1,8 +1,13 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { loadWorkspaceDataOwnerUsers } from "$lib/server/workspace-owner";
+import { sql } from "drizzle-orm";
 import { backupFilename } from "$lib/brand";
+import { normalizeEmail } from "$lib/loan-signing";
 import { fetchBackupDataForUser } from "$lib/server/backup-data";
+import { isCronAuthorized } from "$lib/server/cron-auth";
+import { db } from "$lib/server/db";
+import { users } from "$lib/server/db/schema";
+import { approxJsonBytes, logEgress } from "$lib/server/egress-log";
 import {
   buildBackupEmailHtml,
   buildBackupEmailSubject,
@@ -11,8 +16,8 @@ import {
   isTransactionalEmailConfigured,
   sendTransactionalEmail,
 } from "$lib/server/email/send-email";
-import { isCronAuthorized } from "$lib/server/cron-auth";
 import { publicJsonError } from "$lib/server/http-error";
+import { WORKSPACE_OWNER_EMAIL } from "$lib/server/workspace-owner";
 
 interface BackupSummary {
   totalInvestors: number;
@@ -28,122 +33,137 @@ interface BackupSummary {
 
 /**
  * GET /api/cron/backup
- * Cron endpoint for automated daily backups
- * Sends backup data via email using Resend
+ * Weekly thin backup for the workspace owner only (no receipt image blobs).
+ * Real DR remains `bun run backup:neon` / Neon PITR.
  *
- * To enable email backups:
- * 1. Sign up at https://resend.com (free tier: 3000 emails/month)
- * 2. Add RESEND_API_KEY to your environment variables
- * 3. Add BACKUP_EMAIL to specify where backups should be sent
+ * Schedule: Sunday 06:00 UTC (`0 6 * * 0` in vercel.json).
  */
 export const GET: RequestHandler = async (event) => {
   const request = event.request;
+  const started = performance.now();
   try {
     if (!isCronAuthorized(request)) {
+      console.warn(
+        JSON.stringify({
+          level: "warn",
+          kind: "cron_unauthorized",
+          path: "/api/cron/backup",
+        }),
+      );
       return json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const adminUsers = await loadWorkspaceDataOwnerUsers();
+    const ownerEmail = normalizeEmail(WORKSPACE_OWNER_EMAIL);
+    const owner = ownerEmail
+      ? await db.query.users.findFirst({
+          where: sql`lower(${users.email}) = ${ownerEmail}`,
+        })
+      : null;
 
-    if (adminUsers.length === 0) {
+    if (!owner) {
       return json({
-        message: "No workspace data owners found",
+        message: "Workspace owner user not found",
         timestamp: new Date().toISOString(),
       });
     }
 
-    const backupResults = [];
+    const payload = await fetchBackupDataForUser({
+      userId: owner.id,
+      exportedByLabel: owner.email ?? owner.id,
+    });
 
-    for (const user of adminUsers) {
-      const payload = await fetchBackupDataForUser({
-        userId: user.id,
-        exportedByLabel: user.email ?? user.id,
-      });
+    const loansForStats = payload.data.loans as Array<{
+      status: string;
+    }>;
 
-      const loansForStats = payload.data.loans as Array<{
-        status: string;
-      }>;
+    const summary: BackupSummary = {
+      totalInvestors: payload.summary.totalInvestors,
+      totalLoans: payload.summary.totalLoans,
+      totalTransactions: payload.summary.totalTransactions,
+      activeLoans: loansForStats.filter(
+        (l) => l.status === "Fully Funded" || l.status === "Partially Funded",
+      ).length,
+      completedLoans: loansForStats.filter((l) => l.status === "Completed")
+        .length,
+      overdueLoans: loansForStats.filter((l) => l.status === "Overdue").length,
+      totalLoanInvestors: payload.summary.totalLoanInvestors,
+      totalInterestPeriods: payload.summary.totalInterestPeriods,
+      totalReceivedPayments: payload.summary.totalReceivedPayments,
+    };
 
-      const summary: BackupSummary = {
-        totalInvestors: payload.summary.totalInvestors,
-        totalLoans: payload.summary.totalLoans,
-        totalTransactions: payload.summary.totalTransactions,
-        activeLoans: loansForStats.filter(
-          (l) => l.status === "Fully Funded" || l.status === "Partially Funded",
-        ).length,
-        completedLoans: loansForStats.filter((l) => l.status === "Completed")
-          .length,
-        overdueLoans: loansForStats.filter((l) => l.status === "Overdue")
-          .length,
-        totalLoanInvestors: payload.summary.totalLoanInvestors,
-        totalInterestPeriods: payload.summary.totalInterestPeriods,
-        totalReceivedPayments: payload.summary.totalReceivedPayments,
-      };
+    const backupData = {
+      ...payload,
+      type: "automated-weekly-backup",
+      summary,
+    };
 
-      const backupData = {
-        ...payload,
-        type: "automated-daily-backup",
-        summary,
-      };
+    const approxBytes = approxJsonBytes(backupData);
+    const backupEmail = process.env.BACKUP_EMAIL || owner.email;
+    const resendConfigured = isTransactionalEmailConfigured();
+    let result: Record<string, unknown>;
 
-      // Send email if Resend is configured
-      const backupEmail = process.env.BACKUP_EMAIL || user.email;
-      const resendConfigured = isTransactionalEmailConfigured();
+    if (resendConfigured && backupEmail) {
+      try {
+        const filename = backupFilename(new Date(), false);
+        const jsonContent = JSON.stringify(backupData, null, 2);
+        const base64Content = Buffer.from(jsonContent).toString("base64");
 
-      if (resendConfigured && backupEmail) {
-        try {
-          const filename = backupFilename(new Date(), false);
-          const jsonContent = JSON.stringify(backupData, null, 2);
-          const base64Content = Buffer.from(jsonContent).toString("base64");
-
-          await sendTransactionalEmail({
-            to: backupEmail,
-            subject: buildBackupEmailSubject(),
-            html: buildBackupEmailHtml(summary),
-            attachments: [
-              {
-                filename,
-                content: base64Content,
-              },
-            ],
-          });
-
-          backupResults.push({
-            userId: user.id,
-            email: backupEmail,
-            status: "sent",
-            summary,
-          });
-        } catch (emailError) {
-          console.error("Error sending backup email:", emailError);
-          backupResults.push({
-            userId: user.id,
-            email: backupEmail,
-            status: "email_failed",
-            error:
-              emailError instanceof Error
-                ? emailError.message
-                : "Unknown error",
-            summary,
-          });
-        }
-      } else {
-        backupResults.push({
-          userId: user.id,
-          email: user.email,
-          status: "skipped",
-          reason: !resendConfigured
-            ? "Resend not configured"
-            : "No backup email",
-          summary,
+        await sendTransactionalEmail({
+          to: backupEmail,
+          subject: buildBackupEmailSubject(),
+          html: buildBackupEmailHtml(summary),
+          attachments: [
+            {
+              filename,
+              content: base64Content,
+            },
+          ],
         });
+
+        result = {
+          userId: owner.id,
+          email: backupEmail,
+          status: "sent",
+          summary,
+          approxBytes,
+        };
+      } catch (emailError) {
+        console.error("Error sending backup email:", emailError);
+        result = {
+          userId: owner.id,
+          email: backupEmail,
+          status: "email_failed",
+          error:
+            emailError instanceof Error ? emailError.message : "Unknown error",
+          summary,
+          approxBytes,
+        };
       }
+    } else {
+      result = {
+        userId: owner.id,
+        email: owner.email,
+        status: "skipped",
+        reason: !resendConfigured ? "Resend not configured" : "No backup email",
+        summary,
+        approxBytes,
+      };
     }
+
+    logEgress({
+      kind: "cron_egress",
+      path: "/api/cron/backup",
+      ms: Math.round(performance.now() - started),
+      status: 200,
+      approxBytes,
+      rows: summary.totalLoans,
+      extra: { backupStatus: String(result.status) },
+    });
 
     return json({
       success: true,
       timestamp: new Date().toISOString(),
-      results: backupResults,
+      results: [result],
     });
   } catch (error) {
     console.error("Error in cron backup:", error);

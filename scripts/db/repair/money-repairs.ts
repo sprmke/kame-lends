@@ -8,11 +8,12 @@
  *   bun scripts/db/repair/money-repairs.ts --category=duplicate-period-dates \
  *     --loan-id=19
  *   bun scripts/db/repair/money-repairs.ts --category=duplicate-period-dates \
- *     --source=prod
+ *     --source=prod --confirm-prod
  *   bun scripts/db/repair/money-repairs.ts --category=receiptless-placeholder \
- *     --source=prod --apply --backup-id=...
+ *     --source=prod --confirm-prod --apply --backup-id=...
  *
  * Rules:
+ * - `--source=prod` requires `--confirm-prod` (Neon egress / write risk);
  * - never runs without `--apply` and a backup id;
  * - runs inside one transaction;
  * - writes a money_audit_events row with reason `repair:<category>`;
@@ -37,8 +38,15 @@ if (loanIdArg && (!Number.isInteger(loanId) || loanId! <= 0)) {
 const backupId = args.find((a) => a.startsWith("--backup-id="))?.split("=")[1];
 const source =
   args.find((a) => a.startsWith("--source="))?.split("=")[1] ?? "local";
+const confirmProd = args.includes("--confirm-prod");
 if (source !== "local" && source !== "prod") {
   console.error("--source must be local or prod");
+  process.exit(1);
+}
+if (source === "prod" && !confirmProd) {
+  console.error(
+    "Refusing --source=prod without --confirm-prod (Neon egress / write risk).",
+  );
   process.exit(1);
 }
 

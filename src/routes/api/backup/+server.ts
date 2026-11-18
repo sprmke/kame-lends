@@ -8,14 +8,17 @@ import {
   type BackupData,
 } from "$lib/server/backup-data";
 import { backupScopeAllAllowed } from "$lib/server/backup-access";
+import { approxJsonBytes, logEgress } from "$lib/server/egress-log";
 
 /**
  * GET /api/backup
  * Exports business data for the signed-in user, or all data owners when
  * scope=all and the caller is the platform owner email.
+ * Receipt image blobs are omitted (see backup-data); use R2 + Neon PITR for images.
  */
 export const GET: RequestHandler = async (event) => {
   const request = event.request;
+  const started = performance.now();
   try {
     const session = await getSession(event);
     if (!session?.user?.id) {
@@ -42,6 +45,16 @@ export const GET: RequestHandler = async (event) => {
             exportedByLabel:
               session.user.email || session.user.name || session.user.id,
           });
+
+    const approxBytes = approxJsonBytes(backupData);
+    logEgress({
+      kind: "api_egress",
+      path: "/api/backup",
+      ms: Math.round(performance.now() - started),
+      status: 200,
+      approxBytes,
+      extra: { scopeAll, download },
+    });
 
     if (download) {
       const filename = scopeAll
