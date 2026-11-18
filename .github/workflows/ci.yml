@@ -38,7 +38,8 @@ jobs:
         run: node scripts/pwa/check-precache-budget.mjs
       - name: Dependency audit
         # braces@3.0.3 via lint-staged has no patched release (GHSA-vfj7-8cjw-p6xm).
-        run: bun audit --audit-level=high --ignore GHSA-vfj7-8cjw-p6xm
+        # @sveltejs/kit 2.x has no patch for GHSA-3r8g-jcqq-3p5j (fixed in 3.1.1 only).
+        run: bun audit --audit-level=high --ignore GHSA-vfj7-8cjw-p6xm --ignore GHSA-3r8g-jcqq-3p5j
 
   lighthouse:
     name: Lighthouse (non-blocking)

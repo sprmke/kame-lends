@@ -28,7 +28,7 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "ci:quality": "bun run check && bun run check:ai-gateway && bun run format:check && bun run lint:js && bun run test:unit && bun run test:coverage && bun run check:ai-tooling-sync && bun run build && node scripts/pwa/check-precache-budget.mjs && CI=true bun run test:e2e:pwa",
-    "ci:pre-push": "bun run check && bun run check:ai-gateway && bun run format:check && bun run lint:js && bun run test:unit && bun run check:ai-tooling-sync && bun audit --audit-level=high --ignore GHSA-vfj7-8cjw-p6xm",
+    "ci:pre-push": "bun run check && bun run check:ai-gateway && bun run format:check && bun run lint:js && bun run test:unit && bun run check:ai-tooling-sync && bun audit --audit-level=high --ignore GHSA-vfj7-8cjw-p6xm --ignore GHSA-3r8g-jcqq-3p5j",
     "pwa:capture-screenshots": "bun scripts/pwa/capture-screenshots.ts",
     "pwa:generate-vapid-keys": "bun scripts/pwa/generate-vapid-keys.ts",
     "test:e2e:pwa": "playwright test --config playwright.pwa.config.ts",
