@@ -8,9 +8,15 @@ import {
   type RateLimitDecision,
 } from "$lib/server/rate-limit";
 
-/** Durable limiter (Postgres). Fail open if the table is missing so deploys before migrate still serve. */
+function failOpenOnStoreError(): boolean {
+  return process.env.VERCEL_ENV !== "production";
+}
+
+/** Durable limiter (Postgres). Production fails closed if the store errors. */
 export async function consumeRateLimit(
   key: string,
+  limit: number = RATE_LIMIT_MAX,
+  windowMs: number = RATE_LIMIT_WINDOW_MS,
 ): Promise<RateLimitDecision> {
   const now = Date.now();
   try {
@@ -28,12 +34,7 @@ export async function consumeRateLimit(
           windowStart: existing[0].windowStart.getTime(),
         }
       : null;
-    const next = nextRateLimitState(
-      current,
-      now,
-      RATE_LIMIT_MAX,
-      RATE_LIMIT_WINDOW_MS,
-    );
+    const next = nextRateLimitState(current, now, limit, windowMs);
     await db
       .insert(rateLimitBuckets)
       .values({
@@ -51,10 +52,18 @@ export async function consumeRateLimit(
     return next;
   } catch (error) {
     console.error("[rate-limit] store unavailable", error);
+    if (failOpenOnStoreError()) {
+      return {
+        allowed: true,
+        retryAfterSec: 0,
+        count: 0,
+        windowStart: now,
+      };
+    }
     return {
-      allowed: true,
-      retryAfterSec: 0,
-      count: 0,
+      allowed: false,
+      retryAfterSec: 60,
+      count: limit,
       windowStart: now,
     };
   }

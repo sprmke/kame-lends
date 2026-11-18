@@ -1,11 +1,31 @@
 #!/usr/bin/env bash
 # Read-only Neon Postgres backup (custom format). Writes OUTSIDE the repo.
 # Usage:
-#   bun run backup:neon
+#   bun run backup:neon --confirm-prod
 #     Uses DATABASE_URL_PROD from .env.local (or DATABASE_URL when it points at Neon).
-#   DATABASE_URL='postgresql://...@....neon.tech/...' bun run backup:neon
+#   DATABASE_URL='postgresql://...@....neon.tech/...' bun run backup:neon --confirm-prod
 #     One-off backup (e.g. legacy Pawn Tracker us-east-1 before project delete).
+#
+# --confirm-prod is required. Full dumps count toward Neon public network transfer.
 set -euo pipefail
+
+CONFIRM_PROD=0
+for arg in "$@"; do
+  case "$arg" in
+    --confirm-prod) CONFIRM_PROD=1 ;;
+    -h|--help)
+      echo "Usage: bun run backup:neon --confirm-prod"
+      exit 0
+      ;;
+  esac
+done
+
+if [[ "$CONFIRM_PROD" -ne 1 ]]; then
+  echo "ERROR: Refusing Neon dump without --confirm-prod (egress counts toward network transfer)."
+  echo "  bun run backup:neon --confirm-prod"
+  echo "Prefer local Docker + on-disk dumps for QA when possible."
+  exit 1
+fi
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"

@@ -12,7 +12,11 @@ import {
   requiresOriginCheck,
 } from "$lib/server/api-access";
 import { warnMissingProductionEnv } from "$lib/server/env-production";
-import { isRateLimitedApiPath, rateLimitKey } from "$lib/server/rate-limit";
+import {
+  isRateLimitedApiPath,
+  rateLimitKey,
+  rateLimitMaxForPath,
+} from "$lib/server/rate-limit";
 import { consumeRateLimit } from "$lib/server/rate-limit-store";
 import {
   applyApiCacheHeaders,
@@ -95,7 +99,10 @@ const apiGuardAndHeaders: Handle = async ({ event, resolve }) => {
     if (isRateLimitedApiPath(pathname)) {
       const identity =
         event.locals.session?.user?.id ?? event.getClientAddress();
-      const decision = await consumeRateLimit(rateLimitKey(pathname, identity));
+      const decision = await consumeRateLimit(
+        rateLimitKey(pathname, identity),
+        rateLimitMaxForPath(pathname),
+      );
       if (!decision.allowed) {
         return json(
           { error: "Too many requests" },

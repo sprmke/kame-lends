@@ -26,6 +26,10 @@ import {
   transactions,
   witnesses,
 } from "$lib/server/db/schema";
+import {
+  leanLoanInvestorColumns,
+  leanReceivedPaymentColumns,
+} from "$lib/server/payment-select";
 
 export type LoanCacheMode = "full" | "list";
 export type InvestorCacheMode = "simple" | "list" | "full";
@@ -96,10 +100,11 @@ const partyContactColumns = {
 const fullRelations = {
   borrower: { columns: { ...partyContactColumns, notes: true } },
   loanInvestors: {
+    columns: leanLoanInvestorColumns,
     with: {
       investor: { columns: partyContactColumns },
       interestPeriods: true,
-      receivedPayments: true,
+      receivedPayments: { columns: leanReceivedPaymentColumns },
     },
   },
   loanWitnesses: {

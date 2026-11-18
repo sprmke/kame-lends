@@ -2,10 +2,18 @@
 title: "To plan"
 status: active
 tags: [planning]
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 **Status legend:** ❌ cancelled / won't do · ✅ done · 🧪 for testing · 📋 planned (plan doc written) · 🚧 in progress · 🔵 pending / open
+
+===
+
+🧪 Neon transfer cost guards
+
+Cut Neon network-transfer burn (daily fat backup cron, receipt-blob SELECTs) and add rate-limit / usage alerts so a quiet few-user app cannot suspend the database again.
+
+→ **For testing:** [`../for-testing/neon-transfer-cost-guards.md`](../for-testing/neon-transfer-cost-guards.md)
 
 ===
 

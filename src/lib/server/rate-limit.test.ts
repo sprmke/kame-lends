@@ -3,6 +3,10 @@ import {
   isRateLimitedApiPath,
   nextRateLimitState,
   rateLimitKey,
+  rateLimitMaxForPath,
+  RATE_LIMIT_BACKUP_MAX,
+  RATE_LIMIT_HEALTH_MAX,
+  RATE_LIMIT_MAX,
 } from "./rate-limit";
 
 describe("rate-limit", () => {
@@ -21,9 +25,16 @@ describe("rate-limit", () => {
 
   it("keys high-cost routes", () => {
     expect(isRateLimitedApiPath("/api/sign/abc")).toBe(true);
+    expect(isRateLimitedApiPath("/api/health")).toBe(true);
     expect(isRateLimitedApiPath("/api/loans")).toBe(false);
     expect(rateLimitKey("/api/sign/abc", "1.2.3.4")).toBe(
       "/api/sign/abc:1.2.3.4",
     );
+  });
+
+  it("uses tighter limits for health and backup", () => {
+    expect(rateLimitMaxForPath("/api/health")).toBe(RATE_LIMIT_HEALTH_MAX);
+    expect(rateLimitMaxForPath("/api/backup")).toBe(RATE_LIMIT_BACKUP_MAX);
+    expect(rateLimitMaxForPath("/api/sign/x")).toBe(RATE_LIMIT_MAX);
   });
 });

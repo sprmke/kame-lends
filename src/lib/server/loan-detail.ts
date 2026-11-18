@@ -19,6 +19,10 @@ import {
   hasPartyMembershipForCommission,
   stripLegacyCommissionFields,
 } from "$lib/server/loan-user-commission";
+import {
+  loanInvestorColumnsWithReceipts,
+  receivedPaymentColumnsWithReceipts,
+} from "$lib/server/payment-select";
 
 const partyColumns = {
   id: true,
@@ -55,10 +59,14 @@ export async function loadLoanDetail(
         },
         loanInvestors: {
           where: isNull(loanInvestors.deletedAt),
+          columns: loanInvestorColumnsWithReceipts,
           with: {
             investor: { columns: { ...partyColumns, investorUserId: true } },
             interestPeriods: true,
-            receivedPayments: { where: isNull(receivedPayments.deletedAt) },
+            receivedPayments: {
+              where: isNull(receivedPayments.deletedAt),
+              columns: receivedPaymentColumnsWithReceipts,
+            },
           },
         },
         loanWitnesses: {

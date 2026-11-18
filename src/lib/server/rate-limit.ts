@@ -43,6 +43,7 @@ export function rateLimitKey(pathname: string, identity: string): string {
 }
 
 const HIGH_COST_PREFIXES = [
+  "/api/health",
   "/api/sign",
   "/api/ai/receipt-extraction",
   "/api/backup",
@@ -59,3 +60,17 @@ export function isRateLimitedApiPath(pathname: string): boolean {
 
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 export const RATE_LIMIT_MAX = 30;
+/** Public readiness probe: allow CD smoke, block scrapers waking Neon. */
+export const RATE_LIMIT_HEALTH_MAX = 60;
+/** Full JSON backup download: expensive Neon read. */
+export const RATE_LIMIT_BACKUP_MAX = 5;
+
+export function rateLimitMaxForPath(pathname: string): number {
+  if (pathname === "/api/health" || pathname.startsWith("/api/health/")) {
+    return RATE_LIMIT_HEALTH_MAX;
+  }
+  if (pathname === "/api/backup" || pathname.startsWith("/api/backup/")) {
+    return RATE_LIMIT_BACKUP_MAX;
+  }
+  return RATE_LIMIT_MAX;
+}
