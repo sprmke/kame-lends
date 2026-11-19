@@ -48,7 +48,7 @@ Phone layouts use a native-style shell instead of a hamburger drawer:
 
 The logo is a geometric top-down sea turtle (_kame_ 亀 = turtle) with a hex-scute shell on an orange gradient tile (`#ffbf73` → `#fb9f44` → `#e4702a`). Geometry lives once in `src/lib/brand-mark.ts`:
 
-- **In app:** `BrandMark` (turtle in `currentColor`) → `BrandIcon` (solid gradient tile, or `glass` on the mobile brand hero) → `Logo` (icon + `APP_NAME` wordmark). Used by the sidebar, `MobileTopBar`, landing nav/footer, sign-in, and the error page.
+- **In app:** `BrandMark` (turtle in `currentColor`) → `BrandIcon` (solid gradient tile, or `glass` on the mobile brand hero) → `Logo` (icon + `APP_NAME` wordmark). Used by the sidebar, `MobileTopBar`, landing nav/footer, sign-in, and the error page. `--primary-foreground` is near-white so the mark and primary buttons stay light on orange; use `--primary-ink` / `--primary-strong` for dark ink on light surfaces.
 - **Static assets:** `bun run brand:assets` (`scripts/brand/generate-brand-assets.ts`, rasterized with Playwright Chromium) regenerates `static/favicon.svg` / `favicon.ico` (16/32/48), `apple-touch-icon.png` (180, full-bleed), `icon-192.png` / `icon-512.png` (manifest `any`), `icon-maskable-512.png` (manifest `maskable`), `og-image.png` (1200×630 social card), and `static/brand/` masters (`kame-lends-icon.svg`, `kame-lends-mark.svg`, `kame-lends-icon-1024.png`). Re-run after any geometry or color change; do not hand-edit the outputs.
 - **Head:** icon links + `application-name` / `apple-mobile-web-app-title` in `src/app.html`; `description`, Open Graph, and Twitter card tags (`APP_DESCRIPTION` from `src/lib/brand.ts`, absolute `og:image` from the request origin) in `src/routes/+layout.svelte`.
 
