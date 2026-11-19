@@ -57,9 +57,20 @@ const listRelations = {
       investor: {
         columns: { id: true, name: true, investorUserId: true, email: true },
       },
+      // Period id is required so linked payments attribute correctly in the ledger.
+      // Do not select deletedAt: production interest_periods has no deleted_at column yet.
       interestPeriods: {
-        columns: { interestRate: true, interestType: true, dueDate: true },
+        columns: {
+          id: true,
+          interestRate: true,
+          interestType: true,
+          dueDate: true,
+        },
       },
+      // Lean payments (no receipt blobs). finalizeLoansForViewer re-derives
+      // status and list summary interest from the ledger; without these rows
+      // every loan looks unpaid (interest earned 0, completed 0).
+      receivedPayments: { columns: leanReceivedPaymentColumns },
     },
   },
   signingInvitations: {

@@ -10,6 +10,7 @@ import {
   computePeakConcurrentPrincipal,
   computePortfolioCapitalStats,
 } from "$lib/loan-list-summary";
+import { buildLoanLedger } from "$lib/money/ledger";
 import type { LoanWithInvestors } from "$lib/types";
 
 function loanFixture(input: {
@@ -329,6 +330,83 @@ describe("computeCurrentCapital", () => {
 });
 
 describe("computeLoanListSummaryStats", () => {
+  it("keeps earned interest and completed count when list payload includes lean payments", () => {
+    // Mirrors /loans listRelations after finalizeLoansForViewer: status comes
+    // from the ledger, which needs period ids + receivedPayments (no receipts).
+    const listLoan = {
+      id: 1,
+      loanName: "list-shaped",
+      status: "Fully Funded",
+      statusOverride: null,
+      dueDate: new Date("2026-10-20"),
+      updatedAt: new Date("2026-10-20"),
+      loanInvestors: [
+        {
+          id: 1,
+          investorId: 1,
+          amount: "100000",
+          interestRate: "10",
+          interestType: "Percentage",
+          sentDate: new Date("2026-09-01"),
+          isPaid: true,
+          hasMultipleInterest: true,
+          interestPeriods: [
+            {
+              id: 101,
+              interestRate: "10",
+              interestType: "Percentage",
+              dueDate: new Date("2026-10-15"),
+              deletedAt: null,
+            },
+          ],
+          receivedPayments: [
+            {
+              id: 1,
+              loanInvestorId: 1,
+              interestPeriodId: 101,
+              amount: "10000",
+              receivedDate: new Date("2026-10-10"),
+              deletedAt: null,
+            },
+            {
+              id: 2,
+              loanInvestorId: 1,
+              interestPeriodId: null,
+              amount: "100000",
+              receivedDate: new Date("2026-10-18"),
+              deletedAt: null,
+            },
+          ],
+        },
+      ],
+    } as unknown as LoanWithInvestors;
+
+    const withoutPayments = {
+      ...listLoan,
+      loanInvestors: listLoan.loanInvestors.map((row) => ({
+        ...row,
+        receivedPayments: undefined,
+      })),
+    } as unknown as LoanWithInvestors;
+
+    const derived = {
+      ...listLoan,
+      status: buildLoanLedger(listLoan).status,
+    } as LoanWithInvestors;
+    const broken = {
+      ...withoutPayments,
+      status: buildLoanLedger(withoutPayments).status,
+    } as LoanWithInvestors;
+
+    const ok = computeLoanListSummaryStats([derived]);
+    const zeroed = computeLoanListSummaryStats([broken]);
+
+    expect(ok.interestEarned).toBe(10000);
+    expect(ok.completedCount).toBe(1);
+    expect(zeroed.interestEarned).toBe(0);
+    expect(zeroed.completedCount).toBe(0);
+  });
+
   it("totals interest on all loans in range and splits earned on completed", () => {
     const stats = computeLoanListSummaryStats(
       [
