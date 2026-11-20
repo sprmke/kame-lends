@@ -202,7 +202,9 @@
 			includeBorrowers = initialContact.partyType === 'borrower';
 			selectedContactKeys = [contactKey(initialContact)];
 			name = suggestedNameFor([initialContact]);
-			selectedLoanIds = [...new Set(initialContact.loanIds)];
+			selectedLoanIds = [...new Set(initialContact.loanIds)].filter((id) =>
+				selectableLoanIds.has(id)
+			);
 			addFutureRule = true;
 		}
 		color = nextGroupColor(usedColorKeys);
@@ -256,6 +258,13 @@
 	);
 
 	const contactLoanIds = $derived(new Set(resolveWizardContactLoanIds(selectedContacts)));
+	const selectableLoanIds = $derived(
+		new Set(
+			ownedLoans
+				.filter((loan) => showCompleted || loan.status !== 'completed')
+				.map((loan) => loan.id)
+		)
+	);
 
 	const filteredLoans = $derived.by(() => {
 		if (step !== 2) return [];
@@ -287,7 +296,9 @@
 		if (!name.trim() || name.trim() === previousSuggested) {
 			if (nextSuggested) name = nextSuggested;
 		}
-		selectedLoanIds = resolveWizardContactLoanIds(next);
+		selectedLoanIds = resolveWizardContactLoanIds(next).filter((id) =>
+			selectableLoanIds.has(id)
+		);
 		showAllLoans = false;
 	}
 

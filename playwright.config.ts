@@ -115,6 +115,15 @@ export default defineConfig({
       },
     },
     {
+      name: "qa-groups",
+      testMatch: /qa-groups\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+      },
+    },
+    {
       name: "qa-loan-form",
       testMatch: /qa-loan-form\.spec\.ts/,
       dependencies: ["setup"],

@@ -262,7 +262,7 @@
 		>
 			{step === 'preview' ? 'Back' : 'Cancel'}
 		</Button>
-		{#if availableLoans.length > 0}
+		{#if loanChoices.length > 0}
 			<Button
 				type="button"
 				class="touch-target h-12 w-full"

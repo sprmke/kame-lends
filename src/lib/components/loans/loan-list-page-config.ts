@@ -160,7 +160,7 @@ export const LOAN_LIST_PAGE_VARIANTS: Record<
     groupScopeNoun: "loans",
     groupShowManageLink: false,
     embedded: true,
-    defaultDatePreset: DEFAULT_DATE_PRESET,
+    defaultDatePreset: "all-time",
     listInvalidate: "app:groups",
     hideGroupBadges: true,
     showAddToGroup: false,
