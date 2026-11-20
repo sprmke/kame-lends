@@ -11,6 +11,8 @@ import {
 import { invalidateInvestorData } from "$lib/server/cache-invalidation";
 import {
   PartyEmailConflictError,
+  deleteUnusedPartyUser,
+  PartyValidationError,
   upsertWorkspacePartyContact,
 } from "$lib/server/party-directory";
 import { hasInvestorContactViewAccess } from "$lib/server/access-control";
@@ -103,6 +105,9 @@ export const PUT: RequestHandler = async (event) => {
     });
     return json(saved);
   } catch (error) {
+    if (error instanceof PartyValidationError) {
+      return json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof PartyEmailConflictError) {
       return json({ error: error.message }, { status: 409 });
     }
@@ -185,6 +190,7 @@ export const DELETE: RequestHandler = async (event) => {
         ),
       );
 
+    await deleteUnusedPartyUser(investor.investorUserId);
     invalidateInvestorData();
     return json({ success: true });
   } catch (error) {

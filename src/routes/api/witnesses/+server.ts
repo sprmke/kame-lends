@@ -8,6 +8,7 @@ import {
 } from "$lib/valid-id-document";
 import {
   PartyEmailConflictError,
+  PartyValidationError,
   upsertWorkspacePartyContact,
 } from "$lib/server/party-directory";
 import { workspaceAdminForbidden } from "$lib/server/workspace-admin";
@@ -99,6 +100,9 @@ export const POST: RequestHandler = async (event) => {
 
     return json(saved, { status: 201 });
   } catch (error) {
+    if (error instanceof PartyValidationError) {
+      return json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof PartyEmailConflictError) {
       return json({ error: error.message }, { status: 409 });
     }

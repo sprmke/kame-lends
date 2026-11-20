@@ -70,6 +70,13 @@
 	const hasScheduledPeriods = $derived(
 		loan.loanInvestors.some((allocation) => (allocation.interestPeriods?.length ?? 0) > 0)
 	);
+	const canViewAllInvestors = $derived(access ? access.canAdminEdit : !readOnly);
+	const visibleInvestorGroups = $derived.by(() => {
+		if (canViewAllInvestors) return investorGroups;
+		const linkedInvestorId = access?.linkedInvestorId ?? null;
+		if (linkedInvestorId == null) return [];
+		return investorGroups.filter((group) => group.investor.id === linkedInvestorId);
+	});
 	const myLoanWitnessId = $derived(access?.linkedLoanWitnessId ?? null);
 	const isGroupViewer = $derived(Boolean(access?.isGroupViewer));
 	const effectiveReadOnly = $derived(readOnly || isGroupViewer);
@@ -320,11 +327,12 @@
 	</Card.Root>
 
 	<LoanInvestorsSection
-		investorsWithTransactions={investorGroups}
+		investorsWithTransactions={visibleInvestorGroups}
 		loanId={loanId ?? loan.id}
 		{onRefresh}
 		readOnly={effectiveReadOnly}
 		{editableInvestorIds}
+		emptyMessage={canViewAllInvestors ? undefined : 'Investor details are private'}
 	/>
 
 	<LoanWitnessesSection

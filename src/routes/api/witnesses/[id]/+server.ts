@@ -11,6 +11,8 @@ import {
 } from "$lib/valid-id-document";
 import {
   PartyEmailConflictError,
+  deleteUnusedPartyUser,
+  PartyValidationError,
   upsertWorkspacePartyContact,
 } from "$lib/server/party-directory";
 import { hasWitnessContactViewAccess } from "$lib/server/access-control";
@@ -144,6 +146,9 @@ export const PUT: RequestHandler = async (event) => {
     invalidateWitnessData();
     return json(updated);
   } catch (error) {
+    if (error instanceof PartyValidationError) {
+      return json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof PartyEmailConflictError) {
       return json({ error: error.message }, { status: 409 });
     }
@@ -186,6 +191,7 @@ export const DELETE: RequestHandler = async (event) => {
         and(eq(witnesses.id, witnessId), eq(witnesses.userId, session.user.id)),
       );
 
+    await deleteUnusedPartyUser(witness.witnessUserId);
     invalidateWitnessData();
     return json({ success: true });
   } catch (error) {

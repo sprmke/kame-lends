@@ -11,6 +11,8 @@ import {
 import { invalidateBorrowerData } from "$lib/server/cache-invalidation";
 import {
   PartyEmailConflictError,
+  deleteUnusedPartyUser,
+  PartyValidationError,
   upsertWorkspacePartyContact,
 } from "$lib/server/party-directory";
 import { borrowerDetailLoansWith } from "$lib/server/borrower-detail-query";
@@ -134,6 +136,9 @@ export const PUT: RequestHandler = async (event) => {
     invalidateBorrowerData();
     return json(updatedBorrower[0]);
   } catch (error) {
+    if (error instanceof PartyValidationError) {
+      return json({ error: error.message }, { status: 400 });
+    }
     if (error instanceof PartyEmailConflictError) {
       return json({ error: error.message }, { status: 409 });
     }
@@ -202,6 +207,7 @@ export const DELETE: RequestHandler = async (event) => {
         ),
       );
 
+    await deleteUnusedPartyUser(borrower.borrowerUserId);
     invalidateBorrowerData();
     return json({ success: true });
   } catch (error) {

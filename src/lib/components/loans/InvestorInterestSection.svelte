@@ -140,12 +140,14 @@
 										)
 								: []}
 						{@const canComplete =
+							canMutate &&
 							pid != null &&
 							(periodStatus === 'Pending' ||
 								periodStatus === 'Overdue' ||
 								periodStatus === 'Incomplete') &&
 							!!loanId}
 						{@const canEditPayment =
+							canMutate &&
 							pid != null && periodStatus === 'Completed' && !!loanId}
 						{@const legacyMatch =
 							pid != null ? metrics.periodReceivedDateById.get(pid) : undefined}

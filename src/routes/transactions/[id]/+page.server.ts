@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+import { SHOW_TRANSACTIONS_UI } from "$lib/feature-flags";
 import type { PageServerLoad } from "./$types";
 import { db } from "$lib/server/db";
 import { transactions } from "$lib/server/db/schema";
@@ -14,6 +15,7 @@ async function fetchOne(id: number, userId: string) {
 }
 
 export const load: PageServerLoad = async (event) => {
+  if (!SHOW_TRANSACTIONS_UI) throw error(404, "Not found");
   const session = requireUserSession(event);
   const id = Number(event.params.id);
   if (Number.isNaN(id)) throw error(400, "Invalid id");

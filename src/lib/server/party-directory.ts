@@ -1,6 +1,6 @@
 import { and, eq, ne, or, sql } from "drizzle-orm";
 import { db } from "$lib/server/db";
-import { borrowers, investors, witnesses } from "$lib/server/db/schema";
+import { borrowers, investors, users, witnesses } from "$lib/server/db/schema";
 import { normalizeEmail } from "$lib/loan-signing";
 import { normalizePartyName } from "$lib/party-name";
 import {
@@ -12,6 +12,10 @@ import {
   invalidateInvestorData,
   invalidateWitnessData,
 } from "$lib/server/cache-invalidation";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export class PartyValidationError extends Error {}
 
 export class PartyEmailConflictError extends Error {
   readonly role: PartyUserRole;
@@ -161,13 +165,43 @@ function anchorFromNameMatches(
  * Save one contact and make that person available as investor, borrower, and witness.
  * The same email is one Auth.js user, including a later Google sign-in.
  */
+export async function deleteUnusedPartyUser(
+  partyUserId: string | null | undefined,
+): Promise<void> {
+  if (!partyUserId) return;
+  const [investorRow, borrowerRow, witnessRow] = await Promise.all([
+    db.query.investors.findFirst({
+      where: eq(investors.investorUserId, partyUserId),
+      columns: { id: true },
+    }),
+    db.query.borrowers.findFirst({
+      where: eq(borrowers.borrowerUserId, partyUserId),
+      columns: { id: true },
+    }),
+    db.query.witnesses.findFirst({
+      where: eq(witnesses.witnessUserId, partyUserId),
+      columns: { id: true },
+    }),
+  ]);
+  if (investorRow || borrowerRow || witnessRow) return;
+  await db.delete(users).where(eq(users.id, partyUserId));
+}
+
 export async function upsertWorkspacePartyContact(
   input: UpsertInput,
 ): Promise<PartyRow> {
   const email = normalizeEmail(input.email);
   const name = input.name.trim();
-  if (!email) throw new Error("Email is required");
-  if (name.length < 2) throw new Error("Name is required (min 2 characters)");
+  if (!email) throw new PartyValidationError("Email is required");
+  if (!EMAIL_PATTERN.test(email)) {
+    throw new PartyValidationError("Enter a valid email address");
+  }
+  if (name.length < 2) {
+    throw new PartyValidationError("Name is required (min 2 characters)");
+  }
+  if (name.length > 120) {
+    throw new PartyValidationError("Name is too long (max 120 characters)");
+  }
 
   const partyUser = await findOrCreatePartyUser({
     email,

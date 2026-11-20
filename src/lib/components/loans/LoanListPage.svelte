@@ -118,7 +118,7 @@
 	const canManage = $derived(data.canManage !== false);
 	/** Group hub members stay view-only. Loan scope tabs still allow bulk select. */
 	const canBulkSelect = $derived(
-		variant.showBulkActions && SHOW_GROUPS_UI && (scope !== 'group' || canManage)
+		variant.showBulkActions && SHOW_GROUPS_UI && canManage
 	);
 	const emptyIcon = $derived(variant.emptyIcon);
 
