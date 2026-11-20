@@ -50,7 +50,7 @@
 				</p>
 			</div>
 			<div class="dashboard-metric-cell p-2">
-				<p class="mb-1 text-[10px] text-muted-foreground">Rate</p>
+				<p class="mb-1 text-[10px] text-muted-foreground">Total rate</p>
 				<p class="text-xs font-semibold tabular-nums">{formatPercentage(avgRate)}</p>
 			</div>
 		</div>

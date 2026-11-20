@@ -66,6 +66,37 @@ describe("loan form payload", () => {
     expect(rows[0].interestPeriods?.[1].id).toBeUndefined();
   });
 
+  it("accepts multiple periods without a separate transaction interest value", () => {
+    const item = allocation({
+      hasMultipleInterest: true,
+      transactions: [
+        {
+          ...allocation().transactions[0],
+          interestRate: "",
+        },
+      ],
+      interestPeriods: [
+        {
+          id: "21",
+          dueDate: "2027-01-31",
+          interestRate: "2",
+          interestAmount: "",
+          interestType: "rate",
+        },
+      ],
+    });
+    const errors = validateLoanForm({
+      loanName: "Multi",
+      dueDate: "2027-03-31",
+      borrowerId: "1",
+      selectedInvestors: [item],
+    });
+    expect(errors.investors).toBeUndefined();
+
+    const rows = buildInvestorPayload([item]);
+    expect(rows[0].interestRate).toBe("0");
+    expect(rows[0].hasMultipleInterest).toBe(true);
+  });
   it("never converts a zero-capital agent rate to a fixed amount (D-1)", () => {
     const rows = buildInvestorPayload([
       allocation({

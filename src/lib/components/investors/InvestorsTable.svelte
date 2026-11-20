@@ -118,7 +118,7 @@
 		{ field: 'name', label: 'Name' },
 		{ field: 'email', label: 'Email', className: 'hidden md:table-cell' },
 		{ field: 'totalCapital', label: 'Capital', align: 'right' },
-		{ field: 'avgRate', label: 'Rate', className: 'hidden lg:table-cell', align: 'right' },
+		{ field: 'avgRate', label: 'Total rate', className: 'hidden lg:table-cell', align: 'right' },
 		{ field: 'totalInterest', label: 'Interest', className: 'hidden xl:table-cell', align: 'right' },
 		{ field: 'totalAmount', label: 'Amount', align: 'right' }
 	];

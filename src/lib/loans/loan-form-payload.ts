@@ -83,8 +83,8 @@ export function buildInvestorPayload(
         amount: transaction.amount,
         interestRate:
           interestType === "fixed"
-            ? transaction.interestAmount
-            : transaction.interestRate,
+            ? transaction.interestAmount || "0"
+            : transaction.interestRate || "0",
         interestType,
         sentDate: transaction.sentDate,
         isPaid: transaction.isPaid,
@@ -169,12 +169,20 @@ export function validateLoanForm(
         next.investors = "Each transaction needs a valid principal amount";
         break;
       }
-      if (transaction.interestType === "rate" && !interestRateText) {
+      if (
+        !si.hasMultipleInterest &&
+        transaction.interestType === "rate" &&
+        !interestRateText
+      ) {
         next.investors =
           "Each transaction needs an interest rate or fixed amount";
         break;
       }
-      if (transaction.interestType === "fixed" && !interestAmountText) {
+      if (
+        !si.hasMultipleInterest &&
+        transaction.interestType === "fixed" &&
+        !interestAmountText
+      ) {
         next.investors =
           "Each transaction needs an interest rate or fixed amount";
         break;

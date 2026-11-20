@@ -564,7 +564,7 @@ const LoanCard = ({
                   </Text>
                 </View>
                 <View style={styles.financialCell}>
-                  <Text style={styles.financialCellLabel}>Avg Rate</Text>
+                  <Text style={styles.financialCellLabel}>Total rate</Text>
                   <Text style={styles.financialCellValueSmall}>
                     {formatRateForPDF(stats.avgRate)}
                   </Text>
@@ -730,7 +730,7 @@ const LoanCard = ({
                       </Text>
                     </View>
                     <View style={styles.investorDetailItem}>
-                      <Text style={styles.investorDetailLabel}>Rate</Text>
+                      <Text style={styles.investorDetailLabel}>Total rate</Text>
                       <Text style={styles.investorDetailValue}>
                         {isFixed
                           ? formatTextForPDF("Fixed")

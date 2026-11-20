@@ -52,6 +52,7 @@
 	let showCommissionModal = $state(false);
 	let quickPaymentKind = $state<LoanQuickPaymentKind | null>(null);
 	let showDuplicateModal = $state(false);
+	let duplicateSource = $state<LoanWithInvestors | null>(null);
 	let editSubmitting = $state(false);
 	let editSubmitBlocked = $state(false);
 	let editSubmitError = $state<string | null>(null);
@@ -88,12 +89,32 @@
 			?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 
-	function handleDuplicate() {
+	async function handleDuplicate() {
+		let source = loan;
+		if (!source.loanContract) {
+			try {
+				const response = await fetch(`/api/loans/${loan.id}/contract`);
+				if (response.ok) {
+					const contract = (await response.json()) as {
+						customization?: unknown;
+					};
+					if (contract.customization) {
+						source = {
+							...loan,
+							loanContract: { customization: contract.customization }
+						} as typeof loan;
+					}
+				}
+			} catch {
+				// Duplicate the money fields even if contract data cannot be loaded.
+			}
+		}
 		if (mobile.matches) {
+			duplicateSource = source;
 			showDuplicateModal = true;
 			return;
 		}
-		const duplicateData = createDuplicateDataFromLoan(loan);
+		const duplicateData = createDuplicateDataFromLoan(source);
 		const encodedData = encodeJsonForUrl(duplicateData);
 		goto(`/loans/new?duplicate=${encodeURIComponent(encodedData)}`);
 	}
@@ -253,10 +274,17 @@
 
 <LoanCreateModal
 	open={showDuplicateModal}
-	onOpenChange={(open) => (showDuplicateModal = open)}
+	onOpenChange={(open) => {
+		showDuplicateModal = open;
+		if (!open) duplicateSource = null;
+	}}
 	{investors}
 	{borrowers}
-	duplicateData={showDuplicateModal ? createDuplicateDataFromLoan(loan) : null}
+	duplicateData={
+		showDuplicateModal
+			? createDuplicateDataFromLoan(duplicateSource ?? loan)
+			: null
+	}
 	onSuccess={handleRefresh}
 />
 

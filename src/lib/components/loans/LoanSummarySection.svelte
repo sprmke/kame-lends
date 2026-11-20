@@ -88,7 +88,7 @@
 				</p>
 			</div>
 			<div class="dashboard-metric-cell">
-				<p class="text-caption mb-1">Avg. Rate</p>
+				<p class="text-caption mb-1">Total rate</p>
 				<p class="text-sm font-semibold">{rateDisplay}</p>
 			</div>
 			<div class="dashboard-metric-cell">

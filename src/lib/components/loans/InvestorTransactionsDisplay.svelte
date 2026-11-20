@@ -444,7 +444,7 @@
 						<p class="text-sm font-medium tabular-nums">{formatCurrency(metrics.totalCapital)}</p>
 					</div>
 					<div>
-						<p class="text-muted-foreground">Avg. Rate</p>
+						<p class="text-muted-foreground">Total rate</p>
 						<p class="text-sm font-medium">{metrics.rateDisplay}</p>
 					</div>
 					<div>

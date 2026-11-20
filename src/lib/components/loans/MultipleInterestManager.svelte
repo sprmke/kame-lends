@@ -315,7 +315,7 @@
 						<p class="font-semibold">{formatCurrency(totals.principal)}</p>
 					</div>
 					<div>
-						<p class="text-xs text-muted-foreground">Avg. Rate</p>
+						<p class="text-xs text-muted-foreground">Total rate</p>
 						<p class="font-semibold">{formatPercentage(totals.avgRate)}</p>
 					</div>
 					<div>

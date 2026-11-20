@@ -97,15 +97,18 @@ export function buildAllocationsFromExistingLoan(
     if (!investor) continue;
 
     const loanInvestorId = firstLoanInvestor?.id ?? investorId;
-    const interestPeriods =
-      firstLoanInvestor?.interestPeriods?.map((ip, index) => ({
+    const interestPeriods = [...(firstLoanInvestor?.interestPeriods ?? [])]
+      .sort(
+        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+      )
+      .map((ip, index) => ({
         id: interestPeriodFormId(ip, loanInvestorId, index),
         dueDate: toLocalDateString(ip.dueDate),
         interestRate: ip.interestType === "rate" ? ip.interestRate : "",
         interestAmount: ip.interestType === "fixed" ? ip.interestRate : "",
         interestType: ip.interestType,
         status: ip.status,
-      })) ?? [];
+      }));
 
     const receivedPayments = mergeReceivedPaymentsForInvestor(
       loan.loanInvestors,
@@ -141,8 +144,12 @@ export function buildAllocationsFromDuplicateData(
         transactions: [],
         receivedPayments: [],
         hasMultipleInterest: row.hasMultipleInterest,
-        interestPeriods:
-          row.interestPeriods?.map((period, index) => ({
+        interestPeriods: [...(row.interestPeriods ?? [])]
+          .sort(
+            (a, b) =>
+              new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+          )
+          .map((period, index) => ({
             id: `period-${index}`,
             dueDate: toLocalDateString(period.dueDate),
             interestRate:
@@ -151,7 +158,7 @@ export function buildAllocationsFromDuplicateData(
               period.interestType === "fixed" ? period.interestRate : "",
             interestType: period.interestType,
             status: period.status,
-          })) ?? [],
+          })),
       };
       byInvestor.set(row.investorId, allocation);
     }
