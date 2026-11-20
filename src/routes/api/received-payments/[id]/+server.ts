@@ -18,6 +18,7 @@ import {
   firstSchemaError,
 } from "$lib/schemas/payment";
 import { parseOptionalPaymentNotes } from "$lib/payment-notes";
+import { receiptColumnsFromInput } from "$lib/payment-receipts";
 import {
   recalculateInterestPeriodStatusFromLinkedPayments,
   syncLoanStatusFromInterestPeriods,
@@ -147,6 +148,13 @@ export const PATCH: RequestHandler = async (event) => {
     }
 
     const actorUserId = session.user.id;
+    const receiptPatch = [
+      "receipts",
+      "receiptImageUrl",
+      "receiptExtractedData",
+    ].some((key) => Object.prototype.hasOwnProperty.call(body, key))
+      ? receiptColumnsFromInput(body)
+      : {};
     await db.transaction(async (tx) => {
       await tx
         .update(receivedPayments)
@@ -155,6 +163,7 @@ export const PATCH: RequestHandler = async (event) => {
           receivedDate: receivedDateObj,
           updatedAt: new Date(),
           ...notesPatch,
+          ...receiptPatch,
         })
         .where(eq(receivedPayments.id, paymentId));
 

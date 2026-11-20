@@ -133,8 +133,13 @@ export async function syncDebtInterestPeriods(
         0,
       );
       const status = derivePeriodStatus(paidTotal, entry.periodDue, dueDate);
-      queueUpdate(current.id, dueDate, expectedAmount, status);
+      const unchanged =
+        current.dueDate.getTime() === dueDate.getTime() &&
+        Number(current.expectedInstallment) === Number(expectedAmount) &&
+        current.status === status;
       existingByNumber.delete(entry.period);
+      if (unchanged) continue;
+      queueUpdate(current.id, dueDate, expectedAmount, status);
       continue;
     }
 

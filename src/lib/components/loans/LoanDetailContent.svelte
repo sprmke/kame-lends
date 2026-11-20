@@ -35,6 +35,7 @@
 		loan: LoanWithInvestors;
 		showHeader?: boolean;
 		onRefresh?: () => void | Promise<void>;
+		onRecordPayment?: () => void;
 		loanId?: number;
 		readOnly?: boolean;
 		editableInvestorIds?: number[];
@@ -47,6 +48,7 @@
 		loan,
 		showHeader = true,
 		onRefresh,
+		onRecordPayment,
 		loanId,
 		readOnly = false,
 		editableInvestorIds = [],
@@ -65,6 +67,9 @@
 	);
 
 	const showMyCommissionCard = $derived(canShowMyCommissionCard(access));
+	const hasScheduledPeriods = $derived(
+		loan.loanInvestors.some((allocation) => (allocation.interestPeriods?.length ?? 0) > 0)
+	);
 	const myLoanWitnessId = $derived(access?.linkedLoanWitnessId ?? null);
 	const isGroupViewer = $derived(Boolean(access?.isGroupViewer));
 	const effectiveReadOnly = $derived(readOnly || isGroupViewer);
@@ -237,6 +242,7 @@
 		{balance}
 		{signingSigned}
 		{signingTotal}
+		onRecordPayment={access?.canAdminEdit && !hasScheduledPeriods ? onRecordPayment : undefined}
 	/>
 
 	{#if showMyCommissionCard}

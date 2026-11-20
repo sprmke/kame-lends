@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
+	import { Button } from '$lib/components/ui/button';
 	import {
 		formatCurrency,
 		formatPercentage,
@@ -31,6 +32,7 @@
 		/** When set with signingTotal > 0, shows contacts signed (e.g. 1/3). */
 		signingSigned?: number | null;
 		signingTotal?: number | null;
+		onRecordPayment?: () => void;
 	}
 
 	let {
@@ -49,7 +51,8 @@
 		profitRate,
 		profitType,
 		signingSigned = null,
-		signingTotal = null
+		signingTotal = null,
+		onRecordPayment
 	}: Props = $props();
 
 	const showSigningProgress = $derived(
@@ -168,5 +171,10 @@
 				</div>
 			{/if}
 		</div>
+		{#if onRecordPayment}
+			<div class="flex justify-end border-t border-border/50 pt-3">
+				<Button type="button" size="sm" onclick={onRecordPayment}>Record payment</Button>
+			</div>
+		{/if}
 	</Card.Content>
 </Card.Root>

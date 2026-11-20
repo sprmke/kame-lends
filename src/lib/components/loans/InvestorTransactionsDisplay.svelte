@@ -15,7 +15,8 @@
 		type InvestorWithTransactions,
 		computeLoanTotalPrincipal,
 		computeInvestorMetrics,
-		sectionKey
+		sectionKey,
+		type ReceivedPaymentDisplay
 	} from './investor-transactions-helpers';
 	import InvestorDisbursementsSection from './InvestorDisbursementsSection.svelte';
 	import InvestorInterestSection from './InvestorInterestSection.svelte';
@@ -72,7 +73,7 @@
 
 	let editPaymentModal = $state<{
 		periodId: number;
-		mode: 'single' | 'consolidate';
+		mode: 'single' | 'consolidate' | 'general';
 		paymentId: number | null;
 		amount: string;
 		receivedDate: string;
@@ -261,6 +262,23 @@
 		};
 	}
 
+	function openGeneralPayment(payment: ReceivedPaymentDisplay) {
+		if (payment.id == null) return;
+		const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(payment.receivedDate)
+			? payment.receivedDate
+			: toDateKey(payment.receivedDate);
+		editPaymentModal = {
+			periodId: payment.id,
+			mode: 'general',
+			paymentId: payment.id,
+			amount: payment.amount,
+			receivedDate: dateStr,
+			expectedInterest: 0,
+			receipts: payment.receipts ?? [],
+			notes: payment.notes ?? ''
+		};
+	}
+
 	async function handleEditPaymentSave() {
 		if (!editPaymentModal) return;
 		const { periodId, mode, paymentId, amount, receivedDate, receipts, notes } = editPaymentModal;
@@ -281,13 +299,14 @@
 
 		editingPaymentPeriodIds = new Set(editingPaymentPeriodIds).add(periodId);
 		try {
-			if (mode === 'single' && paymentId != null) {
+			if ((mode === 'single' || mode === 'general') && paymentId != null) {
 				const response = await fetch(`/api/received-payments/${paymentId}`, {
 					method: 'PATCH',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						amount: parsed,
 						receivedDate: trimmedDate,
+						receipts,
 						notes: notes.trim() || null
 					})
 				});
@@ -411,6 +430,7 @@
 					onDeletePayment={handleDeleteReceivedPayment}
 					onComplete={openCompleteModal}
 					onEditPayment={openEditPaymentModal}
+					onEditGeneralPayment={openGeneralPayment}
 				/>
 			</div>
 
@@ -560,7 +580,9 @@
 	title="Edit payment"
 	description={editPaymentModal?.mode === 'consolidate'
 		? 'This replaces all payment lines for this period with a single entry using the amount and date below.'
-		: undefined}
+		: editPaymentModal?.mode === 'general'
+			? 'Update this payment amount, date, receipt, or notes.'
+			: undefined}
 	contentClass="sm:max-w-md"
 >
 	{#snippet footer()}
@@ -576,7 +598,7 @@
 			disabled={!editPaymentModal ||
 				!editPaymentModal.amount?.trim() ||
 				!editPaymentModal.receivedDate?.trim() ||
-				(editPaymentModal.mode === 'consolidate' && !hasPaymentReceipt(editPaymentModal)) ||
+				(editPaymentModal.mode !== 'single' && !hasPaymentReceipt(editPaymentModal)) ||
 				(editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId))}
 		>
 			{#if editPaymentModal && editingPaymentPeriodIds.has(editPaymentModal.periodId)}
@@ -602,9 +624,11 @@
 						}
 					}}
 				/>
-				<p class="text-[11px] text-muted-foreground">
-					Max for this period: {formatCurrency(editPaymentModal.expectedInterest)}
-				</p>
+				{#if editPaymentModal.mode !== 'general'}
+					<p class="text-[11px] text-muted-foreground">
+						Max for this period: {formatCurrency(editPaymentModal.expectedInterest)}
+					</p>
+				{/if}
 			</div>
 			<div class="space-y-2">
 				<Label for="edit-received-date">Received date</Label>
@@ -619,13 +643,16 @@
 					}}
 				/>
 			</div>
-			{#if editPaymentModal.mode === 'consolidate'}
-				<ReceiptUploadField
+			<ReceiptUploadField
 					fieldId="receipt-consolidate-{editPaymentModal.periodId}"
 					idPrefix="consolidate-{editPaymentModal.periodId}"
 					receipts={editPaymentModal.receipts}
-					required
-					error={hasPaymentReceipt(editPaymentModal) ? null : RECEIPT_REQUIRED_ERROR}
+					required={editPaymentModal.mode !== 'single'}
+					error={
+						editPaymentModal.mode !== 'single' && !hasPaymentReceipt(editPaymentModal)
+							? RECEIPT_REQUIRED_ERROR
+							: null
+					}
 					disabled={editingPaymentPeriodIds.has(editPaymentModal.periodId)}
 					scanContext={{ purpose: 'received_payment', loanId }}
 					onChange={(receipts) => {
@@ -640,7 +667,6 @@
 						};
 					}}
 				/>
-			{/if}
 			<PaymentNotesField
 				id="edit-payment-notes-{editPaymentModal.periodId}"
 				value={editPaymentModal.notes}
@@ -652,3 +678,19 @@
 		</div>
 	{/if}
 </ResponsiveModal>
+
+<ConfirmDeleteDialog
+	open={pendingDeletePaymentId !== null}
+	onOpenChange={(open) => {
+		if (!open) pendingDeletePaymentId = null;
+	}}
+	title="Remove payment?"
+	description="Remove this payment record? This cannot be undone. The interest period and loan status will be recalculated."
+	onConfirm={async () => {
+		const id = pendingDeletePaymentId;
+		if (id != null) {
+			await performDeleteReceivedPayment(id);
+			pendingDeletePaymentId = null;
+		}
+	}}
+/>

@@ -23,7 +23,10 @@
 	);
 
 	const totalAmount = $derived(
-		loans.reduce((sum, loan) => sum + calculateOverdueAmount(loan.loanInvestors), 0)
+		loans.reduce(
+			(sum, loan) => sum + calculateOverdueAmount(loan.loanInvestors, loan.dueDate),
+			0
+		)
 	);
 </script>
 
@@ -46,7 +49,7 @@
 					<div class="flex items-center justify-between text-xs text-muted-foreground">
 						<span>Due {formatDateShort(loan.dueDate)}</span>
 						<span class="font-medium text-destructive tabular-nums">
-							{formatCurrency(calculateOverdueAmount(loan.loanInvestors))}
+							{formatCurrency(calculateOverdueAmount(loan.loanInvestors, loan.dueDate))}
 						</span>
 					</div>
 				</a>

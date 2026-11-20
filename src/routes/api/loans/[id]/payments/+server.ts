@@ -160,7 +160,10 @@ export const POST: RequestHandler = async (event) => {
             scheduleSource?.interestRate ?? String(interestValue || 0),
           sentDate,
           isPaid,
-          hasMultipleInterest: Boolean(scheduleSource),
+          // A new tranche has no schedule of its own. The investor's existing
+          // schedule applies to the total capital; do not claim periods that
+          // were never written.
+          hasMultipleInterest: false,
           notes: notesParsed.notes,
           ...receiptColumnsFromInput(body),
         })

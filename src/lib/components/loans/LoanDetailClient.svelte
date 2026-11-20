@@ -191,6 +191,7 @@
 			{loan}
 			showHeader={false}
 			onRefresh={handleRefresh}
+			onRecordPayment={() => (quickPaymentKind = 'received')}
 			loanId={loan.id}
 			readOnly={!access.canAdminEdit}
 			editableInvestorIds={access.editableInvestorIds}

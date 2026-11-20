@@ -115,6 +115,16 @@ export default defineConfig({
       },
     },
     {
+      name: "money-integrity",
+      testMatch: /qa-money-integrity\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
       name: "advanced-controls",
       testMatch: /advanced-controls\.spec\.ts/,
       dependencies: ["setup"],
