@@ -81,8 +81,8 @@ session_table_exists() {
 
 if [[ "$UI_ONLY" == "1" ]]; then
   echo "Vite only (no Docker). DATABASE_URL comes from .env.local."
-  echo "Starting http://localhost:3200 …"
-  exec bun run dev
+  echo "Starting http://127.0.0.1:$(bun run ui:port)/ …"
+  exec bun run ui
 fi
 
 ensure_docker
@@ -99,7 +99,10 @@ fi
 echo "Applying pending db/migrations/*.sql to local Postgres…"
 DATABASE_URL="$LOCAL_DATABASE_URL" bun run db:migrate:pending --yes
 
+echo "Seeding local test user and sample data…"
+DATABASE_URL="$LOCAL_DATABASE_URL" bun scripts/db/seed-e2e.ts || echo "Skipped E2E seed."
+
 export DATABASE_URL="$LOCAL_DATABASE_URL"
 echo "DATABASE_URL for this process: 127.0.0.1:5433 (does not change .env.local)"
-echo "Starting http://localhost:3200 …"
-exec bun run dev
+echo "Starting http://127.0.0.1:$(bun run ui:port)/ …"
+exec bun run ui

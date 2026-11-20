@@ -63,3 +63,4 @@ drizzle/
 !.vscode/settings.json
 !.vscode/extensions.json
 .lighthouseci/
+.local/
