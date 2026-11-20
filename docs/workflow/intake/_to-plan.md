@@ -77,3 +77,11 @@ Settings card showing AI calls, cost and fallback rate from `ai_usage_events`.
 Decide and repair the remaining prod data anomalies (duplicate period dates, zero-capital fixed, receipt-less payments, unlinked payments) and finish calendar, Telegram, push, email, and device checks.
 
 → **Plan:** [`../planned/prod-data-repairs-and-release-verification.md`](../planned/prod-data-repairs-and-release-verification.md)
+
+===
+
+📋 QA, UX, and test coverage audit
+
+Full app crawl and deep CRUD/payment/signing flows against a local production snapshot: catalog every test layer and gap, broken Playwright specs, signing preview missing the lender allocation, debt amount mismatch, hidden allocations, broken template save, unreachable payment delete, group Add loans, accessibility failures, read-only users seeing write actions, mobile layout bugs, and the UI/UX improvement backlog.
+
+→ **Plan:** [`../planned/qa-ux-and-test-coverage-audit.md`](../planned/qa-ux-and-test-coverage-audit.md)
