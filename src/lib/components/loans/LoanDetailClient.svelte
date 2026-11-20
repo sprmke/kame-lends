@@ -65,14 +65,7 @@
 
 	const editFormId = $derived(`loan-detail-edit-${loan.id}`);
 
-	const highlightSigning = $derived(page.url.searchParams.get('signing') === '1');
 	const highlightCommission = $derived(page.url.searchParams.get('commission') === '1');
-
-	$effect(() => {
-		if (highlightSigning && access.canView) {
-			showContractDetailsModal = true;
-		}
-	});
 
 	$effect(() => {
 		if (highlightCommission && canShowMyCommissionCard(access)) {

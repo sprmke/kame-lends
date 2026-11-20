@@ -10,7 +10,7 @@
 	import PageBackHeader from '$lib/components/common/PageBackHeader.svelte';
 	import { createCanNavigateBack } from '$lib/composables/use-browser-back.svelte';
 	import SignaturePad from './SignaturePad.svelte';
-	import LoanContractPreview from './LoanContractPreview.svelte';
+	import LoanContractDocumentBody from '$lib/components/loans/LoanContractDocumentBody.svelte';
 	import { toast } from '$lib/toast';
 	import {
 		getElectronicSignatureConsentText,
@@ -210,7 +210,14 @@
 				<Card.Title class="text-base sm:text-lg">Signed Contract Preview</Card.Title>
 			</Card.Header>
 			<Card.Content class="p-0">
-				<LoanContractPreview data={data.contractData} customization={data.customization} />
+				<LoanContractDocumentBody
+					data={data.contractData}
+					customization={data.customization}
+					signingContext={{
+						activePartyRole: data.partyRole,
+						activePartyEmail: data.partyEmail
+					}}
+				/>
 			</Card.Content>
 		</Card.Root>
 	</div>
@@ -370,9 +377,13 @@
 					<Card.Title class="text-base sm:text-lg">Contract Preview</Card.Title>
 				</Card.Header>
 				<Card.Content class="p-0">
-					<LoanContractPreview
+					<LoanContractDocumentBody
 						data={previewContract.data}
 						customization={previewContract.customization}
+						signingContext={{
+							activePartyRole: data.partyRole,
+							activePartyEmail: data.partyEmail
+						}}
 					/>
 				</Card.Content>
 			</Card.Root>
