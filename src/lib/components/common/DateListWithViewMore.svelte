@@ -52,7 +52,7 @@
 		<Button
 			variant="link"
 			size="sm"
-			class="h-auto min-h-11 p-0 px-2 text-xs text-primary hover:underline"
+			class="h-auto min-h-11 p-0 px-2 text-xs text-primary-strong hover:underline"
 			onclick={(event) => {
 				event.preventDefault();
 				event.stopPropagation();

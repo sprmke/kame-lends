@@ -93,6 +93,13 @@
 		if (shouldIgnoreRowQuickView(event)) return;
 		onQuickView?.(loan);
 	}
+
+	function handleRowKeydown(event: KeyboardEvent, loan: LoanWithInvestors) {
+		if (event.target !== event.currentTarget) return;
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
+		onQuickView?.(loan);
+	}
 </script>
 
 <div class="overflow-x-auto rounded-md border border-border/60" data-slot="table-container">
@@ -130,8 +137,13 @@
 					scopedEntries ?? loan.loanInvestors
 				)}
 				<Table.Row
-					class={cn(onQuickView && TABLE_ROW_CLICKABLE)}
+					class={cn(
+						onQuickView && TABLE_ROW_CLICKABLE,
+						onQuickView && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+					)}
+					tabindex={onQuickView ? 0 : undefined}
 					onclick={(event) => handleRowClick(event, loan)}
+					onkeydown={(event) => handleRowKeydown(event, loan)}
 				>
 					{#if enableRowSelection}
 						<Table.Cell data-loan-row-select onclick={(e) => e.stopPropagation()}>

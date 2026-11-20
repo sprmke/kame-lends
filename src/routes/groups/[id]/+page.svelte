@@ -363,7 +363,7 @@
 						{overdueCount === 1 ? 'loan' : 'loans'}.
 						<button
 							type="button"
-							class="ml-1 font-medium text-primary hover:underline"
+							class="ml-1 font-medium text-primary-strong hover:underline"
 							onclick={viewOverdueLoans}
 						>
 							View loans
@@ -455,7 +455,7 @@
 						<Card.Title class="text-base">Upcoming</Card.Title>
 						<button
 							type="button"
-							class="text-sm font-medium text-primary hover:underline"
+							class="text-sm font-medium text-primary-strong hover:underline"
 							onclick={() => setTab('loans')}
 						>
 							All loans

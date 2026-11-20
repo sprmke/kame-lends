@@ -238,7 +238,7 @@
 								{#if isLocked(period)}
 									<button
 										type="button"
-										class="text-[11px] font-medium text-primary underline-offset-2 hover:underline"
+										class="text-[11px] font-medium text-primary-strong underline-offset-2 hover:underline"
 										onclick={() => unlockPeriod(period)}
 									>
 										Unlock

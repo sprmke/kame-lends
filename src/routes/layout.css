@@ -86,7 +86,7 @@
   /* Brand orange (#fb9f44); nav/landing gradients keep separate stops */
   --primary: #fb9f44;
   /* Light mark/label on orange (brand mark, primary buttons). */
-  --primary-foreground: oklch(0.99 0 0);
+  --primary-foreground: #2b2118;
   /* Dark ink when orange is used as a surface accent, not as button chrome. */
   --primary-ink: #2b2118;
   /* Orange dark enough for text/icons on white: 5:1. */
@@ -96,12 +96,12 @@
   --secondary-foreground: oklch(0.28 0.03 55);
 
   --muted: oklch(0.96 0.006 70);
-  --muted-foreground: oklch(0.48 0.02 55);
+  --muted-foreground: oklch(0.44 0.02 55);
 
   --accent: oklch(0.95 0.012 70);
   --accent-foreground: oklch(0.28 0.03 55);
 
-  --destructive: oklch(0.58 0.22 25);
+  --destructive: oklch(0.52 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
 
   --border: oklch(0.915 0.008 70);
@@ -109,16 +109,16 @@
   --ring: #fb9f44;
 
   --chart-1: #fb9f44;
-  --chart-2: oklch(0.68 0.16 165);
-  --chart-3: oklch(0.62 0.18 25);
+  --chart-2: oklch(0.52 0.15 165);
+  --chart-3: oklch(0.52 0.18 25);
   --chart-4: oklch(0.65 0.16 280);
-  --chart-5: oklch(0.78 0.14 85);
+  --chart-5: oklch(0.52 0.14 85);
 
   /* Sidebar with warm tones */
   --sidebar: oklch(0.99 0.005 70);
   --sidebar-foreground: oklch(0.22 0.02 55);
   --sidebar-primary: #fb9f44;
-  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-primary-foreground: #2b2118;
   --sidebar-accent: oklch(0.96 0.012 65);
   --sidebar-accent-foreground: oklch(0.28 0.03 55);
   --sidebar-border: oklch(0.925 0.008 70);
@@ -153,7 +153,7 @@
   --popover-foreground: oklch(0.985 0 0);
 
   --primary: #fb9f44;
-  --primary-foreground: oklch(0.99 0 0);
+  --primary-foreground: #2b2118;
   --primary-ink: #2b2118;
   --primary-strong: #fbbf24;
 
@@ -161,7 +161,7 @@
   --secondary-foreground: oklch(0.985 0 0);
 
   --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted-foreground: oklch(0.74 0 0);
 
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
@@ -182,7 +182,7 @@
   --sidebar: oklch(0.18 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: #fb9f44;
-  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-primary-foreground: #2b2118;
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);

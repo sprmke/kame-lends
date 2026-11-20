@@ -315,7 +315,7 @@
 									</Label>
 									<button
 										type="button"
-										class="text-sm font-normal text-primary underline-offset-4 hover:underline"
+										class="text-sm font-normal text-primary-strong underline-offset-4 hover:underline"
 										onclick={() => (consentDetailsOpen = true)}
 									>
 										{consent.detailsLinkLabel}

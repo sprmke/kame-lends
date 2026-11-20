@@ -62,7 +62,7 @@
 				<a
 					href={viewAllHref}
 					data-sveltekit-preload-data="tap"
-					class="shrink-0 text-sm font-medium text-primary hover:underline"
+					class="shrink-0 text-sm font-medium text-primary-strong hover:underline"
 				>
 					{viewAllLabel}
 				</a>

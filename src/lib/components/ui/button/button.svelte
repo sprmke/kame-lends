@@ -17,7 +17,7 @@
 				hero: "border-0 bg-white/15 text-white shadow-[0_0_0_1px_oklch(1_0_0/0.25)] hover:bg-white/25 hover:text-white [&_.lucide-chevron-down]:hidden",
 				destructive:
 					"bg-destructive text-destructive-foreground shadow-sm shadow-destructive/25 hover:bg-destructive/90 hover:shadow-md",
-				link: "text-primary underline-offset-4 hover:underline",
+				link: "text-primary-strong underline-offset-4 hover:underline",
 				success:
 					"bg-chart-2 text-white shadow-sm shadow-chart-2/25 hover:bg-chart-2/90 hover:shadow-md",
 				warning:
