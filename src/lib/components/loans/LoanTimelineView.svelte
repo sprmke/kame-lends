@@ -72,8 +72,8 @@
 	function netClass(net: number): string {
 		if (isSensitiveDataHidden() || net === 0) return 'text-foreground';
 		return net > 0
-			? 'text-emerald-600 dark:text-emerald-400'
-			: 'text-rose-600 dark:text-rose-400';
+			? 'text-emerald-700 dark:text-emerald-400'
+			: 'text-rose-700 dark:text-rose-400';
 	}
 
 	function flowAria(inTotal: number, outTotal: number): string {
@@ -95,11 +95,11 @@
 
 	function amountClass(entry: TimelineEntry): string {
 		if (entry.direction === 'in') {
-			return 'text-emerald-600 dark:text-emerald-400';
+			return 'text-emerald-700 dark:text-emerald-400';
 		}
 		return entry.kind === 'scheduled'
-			? 'text-amber-600 dark:text-amber-400'
-			: 'text-rose-600 dark:text-rose-400';
+			? 'text-amber-800 dark:text-amber-400'
+			: 'text-rose-700 dark:text-rose-400';
 	}
 
 	function markToday(node: HTMLElement, active: boolean) {
@@ -165,12 +165,12 @@
 			aria-label={flowAria(inTotal, outTotal)}
 		>
 			{#if inTotal > 0}
-				<span class="font-medium text-emerald-600 dark:text-emerald-400">
+				<span class="font-medium text-emerald-700 dark:text-emerald-400">
 					In {money(inTotal, '+')}
 				</span>
 			{/if}
 			{#if outTotal > 0}
-				<span class="font-medium text-rose-600 dark:text-rose-400">
+				<span class="font-medium text-rose-700 dark:text-rose-400">
 					Out {money(outTotal, '-')}
 				</span>
 			{/if}

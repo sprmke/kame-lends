@@ -9,6 +9,7 @@
 
 Account summary card (title **Account**, name / email / **Roles** in a compact grid). **Roles** lists **Owner** (owned lending data) plus party assignments (Investor, Borrower, Witness), not the single `users.role` column. Page title is Settings. On phone, open Settings from the dock profile photo; **More** opens the account sheet (Settings also appears in that nav list).
 
+A **Settings sections** anchor row links Account, Templates, Payments, Notifications, and Data. Push notification preferences and **Send test** stay disabled when this browser cannot subscribe (for example missing VAPID keys), with the reason shown once.
 All signed-in users get:
 
 - **Payment methods** — each user manages their own bank/QR rows.

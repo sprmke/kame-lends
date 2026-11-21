@@ -63,6 +63,23 @@ Execution plan for the findings in [`qa-ux-and-test-coverage-audit.md`](./qa-ux-
 | 7     | `fix/qa-07-ux-mobile`            | Mobile tabs, Today control, number/date formatting, storage fallback, push state, form actions, settings index, pagination, CSV | UX-01 to UX-09, UX-11 to UX-15, DEEP-10, DEEP-14, CODE-02        |
 | 8     | `fix/qa-08-test-infra`           | Fix broken Playwright, route smoke, coverage, CI, mobile/dark/WebKit, env isolation                                             | TEST-01 to TEST-17, CODE-03                                      |
 
+## Status (2026-11-21)
+
+All code batches are committed on stacked local branches. Nothing is pushed.
+
+| Batch           | Commit      | Evidence                                                                                                |
+| --------------- | ----------- | ------------------------------------------------------------------------------------------------------- |
+| 1 money         | `22af7c9f`  | `qa-money-integrity` 2/2, unit + integration, manual detail refresh                                     |
+| 2 loan form     | `25be8d58`  | `qa-loan-form` 4/4, unit tests for payload, sorting, duplicate                                          |
+| 3 groups        | `14edd044`  | `qa-groups` 2/2, group due-label unit tests                                                             |
+| 4 signing/legal | `5f3c8624`  | contract body unit test, `/terms` and `/privacy` render                                                 |
+| 5 permissions   | `d90ac8d2`  | read-only Pay hidden, contact validation tests, witness check                                           |
+| 6 accessibility | `3b6500dc`  | `a11y` 10/10, axe clean light and dark                                                                  |
+| 7 UX/mobile     | `cef0d052`  | pagination, CSV, push disabled, settings nav, debt labels                                               |
+| 8 test infra    | in progress | `a11y-mobile` 7/7, `webkit-smoke` 4/4, PWA 4/4, authenticated 16/16, modals/groups 13/13, receipt 12/12 |
+
+Deferred: TEST-16, TEST-17, MONEY-05, CODE-01, CODE-02, CODE-03. Reasons are in the audit's Deferred items section.
+
 ## Rules for each batch
 
 1. Reproduce the finding with a failing test when practical.

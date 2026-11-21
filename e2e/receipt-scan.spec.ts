@@ -438,6 +438,10 @@ test("create loan: receipts add the matched investor, transactions and borrower"
   await expect(page.locator("#borrowerId")).toContainText(borrower.name);
 
   // Save the loan end to end, then clean up.
+  const rateInputs = page.getByLabel("Interest rate percent");
+  for (let index = 0; index < (await rateInputs.count()); index += 1) {
+    await rateInputs.nth(index).fill("10");
+  }
   const stamp = Date.now();
   await page.locator("#loanName").fill(`E2E Receipt Loan ${stamp}`);
   await page
@@ -566,6 +570,7 @@ test("AI endpoints: auth, validation, and graceful no-key response (unmocked)", 
   page,
   playwright,
 }) => {
+  await page.goto("/signin", { waitUntil: "domcontentloaded" });
   const status = await page.request.get("/api/ai/status");
   expect(status.ok()).toBe(true);
   const body = await status.json();

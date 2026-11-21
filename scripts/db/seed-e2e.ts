@@ -65,6 +65,25 @@ try {
       returning id
     `;
 
+    // Extra contacts so party, receipt-match, and contact-picker flows do not
+    // depend on a developer's local data (TEST-15).
+    await tx`
+      insert into investors (user_id, name, email, contact_number)
+      select ${user.id}, 'E2E Investor Two', 'e2e-investor-2@example.com', '09170000001'
+      where not exists (
+        select 1 from investors
+        where user_id = ${user.id} and lower(btrim(name)) = 'e2e investor two'
+      )
+    `;
+    await tx`
+      insert into borrowers (user_id, name, email)
+      select ${user.id}, 'E2E Borrower Two', 'e2e-borrower-2@example.com'
+      where not exists (
+        select 1 from borrowers
+        where user_id = ${user.id} and lower(btrim(name)) = 'e2e borrower two'
+      )
+    `;
+
     const [loan] = await tx`
       insert into loans (user_id, borrower_id, loan_name, type, status, due_date, notes)
       values (${user.id}, ${borrower.id}, 'E2E Money Loan', 'Agent', 'Fully Funded', '2026-12-31', 'seed')

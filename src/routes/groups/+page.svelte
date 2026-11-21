@@ -55,7 +55,9 @@
 		};
 	});
 
-	$effect(() => {
+	// URL-driven open runs after hydration. In a production build the effect
+	// version could fire during hydration and be overwritten by the server state.
+	onMount(() => {
 		if (page.url.searchParams.get('create') !== '1') return;
 		const params = page.url.searchParams;
 		const loanIdsRaw = params.get('loanIds');
@@ -86,14 +88,6 @@
 		}
 		showWizard = true;
 		void ensureWizardData();
-		const url = new URL(page.url);
-		url.searchParams.delete('create');
-		url.searchParams.delete('loanIds');
-		url.searchParams.delete('investorId');
-		url.searchParams.delete('borrowerId');
-		url.searchParams.delete('name');
-		const next = `${url.pathname}${url.search}${url.hash}`;
-		void goto(next, { replaceState: true, keepFocus: true, noScroll: true });
 	});
 
 	const hasActiveFilters = $derived(searchQuery !== '');
@@ -307,6 +301,13 @@
 			if (!open) {
 				wizardContact = null;
 				wizardLoanIds = [];
+				// Clean the query after close. Doing it while the dialog opens
+				// makes SvelteKit re-render the route and drops the open state.
+				const url = new URL(page.url);
+				for (const key of ['create', 'loanIds', 'investorId', 'borrowerId', 'name']) {
+					url.searchParams.delete(key);
+				}
+				history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
 			}
 		}}
 		{ownedLoans}

@@ -3,7 +3,7 @@ import { fetchJson, gotoApp, skipIfNoDatabase } from "./helpers";
 
 test.describe.configure({ mode: "serial", timeout: 60_000, retries: 1 });
 
-test.beforeEach((_fixtures, testInfo) => {
+test.beforeEach(({ page: _page }, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 
@@ -23,8 +23,12 @@ test("loans list renders with table columns", async ({ page }) => {
   ).toBeVisible();
 
   const emptyState = page.getByText("No loans found");
-  const interestHeader = page.getByRole("button", { name: /^interest$/i });
-  await expect(emptyState.or(interestHeader)).toBeVisible({ timeout: 20_000 });
+  const totalAmountHeader = page
+    .getByText("Total Amount", { exact: true })
+    .first();
+  await expect(emptyState.or(totalAmountHeader)).toBeVisible({
+    timeout: 20_000,
+  });
 
   if (await emptyState.isVisible()) {
     await expect(
@@ -33,8 +37,8 @@ test("loans list renders with table columns", async ({ page }) => {
     return;
   }
 
-  await expect(interestHeader).toBeVisible();
-  await expect(page.getByRole("button", { name: /^amount$/i })).toBeVisible();
+  await expect(totalAmountHeader).toBeVisible();
+  await expect(page.getByText("Due", { exact: true }).first()).toBeVisible();
 });
 
 test("loan create form renders", async ({ page }) => {
@@ -43,7 +47,7 @@ test("loan create form renders", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Create Loan" })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByRole("button", { name: /borrower/i })).toBeVisible();
+  await expect(page.locator("#borrowerId")).toBeVisible();
 });
 
 test("investors list renders", async ({ page }) => {
@@ -98,7 +102,7 @@ test("investor detail renders", async ({ page, request }) => {
   await expect(page.getByRole("tab", { name: /overview/i })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByRole("tab", { name: /loans/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^Loans/ }).first()).toBeVisible();
 });
 
 test("bank loans list renders", async ({ page }) => {
@@ -170,4 +174,9 @@ test("bank loan detail page renders", async ({ page, request }) => {
   ).toBeVisible({
     timeout: 20_000,
   });
+});
+
+test("hidden transactions route returns 404", async ({ page }) => {
+  const response = await gotoApp(page, "/transactions");
+  expect(response?.status()).toBe(404);
 });

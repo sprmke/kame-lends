@@ -66,7 +66,7 @@ test("multi-interest loan saves without a separate transaction rate and sorts pe
   request,
 }) => {
   const stamp = Date.now();
-  const { investorId, borrowerId, borrowerName } = await firstParty(request);
+  const { investorId, borrowerName } = await firstParty(request);
   await page.route("**/api/ai/status", (route) =>
     route.fulfill({
       json: { enabled: false, features: { receipt_extraction: false } },

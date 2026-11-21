@@ -91,6 +91,7 @@
 				variant={showMoreFilters ? 'secondary' : 'outline'}
 				size="sm"
 				class="relative shrink-0 px-3 whitespace-nowrap"
+				aria-label={showMoreFilters ? 'Less filters' : 'More filters'}
 				onclick={onToggleMoreFilters}
 			>
 				<Filter class="h-4 w-4 xl:mr-2" />
@@ -106,7 +107,13 @@
 			</Button>
 		{/if}
 		{#if hasActiveFilters && onClearFilters}
-			<Button variant="outline" size="sm" class="shrink-0" onclick={onClearFilters}>
+			<Button
+				variant="outline"
+				size="sm"
+				class="shrink-0"
+				aria-label="Clear all filters"
+				onclick={onClearFilters}
+			>
 				<X class="h-4 w-4 xl:mr-2" />
 				<span class="hidden xl:inline">Clear All</span>
 			</Button>
