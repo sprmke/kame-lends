@@ -4,6 +4,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
 	import TableEmptyRow from '$lib/components/common/TableEmptyRow.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 	import { createLoanActionItems } from '$lib/components/common/action-buttons';
 	import { formatCurrency, formatDateVeryShort, formatText, formatPercentage } from '$lib/format';
 	import { calculateTransactionStats } from '$lib/calculations';
@@ -28,6 +29,7 @@
 		onDelete?: (loan: LoanWithInvestors) => void;
 		onRemoveFromGroup?: (loan: LoanWithInvestors) => void;
 		emptyMessage?: string;
+		itemsPerPage?: number;
 		/** When set, Total Amount is this investor's principal plus interest (not the full loan). */
 		investorId?: number;
 		/** Same as investorId, matching the linked auth user across CRM rows. */
@@ -50,7 +52,8 @@
 		onDelete,
 		onRemoveFromGroup,
 		investorId,
-		investorUserId
+		investorUserId,
+		itemsPerPage = 25
 	}: Props = $props();
 
 	function investorEntriesForLoan(loan: LoanWithInvestors) {
@@ -88,6 +91,16 @@
 				target.closest('[data-loan-row-actions]')
 		);
 	}
+
+	let currentPage = $state(1);
+	const totalPages = $derived(Math.max(1, Math.ceil(loans.length / itemsPerPage)));
+	const pageStart = $derived((Math.min(currentPage, totalPages) - 1) * itemsPerPage);
+	const paginatedLoans = $derived(loans.slice(pageStart, pageStart + itemsPerPage));
+
+	$effect(() => {
+		void loans;
+		currentPage = 1;
+	});
 
 	function handleRowClick(event: MouseEvent, loan: LoanWithInvestors) {
 		if (shouldIgnoreRowQuickView(event)) return;
@@ -131,7 +144,7 @@
 					message={emptyMessage}
 				/>
 			{:else}
-			{#each loans as loan (loan.id)}
+			{#each paginatedLoans as loan (loan.id)}
 				{@const scopedEntries = investorEntriesForLoan(loan)}
 				{@const amountStats = calculateTransactionStats(
 					scopedEntries ?? loan.loanInvestors
@@ -252,3 +265,19 @@
 		</Table.Body>
 	</Table.Root>
 </div>
+
+{#if loans.length > itemsPerPage}
+	<div class="mt-3">
+		<Pagination
+			embedded
+			{currentPage}
+			{totalPages}
+			onPageChange={(page) => (currentPage = page)}
+			startIndex={pageStart}
+			endIndex={Math.min(pageStart + itemsPerPage, loans.length)}
+			totalItems={loans.length}
+			itemName="loans"
+			{itemsPerPage}
+		/>
+	</div>
+{/if}

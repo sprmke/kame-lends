@@ -218,7 +218,7 @@
 {#if timeline.months.length === 0}
 	<ListEmptyState message="No activity in this range" icon={GanttChart} />
 {:else}
-	<div class="loan-timeline flex w-full min-w-0 flex-col gap-7">
+	<div class="loan-timeline flex w-full min-w-0 flex-col gap-7 pb-24 lg:pb-16">
 		{#each timeline.months as month (month.key)}
 			<section id="timeline-month-{month.key}" class="w-full min-w-0 scroll-mt-24">
 				<header
@@ -232,7 +232,7 @@
 							<GanttChart class="h-5 w-5" />
 						</div>
 						<div class="min-w-0 space-y-1 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:space-y-0">
-							<h2 class="text-sm font-semibold tracking-tight">{month.label}</h2>
+							<h2 class="text-sm font-semibold tracking-tight whitespace-nowrap">{month.label}</h2>
 							{@render flowTotals(month.inTotal, month.outTotal, 'month')}
 						</div>
 					</div>

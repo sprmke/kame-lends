@@ -4,7 +4,7 @@
 	import type { RowActionItem } from '$lib/components/common/action-buttons';
 	import ExportColumnsModal from '$lib/components/common/ExportColumnsModal.svelte';
 	import { toast } from '$lib/toast';
-	import { CheckSquare, FileText, Filter, Loader2 } from 'lucide-svelte';
+	import { CheckSquare, FileText, Filter, Loader2, Table2 } from 'lucide-svelte';
 	import type { PDFSection } from '$lib/pdf-export';
 
 	type ExportScope = 'all' | 'filtered' | 'selected';
@@ -15,6 +15,7 @@
 		selectedData?: T[];
 		sections: PDFSection<T>[];
 		onGeneratePDF: (data: T[], enabledSectionKeys: string[]) => Promise<void>;
+		onGenerateCSV?: (data: T[]) => void | Promise<void>;
 		variant?: 'default' | 'outline' | 'ghost' | 'secondary';
 		size?: 'default' | 'sm' | 'lg' | 'icon';
 		class?: string;
@@ -26,6 +27,7 @@
 		selectedData = [],
 		sections,
 		onGeneratePDF,
+		onGenerateCSV,
 		variant = 'outline',
 		size = 'default',
 		class: className = ''
@@ -50,7 +52,9 @@
 		`Choose which sections to include in the exported PDF. (${dataCount} ${dataCount === 1 ? 'item' : 'items'})`
 	);
 
-	const showDropdown = $derived((hasFilters ? 1 : 0) + (hasSelection ? 1 : 0) + 1 > 1);
+	const showDropdown = $derived(
+		(hasFilters ? 1 : 0) + (hasSelection ? 1 : 0) + (onGenerateCSV ? 1 : 0) + 1 > 1
+	);
 
 	const exportMenuItems = $derived.by((): RowActionItem[] => {
 		const items: RowActionItem[] = [
@@ -72,6 +76,14 @@
 				label: `Export Selected (${selectedData.length} ${selectedData.length === 1 ? 'item' : 'items'})`,
 				lucideIcon: CheckSquare,
 				onClick: () => handleExportClick('selected')
+			});
+		}
+		if (onGenerateCSV) {
+			const csvData = hasSelection ? selectedData : filteredData;
+			items.push({
+				label: `Export CSV (${csvData.length} ${csvData.length === 1 ? 'item' : 'items'})`,
+				lucideIcon: Table2,
+				onClick: () => void onGenerateCSV(csvData)
 			});
 		}
 		return items;

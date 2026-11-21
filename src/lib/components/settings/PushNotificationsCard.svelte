@@ -34,6 +34,7 @@
 	});
 	let pushState = $state<PushClientState | null>(null);
 	let busy = $state(false);
+	const preferencesDisabled = $derived(pushState !== null && !pushState.supported);
 
 	$effect(() => {
 		void refreshPushState();
@@ -123,6 +124,7 @@
 			<div class="flex items-center gap-2">
 				<Checkbox
 					id="notify-upcoming"
+					disabled={busy || preferencesDisabled}
 					checked={prefs.notifyUpcoming}
 					onCheckedChange={(checked) => {
 						prefs.notifyUpcoming = checked === true;
@@ -133,6 +135,7 @@
 			<div class="flex items-center gap-2">
 				<Checkbox
 					id="notify-due-today"
+					disabled={busy || preferencesDisabled}
 					checked={prefs.notifyDueToday}
 					onCheckedChange={(checked) => {
 						prefs.notifyDueToday = checked === true;
@@ -143,6 +146,7 @@
 			<div class="flex items-center gap-2">
 				<Checkbox
 					id="notify-overdue"
+					disabled={busy || preferencesDisabled}
 					checked={prefs.notifyOverdue}
 					onCheckedChange={(checked) => {
 						prefs.notifyOverdue = checked === true;
@@ -153,6 +157,7 @@
 			<div class="flex items-center gap-2">
 				<Checkbox
 					id="notify-activity"
+					disabled={busy || preferencesDisabled}
 					checked={prefs.notifyActivity}
 					onCheckedChange={(checked) => {
 						prefs.notifyActivity = checked === true;
@@ -163,6 +168,7 @@
 			<div class="flex items-center gap-2">
 				<Checkbox
 					id="notify-signing"
+					disabled={busy || preferencesDisabled}
 					checked={prefs.notifySigning}
 					onCheckedChange={(checked) => {
 						prefs.notifySigning = checked === true;
@@ -173,9 +179,9 @@
 		</div>
 
 		<div class="flex flex-wrap gap-2">
-			<Button type="button" disabled={busy} onclick={() => void savePreferences()}>Save</Button>
+			<Button type="button" disabled={busy || preferencesDisabled} onclick={() => void savePreferences()}>Save</Button>
 			{#if pushState?.subscribed}
-				<Button type="button" variant="outline" disabled={busy} onclick={() => void sendTest()}>
+				<Button type="button" variant="outline" disabled={busy || preferencesDisabled} onclick={() => void sendTest()}>
 					Send test
 				</Button>
 			{/if}

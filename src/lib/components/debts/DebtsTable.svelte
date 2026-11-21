@@ -7,7 +7,7 @@
 	import TableActionsHead from '$lib/components/common/TableActionsHead.svelte';
 	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
 	import { createRowActionItems } from '$lib/components/common/action-buttons';
-	import { formatCurrencyCompact, formatDateVeryShort, formatText } from '$lib/format';
+	import { formatCurrencyCompact, formatDateShort, formatPercentage, formatText } from '$lib/format';
 	import TableEmptyRow from '$lib/components/common/TableEmptyRow.svelte';
 	import { TABLE_COL_ACTIONS, TABLE_COL_NAME, TABLE_COL_NUMERIC, TABLE_ROW_CLICKABLE } from '$lib/table-styles';
 	import { cn } from '$lib/utils';
@@ -124,7 +124,7 @@
 				{:else}
 				{#each paginated as debt (debt.id)}
 					<Table.Row class={TABLE_ROW_CLICKABLE} onclick={() => onQuickView?.(debt)}>
-						<Table.Cell>{formatDateVeryShort(debt.date)}</Table.Cell>
+						<Table.Cell>{formatDateShort(debt.date)}</Table.Cell>
 						<Table.Cell>
 							<p class={cn('truncate', TABLE_COL_NAME)} title={formatText(debt.name)}>
 								{formatText(debt.name)}
@@ -137,7 +137,7 @@
 							{formatCurrencyCompact(debt.amount)}
 						</Table.Cell>
 						<Table.Cell class={cn('hidden lg:table-cell', TABLE_COL_NUMERIC)}>
-							{debt.interestRate}%
+							{formatPercentage(Number(debt.interestRate), 2)}
 						</Table.Cell>
 						<Table.Cell class="hidden xl:table-cell">
 							<Badge variant="secondary" class="text-[10px]">{debt.interestInterval}</Badge>

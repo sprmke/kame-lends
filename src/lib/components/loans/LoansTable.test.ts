@@ -64,6 +64,22 @@ function loan(): LoanWithInvestors {
 }
 
 describe("loan list total amount", () => {
+  it("paginates long loan tables at 25 rows", () => {
+    const loans = Array.from({ length: 30 }, (_, index) => ({
+      ...loan(),
+      id: index + 1,
+      loanName: `Paged Loan ${index + 1}`,
+      loanInvestors: loan().loanInvestors.map((row, rowIndex) => ({
+        ...row,
+        id: (index + 1) * 10 + rowIndex,
+        loanId: index + 1,
+      })),
+    }));
+    const { body } = render(LoansTable, { props: { loans } });
+    expect(body).toContain("Paged Loan 25");
+    expect(body).not.toContain("Paged Loan 26");
+    expect(body).toContain("1–25 of 30");
+  });
   it("shows principal plus interest in the table, scoped to one investor", () => {
     const full = render(LoansTable, { props: { loans: [loan()] } });
     expect(full.body).toContain("Total Amount");

@@ -57,7 +57,7 @@
 	);
 
 	// Keep local editable list in sync when the server props change.
-	// eslint-disable-next-line svelte/prefer-writable-derived -- local mutations require $state
+	 
 	$effect(() => {
 		methods = [...initialMethods];
 	});
@@ -269,6 +269,7 @@
 									src={imagePreviewSrc(method.qrCodeUrl)}
 									alt={paymentQrAltText(method.bankName)}
 									class="mt-2 max-h-28 rounded-lg border border-border bg-white object-contain p-1"
+									onerror={(event) => ((event.currentTarget as HTMLElement).hidden = true)}
 								/>
 							{/if}
 						</div>

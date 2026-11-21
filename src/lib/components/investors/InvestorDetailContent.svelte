@@ -55,6 +55,7 @@
 	import { computeTotalLot } from '$lib/lot-utils';
 	import { formatCurrency } from '$lib/format';
 	import { downloadLoansPdf } from '$lib/pdf-download';
+	import { downloadLoansCsv } from '$lib/csv-download';
 	import { loanPDFSections } from '$lib/pdf-sections';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 	import { createLoanFormOptions } from '$lib/composables/use-loan-form-options.svelte';
@@ -615,6 +616,7 @@
 						sections={loanPDFSections}
 						onGeneratePDF={(data, keys) =>
 							downloadLoansPdf(data, keys, scopeToInvestor ? investor.id : undefined)}
+						onGenerateCSV={downloadLoansCsv}
 					/>
 					{#if canManage}
 						<Button size="sm" class="shrink-0" onclick={() => openLoanCreate()}>

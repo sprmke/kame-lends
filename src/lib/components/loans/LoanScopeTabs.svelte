@@ -35,7 +35,7 @@
 
 <div
 	class={cn(
-		'flex gap-0.5 overflow-x-auto rounded-xl bg-muted/60 p-0.5 sm:gap-1 sm:rounded-2xl sm:p-1',
+		'flex flex-wrap gap-0.5 rounded-xl bg-muted/60 p-0.5 sm:gap-1 sm:rounded-2xl sm:p-1',
 		className
 	)}
 	role="tablist"

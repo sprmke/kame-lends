@@ -36,6 +36,8 @@
 
 	const busy = $derived(disabled || isProcessing);
 	const previewSrc = $derived(imagePreviewSrc(value));
+	let failedSrc = $state<string | null>(null);
+	const canShowPreview = $derived(Boolean(previewSrc && failedSrc !== previewSrc));
 </script>
 
 {#if previewSrc}
@@ -47,7 +49,18 @@
 			busy && 'opacity-60'
 		)}
 	>
-		<img src={previewSrc} {alt} class={cn('block w-full', previewClass)} />
+		{#if canShowPreview}
+			<img
+				src={previewSrc}
+				{alt}
+				class={cn('block w-full', previewClass)}
+				onerror={() => (failedSrc = previewSrc)}
+			/>
+		{:else}
+			<div class="flex min-h-[5.5rem] items-center justify-center px-4 text-xs text-muted-foreground">
+				Preview unavailable
+			</div>
+		{/if}
 		<div
 			class={cn(
 				'absolute inset-0 flex flex-wrap items-center justify-center gap-2 bg-background/80 px-3 transition-opacity motion-reduce:transition-none',

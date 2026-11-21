@@ -1881,6 +1881,7 @@
 		error={submitError}
 		submitLabel={submitButtonLabel}
 		layout={isModalMode ? 'stacked' : 'responsive'}
+		sticky={!isModalMode}
 		class={isModalMode ? 'md:hidden' : 'lg:hidden'}
 	/>
 </form>

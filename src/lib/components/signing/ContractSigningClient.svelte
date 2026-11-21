@@ -239,7 +239,7 @@
 
 		<div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] xl:items-start">
 			<div class="order-2 min-w-0 space-y-5 xl:sticky xl:top-6 xl:order-2 xl:self-start">
-				<Card.Root class="rounded-3xl shadow-sm">
+				<Card.Root id="signature-panel" class="scroll-mt-24 rounded-3xl shadow-sm">
 					<Card.Header class="space-y-1 p-5 pb-3 sm:p-6 sm:pb-4 md:p-7 md:pb-5">
 						<Card.Title class="text-base sm:text-lg">
 							{displayName} ({roleLabel}) - Signature
@@ -386,6 +386,18 @@
 						}}
 					/>
 				</Card.Content>
+				<div class="sticky bottom-[calc(var(--mobile-dock-clearance)+var(--safe-area-bottom)+0.5rem)] z-20 border-t border-border/60 bg-background/95 p-3 backdrop-blur xl:hidden">
+					<Button
+						type="button"
+						class="w-full"
+						onclick={() =>
+							document
+								.getElementById('signature-panel')
+								?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+					>
+						Go to signature
+					</Button>
+				</div>
 			</Card.Root>
 		</div>
 	</div>

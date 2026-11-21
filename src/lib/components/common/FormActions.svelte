@@ -15,6 +15,7 @@
 		/** stacked = full-width column (sheet / phone). inline = row. responsive = column below sm, row at sm+. */
 		layout?: 'stacked' | 'inline' | 'responsive';
 		class?: string;
+		sticky?: boolean;
 	}
 
 	let {
@@ -26,7 +27,8 @@
 		error = null,
 		cancelLabel = 'Cancel',
 		layout = 'responsive',
-		class: className
+		class: className,
+		sticky = false
 	}: Props = $props();
 
 	const isStacked = $derived(layout === 'stacked');
@@ -51,6 +53,8 @@
 		isStacked && 'mt-4 w-full border-t border-border/60 pt-4 pb-safe',
 		isInline && 'w-auto shrink-0',
 		isResponsive && 'mt-4 w-full border-t border-border/60 pt-4 pb-safe sm:border-t-0 sm:pt-0 sm:pb-0',
+		sticky &&
+			'max-lg:sticky max-lg:bottom-[calc(var(--mobile-dock-clearance)+var(--safe-area-bottom)+0.5rem)] z-20 rounded-xl border border-border/60 bg-background/95 px-3 py-2 shadow-[var(--shadow-native-float)] backdrop-blur',
 		className
 	)}
 >

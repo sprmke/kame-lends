@@ -32,6 +32,7 @@
 		isMobileShellViewport
 	} from '$lib/composables/use-media-query.svelte';
 	import { downloadLoansPdf } from '$lib/pdf-download';
+	import { downloadLoansCsv } from '$lib/csv-download';
 	import { loanPDFSections } from '$lib/pdf-sections';
 	import { createDuplicateDataFromLoan } from '$lib/loan-duplicate';
 	import LoanContractDetailsModal from '$lib/components/loans/LoanContractDetailsModal.svelte';
@@ -701,6 +702,7 @@
 						selectedData={selectedLoans}
 						sections={loanPDFSections}
 						onGeneratePDF={downloadLoansPdf}
+						onGenerateCSV={downloadLoansCsv}
 						size="sm"
 						class="shrink-0"
 					/>
@@ -727,6 +729,7 @@
 				selectedData={selectedLoans}
 				sections={loanPDFSections}
 				onGeneratePDF={downloadLoansPdf}
+				onGenerateCSV={downloadLoansCsv}
 			/>
 			{#if canCreate && createTemplates.length > 0}
 				<ResponsiveOverflowMenu
