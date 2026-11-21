@@ -8,6 +8,7 @@ import {
 } from "$lib/server/db/schema";
 import { eq, and, ne, isNull } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
+import { toLocalDateString } from "$lib/date-utils";
 import { invalidateLoanData } from "$lib/server/cache-invalidation";
 import { centavosToPesos, toCentavos } from "$lib/money/centavos";
 import { expectedInterestC, loadLoanLedger } from "$lib/server/loan-ledger";
@@ -86,6 +87,7 @@ export const PATCH: RequestHandler = async (event) => {
         loanInvestor: {
           with: {
             loan: true,
+            investor: true,
           },
         },
       },
@@ -176,6 +178,28 @@ export const PATCH: RequestHandler = async (event) => {
     await syncLoanStatusFromInterestPeriods(loanId);
 
     invalidateLoanData();
+    try {
+      const { enqueueGroupLoanChanged } =
+        await import("$lib/server/jobs/queue");
+      const { scheduleDrain } = await import("$lib/server/jobs/after-response");
+      await enqueueGroupLoanChanged(loanId, {
+        calendar: false,
+        activity: {
+          type: "payment_received",
+          entityId: paymentId,
+          actorUserId: session.user.id,
+          actorEmail: session.user?.email ?? undefined,
+          detail: {
+            amount: parsedAmount,
+            date: toLocalDateString(receivedDateObj),
+            investorName: rp.loanInvestor.investor?.name ?? "",
+          },
+        },
+      });
+      scheduleDrain(event);
+    } catch (notifyErr) {
+      console.error("[email] payment update notify failed", notifyErr);
+    }
     return json({ success: true });
   } catch (error) {
     console.error("Error updating received payment:", error);
@@ -205,6 +229,7 @@ export const DELETE: RequestHandler = async (event) => {
         loanInvestor: {
           with: {
             loan: true,
+            investor: true,
           },
         },
       },
@@ -246,6 +271,29 @@ export const DELETE: RequestHandler = async (event) => {
     await syncLoanStatusFromInterestPeriods(loanId);
 
     invalidateLoanData();
+    try {
+      const { enqueueGroupLoanChanged } =
+        await import("$lib/server/jobs/queue");
+      const { scheduleDrain } = await import("$lib/server/jobs/after-response");
+      const removedAmount = Number.parseFloat(rp.amount);
+      await enqueueGroupLoanChanged(loanId, {
+        calendar: false,
+        activity: {
+          type: "payment_removed",
+          entityId: paymentId,
+          actorUserId: session.user.id,
+          actorEmail: session.user?.email ?? undefined,
+          detail: {
+            amount: Number.isFinite(removedAmount) ? removedAmount : undefined,
+            date: toLocalDateString(rp.receivedDate),
+            investorName: rp.loanInvestor.investor?.name ?? "",
+          },
+        },
+      });
+      scheduleDrain(event);
+    } catch (notifyErr) {
+      console.error("[email] payment delete notify failed", notifyErr);
+    }
     return json({ success: true });
   } catch (error) {
     console.error("Error deleting received payment:", error);

@@ -10,6 +10,7 @@
 	import PartyIdentityDocumentsManager from '$lib/components/settings/PartyIdentityDocumentsManager.svelte';
 	import InstallAppCard from '$lib/components/settings/InstallAppCard.svelte';
 	import PushNotificationsCard from '$lib/components/settings/PushNotificationsCard.svelte';
+	import EmailNotificationsCard from '$lib/components/settings/EmailNotificationsCard.svelte';
 	import AutoAttachSignatureCard from '$lib/components/settings/AutoAttachSignatureCard.svelte';
 	import { formatAccountRoles } from '$lib/account-roles';
 	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
@@ -69,6 +70,10 @@
 
 	<InstallAppCard />
 	<PushNotificationsCard initialPreferences={data.pushPreferences} />
+	<EmailNotificationsCard
+		initialPreferences={data.emailPreferences}
+		emailConfigured={data.emailConfigured}
+	/>
 
 	<Card.Root>
 		<Card.Header>

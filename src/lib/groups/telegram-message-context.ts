@@ -7,6 +7,7 @@ export const TELEGRAM_LIST_CAP = 12;
 export type TelegramActivityDetail = {
   amount?: number;
   date?: string;
+  previousDate?: string;
   investorName?: string;
   signerName?: string;
   signerRole?: string;

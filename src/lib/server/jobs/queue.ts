@@ -22,6 +22,10 @@ export type ActivityEvent = {
   updatedAt?: string;
   summary?: string;
   loanId?: number;
+  /** The signed-in user who performed the action. Never emailed. */
+  actorUserId?: string;
+  /** Actor email fallback for party rows without a linked user. */
+  actorEmail?: string;
   detail?: TelegramActivityDetail;
 };
 
@@ -71,6 +75,18 @@ export async function enqueueGroupLoanChanged(
     .from(loanGroupLoans)
     .where(eq(loanGroupLoans.loanId, loanId));
 
+  if (options.activity) {
+    const updatedAt = options.activity.updatedAt ?? new Date().toISOString();
+    const event = { ...options.activity, loanId, updatedAt };
+    // Email is loan-scoped: every party gets activity mail even when the loan
+    // is not in any group.
+    await enqueueJob({
+      kind: "email.loan.activity",
+      payload: { event },
+      dedupeKey: `email.loan.activity:${event.type}:${event.entityId}:${updatedAt}`,
+    });
+  }
+
   for (const { groupId } of rows) {
     if (options.calendar !== false) {
       await enqueueJob({
@@ -97,6 +113,45 @@ export async function enqueueGroupLoanChanged(
       });
     }
   }
+}
+
+/**
+ * Group membership email. Separate from enqueueGroupLoanChanged because the
+ * recipients are the group members, not only the loan parties, and the event
+ * applies to one group at a time.
+ */
+export async function enqueueGroupLoanActivityEmails(input: {
+  groupId: number;
+  groupName: string;
+  loanId: number;
+  type: "loan_added" | "loan_removed";
+  actorUserId?: string | null;
+  actorEmail?: string | null;
+  updatedAt?: string;
+}): Promise<void> {
+  const updatedAt = input.updatedAt ?? new Date().toISOString();
+  const event: ActivityEvent = {
+    type: input.type,
+    entityId: input.loanId,
+    loanId: input.loanId,
+    updatedAt,
+    actorUserId: input.actorUserId ?? undefined,
+    actorEmail: input.actorEmail ?? undefined,
+  };
+
+  await enqueueJob({
+    kind: "email.group.loanActivity",
+    groupId: input.groupId,
+    payload: { event, groupName: input.groupName },
+    dedupeKey: `email.group.loanActivity:${input.groupId}:${input.type}:${input.loanId}:${updatedAt}`,
+  });
+
+  await enqueueJob({
+    kind: "push.user.activity",
+    groupId: input.groupId,
+    payload: { event },
+    dedupeKey: `push.user.activity:${input.groupId}:${input.type}:${input.loanId}:${updatedAt}`,
+  });
 }
 
 export async function reclaimStuckJobs(

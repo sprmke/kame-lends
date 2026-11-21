@@ -17,6 +17,7 @@ import {
   RECEIPT_REQUIRED_ERROR,
 } from "$lib/payment-receipts";
 import { syncLoanStatusFromInterestPeriods } from "$lib/server/loan-interest-period-sync";
+import { toLocalDateString } from "$lib/date-utils";
 import { parseOptionalPaymentNotes } from "$lib/payment-notes";
 
 const AMOUNT_TOLERANCE_CENTAVOS = 0;
@@ -72,6 +73,7 @@ export const PATCH: RequestHandler = async (event) => {
         loanInvestor: {
           with: {
             loan: true,
+            investor: true,
             receivedPayments: {
               where: isNull(receivedPayments.deletedAt),
               orderBy: [desc(receivedPayments.createdAt)],
@@ -248,6 +250,33 @@ export const PATCH: RequestHandler = async (event) => {
     await syncLoanStatusFromInterestPeriods(loanId);
 
     invalidateLoanData();
+    if (pendingPayment) {
+      try {
+        const { enqueueGroupLoanChanged } =
+          await import("$lib/server/jobs/queue");
+        const { scheduleDrain } =
+          await import("$lib/server/jobs/after-response");
+        await enqueueGroupLoanChanged(loanId, {
+          calendar: false,
+          activity: {
+            type: "interest_paid",
+            entityId: periodId,
+            actorUserId,
+            actorEmail: session.user?.email ?? undefined,
+            detail: {
+              amount: Number.parseFloat(pendingPayment.amount ?? "0") || 0,
+              date: pendingPayment.receivedDate
+                ? toLocalDateString(pendingPayment.receivedDate)
+                : "",
+              investorName: period.loanInvestor.investor?.name ?? "",
+            },
+          },
+        });
+        scheduleDrain(event);
+      } catch (notifyErr) {
+        console.error("[email] interest payment notify failed", notifyErr);
+      }
+    }
     return json({ success: true, status: responseStatus });
   } catch (error) {
     console.error("Error updating interest period status:", error);

@@ -28,6 +28,49 @@ test("settings page renders maintenance controls", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("settings email notification preferences save", async ({
+  page,
+  request,
+}) => {
+  const before = await request.get("/api/email/preferences");
+  expect(before.ok(), await before.text()).toBeTruthy();
+  const original = (await before.json()) as { notifyDueToday: boolean };
+
+  const response = await gotoApp(page, "/settings");
+  expect(response?.status()).toBe(200);
+  await expect(
+    page.getByText("Email notifications", { exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
+  await page.waitForLoadState("networkidle");
+
+  const dueToday = page
+    .getByRole("checkbox", { name: "Due today", exact: true })
+    .last();
+  await expect(dueToday).toBeVisible();
+  await expect(dueToday).toBeChecked();
+  await dueToday.click();
+  await page.waitForTimeout(300);
+  await expect(dueToday).not.toBeChecked();
+
+  await Promise.all([
+    page.waitForResponse(
+      (res) =>
+        res.url().endsWith("/api/email/preferences") &&
+        res.request().method() === "PUT",
+    ),
+    page.getByRole("button", { name: "Save email preferences" }).click(),
+  ]);
+
+  const after = await request.get("/api/email/preferences");
+  expect(after.ok(), await after.text()).toBeTruthy();
+  const updated = (await after.json()) as { notifyDueToday: boolean };
+  expect(updated.notifyDueToday).toBe(!original.notifyDueToday);
+
+  await request.put("/api/email/preferences", {
+    data: { notifyDueToday: original.notifyDueToday },
+  });
+});
+
 test("loan create form opens new borrower modal", async ({ page }) => {
   const response = await gotoApp(page, "/loans/new");
   expect(response?.status()).toBe(200);

@@ -1,7 +1,11 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { loanGroupLoans, groupCalendars } from "$lib/server/db/schema";
+import {
+  loanGroupLoans,
+  groupCalendars,
+  loanGroups,
+} from "$lib/server/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { hasLoanAdminAccess } from "$lib/server/access-control";
@@ -58,6 +62,18 @@ export const PUT: RequestHandler = async (event) => {
 
     const toAdd = [...desired].filter((id) => !currentIds.has(id));
     const toRemove = [...currentIds].filter((id) => !desired.has(id));
+
+    const changedGroupIds = [...new Set([...toAdd, ...toRemove])];
+    const groupNameRows =
+      changedGroupIds.length > 0
+        ? await db
+            .select({ id: loanGroups.id, name: loanGroups.name })
+            .from(loanGroups)
+            .where(inArray(loanGroups.id, changedGroupIds))
+        : [];
+    const groupNameById = new Map(
+      groupNameRows.map((row) => [row.id, row.name]),
+    );
 
     if (toAdd.length > 0) {
       await db.insert(loanGroupLoans).values(
@@ -121,6 +137,32 @@ export const PUT: RequestHandler = async (event) => {
     }
     invalidateGroupData();
     invalidateLoanData();
+    try {
+      const { enqueueGroupLoanActivityEmails } =
+        await import("$lib/server/jobs/queue");
+      for (const groupId of toAdd) {
+        await enqueueGroupLoanActivityEmails({
+          groupId,
+          groupName: groupNameById.get(groupId) ?? "Group",
+          loanId,
+          type: "loan_added",
+          actorUserId: session.user.id,
+          actorEmail: session.user?.email ?? undefined,
+        });
+      }
+      for (const groupId of toRemove) {
+        await enqueueGroupLoanActivityEmails({
+          groupId,
+          groupName: groupNameById.get(groupId) ?? "Group",
+          loanId,
+          type: "loan_removed",
+          actorUserId: session.user.id,
+          actorEmail: session.user?.email ?? undefined,
+        });
+      }
+    } catch (notifyErr) {
+      console.error("[email] loan group change notify failed", notifyErr);
+    }
     scheduleDrain(event);
     return json({ success: true, groupIds: [...desired] });
   } catch (error) {
