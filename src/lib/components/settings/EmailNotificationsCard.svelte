@@ -36,7 +36,6 @@
 		) as Record<number, boolean>;
 	}
 
-	 
 	let prefs = $state(initialPreferences);
 	let dayChecks = $state<Record<number, boolean>>(
 		dayChecksFrom(initialPreferences.reminderDays),
@@ -227,6 +226,7 @@
 			<Button
 				type="button"
 				aria-label="Save email preferences"
+				class="text-primary-ink"
 				disabled={busy}
 				onclick={() => void savePreferences()}>Save</Button
 			>
