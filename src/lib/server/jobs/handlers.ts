@@ -104,3 +104,54 @@ async function handlePushActivity(job: JobRow) {
 }
 
 registerJobHandler("push.user.activity", handlePushActivity);
+
+async function handleEmailLoanActivity(job: JobRow) {
+  const event = (
+    job.payload as { event?: import("$lib/server/jobs/queue").ActivityEvent }
+  ).event;
+  if (!event?.loanId) return;
+
+  const { sendLoanActivityEmails } = await import("$lib/server/email/activity");
+  const result = await sendLoanActivityEmails({
+    loanId: event.loanId,
+    event,
+    actorUserId: event.actorUserId,
+    actorEmail: event.actorEmail,
+  });
+
+  if (result.failed > 0) {
+    throw new Error(
+      `Email activity delivery failed for ${result.failed} recipient(s): ${result.errors[0] ?? "unknown error"}`,
+    );
+  }
+}
+
+async function handleEmailGroupLoanActivity(job: JobRow) {
+  if (job.groupId == null) return;
+  const payload = job.payload as {
+    event?: import("$lib/server/jobs/queue").ActivityEvent;
+    groupName?: string;
+  };
+  const event = payload.event;
+  if (!event?.loanId) return;
+
+  const { sendGroupLoanActivityEmails } =
+    await import("$lib/server/email/activity");
+  const result = await sendGroupLoanActivityEmails({
+    groupId: job.groupId,
+    loanId: event.loanId,
+    groupName: payload.groupName?.trim() || "Group",
+    event,
+    actorUserId: event.actorUserId,
+    actorEmail: event.actorEmail,
+  });
+
+  if (result.failed > 0) {
+    throw new Error(
+      `Group email activity delivery failed for ${result.failed} recipient(s): ${result.errors[0] ?? "unknown error"}`,
+    );
+  }
+}
+
+registerJobHandler("email.loan.activity", handleEmailLoanActivity);
+registerJobHandler("email.group.loanActivity", handleEmailGroupLoanActivity);

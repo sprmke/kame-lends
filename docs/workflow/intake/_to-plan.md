@@ -2,7 +2,7 @@
 title: "To plan"
 status: active
 tags: [planning]
-updated: 2026-11-19
+updated: 2026-11-20
 ---
 
 **Status legend:** ❌ cancelled / won't do · ✅ done · 🧪 for testing · 📋 planned (plan doc written) · 🚧 in progress · 🔵 pending / open
@@ -77,3 +77,11 @@ Settings card showing AI calls, cost and fallback rate from `ai_usage_events`.
 Decide and repair the remaining prod data anomalies (duplicate period dates, zero-capital fixed, receipt-less payments, unlinked payments) and finish calendar, Telegram, push, email, and device checks.
 
 → **Plan:** [`../planned/prod-data-repairs-and-release-verification.md`](../planned/prod-data-repairs-and-release-verification.md)
+
+===
+
+✅ Email notifications for important actions
+
+Immediate emails for loan, payment, group, and signing events, a configurable daily reminder digest for unsigned contracts and due dates, per-user email preferences in Settings, and dedupe plus retry logging so users are never spammed.
+
+→ **Done:** [`../done/email-notifications.md`](../done/email-notifications.md)

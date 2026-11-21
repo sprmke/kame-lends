@@ -23,6 +23,7 @@ import {
 } from "$lib/payment-receipts";
 import { parseOptionalPaymentNotes } from "$lib/payment-notes";
 import { parseIdParam } from "$lib/server/route-params";
+import { toLocalDateString } from "$lib/date-utils";
 import { recordMoneyAudit } from "$lib/server/money-audit";
 import {
   consolidatePaymentSchema,
@@ -89,6 +90,7 @@ export const POST: RequestHandler = async (event) => {
         loanInvestor: {
           with: {
             loan: true,
+            investor: true,
           },
         },
       },
@@ -199,6 +201,28 @@ export const POST: RequestHandler = async (event) => {
     await syncLoanStatusFromInterestPeriods(loanId);
 
     invalidateLoanData();
+    try {
+      const { enqueueGroupLoanChanged } =
+        await import("$lib/server/jobs/queue");
+      const { scheduleDrain } = await import("$lib/server/jobs/after-response");
+      await enqueueGroupLoanChanged(loanId, {
+        calendar: false,
+        activity: {
+          type: "interest_paid",
+          entityId: periodId,
+          actorUserId,
+          actorEmail: session.user?.email ?? undefined,
+          detail: {
+            amount: parsedAmount,
+            date: toLocalDateString(receivedDateObj),
+            investorName: period.loanInvestor.investor?.name ?? "",
+          },
+        },
+      });
+      scheduleDrain(event);
+    } catch (notifyErr) {
+      console.error("[email] consolidated payment notify failed", notifyErr);
+    }
     return json({ success: true });
   } catch (error) {
     console.error("Error consolidating period payments:", error);

@@ -14,6 +14,8 @@ export async function enqueueContractSigned(
     invitationId: number;
     partyName: string;
     partyRole: string;
+    actorUserId?: string | null;
+    actorEmail?: string | null;
   },
 ): Promise<void> {
   const [loan, invitations] = await Promise.all([
@@ -37,6 +39,8 @@ export async function enqueueContractSigned(
     activity: {
       type: "contract_signed",
       entityId: input.invitationId,
+      actorUserId: input.actorUserId ?? undefined,
+      actorEmail: input.actorEmail ?? undefined,
       summary: `${signerName} signed ${loanName}`,
       detail: {
         signerName,

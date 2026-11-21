@@ -216,7 +216,7 @@
 				>
 					<Avatar.Root class="h-9 w-9 ring-2 ring-primary/20">
 						<Avatar.Image src={user.image ?? undefined} alt={user.name ?? 'User'} />
-						<Avatar.Fallback class="bg-primary text-sm font-semibold text-primary-foreground">
+						<Avatar.Fallback class="bg-primary text-sm font-semibold text-primary-ink">
 							{userInitials}
 						</Avatar.Fallback>
 					</Avatar.Root>

@@ -1,7 +1,12 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { db } from "$lib/server/db";
-import { loanGroupLoans, groupCalendars, loans } from "$lib/server/db/schema";
+import {
+  loanGroupLoans,
+  groupCalendars,
+  loanGroups,
+  loans,
+} from "$lib/server/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import {
@@ -34,6 +39,12 @@ export const POST: RequestHandler = async (event) => {
     if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }
+
+    const groupRow = await db.query.loanGroups.findFirst({
+      where: eq(loanGroups.id, groupId),
+      columns: { name: true },
+    });
+    const groupName = groupRow?.name?.trim() || "Group";
 
     const raw = await request.json();
     // Support legacy { loanId } and bulk { loanIds }
@@ -107,6 +118,16 @@ export const POST: RequestHandler = async (event) => {
           },
         },
       });
+      const { enqueueGroupLoanActivityEmails } =
+        await import("$lib/server/jobs/queue");
+      await enqueueGroupLoanActivityEmails({
+        groupId,
+        groupName,
+        loanId,
+        type: "loan_added",
+        actorUserId: session.user.id,
+        actorEmail: session.user?.email ?? undefined,
+      });
     }
 
     invalidateGroupData();
@@ -135,6 +156,12 @@ export const DELETE: RequestHandler = async (event) => {
     if (!(await hasGroupManageAccess(groupId, session.user.id))) {
       return json({ error: "Group not found" }, { status: 404 });
     }
+
+    const groupRow = await db.query.loanGroups.findFirst({
+      where: eq(loanGroups.id, groupId),
+      columns: { name: true },
+    });
+    const groupName = groupRow?.name?.trim() || "Group";
 
     const parsed = parseJsonBody(bulkLoanIdsBodySchema, await request.json());
     if ("error" in parsed) {
@@ -207,6 +234,17 @@ export const DELETE: RequestHandler = async (event) => {
             },
           },
         },
+      });
+      const { enqueueGroupLoanActivityEmails } =
+        await import("$lib/server/jobs/queue");
+      await enqueueGroupLoanActivityEmails({
+        groupId,
+        groupName,
+        loanId: loan.id,
+        type: "loan_removed",
+        actorUserId: session.user.id,
+        actorEmail: session.user?.email ?? undefined,
+        updatedAt: removedAt,
       });
     }
 

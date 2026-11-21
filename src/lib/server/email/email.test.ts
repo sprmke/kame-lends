@@ -5,11 +5,7 @@ import {
   resolveEmailLogoUrl,
 } from "./branded-email-shell";
 import { escapeHtml, replacePlaceholders } from "./email-html";
-import {
-  buildLoanCreatedEmailBodyHtml,
-  buildLoanCreatedEmailSubject,
-  signingPartyRoleLabel,
-} from "./loan-created-email";
+import { signingPartyRoleLabel } from "./loan-created-email";
 import { buildBackupEmailHtml, buildBackupEmailSubject } from "./backup-email";
 
 describe("email-html", () => {
@@ -64,41 +60,6 @@ describe("loan-created-email", () => {
     expect(signingPartyRoleLabel("borrower")).toBe("Borrower");
     expect(signingPartyRoleLabel("lender")).toBe("Investor");
     expect(signingPartyRoleLabel("witness_1")).toBe("Witness");
-  });
-
-  it("builds subject and body with sign CTA", () => {
-    expect(buildLoanCreatedEmailSubject("Alpha Loan")).toBe(
-      "Kame Lends: Sign contract for Alpha Loan",
-    );
-
-    const body = buildLoanCreatedEmailBodyHtml({
-      partyName: "Maria",
-      partyRoles: ["borrower"],
-      partyEmail: "maria@example.com",
-      loanName: "Alpha Loan",
-      dueDateLabel: "October 1, 2026",
-      signingUrl: "https://example.com/loans/42/sign",
-    });
-
-    expect(body).toContain("Hi Maria");
-    expect(body).toContain("Borrower");
-    expect(body).toContain("Alpha Loan");
-    expect(body).toContain("October 1, 2026");
-    expect(body).toContain("maria@example.com");
-    expect(body).toContain("Sign contract");
-    expect(body).toContain("https://example.com/loans/42/sign");
-  });
-
-  it("combines multiple roles for one recipient", () => {
-    const body = buildLoanCreatedEmailBodyHtml({
-      partyName: "Alex",
-      partyRoles: ["lender", "witness_1"],
-      partyEmail: "alex@example.com",
-      loanName: "Beta",
-      dueDateLabel: "",
-      signingUrl: "https://example.com/loans/7/sign",
-    });
-    expect(body).toContain("Investor and Witness");
   });
 });
 

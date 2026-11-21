@@ -697,6 +697,66 @@ export const userPushPreferences = pgTable("user_push_preferences", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const userEmailPreferences = pgTable("user_email_preferences", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  emailEnabled: boolean("email_enabled").notNull().default(true),
+  notifyActivity: boolean("notify_activity").notNull().default(true),
+  notifySigningRequests: boolean("notify_signing_requests")
+    .notNull()
+    .default(true),
+  notifySigningReminders: boolean("notify_signing_reminders")
+    .notNull()
+    .default(true),
+  signingReminderFirstAfterDays: integer("signing_reminder_first_after_days")
+    .notNull()
+    .default(3),
+  signingReminderRepeatEveryDays: integer("signing_reminder_repeat_every_days")
+    .notNull()
+    .default(3),
+  notifyDueReminders: boolean("notify_due_reminders").notNull().default(true),
+  reminderDays: integer("reminder_days").array().notNull().default([3, 1]),
+  notifyDueToday: boolean("notify_due_today").notNull().default(true),
+  notifyOverdue: boolean("notify_overdue").notNull().default(true),
+  overdueRepeatEveryDays: integer("overdue_repeat_every_days")
+    .notNull()
+    .default(3),
+  includeAmounts: boolean("include_amounts").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const emailNotificationLog = pgTable(
+  "email_notification_log",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    recipientEmail: text("recipient_email").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    kind: text("kind").notNull(),
+    status: groupNotificationStatusEnum("status").notNull().default("claimed"),
+    attempts: integer("attempts").notNull().default(0),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    sentAt: timestamp("sent_at"),
+  },
+  (table) => ({
+    recipientFingerprintUnique: unique(
+      "email_notification_log_recipient_fingerprint_unique",
+    ).on(table.recipientEmail, table.fingerprint),
+    statusCreatedAtIdx: index(
+      "email_notification_log_status_created_at_idx",
+    ).on(table.status, table.createdAt),
+    recipientEmailIdx: index("email_notification_log_recipient_email_idx").on(
+      table.recipientEmail,
+    ),
+    kindIdx: index("email_notification_log_kind_idx").on(table.kind),
+  }),
+);
+
 export const userSigningPreferences = pgTable("user_signing_preferences", {
   userId: text("user_id")
     .primaryKey()
