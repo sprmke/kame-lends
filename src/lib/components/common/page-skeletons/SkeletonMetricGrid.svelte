@@ -7,15 +7,24 @@
 		count?: number;
 		gridClass?: string;
 		class?: string;
+		/** Render the smaller second line under each value. */
+		sub?: boolean;
 	}
 
-	let { count = 4, gridClass, class: className }: Props = $props();
+	let { count = 4, gridClass, class: className, sub = false }: Props = $props();
 
 	const cols = $derived(gridClass ?? getSummaryMetricGridCols(count));
 </script>
 
-<div class={cn('grid min-w-0 items-stretch gap-2.5 md:gap-5', cols, ODD_LAST_TWO_COL_GRID_UNTIL_MD, className)}>
+<div
+	class={cn(
+		'grid min-w-0 items-stretch gap-2.5 md:gap-5',
+		cols,
+		ODD_LAST_TWO_COL_GRID_UNTIL_MD,
+		className
+	)}
+>
 	{#each Array.from({ length: count }) as _, index (index)}
-		<SkeletonMetricCard />
+		<SkeletonMetricCard {sub} />
 	{/each}
 </div>

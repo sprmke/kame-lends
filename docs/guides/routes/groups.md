@@ -13,6 +13,8 @@ Behind `SHOW_GROUPS_UI` in `src/lib/feature-flags.ts` (currently on for local QA
 
 **Access model (v2):** People on any loan in a group can view the group and **all of its loans, read-only**. Membership is fully derived from loan parties (owner, investor, borrower, and **loan witnesses** on `loan_witnesses`). Witness CRM rows with an email get `witness_user_id` linked (find-or-create party user) when membership is computed or access is previewed, so witnesses appear in the wizard review and receive Google Calendar reader shares when a shared calendar is created (`sendNotifications` on ACL insert). Any signed-in user can create a group; only the creator manages it. Adding loans still requires ownership of those loans.
 
+- **Loading:** The page header renders immediately. `ListPageSkeleton variant="groups" embedded` then shows the two section headers and group card grids (3 owned, 2 shared) while the streamed list resolves. Search stays hidden until the real list has more than 6 groups, matching the loaded toolbar rule.
+
 ## Load
 
 `src/routes/groups/+page.server.ts` streams aggregated cards via `getCachedGroupsForUser` (`depends('app:groups')`). Create-wizard loan/contact options load on demand from `GET /api/groups/wizard-data` (cached owned loan list + group metadata) when **New group** opens, not on every list visit.

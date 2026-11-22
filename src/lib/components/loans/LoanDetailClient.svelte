@@ -144,7 +144,7 @@
 
 {#if isEditing && !mobile.matches}
 	{#if loadingFormData}
-		<FormPageSkeleton />
+		<FormPageSkeleton sections={2} />
 	{:else}
 		{#key loan.id}
 			<LoanForm
@@ -230,7 +230,7 @@
 		submitLabel={editSubmitting ? 'Updating...' : 'Update Loan'}
 	>
 		{#if loadingFormData}
-			<FormPageSkeleton />
+			<FormPageSkeleton showHeader={false} sections={2} />
 		{:else}
 			{#key loan.id}
 				<LoanForm

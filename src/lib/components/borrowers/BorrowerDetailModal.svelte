@@ -141,7 +141,7 @@
 	{/snippet}
 
 	{#if isLoading && !isEditing}
-		<BorrowerDetailSkeleton />
+		<BorrowerDetailSkeleton variant="modal" />
 	{:else if borrower}
 		{#if isEditing}
 			{#key `borrower-form-edit-${borrower.id}-${fetchKey}`}

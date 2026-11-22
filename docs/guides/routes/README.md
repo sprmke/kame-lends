@@ -2,26 +2,28 @@
 
 Per-page behavior specs mirroring SvelteKit URLs under `src/routes/`.
 
-| Route              | Guide                                        | Status     |
-| ------------------ | -------------------------------------------- | ---------- |
-| `/signin`          | [signin.md](./signin.md)                     | Documented |
-| `/dashboard`       | [dashboard.md](./dashboard.md)               | Documented |
-| `/loans`           | [loans.md](./loans.md)                       | Documented |
-| `/groups`          | [groups.md](./groups.md)                     | Documented |
-| `/groups/[id]`     | [groups-detail.md](./groups-detail.md)       | Documented |
-| `/investments`     | [investments.md](./investments.md)           | Documented |
-| `/borrowed`        | [borrowed.md](./borrowed.md)                 | Documented |
-| `/commissioned`    | [commissioned.md](./commissioned.md)         | Documented |
-| `/witnessed`       | [witnessed.md](./witnessed.md)               | Documented |
-| `/borrowers`       | [borrowers.md](./borrowers.md)               | Documented |
-| `/borrowers/[id]`  | [borrowers-detail.md](./borrowers-detail.md) | Documented |
-| `/witnesses`       | [witnesses.md](./witnesses.md)               | Documented |
-| `/witnesses/[id]`  | [witnesses-detail.md](./witnesses-detail.md) | Documented |
-| `/investors`       | [investors.md](./investors.md)               | Documented |
-| `/investors/[id]`  | [investors-detail.md](./investors-detail.md) | Documented |
-| `/debts`           | [debts.md](./debts.md)                       | Documented |
-| `/debts/[id]`      | [debts-detail.md](./debts-detail.md)         | Documented |
-| `/settings`        | [settings.md](./settings.md)                 | Documented |
-| `/loans/[id]`      | [loans-detail.md](./loans-detail.md)         | Documented |
-| `/loans/[id]/sign` | [sign.md](./sign.md)                         | Documented |
-| Any failing route  | [errors.md](./errors.md)                     | Documented |
+| Route                | Guide                                        | Status     |
+| -------------------- | -------------------------------------------- | ---------- |
+| `/signin`            | [signin.md](./signin.md)                     | Documented |
+| `/dashboard`         | [dashboard.md](./dashboard.md)               | Documented |
+| `/loans`             | [loans.md](./loans.md)                       | Documented |
+| `/groups`            | [groups.md](./groups.md)                     | Documented |
+| `/groups/[id]`       | [groups-detail.md](./groups-detail.md)       | Documented |
+| `/investments`       | [investments.md](./investments.md)           | Documented |
+| `/borrowed`          | [borrowed.md](./borrowed.md)                 | Documented |
+| `/commissioned`      | [commissioned.md](./commissioned.md)         | Documented |
+| `/witnessed`         | [witnessed.md](./witnessed.md)               | Documented |
+| `/borrowers`         | [borrowers.md](./borrowers.md)               | Documented |
+| `/borrowers/[id]`    | [borrowers-detail.md](./borrowers-detail.md) | Documented |
+| `/witnesses`         | [witnesses.md](./witnesses.md)               | Documented |
+| `/witnesses/[id]`    | [witnesses-detail.md](./witnesses-detail.md) | Documented |
+| `/investors`         | [investors.md](./investors.md)               | Documented |
+| `/investors/[id]`    | [investors-detail.md](./investors-detail.md) | Documented |
+| `/debts`             | [debts.md](./debts.md)                       | Documented |
+| `/debts/[id]`        | [debts-detail.md](./debts-detail.md)         | Documented |
+| `/transactions`      | [transactions.md](./transactions.md)         | Documented |
+| `/transactions/[id]` | [transactions.md](./transactions.md)         | Documented |
+| `/settings`          | [settings.md](./settings.md)                 | Documented |
+| `/loans/[id]`        | [loans-detail.md](./loans-detail.md)         | Documented |
+| `/loans/[id]/sign`   | [sign.md](./sign.md)                         | Documented |
+| Any failing route    | [errors.md](./errors.md)                     | Documented |

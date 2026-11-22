@@ -28,6 +28,8 @@ Party users with linked CRM rows also get **Identity documents** (valid ID and e
 
 Google Calendar sync is per group on the group hub only (no workspace calendar on Settings).
 
+- **Loading:** `SettingsPageSkeleton` mirrors the header, Account card, and manager cards. Data health and recently deleted rows use inline row skeletons while their explicit checks run. Party identity and payment method cards load from the page payload, not a spinner.
+
 ## Load
 
 [`src/routes/settings/+page.server.ts`](../../../src/routes/settings/+page.server.ts)

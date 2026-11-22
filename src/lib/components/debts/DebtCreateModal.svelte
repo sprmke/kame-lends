@@ -66,7 +66,7 @@
 	{/snippet}
 
 	{#if isLoading}
-		<FormPageSkeleton />
+		<FormPageSkeleton showHeader={false} />
 	{:else}
 		<DebtForm
 			{investors}

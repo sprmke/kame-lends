@@ -3,9 +3,11 @@
 
 	interface Props {
 		actionCount?: number;
+		/** Loans put the date range control first in the header actions. */
+		dateRangeFirst?: boolean;
 	}
 
-	let { actionCount = 4 }: Props = $props();
+	let { actionCount = 4, dateRangeFirst = false }: Props = $props();
 </script>
 
 <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between lg:gap-4">
@@ -16,7 +18,7 @@
 	{#if actionCount > 0}
 		<div class="page-header-actions hidden shrink-0 flex-wrap items-center gap-2 lg:flex">
 			{#each Array.from({ length: actionCount }) as _, i (i)}
-				<Skeleton class="h-9 w-24 rounded-2xl" />
+				<Skeleton class={i === 0 && dateRangeFirst ? 'h-9 w-56 rounded-2xl' : 'h-9 w-24 rounded-2xl'} />
 			{/each}
 		</div>
 	{/if}

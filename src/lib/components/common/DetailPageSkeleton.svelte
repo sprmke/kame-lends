@@ -7,7 +7,9 @@
 	import BorrowerDetailSkeleton from './page-skeletons/BorrowerDetailSkeleton.svelte';
 	import WitnessDetailSkeleton from './page-skeletons/WitnessDetailSkeleton.svelte';
 	import SettingsPageSkeleton from './page-skeletons/SettingsPageSkeleton.svelte';
-	import DetailHeaderSkeleton from './page-skeletons/DetailHeaderSkeleton.svelte';
+	import GroupDetailSkeleton from './page-skeletons/GroupDetailSkeleton.svelte';
+	import SigningPageSkeleton from './page-skeletons/SigningPageSkeleton.svelte';
+	import PartyProfileFormSkeleton from './page-skeletons/PartyProfileFormSkeleton.svelte';
 
 	export type DetailPageSkeletonVariant =
 		| 'debt'
@@ -16,8 +18,13 @@
 		| 'transaction'
 		| 'borrower'
 		| 'witness'
+		| 'group'
 		| 'settings'
-		| 'form';
+		| 'signing'
+		| 'loan-form'
+		| 'debt-form'
+		| 'transaction-form'
+		| 'party-form';
 
 	interface Props {
 		variant: DetailPageSkeletonVariant;
@@ -27,13 +34,22 @@
 </script>
 
 <div class="dashboard-page">
-	{#if variant === 'form'}
-		<FormPageSkeleton />
-	{:else if variant === 'debt'}
+	{#if variant === 'loan-form'}
 		<div class="dashboard-form max-w-4xl">
-			<DetailHeaderSkeleton />
-			<DebtDetailSkeleton />
+			<FormPageSkeleton sections={2} />
 		</div>
+	{:else if variant === 'debt-form'}
+		<div class="dashboard-form max-w-4xl">
+			<FormPageSkeleton />
+		</div>
+	{:else if variant === 'transaction-form'}
+		<FormPageSkeleton />
+	{:else if variant === 'party-form'}
+		<div class="dashboard-form max-w-2xl">
+			<PartyProfileFormSkeleton showHeader />
+		</div>
+	{:else if variant === 'debt'}
+		<DebtDetailSkeleton variant="page" />
 	{:else if variant === 'loan'}
 		<LoanDetailSkeleton />
 	{:else if variant === 'investor'}
@@ -44,7 +60,11 @@
 		<BorrowerDetailSkeleton />
 	{:else if variant === 'witness'}
 		<WitnessDetailSkeleton />
+	{:else if variant === 'group'}
+		<GroupDetailSkeleton />
 	{:else if variant === 'settings'}
 		<SettingsPageSkeleton />
+	{:else if variant === 'signing'}
+		<SigningPageSkeleton />
 	{/if}
 </div>

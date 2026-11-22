@@ -174,8 +174,12 @@
 
 <svelte:head><title>Witnesses</title></svelte:head>
 
-{#if items === null}
-	<ListPageSkeleton variant="witnesses" />
+{#if items === null || !viewModeState.isReady}
+	<ListPageSkeleton
+		variant="witnesses"
+		viewMode={viewModeState.viewMode}
+		ready={viewModeState.isReady}
+	/>
 {:else}
 	<DashboardPage>
 		<PageHeader

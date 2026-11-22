@@ -13,6 +13,8 @@ Read-only list and detail (create, edit, and payments stay off). Table checkboxe
 
 **Commission** on loan detail: **Your Commission** (`LoanMyCommissionCard`, `GET` / `PATCH /api/loans/[id]/my-commission`) for the signed-in witness only. The **Witnesses** section lists names only; commission is not shown there. Commission totals live on the **Commissioned** tab. Assigning or removing witnesses is owner-only.
 
+- **Loading:** `ListPageSkeleton` with the witnessed scope mirrors the header, date range, summary cards, toolbar, and the resolved view (table at `lg+`, timeline/cards below `lg`).
+
 ## Load
 
 [`src/routes/loans/+page.server.ts`](../../../src/routes/loans/+page.server.ts) → `getCachedLoansByScope(userId, 'witnessed', 'list')`. Summary stats use the same path as **Invested** / **Borrowed** (`computeLoanListSummaryStats` on `scopedLoans` after the due-date range filter).

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge';
-	import { AlertTriangle, Loader2 } from 'lucide-svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { AlertTriangle } from 'lucide-svelte';
 	import { partyRoleLabel } from '$lib/groups/party-role-labels';
 	import { formatCount, formatText } from '$lib/format';
 	import type { AccessPreviewData } from '$lib/components/groups/types';
@@ -44,9 +45,23 @@
 
 <div class={cn('space-y-4', className)}>
 	{#if loading}
-		<div class="flex items-center gap-2 text-sm text-muted-foreground">
-			<Loader2 class="size-4 animate-spin" aria-hidden="true" />
-			<span>Checking access…</span>
+		<div class="space-y-4" aria-busy="true" aria-label="Checking access" role="status">
+			{#if showSummary}
+				<Skeleton class="h-4 w-4/5 max-w-sm" />
+			{/if}
+			{#if showGainedList}
+				<div class="space-y-2">
+					<Skeleton class="h-4 w-32" />
+					<ul class="space-y-1.5">
+						{#each Array.from({ length: 2 }) as _, index (index)}
+							<li class="flex flex-wrap items-center gap-2">
+								<Skeleton class="h-4 w-28 max-w-full" />
+								<Skeleton class="h-5 w-16 rounded-full" />
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
 		</div>
 	{:else if error}
 		<p class="text-sm text-destructive">{error}</p>
