@@ -874,3 +874,34 @@
   background-color: transparent;
   cursor: default;
 }
+
+/* Ask Kame: docked panel makes room on very wide screens instead of covering content. */
+.app-shell {
+  transition:
+    margin 300ms ease,
+    padding 300ms ease;
+}
+@media (min-width: 1280px) {
+  html.assistant-docked .app-shell {
+    padding-right: 27.5rem;
+  }
+}
+.assistant-panel {
+  animation: assistant-panel-in 180ms ease-out;
+}
+@keyframes assistant-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-panel,
+  .assistant-caret {
+    animation: none;
+  }
+}

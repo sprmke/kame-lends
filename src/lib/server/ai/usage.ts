@@ -1,6 +1,6 @@
-import { and, count, eq, gte } from "drizzle-orm";
+import { and, count, eq, gte, sql } from "drizzle-orm";
 import { db } from "$lib/server/db";
-import { aiUsageEvents } from "$lib/server/db/schema";
+import { aiMessages, aiUsageEvents } from "$lib/server/db/schema";
 import type { AiErrorCode } from "./errors";
 import type { AiFeature, AiProvider } from "./features";
 
@@ -19,6 +19,10 @@ export interface AiUsageRecord {
   errorCode: AiErrorCode | null;
   fallbackUsed: boolean;
   cacheHit: boolean;
+  conversationId?: string | null;
+  messageId?: string | null;
+  rounds?: number | null;
+  toolCalls?: number | null;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -42,6 +46,51 @@ export async function countRecentCalls(userId: string): Promise<number> {
     return Number(row?.value ?? 0);
   } catch (error) {
     console.warn("[ai.usage] count failed", (error as Error).message);
+    return 0;
+  }
+}
+
+/**
+ * Assistant turns in the last 24h for this user. One user message = one turn.
+ * Fails open (0) when the assistant tables do not exist yet, matching the
+ * deploy-before-migrate pattern used by `countRecentCalls`.
+ */
+export async function countAssistantTurns(userId: string): Promise<number> {
+  try {
+    const [row] = await db
+      .select({ value: count() })
+      .from(aiMessages)
+      .where(
+        and(
+          eq(aiMessages.userId, userId),
+          eq(aiMessages.role, "user"),
+          gte(aiMessages.createdAt, new Date(Date.now() - DAY_MS)),
+        ),
+      );
+    return Number(row?.value ?? 0);
+  } catch (error) {
+    console.warn("[ai.usage] turn count failed", (error as Error).message);
+    return 0;
+  }
+}
+
+/** Estimated USD spent by this user in the last 24h (cache hits included as 0). */
+export async function getDailyCostUsd(userId: string): Promise<number> {
+  try {
+    const [row] = await db
+      .select({
+        value: sql<string>`coalesce(sum(${aiUsageEvents.estCostUsd}), 0)`,
+      })
+      .from(aiUsageEvents)
+      .where(
+        and(
+          eq(aiUsageEvents.userId, userId),
+          gte(aiUsageEvents.createdAt, new Date(Date.now() - DAY_MS)),
+        ),
+      );
+    return Number(row?.value ?? 0);
+  } catch (error) {
+    console.warn("[ai.usage] cost sum failed", (error as Error).message);
     return 0;
   }
 }

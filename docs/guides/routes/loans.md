@@ -64,3 +64,7 @@
 - Multiple interest periods are generated from business date keys. Jan 1 to Apr 1 gives Jan 31, Feb 28, Mar 31, Apr 1. The final period is always the loan due date.
 - "Copy investor config" copies interest settings only, never payments or receipts.
 - Deleting a loan is a soft delete (`deleted_at`) with an audit event.
+
+## Ask Kame (2026-11)
+
+The **Ask** launcher is available on loan lists. Questions about overdue, dues, or a named borrower resolve against the same viewer-scoped list payload the table uses. The assistant does not filter or change the table. See [assistant.md](./assistant.md).

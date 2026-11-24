@@ -152,6 +152,9 @@ A loan is **never** `Completed` while principal is outstanding (STAT-03).
   `loadLoanLedger`, write in a transaction, and call `recordMoneyAudit`.
 - Never re-implement interest in a component, PDF, CSV, Telegram message, or
   calendar event.
+- The AI assistant (`src/lib/server/ai/tools/`) reads this engine through
+  `buildLoanLedger`, `sumLedgers`, and `investorLedger`. It must never
+  re-implement a definition. `bun run check:ai-tools` keeps it read-only.
 
 ## Known repairs
 

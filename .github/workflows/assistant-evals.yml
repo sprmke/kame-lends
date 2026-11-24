@@ -1,0 +1,38 @@
+name: Assistant evals
+
+on:
+  schedule:
+    # Nightly at 18:10 Asia/Manila (10:10 UTC).
+    - cron: "10 10 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: assistant-evals
+  cancel-in-progress: true
+
+jobs:
+  evals:
+    name: Tool selection and red team
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      RUN_ASSISTANT_EVALS: "1"
+      AI_ASSISTANT_MAX_ROUNDS: "4"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Dataset checks
+        run: bun run eval:assistant
+      - name: Live evals
+        if: env.GEMINI_API_KEY != ''
+        run: bunx vitest run src/lib/server/ai/assistant-live.eval.test.ts
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: assistant-eval-results
+          path: evals/assistant/last-run.json
+          if-no-files-found: ignore

@@ -37,3 +37,7 @@
 | Detail modal | `src/lib/components/borrowers/BorrowerDetailModal.svelte` |
 | Create modal | `src/lib/components/borrowers/BorrowerCreateModal.svelte` |
 | Nav          | `src/lib/nav/app-nav.ts`                                  |
+
+## Ask Kame (2026-11)
+
+On a borrower detail page the launcher offers borrower-specific starters (balance, overdue, payment history, next due). The assistant uses `get_borrower_position`, which totals the same ledgers the detail page shows. See [assistant.md](./assistant.md).

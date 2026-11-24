@@ -145,8 +145,12 @@ async function attemptJson(
   call: HttpCall,
   timeoutMs: number,
   deps: TransportDeps,
+  outerSignal?: AbortSignal,
 ): Promise<unknown> {
-  const signal = AbortSignal.timeout(timeoutMs);
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const signal = outerSignal
+    ? AbortSignal.any([outerSignal, timeout])
+    : timeout;
   let response: Response;
   try {
     response = await deps.fetch(call.url, {
@@ -419,4 +423,410 @@ export async function callModel(
   throw lastFailure
     ? toGatewayError(lastFailure.error, lastFailure.provider)
     : new AiGatewayError("provider_error");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tool calling + streaming (assistant)                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A Gemini content part. Field names mirror the REST shape so parts can be
+ * echoed back to the model untouched (including `thoughtSignature`, which must
+ * not be edited between tool rounds).
+ */
+export interface GeminiPart {
+  text?: string;
+  thought?: boolean;
+  inlineData?: { mimeType: string; data: string };
+  functionCall?: {
+    id?: string;
+    name: string;
+    args?: Record<string, unknown>;
+  };
+  functionResponse?: {
+    id?: string;
+    name: string;
+    response: Record<string, unknown>;
+  };
+  thoughtSignature?: string;
+}
+
+export interface GeminiContent {
+  role: "user" | "model";
+  parts: GeminiPart[];
+}
+
+export interface ToolDeclaration {
+  name: string;
+  description: string;
+  /** Gemini subset of JSON Schema. */
+  parameters: Record<string, unknown>;
+}
+
+export type ToolMode = "AUTO" | "ANY" | "NONE";
+
+export interface ToolTransportRequest {
+  route: AiFeatureRoute;
+  system: string;
+  contents: GeminiContent[];
+  tools?: ToolDeclaration[];
+  toolMode?: ToolMode;
+  deadlineMs?: number;
+  signal?: AbortSignal;
+  maxOutputTokens?: number;
+}
+
+export interface ToolTransportResult {
+  parts: GeminiPart[];
+  text: string;
+  provider: AiProvider;
+  model: string;
+  usage: TransportUsage;
+  latencyMs: number;
+  finishReason: string | null;
+}
+
+function toGeminiGenerationConfig(
+  request: ToolTransportRequest,
+): Record<string, unknown> {
+  const { route } = request;
+  return {
+    temperature: route.temperature,
+    maxOutputTokens: request.maxOutputTokens ?? route.maxOutputTokens,
+    thinkingConfig: { thinkingBudget: route.thinkingBudget },
+  };
+}
+
+export function toGeminiContents(contents: GeminiContent[]) {
+  return contents.map((content) => ({
+    role: content.role,
+    parts: content.parts.map((part) => {
+      const next: Record<string, unknown> = {};
+      if (part.text !== undefined) next.text = part.text;
+      if (part.thought === true) next.thought = true;
+      if (part.inlineData) next.inlineData = part.inlineData;
+      if (part.functionCall) next.functionCall = part.functionCall;
+      if (part.functionResponse) next.functionResponse = part.functionResponse;
+      if (part.thoughtSignature) next.thoughtSignature = part.thoughtSignature;
+      return next;
+    }),
+  }));
+}
+
+function toolBody(request: ToolTransportRequest): Record<string, unknown> {
+  return {
+    systemInstruction: { parts: [{ text: request.system }] },
+    contents: toGeminiContents(request.contents),
+    ...(request.tools && request.tools.length > 0
+      ? {
+          tools: [{ functionDeclarations: request.tools }],
+          toolConfig: {
+            functionCallingConfig: { mode: request.toolMode ?? "AUTO" },
+          },
+        }
+      : {}),
+    generationConfig: toGeminiGenerationConfig(request),
+  };
+}
+
+function toToolResult(
+  body: unknown,
+  provider: AiProvider,
+  model: string,
+  latencyMs: number,
+): ToolTransportResult {
+  const typed = body as {
+    candidates?: Array<{
+      content?: { parts?: GeminiPart[] };
+      finishReason?: string;
+    }>;
+    usageMetadata?: Record<string, unknown>;
+  } | null;
+  const candidate = typed?.candidates?.[0];
+  const parts = candidate?.content?.parts ?? [];
+  const text = parts
+    .filter((part) => part.thought !== true && typeof part.text === "string")
+    .map((part) => part.text as string)
+    .join("")
+    .trim();
+  const meta = typed?.usageMetadata ?? {};
+  return {
+    parts,
+    text,
+    provider,
+    model,
+    usage: {
+      inputTokens: toNumber(meta.promptTokenCount),
+      outputTokens:
+        toNumber(meta.candidatesTokenCount) + toNumber(meta.thoughtsTokenCount),
+    },
+    latencyMs,
+    finishReason: candidate?.finishReason ?? null,
+  };
+}
+
+function toolCall(
+  key: string,
+  request: ToolTransportRequest,
+  stream = false,
+): HttpCall {
+  const suffix = stream ? ":streamGenerateContent?alt=sse" : ":generateContent";
+  return {
+    url: `${GEMINI_API_BASE}/models/${request.route.geminiModel}${suffix}`,
+    headers: { "x-goog-api-key": key },
+    body: JSON.stringify(toolBody(request)),
+  };
+}
+
+function toolFailed(result: ToolTransportResult): boolean {
+  return result.parts.length === 0;
+}
+
+/**
+ * Gemini `generateContent` with tools. Same key rotation, retries, and deadline
+ * as `callModel`. Returns raw parts so the loop can echo them back verbatim.
+ */
+export async function callModelWithTools(
+  request: ToolTransportRequest,
+  deps: TransportDeps = defaultDeps,
+): Promise<ToolTransportResult> {
+  const keys = getGeminiApiKeys();
+  if (keys.length === 0) {
+    throw new AiGatewayError("not_configured", "No Gemini key configured");
+  }
+  const startedAt = deps.now();
+  const deadline = startedAt + (request.deadlineMs ?? DEFAULT_DEADLINE_MS);
+  const start = nextKeyStartIndex("gemini", keys.length);
+  let lastError: AttemptError = new AttemptError("server");
+
+  for (let k = 0; k < keys.length; k += 1) {
+    const key = keys[(start + k) % keys.length];
+    for (let attempt = 0; attempt < ATTEMPTS_PER_KEY; attempt += 1) {
+      const remaining = deadline - deps.now();
+      if (remaining <= 1_000) throw new AttemptError("timeout");
+      if (request.signal?.aborted) {
+        throw new AiGatewayError("aborted", "aborted");
+      }
+      try {
+        const body = await attemptJson(
+          toolCall(key, request),
+          Math.min(request.route.timeoutMs, remaining),
+          deps,
+          request.signal,
+        );
+        const result = toToolResult(
+          body,
+          "gemini",
+          request.route.geminiModel,
+          deps.now() - startedAt,
+        );
+        if (toolFailed(result)) throw new AttemptError("empty");
+        return result;
+      } catch (error) {
+        lastError =
+          error instanceof AttemptError ? error : new AttemptError("server");
+        if (request.signal?.aborted) {
+          throw new AiGatewayError("aborted", "aborted");
+        }
+        if (lastError.kind === "bad_request") {
+          throw toGatewayError(lastError, "gemini");
+        }
+        if (lastError.kind === "auth" || lastError.kind === "empty") break;
+        if (!lastError.retryable) break;
+        if (attempt < ATTEMPTS_PER_KEY - 1) {
+          await deps.sleep(
+            backoffDelayMs(attempt, lastError.retryAfter, deps.random),
+          );
+        }
+      }
+    }
+  }
+  throw toGatewayError(lastError, "gemini");
+}
+
+export type StreamDelta = { type: "text"; text: string };
+
+interface StreamSink {
+  onDelta: (delta: StreamDelta) => void | Promise<void>;
+}
+
+function parseSseBlock(block: string): unknown | null {
+  const dataLines = block
+    .split("\n")
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart());
+  if (dataLines.length === 0) return null;
+  const payload = dataLines.join("\n").trim();
+  if (!payload || payload === "[DONE]") return null;
+  try {
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
+}
+
+function mergeUsage(current: TransportUsage, body: unknown): TransportUsage {
+  const meta =
+    (body as { usageMetadata?: Record<string, unknown> } | null)
+      ?.usageMetadata ?? {};
+  const prompt = toNumber(meta.promptTokenCount);
+  const candidates = toNumber(meta.candidatesTokenCount);
+  const thoughts = toNumber(meta.thoughtsTokenCount);
+  if (prompt === 0 && candidates === 0 && thoughts === 0) return current;
+  return {
+    inputTokens: Math.max(current.inputTokens, prompt),
+    outputTokens: Math.max(current.outputTokens, candidates + thoughts),
+  };
+}
+
+/**
+ * Streams `streamGenerateContent?alt=sse`. Deltas are passed to `onDelta` as
+ * they arrive; the final result contains the full parts (including function
+ * calls and thought signatures) for the next round.
+ */
+export async function streamModelWithTools(
+  request: ToolTransportRequest,
+  sink: StreamSink,
+  deps: TransportDeps = defaultDeps,
+): Promise<ToolTransportResult> {
+  const keys = getGeminiApiKeys();
+  if (keys.length === 0) {
+    throw new AiGatewayError("not_configured", "No Gemini key configured");
+  }
+  const startedAt = deps.now();
+  const deadline = startedAt + (request.deadlineMs ?? DEFAULT_DEADLINE_MS);
+  const start = nextKeyStartIndex("gemini", keys.length);
+  let lastError: AttemptError = new AttemptError("server");
+
+  for (let k = 0; k < keys.length; k += 1) {
+    const key = keys[(start + k) % keys.length];
+    if (request.signal?.aborted) {
+      throw new AiGatewayError("aborted", "aborted");
+    }
+    const remaining = deadline - deps.now();
+    if (remaining <= 1_000) throw new AttemptError("timeout");
+
+    const timeout = AbortSignal.timeout(
+      Math.min(request.route.timeoutMs, remaining),
+    );
+    const signal = request.signal
+      ? AbortSignal.any([request.signal, timeout])
+      : timeout;
+    const call = toolCall(key, request, true);
+
+    let response: Response;
+    try {
+      response = await deps.fetch(call.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...call.headers },
+        body: call.body,
+        signal,
+      });
+    } catch {
+      if (request.signal?.aborted) {
+        throw new AiGatewayError("aborted", "aborted");
+      }
+      lastError = new AttemptError(signal.aborted ? "timeout" : "network");
+      if (lastError.retryable && k < keys.length - 1) continue;
+      throw toGatewayError(lastError, "gemini");
+    }
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      lastError = new AttemptError(
+        classifyStatus(response.status, providerErrorMessage(body)),
+        response.status,
+        response.headers?.get?.("retry-after") ?? null,
+      );
+      if (lastError.kind === "auth" || lastError.kind === "rate_limited") {
+        if (k < keys.length - 1) continue;
+      }
+      throw toGatewayError(lastError, "gemini");
+    }
+
+    if (!response.body) {
+      throw toGatewayError(new AttemptError("empty"), "gemini");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let text = "";
+    const parts: GeminiPart[] = [];
+    let usage: TransportUsage = { inputTokens: 0, outputTokens: 0 };
+    let finishReason: string | null = null;
+    let sawPayload = false;
+
+    const consume = async (block: string) => {
+      const body = parseSseBlock(block);
+      if (!body) return;
+      sawPayload = true;
+      usage = mergeUsage(usage, body);
+      const candidate = (
+        body as {
+          candidates?: Array<{
+            content?: { parts?: GeminiPart[] };
+            finishReason?: string;
+          }>;
+        }
+      ).candidates?.[0];
+      finishReason = candidate?.finishReason ?? finishReason;
+      for (const part of candidate?.content?.parts ?? []) {
+        parts.push(part);
+        if (part.thought === true) continue;
+        if (typeof part.text === "string" && part.text.length > 0) {
+          text += part.text;
+          await sink.onDelta({ type: "text", text: part.text });
+        }
+      }
+    };
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer = (buffer + decoder.decode(value, { stream: true })).replace(
+          /\r\n/g,
+          "\n",
+        );
+        let boundary = buffer.indexOf("\n\n");
+        while (boundary >= 0) {
+          const block = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          await consume(block);
+          boundary = buffer.indexOf("\n\n");
+        }
+      }
+      if (buffer.trim()) await consume(buffer);
+    } catch (error) {
+      try {
+        await reader.cancel();
+      } catch {
+        // Already closed.
+      }
+      if (request.signal?.aborted) {
+        throw new AiGatewayError("aborted", "aborted");
+      }
+      throw toGatewayError(
+        error instanceof AttemptError ? error : new AttemptError("network"),
+        "gemini",
+      );
+    }
+
+    if (!sawPayload && text.length === 0 && parts.length === 0) {
+      throw toGatewayError(new AttemptError("empty"), "gemini");
+    }
+
+    return {
+      parts,
+      text,
+      provider: "gemini",
+      model: request.route.geminiModel,
+      usage,
+      latencyMs: deps.now() - startedAt,
+      finishReason,
+    };
+  }
+
+  throw toGatewayError(lastError, "gemini");
 }

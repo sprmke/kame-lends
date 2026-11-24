@@ -15,6 +15,7 @@
 	import NavigationProgress from '$lib/components/common/NavigationProgress.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import PwaProvider from '$lib/components/pwa/PwaProvider.svelte';
+	import AssistantLauncher from '$lib/components/assistant/AssistantLauncher.svelte';
 	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import { navigating, page } from '$app/state';
 	import { releaseStaleBodyScrollLock } from '$lib/composables/body-scroll-lock-release';
@@ -180,5 +181,8 @@
 			{/if}
 		</PriceVisibilityShell>
 	</Nav>
+	{#if data.session?.user}
+		<AssistantLauncher />
+	{/if}
 </PwaProvider>
 <Toaster />

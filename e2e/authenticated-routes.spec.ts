@@ -23,10 +23,7 @@ test("loans list renders with table columns", async ({ page }) => {
   ).toBeVisible();
 
   const emptyState = page.getByText("No loans found");
-  const totalAmountHeader = page
-    .getByText("Total Amount", { exact: true })
-    .first();
-  await expect(emptyState.or(totalAmountHeader)).toBeVisible({
+  await expect(page.getByRole("table").first()).toBeVisible({
     timeout: 20_000,
   });
 
@@ -37,8 +34,15 @@ test("loans list renders with table columns", async ({ page }) => {
     return;
   }
 
-  await expect(totalAmountHeader).toBeVisible();
-  await expect(page.getByText("Due", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Loan", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Total Amount", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Due", exact: true }),
+  ).toBeVisible();
 });
 
 test("loan create form renders", async ({ page }) => {
@@ -47,7 +51,7 @@ test("loan create form renders", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Create Loan" })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.locator("#borrowerId")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /borrower/i })).toBeVisible();
 });
 
 test("investors list renders", async ({ page }) => {
@@ -102,7 +106,7 @@ test("investor detail renders", async ({ page, request }) => {
   await expect(page.getByRole("tab", { name: /overview/i })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByRole("tab", { name: /^Loans/ }).first()).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^loans\b/i })).toBeVisible();
 });
 
 test("bank loans list renders", async ({ page }) => {

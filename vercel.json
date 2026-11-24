@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/money-health",
       "schedule": "0 23 * * 0"
+    },
+    {
+      "path": "/api/cron/assistant-health",
+      "schedule": "30 23 * * *"
     }
   ]
 }

@@ -86,3 +86,7 @@ No view access returns 404 and renders `+error.svelte` ("Loan not available"). `
 - **Complete loan** requires a reason and writes `status_override`, `status_reason`, and `completed_at`. Clearing the override recomputes the derived status.
 - Deleting a payment soft-deletes it and writes an audit event.
 - The dashboard/cron status sweep uses the same rule: overdue starts the day after the due date.
+
+## Ask Kame (2026-11)
+
+On this page the launcher pins the loan as page context ("Viewing Loan #12") and swaps starters to explain-this-loan, next due, payment history, and simulate-a-rate. The assistant reads the same detail payload and ledger; it cannot edit the loan or record a payment. See [assistant.md](./assistant.md).
