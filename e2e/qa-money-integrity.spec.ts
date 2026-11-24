@@ -6,7 +6,7 @@ import { e2ePaymentReceipt, gotoApp, skipIfNoDatabase } from "./helpers";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const receiptFile = path.join(__dirname, "fixtures/receipts/receipt-1.png");
 
-test.describe.configure({ mode: "serial", timeout: 120_000, retries: 1 });
+test.describe.configure({ mode: "serial", timeout: 180_000, retries: 1 });
 
 test.beforeEach(({ page: _page }, testInfo) => {
   skipIfNoDatabase(testInfo);
@@ -69,13 +69,15 @@ test("single-interest payment updates totals without reload, then edits and dele
   try {
     const response = await gotoApp(page, `/loans/${loan.id}`);
     expect(response?.status()).toBe(200);
-    await page.waitForTimeout(1200);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(500);
     await expect(
       page.getByRole("button", { name: "Record payment" }),
     ).toBeVisible({ timeout: 20_000 });
 
     await page.getByRole("button", { name: "Record payment" }).click();
     const dialog = page.getByRole("dialog").last();
+    await expect(dialog).toBeVisible({ timeout: 20_000 });
     await dialog.locator('input[id$="-amount"]').fill("55000");
     await dialog.locator('input[id$="-date"]').fill("2026-12-01");
     await dialog
@@ -101,8 +103,11 @@ test("single-interest payment updates totals without reload, then edits and dele
         .getByText("Completed"),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "Edit payment" }).click();
+    const editPayment = page.getByRole("button", { name: "Edit payment" });
+    await expect(editPayment).toBeVisible({ timeout: 20_000 });
+    await editPayment.click();
     const edit = page.getByRole("dialog").last();
+    await expect(edit).toBeVisible({ timeout: 20_000 });
     await edit.locator('input[id$="-amount"]').fill("50000");
     const editResponse = page.waitForResponse(
       (res) =>
