@@ -52,11 +52,20 @@ export async function waitForLoansTable(page: Page) {
     page.getByRole("heading", { name: "Loans", exact: true }),
   ).toBeVisible();
   const table = page.locator("table").first();
-  const emptyState = page.getByText(
-    /No (loans|investments|borrowed|commissioned|witnessed)/i,
-  );
-  await expect(table.or(emptyState)).toBeVisible({ timeout: 20_000 });
-  return !(await emptyState.isVisible());
+  const emptyState = page
+    .getByText(/No (loans|investments|borrowed|commissioned|witnessed)/i)
+    .first();
+  // The empty state can live inside the table, so `table.or(emptyState)` is
+  // ambiguous once the table paints. Poll both instead of using `or`.
+  await expect
+    .poll(
+      async () =>
+        (await table.count()) > 0 ||
+        (await emptyState.isVisible().catch(() => false)),
+      { timeout: 20_000 },
+    )
+    .toBe(true);
+  return !(await emptyState.isVisible().catch(() => false));
 }
 
 const e2eSecret = process.env.E2E_AUTH_SECRET ?? "e2e-local-secret";
