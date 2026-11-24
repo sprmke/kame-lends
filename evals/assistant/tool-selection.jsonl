@@ -1,0 +1,72 @@
+{"id":"ts-001","question":"How much does Maria Santos still owe?","expectedTools":["find_party","get_borrower_position"]}
+{"id":"ts-002","question":"What is due this week?","expectedTools":["resolve_period","get_upcoming_dues"]}
+{"id":"ts-003","question":"Which loans are overdue and by how much?","expectedTools":["list_overdue"]}
+{"id":"ts-004","question":"How much interest did I collect in October?","expectedTools":["resolve_period","get_interest_summary"]}
+{"id":"ts-005","question":"Give me the portfolio totals.","expectedTools":["get_portfolio_summary"]}
+{"id":"ts-006","question":"Show me the loans for Juan Dela Cruz.","expectedTools":["find_party","list_loans"]}
+{"id":"ts-007","question":"Explain the balance on this loan.","expectedTools":["get_loan"]}
+{"id":"ts-008","question":"When is the next payment due on loan 1?","expectedTools":["get_loan_schedule"]}
+{"id":"ts-009","question":"Show the payments received on loan 2.","expectedTools":["get_loan_payments"]}
+{"id":"ts-010","question":"How much capital does Elena Torres have out?","expectedTools":["find_party","get_investor_position"]}
+{"id":"ts-011","question":"What did I collect from borrowers last month?","expectedTools":["resolve_period","list_payments"]}
+{"id":"ts-012","question":"Show cashflow for this quarter by month.","expectedTools":["resolve_period","get_cashflow"]}
+{"id":"ts-013","question":"What do I owe the bank?","expectedTools":["list_debts"]}
+{"id":"ts-014","question":"Show the schedule for the Bank of the Islands term loan.","expectedTools":["list_debts","get_debt"]}
+{"id":"ts-015","question":"Which loans are in the Santos family group?","expectedTools":["list_groups","get_group_summary"]}
+{"id":"ts-016","question":"How much is my commission?","expectedTools":["get_commission_summary"]}
+{"id":"ts-017","question":"Is anything wrong with my data?","expectedTools":["get_data_health"]}
+{"id":"ts-018","question":"What if the rate on loan 1 were 3%?","expectedTools":["simulate_interest"]}
+{"id":"ts-019","question":"Add the interest expected and the overdue total.","expectedTools":["get_portfolio_summary","calculate"]}
+{"id":"ts-020","question":"How do I record a payment?","expectedTools":["search_help"]}
+{"id":"ts-021","question":"Take me to the loans page.","expectedTools":["open_page"]}
+{"id":"ts-022","question":"Is this payment already recorded?","expectedTools":["read_receipt_image"]}
+{"id":"ts-023","question":"Magkano pa ang utang ni Maria Santos?","expectedTools":["find_party","get_borrower_position"]}
+{"id":"ts-024","question":"Ilan ang overdue ngayon?","expectedTools":["list_overdue"]}
+{"id":"ts-025","question":"Sino ang may pinakamalaking utang?","expectedTools":["list_loans"]}
+{"id":"ts-026","question":"How much interest is expected this month versus collected?","expectedTools":["resolve_period","get_interest_summary"]}
+{"id":"ts-027","question":"What is the balance on the fixed-interest loan?","expectedTools":["list_loans","get_loan"]}
+{"id":"ts-028","question":"Which payments are not linked to a period?","expectedTools":["list_payments"]}
+{"id":"ts-029","question":"What is the aging of my overdue loans?","expectedTools":["list_overdue"]}
+{"id":"ts-030","question":"Show me everything due in December.","expectedTools":["resolve_period","get_upcoming_dues"]}
+{"id":"ts-031","question":"Which investor funded loan 4?","expectedTools":["get_loan"]}
+{"id":"ts-032","question":"How many loans are completed?","expectedTools":["list_loans"]}
+{"id":"ts-033","question":"Do I have any partially funded loans?","expectedTools":["list_loans"]}
+{"id":"ts-034","question":"What is the principal on the Lot Title for Pedro Lim?","expectedTools":["find_party","list_loans"]}
+{"id":"ts-035","question":"Show me the interest periods for Liza Cruz's multi-period loan.","expectedTools":["find_party","get_loan_schedule"]}
+{"id":"ts-036","question":"Which loans is Marco Silva funding?","expectedTools":["find_party","list_loans"]}
+{"id":"ts-037","question":"What is my net cashflow since June?","expectedTools":["resolve_period","get_cashflow"]}
+{"id":"ts-038","question":"How much did Ana Reyes pay this year?","expectedTools":["find_party","list_payments"]}
+{"id":"ts-039","question":"Explain how interest is rounded.","expectedTools":["search_help"]}
+{"id":"ts-040","question":"Open Maria Santos.","expectedTools":["find_party","open_page"]}
+{"id":"ts-041","question":"How much has Elena Torres earned in interest?","expectedTools":["find_party","get_investor_position"]}
+{"id":"ts-042","question":"What is due next Friday?","expectedTools":["resolve_period","get_upcoming_dues"]}
+{"id":"ts-043","question":"Show me the details of loan 3.","expectedTools":["get_loan"]}
+{"id":"ts-044","question":"What is the remaining balance on Juan's OR/CR?","expectedTools":["find_party","list_loans"]}
+{"id":"ts-045","question":"What is the overdue total for Pedro Lim?","expectedTools":["find_party","get_borrower_position"]}
+{"id":"ts-046","question":"Compare interest collected in October and September.","expectedTools":["resolve_period","get_interest_summary","calculate"]}
+{"id":"ts-047","question":"Which loans have no payments yet?","expectedTools":["list_loans","list_payments"]}
+{"id":"ts-048","question":"What is the difference between expected and collected interest?","expectedTools":["get_interest_summary","calculate"]}
+{"id":"ts-049","question":"Show me the bank loan schedule.","expectedTools":["list_debts","get_debt"]}
+{"id":"ts-050","question":"What is the date range for Q3 2026?","expectedTools":["resolve_period"]}
+{"id":"ts-051","question":"How do I hide amounts on screen?","expectedTools":["search_help"]}
+{"id":"ts-052","question":"Take me to settings.","expectedTools":["open_page"]}
+{"id":"ts-053","question":"Which witness is on the Liza Cruz loan?","expectedTools":["find_party","get_loan"]}
+{"id":"ts-054","question":"How much did I lend in total?","expectedTools":["get_portfolio_summary"]}
+{"id":"ts-055","question":"How much interest is still unpaid?","expectedTools":["get_interest_summary"]}
+{"id":"ts-056","question":"Show the cashflow for the last 30 days.","expectedTools":["resolve_period","get_cashflow"]}
+{"id":"ts-057","question":"Which loans are due today?","expectedTools":["resolve_period","get_upcoming_dues"]}
+{"id":"ts-058","question":"How many investors do I have?","expectedTools":["get_portfolio_summary","find_party"]}
+{"id":"ts-059","question":"What is the total principal still active?","expectedTools":["get_portfolio_summary"]}
+{"id":"ts-060","question":"Is there an unlinked payment on loan 1?","expectedTools":["get_loan","list_payments"]}
+{"id":"ts-061","question":"Which loans are overdue, and by how much?","expectedTools":["list_overdue"]}
+{"id":"ts-062","question":"How much does this borrower still owe?","expectedTools":["get_borrower_position"]}
+{"id":"ts-063","question":"How much interest has this investor collected, and what is still outstanding?","expectedTools":["get_investor_position","get_interest_summary"]}
+{"id":"ts-064","question":"How much interest was collected this month compared with what was expected?","expectedTools":["resolve_period","get_interest_summary"]}
+{"id":"ts-065","question":"Give me the portfolio totals: principal, outstanding, and overdue.","expectedTools":["get_portfolio_summary"]}
+{"id":"ts-066","question":"Show the cashflow for this quarter by month.","expectedTools":["resolve_period","get_cashflow"]}
+{"id":"ts-067","question":"Explain this loan's balance and schedule.","expectedTools":["get_loan","get_loan_schedule"]}
+{"id":"ts-068","question":"What if the rate on this loan were 3%?","expectedTools":["simulate_interest"]}
+{"id":"ts-069","question":"Are there payments that are not linked to an interest period?","expectedTools":["list_payments"]}
+{"id":"ts-070","question":"Is anything wrong with my data?","expectedTools":["get_data_health"]}
+{"id":"ts-071","question":"Is this payment already recorded?","expectedTools":["read_receipt_image"]}
+{"id":"ts-072","question":"What is due this week?","expectedTools":["resolve_period","get_upcoming_dues"]}

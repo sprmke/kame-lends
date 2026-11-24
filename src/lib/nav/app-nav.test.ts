@@ -45,6 +45,7 @@ describe("buildSidebarGroups", () => {
     expect(groups[2]?.label).toBe("Tools");
     expect(groups[2]?.items).toEqual([
       expect.objectContaining({ id: "debts", title: "Bank Loans" }),
+      expect.objectContaining({ id: "assistant", title: "Ask Kame" }),
     ]);
   });
 

@@ -24,6 +24,8 @@ Per-page behavior specs mirroring SvelteKit URLs under `src/routes/`.
 | `/transactions`      | [transactions.md](./transactions.md)         | Documented |
 | `/transactions/[id]` | [transactions.md](./transactions.md)         | Documented |
 | `/settings`          | [settings.md](./settings.md)                 | Documented |
+| `/assistant`         | [assistant.md](./assistant.md)               | Documented |
+| `/assistant/[id]`    | [assistant.md](./assistant.md)               | Documented |
 | `/loans/[id]`        | [loans-detail.md](./loans-detail.md)         | Documented |
 | `/loans/[id]/sign`   | [sign.md](./sign.md)                         | Documented |
 | Any failing route    | [errors.md](./errors.md)                     | Documented |

@@ -13,6 +13,8 @@ import {
   index,
   unique,
   uniqueIndex,
+  uuid,
+  smallint,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import type { AdapterAccount } from "@auth/core/adapters";
@@ -1579,6 +1581,11 @@ export const aiUsageEvents = pgTable(
     errorCode: text("error_code"),
     fallbackUsed: boolean("fallback_used").notNull().default(false),
     cacheHit: boolean("cache_hit").notNull().default(false),
+    /** Assistant turn linkage (nullable; receipt calls leave these null). */
+    conversationId: uuid("conversation_id"),
+    messageId: uuid("message_id"),
+    rounds: integer("rounds"),
+    toolCalls: integer("tool_calls"),
     createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => ({
@@ -1605,5 +1612,99 @@ export const aiResponseCache = pgTable(
   },
   (table) => ({
     expiresIdx: index("ai_response_cache_expires_idx").on(table.expiresAt),
+  }),
+);
+
+/** One chat thread per row. Always owned by exactly one user. */
+export const aiConversations = pgTable(
+  "ai_conversations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    agent: text("agent").notNull().default("assistant"),
+    title: text("title").notNull().default("New chat"),
+    pinnedContext: jsonb("pinned_context").$type<unknown[]>(),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+    archivedAt: timestamp("archived_at", { mode: "date" }),
+    deletedAt: timestamp("deleted_at", { mode: "date" }),
+  },
+  (table) => ({
+    userUpdatedIdx: index("ai_conversations_user_updated_idx").on(
+      table.userId,
+      table.updatedAt,
+    ),
+  }),
+);
+
+/** One message per row. `blocks` holds the render-ready typed union. */
+export const aiMessages = pgTable(
+  "ai_messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => aiConversations.id, { onDelete: "cascade" }),
+    /** Denormalized so ownership checks never rely on the join alone. */
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    status: text("status").notNull().default("complete"),
+    text: text("text").notNull().default(""),
+    blocks: jsonb("blocks").$type<unknown[]>().notNull().default([]),
+    attachments: jsonb("attachments").$type<unknown[]>().notNull().default([]),
+    toolTrace: jsonb("tool_trace").$type<unknown[]>().notNull().default([]),
+    promptId: text("prompt_id"),
+    promptVersion: text("prompt_version"),
+    model: text("model"),
+    provider: text("provider"),
+    rounds: integer("rounds").notNull().default(0),
+    tokensIn: integer("tokens_in").notNull().default(0),
+    tokensOut: integer("tokens_out").notNull().default(0),
+    estCostUsd: decimal("est_cost_usd", { precision: 10, scale: 6 })
+      .notNull()
+      .default("0"),
+    latencyBreakdown: jsonb("latency_breakdown").$type<unknown>(),
+    guardMode: text("guard_mode"),
+    feedback: smallint("feedback"),
+    feedbackReason: text("feedback_reason"),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    conversationCreatedIdx: index("ai_messages_conversation_created_idx").on(
+      table.conversationId,
+      table.createdAt,
+    ),
+  }),
+);
+
+/** Append-only tool audit. No arguments values and no results. */
+export const aiToolCalls = pgTable(
+  "ai_tool_calls",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => aiMessages.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tool: text("tool").notNull(),
+    argsHash: text("args_hash").notNull(),
+    ok: boolean("ok").notNull(),
+    errorCode: text("error_code"),
+    rowCount: integer("row_count").notNull().default(0),
+    truncated: boolean("truncated").notNull().default(false),
+    latencyMs: integer("latency_ms").notNull().default(0),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => ({
+    toolCreatedIdx: index("ai_tool_calls_tool_created_idx").on(
+      table.tool,
+      table.createdAt,
+    ),
   }),
 );

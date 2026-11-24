@@ -11,6 +11,7 @@ export const AI_ERROR_CODES = [
   "provider_error",
   "invalid_output",
   "unsupported_input",
+  "aborted",
 ] as const;
 
 export type AiErrorCode = (typeof AI_ERROR_CODES)[number];
@@ -49,6 +50,7 @@ const FRIENDLY_MESSAGES: Record<AiErrorCode, string> = {
   invalid_output:
     "Couldn't read this receipt automatically. Please enter the details manually.",
   unsupported_input: "Please upload a JPEG, PNG, WebP, or HEIC image.",
+  aborted: "Stopped.",
 };
 
 export function aiErrorMessage(code: AiErrorCode): string {

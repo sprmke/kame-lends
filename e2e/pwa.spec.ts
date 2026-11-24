@@ -85,7 +85,7 @@ test.describe("PWA @smoke", () => {
     await page.waitForFunction(() => !navigator.onLine);
     await page.evaluate(() => window.dispatchEvent(new Event("offline")));
     await expect(page.getByRole("status")).toContainText(
-      "Offline. Showing saved data.",
+      /Offline\. (Showing saved data\.|Saved data from .+\.)/,
     );
   });
 

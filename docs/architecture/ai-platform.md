@@ -1,30 +1,32 @@
 # AI platform
 
-Part of [`docs/PROJECT.md`](../PROJECT.md). Plan: [`workflow/for-testing/ai-platform-and-receipt-autofill.md`](../workflow/for-testing/ai-platform-and-receipt-autofill.md).
+Part of [`docs/PROJECT.md`](../PROJECT.md). Assistant: [`ai-assistant.md`](./ai-assistant.md). Plan: [`workflow/for-testing/ai-platform-and-receipt-autofill.md`](../workflow/for-testing/ai-platform-and-receipt-autofill.md).
 
 Kame Lends uses AI to **pre-fill forms**, never to save data by itself. A person always reviews and confirms. The design follows the Kame Homes gateway and leaves out its SaaS layers (plans, credits, wallets). It also avoids the Kame Ops gaps (client-supplied storage paths, forgeable AI results, auto-apply, no dedupe, no usage log).
 
 ## Layers
 
 ```
-feature (receipt-extraction.ts)
+feature (receipt-extraction.ts)        assistant (agent/turn.ts)
   → client.ts       kill switch · daily cap · cache · zod validation + 1 repair retry · metering
-    → transport.ts  only file that calls providers · timeouts · retries · key rotation · Groq fallback
+    → transport.ts  only file that calls providers · timeouts · retries · key rotation · Groq fallback · tools · SSE
       → Gemini (primary) / Groq (fallback)
 ```
 
-| File (`src/lib/server/ai/`) | Role                                                                                                                                              |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `config.ts`                 | Env: keys, `AI_ENABLED`, `AI_DISABLED_FEATURES`, `AI_DAILY_CALLS_PER_USER`, `AI_RESPONSE_CACHE_DISABLED`; `getAiStatus()`                         |
-| `features.ts`               | Feature ids and routing: model, fallback model, `maxOutputTokens`, `thinkingBudget: 0`, timeout, prices                                           |
-| `transport.ts`              | Gemini REST (`x-goog-api-key` header), Groq OpenAI-compatible; 2 attempts per key, jittered backoff honoring `retry-after`, 55s whole-call budget |
-| `client.ts`                 | `generateStructured()` — the only entry point for feature code                                                                                    |
-| `prompt.ts`, `prompts/*.ts` | Versioned prompts (`id` + `version`), `DOCUMENT_INJECTION_RULE`                                                                                   |
-| `usage.ts`                  | `ai_usage_events` row + one structured log line per call                                                                                          |
-| `cache.ts`                  | `ai_response_cache` (sha256 of user + prompt@version + model + input), 30-day TTL, lazy sweep                                                     |
-| `errors.ts`                 | `AiGatewayError` codes and friendly messages                                                                                                      |
+| File (`src/lib/server/ai/`) | Role                                                                                                                                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config.ts`                 | Env: keys, `AI_ENABLED`, `AI_DISABLED_FEATURES`, `AI_DAILY_CALLS_PER_USER`, `AI_RESPONSE_CACHE_DISABLED`; assistant caps/rollout; `getAiStatus()`                                                  |
+| `features.ts`               | Feature ids and routing: model, fallback model, `maxOutputTokens`, `thinkingBudget`, timeout, prices, env model override                                                                           |
+| `transport.ts`              | Gemini REST (`x-goog-api-key` header), Groq OpenAI-compatible; 2 attempts per key, jittered backoff honoring `retry-after`, 55s whole-call budget; `callModelWithTools` and `streamModelWithTools` |
+| `client.ts`                 | `generateStructured()` for structured features; `runAgentTurn()` for agent profiles                                                                                                                |
+| `agent/*`                   | Bounded loop, context, registry, facts/number tokens, verifier, SSE encoder, thread memory                                                                                                         |
+| `tools/*`                   | Read-only assistant tools. Guarded by `check:ai-tools`                                                                                                                                             |
+| `prompt.ts`, `prompts/*.ts` | Versioned prompts (`id` + `version`), `DOCUMENT_INJECTION_RULE`                                                                                                                                    |
+| `usage.ts`                  | `ai_usage_events` row + one structured log line per call; daily turn/cost helpers                                                                                                                  |
+| `cache.ts`                  | `ai_response_cache` (sha256 of user + prompt@version + model + input), 30-day TTL, lazy sweep                                                                                                      |
+| `errors.ts`                 | `AiGatewayError` codes and friendly messages                                                                                                                                                       |
 
-`scripts/check-ai-gateway.mjs` (`bun run check:ai-gateway`, CI and CD) fails if a provider host appears outside `transport.ts` or an API key is put in a URL query string.
+`scripts/check-ai-gateway.mjs` (`bun run check:ai-gateway`, CI and CD) fails if a provider host appears outside `transport.ts` or an API key is put in a URL query string. `scripts/check-ai-tools.mjs` (`bun run check:ai-tools`) fails if a tool under `src/lib/server/ai/tools/` writes to the DB, calls `fetch`, reads fs/env, or declares a non-read capability.
 
 ## Retry and fallback rules
 
@@ -39,18 +41,25 @@ feature (receipt-extraction.ts)
 
 ## Controls
 
-| Env                          | Default        | Effect                                                |
-| ---------------------------- | -------------- | ----------------------------------------------------- |
-| `AI_ENABLED`                 | on (with keys) | `false` turns every AI feature off                    |
-| `AI_DISABLED_FEATURES`       | none           | Comma list, e.g. `receipt_extraction`                 |
-| `AI_DAILY_CALLS_PER_USER`    | `300`          | Model calls per user per rolling 24h; `0` = unlimited |
-| `AI_RESPONSE_CACHE_DISABLED` | off            | `1` skips the cache                                   |
+| Env                                 | Default        | Effect                                                  |
+| ----------------------------------- | -------------- | ------------------------------------------------------- |
+| `AI_ENABLED`                        | on (with keys) | `false` turns every AI feature off                      |
+| `AI_DISABLED_FEATURES`              | none           | Comma list, e.g. `receipt_extraction`                   |
+| `AI_DAILY_CALLS_PER_USER`           | `300`          | Model calls per user per rolling 24h; `0` = unlimited   |
+| `AI_RESPONSE_CACHE_DISABLED`        | off            | `1` skips the cache                                     |
+| `AI_ASSISTANT_ROLLOUT`              | `owner`        | `owner` (admin role) or `all`                           |
+| `AI_DISABLED_TOOLS`                 | none           | Comma list of assistant tool names                      |
+| `AI_ASSISTANT_DAILY_TURNS_PER_USER` | `60`           | User questions per rolling 24h; `0` = unlimited         |
+| `AI_DAILY_COST_USD_PER_USER`        | `1`            | Estimated USD per user per rolling 24h; `0` = unlimited |
+| `AI_ASSISTANT_TURN_TOKEN_CEILING`   | `60000`        | Input + output tokens per turn                          |
+| `AI_ASSISTANT_RETENTION_DAYS`       | `90`           | Conversation retention before the lazy sweep            |
 
-Per-path request rate limiting (`src/lib/server/rate-limit.ts`, 30/min/user) also covers `/api/ai/receipt-extraction`.
+Per-path request rate limiting (`src/lib/server/rate-limit.ts`, 30/min/user) also covers `/api/ai/receipt-extraction` and `/api/ai/assistant`.
 
 ## Cost and privacy
 
-- Receipt extraction: `gemini-2.5-flash`, thinking off, max 2048 output tokens. A compressed receipt (≤1600px) is roughly 1–2k input tokens, so about **$0.001 per scan**. Re-uploading the same image is a cache hit (no cost).
+- Receipt extraction: `gemini-3.5-flash-lite` (replacement for the deprecated `gemini-2.5-flash`), thinking off, max 2048 output tokens. A compressed receipt (≤1600px) is roughly 1–2k input tokens, so about **$0.001 per scan**. Re-uploading the same image is a cache hit (no cost).
+- Assistant: `gemini-3.8-flash`, thinking budget 512, 6 rounds max. A turn is typically 2–3 rounds with a stable prefix, so roughly **one cent per turn** before caching. Caps stop runaway use.
 - `ai_usage_events` stores tokens, estimated USD, latency, provider, model, prompt id/version, status, error code, fallback, cache hit. No prompt or reply text, no names.
 - Logs print one JSON line (`ai.<feature>.<status>`) with the same fields. Receipt summaries are never logged.
 - **Use a paid-tier Gemini key in production.** Free-tier data may be used by Google to improve products, and receipts contain names and account numbers.
@@ -66,6 +75,16 @@ from ai_usage_events
 where created_at > now() - interval '7 days'
 group by 1, 2, 3 order by 1, 2, 3;
 ```
+
+## Adding an agent profile
+
+For a conversational or non-interactive agent (briefing, reminder draft, contract summary):
+
+1. Add the feature id and route in `features.ts` (tools only work with Gemini for now).
+2. Add a versioned prompt in `prompts/`, a toolset in `ai/tools/index.ts` (or a sibling), and a profile entry if it needs its own caps. Tools stay read-only until the three-tier write design exists.
+3. Call `runAgentTurn()` from the server, or `runAssistantLoop()` directly for a non-streaming job. Keep the context derived from the session.
+4. Reuse `ai_messages` with `agent = '<profile>'` for threads, or `ai_usage_events` only for one-shot jobs.
+5. Add eval cases to `evals/assistant/` (one dataset folder per profile), run `bun run eval:assistant`, and update the route guide.
 
 ## Adding an AI feature
 
