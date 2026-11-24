@@ -154,7 +154,7 @@ test("create and delete a transaction", async ({ page, request }, testInfo) => {
 
   await page.getByLabel("Name").fill(`E2E Transaction ${stamp}`);
   await page.getByLabel("Investor").click();
-  await page.getByRole("option", { name: investor!.name }).click();
+  await page.getByRole("option", { name: investor!.name, exact: true }).click();
   await page.getByLabel("Amount").fill("5000");
   await page.getByRole("button", { name: "Create Transaction" }).click();
 
@@ -193,7 +193,7 @@ test("create and delete a bank loan", async ({ page, request }) => {
   await page.waitForLoadState("networkidle");
 
   await page.getByRole("combobox").click();
-  await page.getByRole("button", { name: investor!.name }).click();
+  await page.getByRole("button", { name: investor!.name, exact: true }).click();
   await page.keyboard.press("Escape");
 
   await page
@@ -282,7 +282,10 @@ test("create and delete a loan", async ({ page, request }) => {
   await page.waitForLoadState("networkidle");
 
   await page.locator("#borrowerId").click();
-  await page.getByRole("button", { name: borrower.name }).last().click();
+  await page
+    .getByRole("button", { name: borrower.name, exact: true })
+    .last()
+    .click();
   await page.locator("#loanName").fill(`E2E Loan ${stamp}`);
   await page.locator("#dueDate").fill(dueDate);
   await expect(page.locator('input[id^="principal-"]')).toHaveCount(1);

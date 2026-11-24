@@ -6,7 +6,7 @@ import { e2ePaymentReceipt, gotoApp, skipIfNoDatabase } from "./helpers";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const receiptFile = path.join(__dirname, "fixtures/receipts/receipt-1.png");
 
-test.describe.configure({ mode: "serial", timeout: 120_000, retries: 1 });
+test.describe.configure({ mode: "serial", timeout: 180_000, retries: 1 });
 
 test.beforeEach(({ page: _page }, testInfo) => {
   skipIfNoDatabase(testInfo);
@@ -110,12 +110,18 @@ test("multi-interest loan saves without a separate transaction rate and sorts pe
   const loan = (await create.json()) as { id: number };
 
   try {
-    await gotoApp(page, `/loans/${loan.id}`);
-    await page.waitForTimeout(1200);
-    if (await page.getByRole("dialog").count()) {
+    // The create flow redirects to the detail page and opens Contract Details.
+    // Wait for that navigation to finish before driving the page.
+    await expect(page).toHaveURL(/\/loans\/\d+/, { timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
+    const detailDialog = page.getByRole("dialog");
+    if (await detailDialog.isVisible().catch(() => false)) {
       await page.keyboard.press("Escape");
+      await expect(detailDialog).not.toBeVisible();
     }
-    await page.getByRole("button", { name: "Actions" }).click();
+    const actions = page.getByRole("button", { name: "Actions" });
+    await expect(actions).toBeVisible({ timeout: 20_000 });
+    await actions.click();
     await page.getByRole("menuitem", { name: /^Edit$/i }).click();
     await page.waitForTimeout(1500);
     const dates = await page

@@ -13,8 +13,11 @@ async function clickFirstLoanRow(page: import("@playwright/test").Page) {
   const row = page.locator("table tbody tr").first();
   await expect(row).toBeVisible({ timeout: 20_000 });
   const dialog = page.getByRole("dialog").first();
+  // Enter on the focused row opens quick view without landing on the signing
+  // pill, which is a link to /loans/[id]/sign for the seeded dual-role user.
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    await row.click();
+    await row.focus();
+    await page.keyboard.press("Enter");
     if (await dialog.isVisible().catch(() => false)) return;
     await page.waitForTimeout(500);
   }
@@ -176,11 +179,7 @@ test("contract details from loan quick-view stacks without freezing", async ({
   const response = await gotoApp(page, "/loans");
   expect(response?.status()).toBe(200);
 
-  await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(750);
-  const firstRow = page.locator("table tbody tr").first();
-  await expect(firstRow).toBeVisible({ timeout: 20_000 });
-  await firstRow.click();
+  await clickFirstLoanRow(page);
 
   const loanDialog = page.getByRole("dialog").first();
   await expect(loanDialog).toBeVisible({ timeout: 15_000 });
