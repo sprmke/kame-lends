@@ -88,6 +88,12 @@ Decide and repair the remaining prod data anomalies (duplicate period dates, zer
 
 ===
 
+📋 QA, UX, and test coverage audit
+
+Full app crawl and deep CRUD/payment/signing flows against a local production snapshot: catalog every test layer and gap, broken Playwright specs, signing preview missing the lender allocation, debt amount mismatch, hidden allocations, broken template save, unreachable payment delete, group Add loans, accessibility failures, read-only users seeing write actions, mobile layout bugs, and the UI/UX improvement backlog.
+
+→ **Plan:** [`../planned/qa-ux-and-test-coverage-audit.md`](../planned/qa-ux-and-test-coverage-audit.md)
+
 ✅ Email notifications for important actions
 
 Immediate emails for loan, payment, group, and signing events, a configurable daily reminder digest for unsigned contracts and due dates, per-user email preferences in Settings, and dedupe plus retry logging so users are never spammed.

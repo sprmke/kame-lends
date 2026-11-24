@@ -4,6 +4,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import ActionButtons from '$lib/components/common/ActionButtons.svelte';
 	import TableEmptyRow from '$lib/components/common/TableEmptyRow.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 	import { createLoanActionItems } from '$lib/components/common/action-buttons';
 	import { formatCurrency, formatDateVeryShort, formatText, formatPercentage } from '$lib/format';
 	import { calculateTransactionStats } from '$lib/calculations';
@@ -28,6 +29,7 @@
 		onDelete?: (loan: LoanWithInvestors) => void;
 		onRemoveFromGroup?: (loan: LoanWithInvestors) => void;
 		emptyMessage?: string;
+		itemsPerPage?: number;
 		/** When set, Total Amount is this investor's principal plus interest (not the full loan). */
 		investorId?: number;
 		/** Same as investorId, matching the linked auth user across CRM rows. */
@@ -50,7 +52,8 @@
 		onDelete,
 		onRemoveFromGroup,
 		investorId,
-		investorUserId
+		investorUserId,
+		itemsPerPage = 25
 	}: Props = $props();
 
 	function investorEntriesForLoan(loan: LoanWithInvestors) {
@@ -89,8 +92,25 @@
 		);
 	}
 
+	let currentPage = $state(1);
+	const totalPages = $derived(Math.max(1, Math.ceil(loans.length / itemsPerPage)));
+	const pageStart = $derived((Math.min(currentPage, totalPages) - 1) * itemsPerPage);
+	const paginatedLoans = $derived(loans.slice(pageStart, pageStart + itemsPerPage));
+
+	$effect(() => {
+		void loans;
+		currentPage = 1;
+	});
+
 	function handleRowClick(event: MouseEvent, loan: LoanWithInvestors) {
 		if (shouldIgnoreRowQuickView(event)) return;
+		onQuickView?.(loan);
+	}
+
+	function handleRowKeydown(event: KeyboardEvent, loan: LoanWithInvestors) {
+		if (event.target !== event.currentTarget) return;
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
 		onQuickView?.(loan);
 	}
 </script>
@@ -124,14 +144,19 @@
 					message={emptyMessage}
 				/>
 			{:else}
-			{#each loans as loan (loan.id)}
+			{#each paginatedLoans as loan (loan.id)}
 				{@const scopedEntries = investorEntriesForLoan(loan)}
 				{@const amountStats = calculateTransactionStats(
 					scopedEntries ?? loan.loanInvestors
 				)}
 				<Table.Row
-					class={cn(onQuickView && TABLE_ROW_CLICKABLE)}
+					class={cn(
+						onQuickView && TABLE_ROW_CLICKABLE,
+						onQuickView && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+					)}
+					tabindex={onQuickView ? 0 : undefined}
 					onclick={(event) => handleRowClick(event, loan)}
+					onkeydown={(event) => handleRowKeydown(event, loan)}
 				>
 					{#if enableRowSelection}
 						<Table.Cell data-loan-row-select onclick={(e) => e.stopPropagation()}>
@@ -240,3 +265,19 @@
 		</Table.Body>
 	</Table.Root>
 </div>
+
+{#if loans.length > itemsPerPage}
+	<div class="mt-3">
+		<Pagination
+			embedded
+			{currentPage}
+			{totalPages}
+			onPageChange={(page) => (currentPage = page)}
+			startIndex={pageStart}
+			endIndex={Math.min(pageStart + itemsPerPage, loans.length)}
+			totalItems={loans.length}
+			itemName="loans"
+			{itemsPerPage}
+		/>
+	</div>
+{/if}

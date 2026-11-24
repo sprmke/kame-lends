@@ -4,6 +4,8 @@
 	import DashboardPage from '$lib/components/common/DashboardPage.svelte';
 	import ConfirmDeleteDialog from '$lib/components/common/ConfirmDeleteDialog.svelte';
 	import GroupHubHeader from '$lib/components/groups/GroupHubHeader.svelte';
+	import { groupDuePrefix } from '$lib/groups/due-label';
+	import { toDateKey, todayKey } from '$lib/dates/business-date';
 	import GroupPeopleTab from '$lib/components/groups/GroupPeopleTab.svelte';
 	import GroupSettingsTab from '$lib/components/groups/GroupSettingsTab.svelte';
 	import GroupCalendarSettingsCard from '$lib/components/groups/GroupCalendarSettingsCard.svelte';
@@ -156,6 +158,7 @@
 	const upcomingLoans = $derived(
 		[...data.loans]
 			.filter((loan) => isOpenLoan(loan as LoanWithInvestors))
+			.filter((loan) => toDateKey(loan.dueDate) >= todayKey())
 			.sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))
 			.slice(0, 5)
 	);
@@ -361,7 +364,7 @@
 						{overdueCount === 1 ? 'loan' : 'loans'}.
 						<button
 							type="button"
-							class="ml-1 font-medium text-primary hover:underline"
+							class="ml-1 font-medium text-primary-strong hover:underline"
 							onclick={viewOverdueLoans}
 						>
 							View loans
@@ -410,7 +413,7 @@
 							<span class="font-medium tabular-nums">{formatCount(peopleCount)}</span>
 						</button>
 						<div class="flex items-center justify-between px-1 py-1.5">
-							<span class="text-muted-foreground">Next due</span>
+							<span class="text-muted-foreground">{groupDuePrefix(nextDueDate)}</span>
 							<span class="font-medium">
 								{nextDueDate ? formatDate(nextDueDate) : 'None'}
 							</span>
@@ -453,7 +456,7 @@
 						<Card.Title class="text-base">Upcoming</Card.Title>
 						<button
 							type="button"
-							class="text-sm font-medium text-primary hover:underline"
+							class="text-sm font-medium text-primary-strong hover:underline"
 							onclick={() => setTab('loans')}
 						>
 							All loans

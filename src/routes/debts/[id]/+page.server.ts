@@ -5,8 +5,10 @@ import { debts } from "$lib/server/db/schema";
 import { eq } from "drizzle-orm";
 import { hasDebtAccess } from "$lib/server/access-control";
 import { requireUserSession } from "$lib/server/request-auth";
+import { syncDebtInterestPeriods } from "$lib/server/debt-interest-period-sync";
 async function fetchOne(id: number, userId: string) {
   if (!(await hasDebtAccess(id, userId))) return null;
+  await syncDebtInterestPeriods(id);
   return db.query.debts.findFirst({
     where: eq(debts.id, id),
     with: {

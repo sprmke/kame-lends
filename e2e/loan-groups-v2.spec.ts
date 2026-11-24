@@ -18,7 +18,9 @@ test.describe("loan groups v2", () => {
   test("owner can open groups list and create wizard", async ({ page }) => {
     await switchE2ESession(page.request, undefined, page.context());
     await gotoApp(page, "/groups");
-    await expect(page.getByRole("heading", { name: "Groups" })).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: "Groups", exact: true }),
+    ).toBeVisible({
       timeout: 20_000,
     });
 
@@ -49,7 +51,9 @@ test.describe("loan groups v2", () => {
     const group = (await create.json()) as { id: number };
 
     await gotoApp(page, `/groups/${group.id}?tab=loans`);
-    await expect(page.getByText(`E2E Group ${stamp}`).first()).toBeVisible({
+    await expect(
+      page.locator("h1:visible", { hasText: `E2E Group ${stamp}` }).first(),
+    ).toBeVisible({
       timeout: 20_000,
     });
     await expect(

@@ -35,7 +35,7 @@
 			{/if}
 		</div>
 		{#if description}
-			<p class="text-sm leading-snug text-muted-foreground">{description}</p>
+			<p class="hidden text-sm leading-snug text-muted-foreground lg:block">{description}</p>
 		{/if}
 	</div>
 	{#if children}

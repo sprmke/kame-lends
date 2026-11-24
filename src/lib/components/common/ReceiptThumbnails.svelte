@@ -34,7 +34,15 @@
 					aria-label="View receipt {item.index + 1}"
 					onclick={() => (openIndex = item.index)}
 				>
-					<img src={item.src} alt="" class="h-14 w-14 object-cover" />
+					<img
+						src={item.src}
+						alt=""
+						class="h-14 w-14 object-cover"
+						onerror={(event) => {
+							const button = event.currentTarget.closest('button');
+							if (button) button.hidden = true;
+						}}
+					/>
 				</button>
 			{/each}
 		</div>
@@ -50,6 +58,11 @@
 		title="Receipt"
 		contentClass="sm:max-w-lg"
 	>
-		<img src={openSrc} alt="Receipt" class="max-h-[70vh] w-full rounded-md object-contain" />
+		<img
+			src={openSrc}
+			alt="Receipt"
+			class="max-h-[70vh] w-full rounded-md object-contain"
+			onerror={(event) => ((event.currentTarget as HTMLElement).hidden = true)}
+		/>
 	</ResponsiveModal>
 {/if}

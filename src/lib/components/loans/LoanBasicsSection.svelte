@@ -88,6 +88,7 @@
 					<Label for="loanTemplate">Template</Label>
 					<SearchableSelect
 						id="loanTemplate"
+						ariaLabel="Template"
 						options={templateOptions}
 						value={selectedTemplateId}
 						onValueChange={onTemplateChange}

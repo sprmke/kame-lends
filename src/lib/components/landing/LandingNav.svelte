@@ -70,7 +70,7 @@
 				type="button"
 				class="touch-target relative inline-flex items-center justify-center rounded-xl border border-border/60 bg-card/80"
 				onclick={() => (mobileOpen = !mobileOpen)}
-				aria-label="Toggle menu"
+				aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
 			>
 				{#if mobileOpen}
 					<X class="h-5 w-5" />

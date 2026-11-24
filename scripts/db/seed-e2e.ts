@@ -31,6 +31,25 @@ if (/neon\.tech/.test(url)) {
 const email = (process.env.E2E_USER_EMAIL ?? "e2e@example.com").toLowerCase();
 const sql = postgres(url, { max: 1 });
 
+function dateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+// The default loan list range is the current month, so the seeded loan must be
+// due inside it or row-dependent browser tests skip on a fresh CI database.
+const manilaNow = new Date(
+  new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
+);
+const year = manilaNow.getFullYear();
+const month = manilaNow.getMonth();
+const dueDate = new Date(Date.UTC(year, month + 1, 0));
+const sentDate = new Date(Date.UTC(year, month, 1));
+const firstPeriodDate = new Date(dueDate);
+firstPeriodDate.setUTCMonth(firstPeriodDate.getUTCMonth() - 3);
+const dueKey = dateKey(dueDate);
+const sentKey = dateKey(sentDate);
+const firstPeriodKey = dateKey(firstPeriodDate);
+
 try {
   await sql.begin(async (tx) => {
     const [user] = await tx`
@@ -65,9 +84,28 @@ try {
       returning id
     `;
 
+    // Extra contacts so party, receipt-match, and contact-picker flows do not
+    // depend on a developer's local data (TEST-15).
+    await tx`
+      insert into investors (user_id, name, email, contact_number)
+      select ${user.id}, 'E2E Investor Two', 'e2e-investor-2@example.com', '09170000001'
+      where not exists (
+        select 1 from investors
+        where user_id = ${user.id} and lower(btrim(name)) = 'e2e investor two'
+      )
+    `;
+    await tx`
+      insert into borrowers (user_id, name, email)
+      select ${user.id}, 'E2E Borrower Two', 'e2e-borrower-2@example.com'
+      where not exists (
+        select 1 from borrowers
+        where user_id = ${user.id} and lower(btrim(name)) = 'e2e borrower two'
+      )
+    `;
+
     const [loan] = await tx`
       insert into loans (user_id, borrower_id, loan_name, type, status, due_date, notes)
-      values (${user.id}, ${borrower.id}, 'E2E Money Loan', 'Agent', 'Fully Funded', '2026-12-31', 'seed')
+      values (${user.id}, ${borrower.id}, 'E2E Money Loan', 'Agent', 'Fully Funded', ${dueKey}, 'seed')
       on conflict do nothing
       returning id
     `;
@@ -78,7 +116,7 @@ try {
         loan_id, investor_id, amount, interest_rate, interest_type, sent_date,
         is_paid, has_multiple_interest, receipts
       )
-      values (${loan.id}, ${investor.id}, '100000', '0', 'rate', '2026-01-15', true, true, '[]'::jsonb)
+      values (${loan.id}, ${investor.id}, '100000', '0', 'rate', ${sentKey}, true, true, '[]'::jsonb)
       returning id
     `;
 
@@ -86,7 +124,7 @@ try {
       insert into interest_periods (
         loan_investor_id, due_date, interest_rate, interest_type, status
       )
-      values (${allocation.id}, '2026-06-30', '3', 'rate', 'Completed')
+      values (${allocation.id}, ${firstPeriodKey}, '3', 'rate', 'Completed')
       on conflict (loan_investor_id, due_date) do nothing
       returning id
     `;
@@ -94,7 +132,7 @@ try {
       insert into interest_periods (
         loan_investor_id, due_date, interest_rate, interest_type, status
       )
-      values (${allocation.id}, '2026-12-31', '3', 'rate', 'Pending')
+      values (${allocation.id}, ${dueKey}, '3', 'rate', 'Pending')
       on conflict (loan_investor_id, due_date) do nothing
     `;
     if (period) {
@@ -102,7 +140,7 @@ try {
         insert into received_payments (
           loan_investor_id, interest_period_id, amount, received_date, receipts
         )
-        values (${allocation.id}, ${period.id}, '3000', '2026-06-30', '[]'::jsonb)
+        values (${allocation.id}, ${period.id}, '3000', ${firstPeriodKey}, '[]'::jsonb)
       `;
     }
   });

@@ -7,6 +7,7 @@
 
 Google OAuth sign-in for workspace users. Signed-in visitors redirect to `callbackUrl` (default `/dashboard`).
 
+The footer links to `/terms` (Terms of Service) and `/privacy` (Privacy Policy); both are public pages that render the shared `LegalPage` shell.
 Auth.js owns `/auth/*` (callback, session, csrf). This page is only the custom button.
 
 Any normalized Google email may sign in. Auth.js creates a `users` row on first login. Invited party contacts with a pre-created row link on first Google login (`allowDangerousEmailAccountLinking`).

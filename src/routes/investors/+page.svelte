@@ -32,6 +32,7 @@
 	import { toast } from '$lib/toast';
 	import { PlusCircle, Users, X } from 'lucide-svelte';
 	import { downloadInvestorsPdf } from '$lib/pdf-download';
+	import { downloadInvestorsCsv } from '$lib/csv-download';
 	import { investorPDFSections } from '$lib/pdf-sections';
 	import type { InvestorWithLoans } from '$lib/types';
 
@@ -181,6 +182,7 @@
 					filteredData={filteredInvestors}
 					sections={investorPDFSections}
 					onGeneratePDF={downloadInvestorsPdf}
+					onGenerateCSV={downloadInvestorsCsv}
 				/>
 			{/if}
 			{#if canCreate}

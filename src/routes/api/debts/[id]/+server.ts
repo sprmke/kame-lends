@@ -6,10 +6,7 @@ import { eq, and, isNull } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
 import { hasDebtAccess, hasDebtAdminAccess } from "$lib/server/access-control";
 import { parseDebtBody } from "$lib/debt-api";
-import {
-  markOverdueDebtInterestPeriods,
-  syncDebtInterestPeriods,
-} from "$lib/server/debt-interest-period-sync";
+import { syncDebtInterestPeriods } from "$lib/server/debt-interest-period-sync";
 import { invalidateDebtData } from "$lib/server/cache-invalidation";
 import { debtWriteSchema, firstDebtError } from "$lib/schemas/debt";
 import { parseIdParam } from "$lib/server/route-params";
@@ -54,11 +51,7 @@ export const GET: RequestHandler = async (event) => {
       return json({ error: "Bank loan not found" }, { status: 404 });
     }
 
-    if (!debt.interestPeriods?.length) {
-      await syncDebtInterestPeriods(id);
-    } else {
-      await markOverdueDebtInterestPeriods(id);
-    }
+    await syncDebtInterestPeriods(id);
 
     const debtWithPeriods = await db.query.debts.findFirst({
       where: and(eq(debts.id, id), isNull(debts.deletedAt)),

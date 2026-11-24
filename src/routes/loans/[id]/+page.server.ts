@@ -6,6 +6,7 @@ import { requireUserSession } from "$lib/server/request-auth";
 
 export const load: PageServerLoad = async (event) => {
   const session = requireUserSession(event);
+  event.depends("app:loans");
   const id = Number(event.params.id);
   if (Number.isNaN(id)) throw error(400, "Invalid id");
   const result = await loadLoanDetail(id, session.user.id, {

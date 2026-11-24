@@ -1,48 +1,101 @@
 import { expect, test, type Page } from "@playwright/test";
 import { OFFLINE_ERROR_MESSAGE } from "../src/lib/pwa/shared";
 
+/**
+ * The service worker claims the page on activate and `register.ts` reloads on
+ * controllerchange. That navigation can destroy the evaluate context while a
+ * waitForFunction is running, so retry until the deadline.
+ */
+async function waitForPageCondition(
+  page: Page,
+  condition: () => boolean | Promise<boolean>,
+  timeout = 20_000,
+) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    try {
+      await page.waitForFunction(condition, undefined, {
+        timeout: Math.max(1_000, deadline - Date.now()),
+      });
+      return;
+    } catch (error) {
+      const message = String(error);
+      if (
+        !message.includes("Execution context was destroyed") &&
+        !message.includes("navigation")
+      ) {
+        throw error;
+      }
+      await page.waitForTimeout(200);
+    }
+  }
+  throw new Error("Timed out waiting for the page condition");
+}
+
 async function waitForPwaShell(page: Page) {
-  await page.waitForFunction(
+  await waitForPageCondition(
+    page,
     () =>
       document.documentElement.dataset.pwaReady === "1" &&
       document.documentElement.dataset.offlineFetch === "1",
-    undefined,
-    { timeout: 20_000 },
   );
 }
 
-async function ensureActiveServiceWorker(page: Page) {
-  await page.waitForFunction(
-    async () => {
-      if (!("serviceWorker" in navigator)) return false;
-      try {
-        let registration = await navigator.serviceWorker.getRegistration();
-        if (!registration) {
-          registration =
-            await navigator.serviceWorker.register("/service-worker.js");
-        }
-        await navigator.serviceWorker.ready;
-        return Boolean(
-          (await navigator.serviceWorker.getRegistration())?.active,
-        );
-      } catch {
-        return false;
+async function evaluateAfterNavigation<T>(
+  page: Page,
+  fn: () => T | Promise<T>,
+): Promise<T | null> {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      return await page.evaluate(fn);
+    } catch (error) {
+      if (!String(error).includes("Execution context was destroyed")) {
+        throw error;
       }
-    },
-    undefined,
-    { timeout: 20_000 },
-  );
+      await page.waitForTimeout(200);
+    }
+  }
+  return null;
+}
+
+async function ensureActiveServiceWorker(page: Page) {
+  await waitForPageCondition(page, async () => {
+    if (!("serviceWorker" in navigator)) return false;
+    try {
+      let registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        registration =
+          await navigator.serviceWorker.register("/service-worker.js");
+      }
+      await navigator.serviceWorker.ready;
+      return Boolean((await navigator.serviceWorker.getRegistration())?.active);
+    } catch {
+      return false;
+    }
+  });
 
   if (
-    !(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
+    !(await evaluateAfterNavigation(page, () =>
+      Boolean(navigator.serviceWorker.controller),
+    ))
   ) {
-    await page.reload({ waitUntil: "domcontentloaded" });
+    try {
+      await page.reload({ waitUntil: "domcontentloaded" });
+    } catch (error) {
+      // A service worker can take control during the reload and cancel it.
+      // WebKit reports "Navigation canceled by policy check" instead of ERR_ABORTED.
+      const message = String(error);
+      if (
+        !message.includes("ERR_ABORTED") &&
+        !message.includes("Navigation canceled")
+      ) {
+        throw error;
+      }
+    }
   }
 
-  await page.waitForFunction(
-    () => Boolean(navigator.serviceWorker.controller),
-    undefined,
-    { timeout: 20_000 },
+  await waitForPageCondition(page, () =>
+    Boolean(navigator.serviceWorker.controller),
   );
 }
 
@@ -54,7 +107,7 @@ test.describe("PWA @smoke", () => {
   test("registers a service worker", async ({ page }) => {
     await page.goto("/signin", { waitUntil: "domcontentloaded" });
     await ensureActiveServiceWorker(page);
-    const registered = await page.evaluate(async () => {
+    const registered = await evaluateAfterNavigation(page, async () => {
       const registration = await navigator.serviceWorker.getRegistration();
       return Boolean(registration?.active);
     });

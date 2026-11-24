@@ -48,6 +48,7 @@
 			periodInterest: number,
 			linkedRows: ReceivedPaymentDisplay[]
 		) => void;
+		onEditGeneralPayment?: (payment: ReceivedPaymentDisplay) => void;
 	}
 
 	let {
@@ -64,7 +65,8 @@
 		editingPaymentPeriodIds,
 		onDeletePayment,
 		onComplete,
-		onEditPayment
+		onEditPayment,
+		onEditGeneralPayment
 	}: Props = $props();
 </script>
 
@@ -138,12 +140,14 @@
 										)
 								: []}
 						{@const canComplete =
+							canMutate &&
 							pid != null &&
 							(periodStatus === 'Pending' ||
 								periodStatus === 'Overdue' ||
 								periodStatus === 'Incomplete') &&
 							!!loanId}
 						{@const canEditPayment =
+							canMutate &&
 							pid != null && periodStatus === 'Completed' && !!loanId}
 						{@const legacyMatch =
 							pid != null ? metrics.periodReceivedDateById.get(pid) : undefined}
@@ -472,16 +476,42 @@
 								{#each metrics.receivedPayments as rp, idx (`single-rp-${idx}`)}
 									<div class="space-y-1.5">
 										<div
-											class="flex justify-between gap-2 rounded-md border border-emerald-200/60 bg-background px-2 py-1.5 text-xs dark:border-emerald-900/40"
+											class="flex items-center justify-between gap-2 rounded-md border border-emerald-200/60 bg-background px-2 py-1.5 text-xs dark:border-emerald-900/40"
 										>
 											<span class="text-muted-foreground">
 												{formatDate(rp.receivedDate)}
 											</span>
-											<span
-												class="shrink-0 font-semibold text-emerald-700 tabular-nums dark:text-emerald-400"
-											>
-												{formatCurrency(parseFloat(rp.amount) || 0)}
-											</span>
+											<div class="flex items-center gap-1">
+												<span
+													class="shrink-0 font-semibold text-emerald-700 tabular-nums dark:text-emerald-400"
+												>
+													{formatCurrency(parseFloat(rp.amount) || 0)}
+												</span>
+												{#if canMutate && rp.id != null}
+													<Button
+														type="button"
+														variant="ghost"
+														size="icon"
+														class="size-7"
+														aria-label="Edit payment"
+														disabled={deletingPaymentIds.has(rp.id)}
+														onclick={() => onEditGeneralPayment?.(rp)}
+													>
+														<Pencil class="h-3.5 w-3.5" />
+													</Button>
+													<Button
+														type="button"
+														variant="ghost"
+														size="icon"
+														class="size-7 text-destructive"
+														aria-label="Remove payment"
+														disabled={deletingPaymentIds.has(rp.id)}
+														onclick={() => onDeletePayment(rp.id!)}
+													>
+														<Trash2 class="h-3.5 w-3.5" />
+													</Button>
+												{/if}
+											</div>
 										</div>
 										<ReceiptThumbnails receipts={rp.receipts ?? []} />
 										{#if rp.notes?.trim()}

@@ -327,7 +327,7 @@
 											onCheckedChange={(checked) =>
 												toggleReminderDay(day, Boolean(checked))}
 										/>
-										D-{day}
+										{day} {day === 1 ? 'day' : 'days'} before
 									</label>
 								{/each}
 							</div>

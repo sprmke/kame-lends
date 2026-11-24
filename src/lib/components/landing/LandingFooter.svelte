@@ -60,11 +60,15 @@
 			</div>
 		</div>
 
-		<div class="mt-12 border-t border-border/40 pt-8">
-			<p class="text-center text-sm text-muted-foreground sm:text-left">
+		<div class="mt-12 flex flex-col gap-3 border-t border-border/40 pt-8 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+			<p class="text-sm text-muted-foreground">
 				&copy; {new Date().getFullYear()}
 				{APP_NAME}. All rights reserved.
 			</p>
+			<div class="flex justify-center gap-4 text-sm">
+				<a class="text-muted-foreground transition-colors hover:text-primary" href="/terms">Terms</a>
+				<a class="text-muted-foreground transition-colors hover:text-primary" href="/privacy">Privacy</a>
+			</div>
 		</div>
 	</div>
 </footer>

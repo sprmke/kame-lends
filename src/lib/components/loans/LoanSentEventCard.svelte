@@ -54,7 +54,7 @@
 
 	const classes = $derived(sizeClasses[size]);
 	const colorClasses = $derived(
-		isFuture ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'
+		isFuture ? 'text-amber-800 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'
 	);
 </script>
 
@@ -93,8 +93,8 @@
 					<div class="flex min-w-0 items-start gap-1">
 						<span
 							class="shrink-0 font-bold {isFuture
-								? 'text-amber-600 dark:text-amber-400'
-								: 'text-rose-600 dark:text-rose-400'}">•</span
+								? 'text-amber-800 dark:text-amber-400'
+								: 'text-rose-700 dark:text-rose-400'}">•</span
 						>
 						<span class="min-w-0 truncate">
 							<span class="font-semibold">{formatText(inv.name)}:</span>
@@ -108,7 +108,7 @@
 			</div>
 		</div>
 		<div
-			class="truncate border-t pt-2 font-bold text-rose-600 tabular-nums dark:text-rose-400 {classes.total}"
+			class="truncate border-t pt-2 font-bold text-rose-700 tabular-nums dark:text-rose-400 {classes.total}"
 		>
 			-{formatCurrency(totalAmount)}
 		</div>

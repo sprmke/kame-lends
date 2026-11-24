@@ -54,6 +54,9 @@ export const receivedPaymentPatchSchema = z.object({
   amount: positive,
   receivedDate: dateInput,
   notes: optionalText.optional(),
+  receipts: z.unknown().optional(),
+  receiptImageUrl: z.unknown().optional(),
+  receiptExtractedData: z.unknown().optional(),
 });
 
 export const periodPaymentSchema = z.object({

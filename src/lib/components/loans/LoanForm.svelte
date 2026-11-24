@@ -75,7 +75,7 @@
 	} from '$lib/loan-form-focus';
 	import { scrollFieldIntoView } from '$lib/scroll-field';
 	import type { ReceiptScanContext } from '$lib/receipt-extraction-client';
-	import { todayKey } from '$lib/dates/business-date';
+	import { addDaysToKey, todayKey } from '$lib/dates/business-date';
 	import { formInvestorDue } from '$lib/loans/form-to-ledger';
 	import {
 		buildInvestorPayload as buildInvestorPayloadFromForm,
@@ -152,7 +152,11 @@
 	);
 	const showGroupsField = $derived(SHOW_GROUPS_UI);
 	let selectedGroupIds = $state<number[]>(
-		existingLoan ? loanGroupIds(existingLoan) : []
+		existingLoan
+			? loanGroupIds(existingLoan)
+			: (duplicateData?.groupIds ?? []).filter((id) =>
+					groupsIndex.some((group) => group.id === id)
+				)
 	);
 
 	let borrowerList = $state<Borrower[]>([...initialBorrowers]);
@@ -232,7 +236,7 @@
 			? toLocalDateString(existingLoan.dueDate)
 			: duplicateData?.dueDate
 				? toLocalDateString(duplicateData.dueDate)
-				: todayKey()
+				: addDaysToKey(todayKey(), 14)
 	);
 	let freeLotSqm = $state(
 		existingLoan?.freeLotSqm
@@ -1877,6 +1881,7 @@
 		error={submitError}
 		submitLabel={submitButtonLabel}
 		layout={isModalMode ? 'stacked' : 'responsive'}
+		sticky={!isModalMode}
 		class={isModalMode ? 'md:hidden' : 'lg:hidden'}
 	/>
 </form>

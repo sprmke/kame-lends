@@ -193,13 +193,15 @@ export function groupScannedReceipts(
     if (!item.extracted) {
       // No reading: AI failed (warn) or was off (plain upload, no warning).
       if (item.error) scanErrorCount += 1;
-      standalone.push(
-        emptyProposal(
-          item,
-          fallbackInvestorId,
-          item.error ? [{ code: "scan_failed", detail: item.error }] : [],
-        ),
+      const proposal = emptyProposal(
+        item,
+        fallbackInvestorId,
+        item.error ? [{ code: "scan_failed", detail: item.error }] : [],
       );
+      // A plain upload (AI off) is still a row the user must fill by hand.
+      // Only an unreadable image is a guide that attaches to an existing row.
+      if (!item.error) proposal.transferCount = 1;
+      standalone.push(proposal);
       continue;
     }
 

@@ -11,6 +11,7 @@ After loan create (`POST /api/loans`), parties with emails receive a branded Res
 
 A signature submitted on this page is stored on the contract invitation and takes priority over any saved CRM e-signature on the PDF. Groups that contain the loan get a Telegram contract-signed message. Auto-sign from a group's default witness does not send that message.
 
+The contract column renders the same full document body as the PDF and Contract Details editor: **Parties**, **Lender Allocation**, loan terms, **Terms and Conditions**, and signature blocks. It is not a reduced summary, so a signer can read every clause before signing. On phone a sticky **Go to signature** control jumps to the signature panel.
 When the signer has a profile e-signature (`/settings` or party profile), the sign page shows **Draw** and **E-signature**. **E-signature** submits the profile image; **Draw** uses the pad. Without a profile e-signature, only the draw pad is shown (with a short note pointing to Settings).
 
 Saved profile signatures also appear on the contract PDF without signing when the owner enabled **Use saved signature** in Contract Details and the party has not signed on this page yet.

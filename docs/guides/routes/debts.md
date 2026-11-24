@@ -9,6 +9,7 @@
 - Search by name, investor, or notes. Inline filters: **Hide Repaid** / **Show Repaid**, accrual period. **More Filters** holds principal range and investor multi-select.
 - Table or card view. Card view (`GridListCardShell`): tap the card to open; **⋯** top-right (Edit, Delete). Empty states: **No bank loans yet.** / **No bank loans match your filters.** Header action: **Add Bank Loan**.
 - **Phone (`<lg`):** row/card opens `/debts/[id]`. **More Filters** opens a bottom sheet (`MoreFiltersSurface`), not an inline panel. Add Bank Loan and row edit open a bottom sheet (`DebtCreateModal` / `EditFormSheet`), not `/debts/new`.
+- **Schedule and formatting:** the debt detail syncs stored installments and due dates with the live schedule before rendering, so **Payment per month**, the schedule, and the Record payment default agree. Dates use the short business-timezone format and rates always show two decimals (for example `0.48%`).
 - **Desktop (`lg+`):** row click opens `DebtDetailModal`. Add Bank Loan goes to `/debts/new`. Row edit goes to `/debts/[id]?edit=1`.
 
 Create/edit copy uses **Create Bank Loan** / **Edit Bank Loan**. Detail back label: **Back to Bank Loans**.

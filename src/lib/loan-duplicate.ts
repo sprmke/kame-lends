@@ -1,4 +1,5 @@
 import type { ContractCustomization } from "$lib/loan-contract-customization";
+import { loanGroupIds } from "$lib/groups/loan-group-filter";
 import type {
   InterestPeriodStatus,
   InterestType,
@@ -12,6 +13,7 @@ export interface DuplicateLoanData {
   dueDate: string | Date;
   freeLotSqm: number | null;
   notes: string | null;
+  groupIds: number[];
   contractCustomization?: ContractCustomization;
   loanInvestors: Array<{
     investorId: number;
@@ -43,6 +45,7 @@ export function createDuplicateDataFromLoan(
     dueDate: loan.dueDate,
     freeLotSqm: loan.freeLotSqm,
     notes: loan.notes,
+    groupIds: loanGroupIds(loan),
     contractCustomization: storedCustomization
       ? {
           ...storedCustomization,

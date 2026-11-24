@@ -238,7 +238,7 @@
 								{#if isLocked(period)}
 									<button
 										type="button"
-										class="text-[11px] font-medium text-primary underline-offset-2 hover:underline"
+										class="text-[11px] font-medium text-primary-strong underline-offset-2 hover:underline"
 										onclick={() => unlockPeriod(period)}
 									>
 										Unlock
@@ -315,7 +315,7 @@
 						<p class="font-semibold">{formatCurrency(totals.principal)}</p>
 					</div>
 					<div>
-						<p class="text-xs text-muted-foreground">Avg. Rate</p>
+						<p class="text-xs text-muted-foreground">Total rate</p>
 						<p class="font-semibold">{formatPercentage(totals.avgRate)}</p>
 					</div>
 					<div>

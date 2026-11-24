@@ -30,7 +30,20 @@ export async function getPushState(): Promise<PushClientState> {
     };
   }
 
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) =>
+      window.setTimeout(() => resolve(null), 1500),
+    ),
+  ]);
+  if (!registration) {
+    return {
+      supported: false,
+      permission: Notification.permission,
+      subscribed: false,
+      needsInstallFirst: needsInstallBeforePush(),
+    };
+  }
   const subscription = await registration.pushManager.getSubscription();
 
   return {
@@ -73,7 +86,13 @@ export async function enablePush(): Promise<boolean> {
 
 export async function disablePush(): Promise<boolean> {
   if (!browser) return false;
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) =>
+      window.setTimeout(() => resolve(null), 1500),
+    ),
+  ]);
+  if (!registration) return true;
   const subscription = await registration.pushManager.getSubscription();
   if (!subscription) return true;
 

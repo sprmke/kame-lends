@@ -18,7 +18,7 @@
 	<a
 		href="/groups/{groupId}?tab=loans"
 		data-sveltekit-preload-data="tap"
-		class="ml-2 text-primary hover:underline"
+		class="ml-2 text-primary-strong hover:underline"
 	>
 		All group loans
 	</a>

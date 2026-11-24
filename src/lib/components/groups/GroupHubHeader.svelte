@@ -6,6 +6,7 @@
 	import ResponsiveOverflowMenu from '$lib/components/common/ResponsiveOverflowMenu.svelte';
 	import type { RowActionItem } from '$lib/components/common/action-buttons';
 	import { resolveGroupColor } from '$lib/groups/group-colors';
+	import { groupDuePrefix } from '$lib/groups/due-label';
 	import { formatPartyRoles } from '$lib/groups/party-role-labels';
 	import type { PartyRole } from '$lib/group-membership-diff';
 	import {
@@ -65,7 +66,7 @@
 			`${formatCount(peopleCount)} ${peopleCount === 1 ? 'person' : 'people'}`
 		];
 		if (nextDueDate) {
-			parts.push(`Next due ${formatDateShort(nextDueDate)}`);
+			parts.push(`${groupDuePrefix(nextDueDate)} ${formatDateShort(nextDueDate)}`);
 		}
 		return parts.join(' · ');
 	});

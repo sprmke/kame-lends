@@ -120,7 +120,7 @@
 			<a
 				href={manageHref}
 				data-sveltekit-preload-data="tap"
-				class="touch-target inline-flex shrink-0 items-center self-center rounded-full px-3 text-sm font-medium text-primary hover:underline"
+				class="touch-target inline-flex shrink-0 items-center self-center rounded-full px-3 text-sm font-medium text-primary-strong hover:underline"
 			>
 				Manage groups
 			</a>

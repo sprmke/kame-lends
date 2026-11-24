@@ -55,6 +55,7 @@
 	import { computeTotalLot } from '$lib/lot-utils';
 	import { formatCurrency } from '$lib/format';
 	import { downloadLoansPdf } from '$lib/pdf-download';
+	import { downloadLoansCsv } from '$lib/csv-download';
 	import { loanPDFSections } from '$lib/pdf-sections';
 	import { createResponsiveViewMode } from '$lib/composables/use-responsive-view-mode.svelte';
 	import { createLoanFormOptions } from '$lib/composables/use-loan-form-options.svelte';
@@ -615,9 +616,15 @@
 						sections={loanPDFSections}
 						onGeneratePDF={(data, keys) =>
 							downloadLoansPdf(data, keys, scopeToInvestor ? investor.id : undefined)}
+						onGenerateCSV={downloadLoansCsv}
 					/>
 					{#if canManage}
-						<Button size="sm" class="shrink-0" onclick={() => openLoanCreate()}>
+						<Button
+							size="sm"
+							class="shrink-0"
+							aria-label="Add loan"
+							onclick={() => openLoanCreate()}
+						>
 							<Plus class="h-3 w-3 xl:mr-1" />
 							<span class="hidden xl:inline">Add Loan</span>
 						</Button>
@@ -761,13 +768,20 @@
 						variant={showMoreDebtFilters ? 'secondary' : 'outline'}
 						size="sm"
 						class="shrink-0"
+						aria-label={showMoreDebtFilters ? 'Less filters' : 'More filters'}
 						onclick={() => (showMoreDebtFilters = !showMoreDebtFilters)}
 					>
 						<Filter class="h-4 w-4 xl:mr-2" />
 						<span class="hidden xl:inline">{showMoreDebtFilters ? 'Less' : 'More'} Filters</span>
 					</Button>
 					{#if hasActiveDebtFilters}
-						<Button variant="outline" size="sm" class="shrink-0" onclick={clearDebtFilters}>
+						<Button
+							variant="outline"
+							size="sm"
+							class="shrink-0"
+							aria-label="Clear all filters"
+							onclick={clearDebtFilters}
+						>
 							<X class="h-4 w-4 xl:mr-2" />
 							<span class="hidden xl:inline">Clear All</span>
 						</Button>

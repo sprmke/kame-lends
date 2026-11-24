@@ -95,6 +95,7 @@
 				type="button"
 				variant="outline"
 				role="combobox"
+				aria-label={placeholder}
 				aria-expanded={open}
 				{disabled}
 				class={cn(

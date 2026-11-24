@@ -9,6 +9,8 @@ import {
   users,
 } from "$lib/server/db/schema";
 import { syncDebtInterestPeriods } from "$lib/server/debt-interest-period-sync";
+import { calculateDebtSummary } from "$lib/debt-calculations";
+import { toDateKey } from "$lib/dates/business-date";
 
 /**
  * Debt schedule sync (T10.2 batch path, DEBT-04).
@@ -103,6 +105,40 @@ describe("syncDebtInterestPeriods", () => {
       0,
     );
     expect(total).toBeGreaterThan(120000);
+  });
+
+  it("repairs a stale stored installment and due date", async () => {
+    await syncDebtInterestPeriods(debtId);
+    const [first] = await periods();
+    await db
+      .update(debtInterestPeriods)
+      .set({
+        expectedInstallment: "999.99",
+        dueDate: new Date("2027-01-31T00:00:00.000Z"),
+      })
+      .where(eq(debtInterestPeriods.id, first.id));
+
+    const debt = await db.query.debts.findFirst({
+      where: eq(debts.id, debtId),
+    });
+    if (!debt) throw new Error("Debt fixture missing");
+    const summary = calculateDebtSummary({
+      principal: debt.amount,
+      interestRate: debt.interestRate,
+      interestInterval: debt.interestInterval,
+      debtDate: toDateKey(debt.date),
+      additionalFees: debt.additionalFees ?? [],
+      durationMonths: debt.durationMonths,
+    });
+
+    await syncDebtInterestPeriods(debtId);
+    const [repaired] = await periods();
+    expect(Number(repaired.expectedInstallment)).toBe(
+      Number(summary.schedule[0].periodDue.toFixed(2)),
+    );
+    expect(repaired.dueDate.toISOString().slice(0, 10)).toBe(
+      summary.schedule[0].date.toISOString().slice(0, 10),
+    );
   });
 
   it("keeps period ids stable across a no-op resync", async () => {

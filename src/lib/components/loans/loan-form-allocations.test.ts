@@ -90,6 +90,61 @@ describe("buildAllocationsFromExistingLoan", () => {
     expect(new Set(periodIds).size).toBe(periodIds.length);
   });
 
+  it("sorts interest periods by due date before the editor renders them", () => {
+    const loan = minimalLoan({
+      loanInvestors: [
+        {
+          id: 10,
+          loanId: 1,
+          investorId: 1,
+          amount: "100000",
+          interestRate: "10",
+          interestType: "rate",
+          sentDate: new Date("2026-01-01"),
+          isPaid: true,
+          hasMultipleInterest: true,
+          profitType: "rate",
+          profitValue: "0",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          investor: {
+            id: 1,
+            name: "Investor",
+            email: "investor@example.com",
+            contactNumber: null,
+            address: null,
+            validIdUrl: null,
+            eSignatureUrl: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          interestPeriods: [
+            {
+              dueDate: new Date("2027-03-31"),
+              interestRate: "2",
+              interestType: "rate",
+            },
+            {
+              dueDate: new Date("2026-11-30"),
+              interestRate: "2",
+              interestType: "rate",
+            },
+            {
+              dueDate: new Date("2026-12-31"),
+              interestRate: "2",
+              interestType: "rate",
+            },
+          ] as InterestPeriod[],
+          receivedPayments: [],
+        },
+      ],
+    });
+
+    const allocations = buildAllocationsFromExistingLoan(loan);
+    expect(
+      allocations[0]?.interestPeriods.map((period) => period.dueDate),
+    ).toEqual(["2026-11-30", "2026-12-31", "2027-03-31"]);
+  });
   it("dedupes received payments by database id across disbursements", () => {
     const loan = minimalLoan({
       loanInvestors: [

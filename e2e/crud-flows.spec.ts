@@ -154,7 +154,7 @@ test("create and delete a transaction", async ({ page, request }, testInfo) => {
 
   await page.getByLabel("Name").fill(`E2E Transaction ${stamp}`);
   await page.getByLabel("Investor").click();
-  await page.getByRole("option", { name: investor!.name }).click();
+  await page.getByRole("option", { name: investor!.name, exact: true }).click();
   await page.getByLabel("Amount").fill("5000");
   await page.getByRole("button", { name: "Create Transaction" }).click();
 
@@ -193,7 +193,7 @@ test("create and delete a bank loan", async ({ page, request }) => {
   await page.waitForLoadState("networkidle");
 
   await page.getByRole("combobox").click();
-  await page.getByRole("button", { name: investor!.name }).click();
+  await page.getByRole("button", { name: investor!.name, exact: true }).click();
   await page.keyboard.press("Escape");
 
   await page
@@ -282,7 +282,10 @@ test("create and delete a loan", async ({ page, request }) => {
   await page.waitForLoadState("networkidle");
 
   await page.locator("#borrowerId").click();
-  await page.getByRole("button", { name: borrower.name }).last().click();
+  await page
+    .getByRole("button", { name: borrower.name, exact: true })
+    .last()
+    .click();
   await page.locator("#loanName").fill(`E2E Loan ${stamp}`);
   await page.locator("#dueDate").fill(dueDate);
   await expect(page.locator('input[id^="principal-"]')).toHaveCount(1);
@@ -321,7 +324,12 @@ test("create and delete a loan", async ({ page, request }) => {
   expect(invitation?.signingUrl).toContain(`/loans/${loanId}/sign`);
   expect(invitation?.token).toBeNull();
 
-  const signPageResponse = await gotoApp(page, invitation.signingUrl);
+  // Signing URLs are absolute (PUBLIC_APP_URL). Use their path so the test
+  // follows the Playwright baseURL instead of a developer port.
+  const signingPath =
+    new URL(invitation.signingUrl, page.url()).pathname +
+    new URL(invitation.signingUrl, page.url()).search;
+  const signPageResponse = await gotoApp(page, signingPath);
   // Admin e2e user may not be a signing party; authenticated route still requires login.
   expect([200, 303, 403]).toContain(signPageResponse?.status() ?? 0);
 

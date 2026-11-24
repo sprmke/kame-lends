@@ -242,7 +242,7 @@
 				<p class="text-sm font-medium">{formatCurrency(stats.total)}</p>
 			</div>
 			<div class="dashboard-metric-cell p-2">
-				<p class="text-caption mb-1">Rate</p>
+				<p class="text-caption mb-1">Total rate</p>
 				<p class="text-sm font-medium">
 					{showCommissionMetrics
 						? commissionType === 'fixed'

@@ -3,8 +3,7 @@ import { fetchJson, gotoApp, skipIfNoDatabase } from "./helpers";
 
 test.describe.configure({ mode: "serial", timeout: 60_000, retries: 1 });
 
-// eslint-disable-next-line no-empty-pattern
-test.beforeEach(({}, testInfo) => {
+test.beforeEach(({ page: _page }, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 
@@ -24,8 +23,9 @@ test("loans list renders with table columns", async ({ page }) => {
   ).toBeVisible();
 
   const emptyState = page.getByText("No loans found");
-  const table = page.getByRole("table").first();
-  await expect(emptyState.or(table)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("table").first()).toBeVisible({
+    timeout: 20_000,
+  });
 
   if (await emptyState.isVisible()) {
     await expect(
@@ -178,4 +178,9 @@ test("bank loan detail page renders", async ({ page, request }) => {
   ).toBeVisible({
     timeout: 20_000,
   });
+});
+
+test("hidden transactions route returns 404", async ({ page }) => {
+  const response = await gotoApp(page, "/transactions");
+  expect(response?.status()).toBe(404);
 });

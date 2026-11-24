@@ -3,6 +3,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import GroupAvatarStack from '$lib/components/groups/GroupAvatarStack.svelte';
 	import { resolveGroupColor } from '$lib/groups/group-colors';
+	import { groupDuePrefix } from '$lib/groups/due-label';
 	import { formatPartyRoles } from '$lib/groups/party-role-labels';
 	import type { PartyRole } from '$lib/group-membership-diff';
 	import {
@@ -36,7 +37,7 @@
 			parts.push(`${formatCurrencyCompact(principal)} outstanding`);
 		}
 		if (group.nextDueDate) {
-			parts.push(`Next due ${formatDateShort(group.nextDueDate)}`);
+			parts.push(`${groupDuePrefix(group.nextDueDate)} ${formatDateShort(group.nextDueDate)}`);
 		}
 		return parts.join(' · ');
 	});

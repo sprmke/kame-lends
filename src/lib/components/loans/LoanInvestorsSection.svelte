@@ -13,6 +13,7 @@
 		showPeriodStatus?: boolean;
 		readOnly?: boolean;
 		editableInvestorIds?: number[] | null;
+		emptyMessage?: string;
 	}
 
 	let {
@@ -23,7 +24,8 @@
 		onRefresh,
 		showPeriodStatus = true,
 		readOnly = false,
-		editableInvestorIds = null
+		editableInvestorIds = null,
+		emptyMessage = 'No investors allocated'
 	}: Props = $props();
 </script>
 
@@ -37,7 +39,7 @@
 		{#if investorsWithTransactions.length === 0}
 			<div class="dashboard-empty gap-2">
 				<Users class="h-8 w-8 text-muted-foreground" />
-				<p class="text-sm text-muted-foreground">No investors allocated</p>
+				<p class="text-sm text-muted-foreground">{emptyMessage}</p>
 			</div>
 		{:else}
 			<InvestorTransactionsDisplay

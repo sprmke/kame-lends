@@ -27,6 +27,7 @@
 		disabled?: boolean;
 		loading?: boolean;
 		id?: string;
+		ariaLabel?: string;
 		class?: string;
 		triggerClassName?: string;
 		searchable?: boolean;
@@ -43,6 +44,7 @@
 		disabled = false,
 		loading = false,
 		id,
+		ariaLabel,
 		class: className,
 		triggerClassName,
 		searchable,
@@ -87,6 +89,7 @@
 				type="button"
 				variant="outline"
 				role="combobox"
+				aria-label={ariaLabel ?? placeholder}
 				aria-expanded={open}
 				{disabled}
 				class={cn(

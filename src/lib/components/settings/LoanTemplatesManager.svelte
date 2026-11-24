@@ -178,9 +178,9 @@
 			groupIds: SHOW_GROUPS_UI ? selectedGroupIds : [],
 			interestType,
 			interestValue,
-			termDays: termDays.trim() === '' ? null : Number(termDays),
+			termDays: String(termDays ?? '').trim() === '' ? null : Number(termDays),
 			notes,
-			freeLotSqm: freeLotSqm.trim() === '' ? null : Number(freeLotSqm)
+			freeLotSqm: String(freeLotSqm ?? '').trim() === '' ? null : Number(freeLotSqm)
 		};
 	}
 

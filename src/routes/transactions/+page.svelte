@@ -190,11 +190,6 @@
 			{/if}
 		</PageHeader>
 
-		{#if !SHOW_TRANSACTIONS_UI}
-			<p class="text-sm text-muted-foreground">
-				Transactions UI is hidden. Set SHOW_TRANSACTIONS_UI to enable nav links.
-			</p>
-		{/if}
 
 		<ListPageToolbar
 			searchValue={searchQuery}

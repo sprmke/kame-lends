@@ -10,7 +10,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { toast } from '$lib/toast';
-	import { formatCurrency, formatDateShort, formatText } from '$lib/format';
+	import { formatCurrency, formatDateShort, formatPercentage, formatText } from '$lib/format';
 	import { normalizeDebtFees } from '$lib/debt-calculations';
 	import type { DebtWithInvestorAndPeriods, Investor } from '$lib/types';
 	import { ODD_LAST_TWO_COL_GRID } from '$lib/summary-grid';
@@ -114,7 +114,7 @@
 					</div>
 					<div class="rounded-lg bg-muted/50 p-3">
 						<p class="mb-1 text-xs text-muted-foreground">Interest Rate</p>
-						<p class="text-sm font-semibold">{debt.interestRate}%</p>
+						<p class="text-sm font-semibold">{formatPercentage(Number(debt.interestRate), 2)}</p>
 					</div>
 					<div class="rounded-lg bg-muted/50 p-3">
 						<p class="mb-1 text-xs text-muted-foreground">Accrual Period</p>

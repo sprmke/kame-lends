@@ -105,6 +105,16 @@ export default defineConfig({
       },
     },
     {
+      name: "webkit-smoke",
+      testMatch: /webkit-smoke\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Safari"],
+        storageState: "e2e/.auth/admin.json",
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
       name: "assistant",
       testMatch: /assistant\.spec\.ts/,
       dependencies: ["setup"],
@@ -115,8 +125,49 @@ export default defineConfig({
       },
     },
     {
+      name: "a11y-mobile",
+      testMatch: /a11y-mobile\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
+    {
       name: "a11y",
       testMatch: /a11y\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: "qa-groups",
+      testMatch: /qa-groups\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+      },
+    },
+    {
+      name: "qa-loan-form",
+      testMatch: /qa-loan-form\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: "money-integrity",
+      testMatch: /qa-money-integrity\.spec\.ts/,
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],

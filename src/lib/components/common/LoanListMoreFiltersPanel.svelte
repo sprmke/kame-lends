@@ -133,7 +133,7 @@
 		maxPlaceholder="Max (₱)"
 	/>
 	<RangeFilter
-		label="Avg. Rate"
+		label="Total rate"
 		minValue={minAvgRate}
 		maxValue={maxAvgRate}
 		onMinChange={onMinAvgRateChange}

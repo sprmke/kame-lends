@@ -10,7 +10,7 @@
 				destructive: "border-transparent bg-destructive/10 text-destructive hover:bg-destructive/20",
 				outline: "text-foreground",
 				ghost: "border-transparent hover:bg-muted hover:text-muted-foreground",
-				link: "border-transparent text-primary underline-offset-4 hover:underline",
+				link: "border-transparent text-primary-strong underline-offset-4 hover:underline",
 				success: "border-transparent bg-chart-2/12 text-chart-2 hover:bg-chart-2/20",
 				warning: "border-transparent bg-chart-5/12 text-chart-5 hover:bg-chart-5/20",
 			},

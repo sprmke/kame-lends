@@ -72,8 +72,8 @@
 	function netClass(net: number): string {
 		if (isSensitiveDataHidden() || net === 0) return 'text-foreground';
 		return net > 0
-			? 'text-emerald-600 dark:text-emerald-400'
-			: 'text-rose-600 dark:text-rose-400';
+			? 'text-emerald-700 dark:text-emerald-400'
+			: 'text-rose-700 dark:text-rose-400';
 	}
 
 	function flowAria(inTotal: number, outTotal: number): string {
@@ -95,11 +95,11 @@
 
 	function amountClass(entry: TimelineEntry): string {
 		if (entry.direction === 'in') {
-			return 'text-emerald-600 dark:text-emerald-400';
+			return 'text-emerald-700 dark:text-emerald-400';
 		}
 		return entry.kind === 'scheduled'
-			? 'text-amber-600 dark:text-amber-400'
-			: 'text-rose-600 dark:text-rose-400';
+			? 'text-amber-800 dark:text-amber-400'
+			: 'text-rose-700 dark:text-rose-400';
 	}
 
 	function markToday(node: HTMLElement, active: boolean) {
@@ -165,12 +165,12 @@
 			aria-label={flowAria(inTotal, outTotal)}
 		>
 			{#if inTotal > 0}
-				<span class="font-medium text-emerald-600 dark:text-emerald-400">
+				<span class="font-medium text-emerald-700 dark:text-emerald-400">
 					In {money(inTotal, '+')}
 				</span>
 			{/if}
 			{#if outTotal > 0}
-				<span class="font-medium text-rose-600 dark:text-rose-400">
+				<span class="font-medium text-rose-700 dark:text-rose-400">
 					Out {money(outTotal, '-')}
 				</span>
 			{/if}
@@ -218,7 +218,7 @@
 {#if timeline.months.length === 0}
 	<ListEmptyState message="No activity in this range" icon={GanttChart} />
 {:else}
-	<div class="loan-timeline flex w-full min-w-0 flex-col gap-7">
+	<div class="loan-timeline flex w-full min-w-0 flex-col gap-7 pb-24 lg:pb-16">
 		{#each timeline.months as month (month.key)}
 			<section id="timeline-month-{month.key}" class="w-full min-w-0 scroll-mt-24">
 				<header
@@ -232,7 +232,7 @@
 							<GanttChart class="h-5 w-5" />
 						</div>
 						<div class="min-w-0 space-y-1 lg:flex lg:items-center lg:justify-between lg:gap-3 lg:space-y-0">
-							<h2 class="text-sm font-semibold tracking-tight">{month.label}</h2>
+							<h2 class="text-sm font-semibold tracking-tight whitespace-nowrap">{month.label}</h2>
 							{@render flowTotals(month.inTotal, month.outTotal, 'month')}
 						</div>
 					</div>

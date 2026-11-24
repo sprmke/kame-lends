@@ -30,7 +30,15 @@
 		showPriceToggle={false}
 	/>
 
-	<Card.Root>
+	<nav aria-label="Settings sections" class="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+		<a class="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" href="#settings-account">Account</a>
+		<a class="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" href="#settings-templates">Templates</a>
+		<a class="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" href="#settings-payments">Payments</a>
+		<a class="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" href="#settings-notifications">Notifications</a>
+		<a class="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" href="#settings-data">Data</a>
+	</nav>
+
+	<Card.Root id="settings-account">
 		<Card.Header class="pb-2">
 			<Card.Title>Account</Card.Title>
 		</Card.Header>
@@ -46,38 +54,48 @@
 		</Card.Content>
 	</Card.Root>
 
-	<LoanTemplatesManager
-		initialTemplates={data.loanTemplates ?? []}
-		borrowers={data.templateBorrowers ?? []}
-		investors={data.templateInvestors ?? []}
-		groups={data.templateGroups ?? []}
-	/>
+	<div id="settings-templates">
+		<LoanTemplatesManager
+			initialTemplates={data.loanTemplates ?? []}
+			borrowers={data.templateBorrowers ?? []}
+			investors={data.templateInvestors ?? []}
+			groups={data.templateGroups ?? []}
+		/>
+	</div>
 
 	{#if hasPartyLinks}
-		<PartyIdentityDocumentsManager initialDocuments={data.identityDocuments} />
+		<div id="settings-identity">
+			<PartyIdentityDocumentsManager initialDocuments={data.identityDocuments} />
+		</div>
 	{/if}
 
-	<AutoAttachSignatureCard
-		initialEnabled={data.signingPreferences?.autoAttachSignature === true}
-		hasSavedSignature={data.hasSavedSignature === true}
-	/>
+	<div id="settings-signing">
+		<AutoAttachSignatureCard
+			initialEnabled={data.signingPreferences?.autoAttachSignature === true}
+			hasSavedSignature={data.hasSavedSignature === true}
+		/>
+	</div>
 
-	<PaymentMethodsManager initialMethods={data.paymentMethods ?? []} />
+	<div id="settings-payments">
+		<PaymentMethodsManager initialMethods={data.paymentMethods ?? []} />
+	</div>
 
 	{#if data.isPlatformOwner}
-		<DataHealthCard />
-		<AiUsageCard />
-		<RecentlyDeletedCard />
+		<div id="settings-health"><DataHealthCard /></div>
+		<div id="settings-usage"><AiUsageCard /></div>
+		<div id="settings-deleted"><RecentlyDeletedCard /></div>
 	{/if}
 
-	<InstallAppCard />
-	<PushNotificationsCard initialPreferences={data.pushPreferences} />
-	<EmailNotificationsCard
-		initialPreferences={data.emailPreferences}
-		emailConfigured={data.emailConfigured}
-	/>
+	<div id="settings-install"><InstallAppCard /></div>
+	<div id="settings-notifications">
+		<PushNotificationsCard initialPreferences={data.pushPreferences} />
+		<EmailNotificationsCard
+			initialPreferences={data.emailPreferences}
+			emailConfigured={data.emailConfigured}
+		/>
+	</div>
 
-	<Card.Root>
+	<Card.Root id="settings-data">
 		<Card.Header>
 			<Card.Title>Data & maintenance</Card.Title>
 		</Card.Header>

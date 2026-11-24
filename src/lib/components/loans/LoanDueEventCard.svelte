@@ -101,7 +101,7 @@
 			</div>
 		</div>
 		<div
-			class="truncate border-t pt-2 font-bold text-emerald-600 tabular-nums dark:text-emerald-400 {classes.total}"
+			class="truncate border-t pt-2 font-bold text-emerald-700 tabular-nums dark:text-emerald-400 {classes.total}"
 		>
 			+{formatCurrency(totalAmount)}
 		</div>
