@@ -23,6 +23,7 @@
 		type NavCapabilities
 	} from '$lib/nav/app-nav';
 	import { THEME_COLOR_DASHBOARD } from '$lib/theme/preferences';
+	import { useAiStatus } from '$lib/ai-status.svelte';
 	import { ChevronLeft, ChevronRight, LogOut } from 'lucide-svelte';
 	import { mobileDockSlot } from '$lib/stores/mobile-dock-slot.svelte';
 
@@ -45,7 +46,20 @@
 	let pendingDockHref = $state<string | null>(null);
 
 	const caps = $derived(navCapabilities ?? DEFAULT_NAV_CAPABILITIES);
-	const nav = $derived(buildAppNav(caps));
+	const ai = useAiStatus();
+	const nav = $derived.by(() => {
+		const built = buildAppNav(caps);
+		if (ai.assistantChat) return built;
+		const keep = (item: { id: string }) => item.id !== 'assistant';
+		return {
+			primaryTabs: built.primaryTabs,
+			sidebarItems: built.sidebarItems.filter(keep),
+			moreNavItems: built.moreNavItems.filter(keep),
+			sidebarGroups: built.sidebarGroups
+				.map((group) => ({ ...group, items: group.items.filter(keep) }))
+				.filter((group) => group.items.length > 0)
+		};
+	});
 
 	const pathname = $derived(page.url.pathname);
 	const dockPathname = $derived(
@@ -216,7 +230,7 @@
 				>
 					<Avatar.Root class="h-9 w-9 ring-2 ring-primary/20">
 						<Avatar.Image src={user.image ?? undefined} alt={user.name ?? 'User'} />
-						<Avatar.Fallback class="bg-primary text-sm font-semibold text-primary-foreground">
+						<Avatar.Fallback class="bg-primary text-sm font-semibold text-primary-ink">
 							{userInitials}
 						</Avatar.Fallback>
 					</Avatar.Root>

@@ -27,8 +27,8 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
-    "ci:quality": "bun run check && bun run check:ai-gateway && bun run format:check && bun run lint:js && bun run test:unit && bun run test:coverage && bun run check:ai-tooling-sync && bun run build && node scripts/pwa/check-precache-budget.mjs && CI=true bun run test:e2e:pwa",
-    "ci:pre-push": "bun run check && bun run check:ai-gateway && bun run format:check && bun run lint:js && bun run test:unit && bun run check:ai-tooling-sync && bun audit --audit-level=high --ignore GHSA-vfj7-8cjw-p6xm --ignore GHSA-3r8g-jcqq-3p5j",
+    "ci:quality": "bun run check && bun run check:ai-gateway && bun run check:ai-tools && bun run format:check && bun run lint:js && bun run test:unit && bun run test:coverage && bun run check:ai-tooling-sync && bun run build && node scripts/pwa/check-precache-budget.mjs && CI=true bun run test:e2e:pwa",
+    "ci:pre-push": "bun run check && bun run check:ai-gateway && bun run check:ai-tools && bun run format:check && bun run lint:js && bun run test:unit && bun run check:ai-tooling-sync && bun audit --audit-level=high --ignore GHSA-vfj7-8cjw-p6xm --ignore GHSA-3r8g-jcqq-3p5j",
     "pwa:capture-screenshots": "bun scripts/pwa/capture-screenshots.ts",
     "pwa:generate-vapid-keys": "bun scripts/pwa/generate-vapid-keys.ts",
     "test:e2e:pwa": "playwright test --config playwright.pwa.config.ts",
@@ -58,6 +58,7 @@
     "db:backfill:storage": "bun scripts/db/backfill-storage-to-r2.ts",
     "db:backfill:group-members": "bun scripts/db/backfill-group-members.ts",
     "db:assign:lot-borrower": "bash scripts/db/assign-unassigned-lot-borrower.sh",
+    "db:seed:demo": "bun scripts/db/seed-demo-workspace.ts",
     "dev:wipe-workspace-calendar": "bun scripts/dev/wipe-workspace-calendar.ts",
     "dev:backfill-group-calendar-colors": "bun scripts/dev/backfill-group-calendar-colors.ts",
     "telegram:set-webhook": "bun scripts/telegram/set-webhook.ts",
@@ -74,7 +75,10 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:unit:tz": "TZ=Asia/Manila vitest run src/lib/money src/lib/dates src/lib/loans/interest-period-editor.test.ts && TZ=UTC vitest run src/lib/money src/lib/dates src/lib/loans/interest-period-editor.test.ts && TZ=America/Los_Angeles vitest run src/lib/money src/lib/dates src/lib/loans/interest-period-editor.test.ts",
     "test:coverage": "vitest run --coverage",
-    "perf:lighthouse": "bun x @lhci/cli autorun"
+    "perf:lighthouse": "bun x @lhci/cli autorun",
+    "check:ai-tools": "node scripts/check-ai-tools.mjs",
+    "eval:assistant": "bun scripts/evals/run-assistant-evals.ts",
+    "assistant:screenshot": "bun scripts/dev/capture-assistant-screenshot.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

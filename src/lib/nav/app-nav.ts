@@ -8,6 +8,7 @@ import {
   HandCoins,
   UserCheck,
   Folders,
+  Sparkles,
 } from "lucide-svelte";
 import { SHOW_TRANSACTIONS_UI } from "$lib/feature-flags";
 
@@ -78,6 +79,14 @@ function settingsItem(): AppNavItem {
   };
 }
 
+/** Conversational assistant (`/assistant`). Hidden when AI is off. */
+export const ASSISTANT_ITEM: AppNavItem = {
+  id: "assistant",
+  title: "Ask Kame",
+  href: "/assistant",
+  icon: Sparkles,
+};
+
 /** Workspace-owner bank / external loan tracker (`/debts`). */
 const BANK_LOANS_ITEM: AppNavItem = {
   id: "debts",
@@ -143,7 +152,7 @@ export function buildSidebarGroups(
   groups.push({
     id: "bank-loans",
     label: "Tools",
-    items: [BANK_LOANS_ITEM],
+    items: [BANK_LOANS_ITEM, ASSISTANT_ITEM],
   });
 
   groups.push({ id: "settings", items: [settingsItem()] });
@@ -162,6 +171,7 @@ export function buildDestinationItems(
   items.push(LOANS_ITEM);
   items.push(...buildPeopleItems());
   items.push(BANK_LOANS_ITEM);
+  items.push(ASSISTANT_ITEM);
 
   return items;
 }
@@ -232,6 +242,8 @@ export function resolveMobileDockHighlight(
 }
 
 export function resolveMobilePageTitle(pathname: string): string {
+  if (pathname === "/assistant" || pathname.startsWith("/assistant/"))
+    return "Ask Kame";
   if (pathname.startsWith("/groups/new")) return "New group";
   if (pathname.startsWith("/groups/")) return "Group";
   if (pathname.startsWith("/groups")) return "Groups";

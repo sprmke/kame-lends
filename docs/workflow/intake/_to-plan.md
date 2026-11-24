@@ -2,7 +2,7 @@
 title: "To plan"
 status: active
 tags: [planning]
-updated: 2026-11-19
+updated: 2026-11-21
 ---
 
 **Status legend:** ❌ cancelled / won't do · ✅ done · 🧪 for testing · 📋 planned (plan doc written) · 🚧 in progress · 🔵 pending / open
@@ -30,6 +30,14 @@ Integrate AI the same way Kame Homes / Kame Ops do, but harden it (gateway, usag
 Group Telegram templates are one line and skip borrower, investors, due date, and amount. Give each reminder, digest, and loan action a detailed default, with placeholders the owner can still insert.
 
 → **For testing:** [`../for-testing/telegram-message-templates.md`](../for-testing/telegram-message-templates.md)
+
+===
+
+🧪 AI assistant (chat over lending data)
+
+Chatbot that answers questions about the user's own loans, borrowers, investors, payments, and debts (for example "how much does X still owe?"). Read-only tool agent on the existing AI gateway, numbers filled in by the server from the money engine, expandable calculation breakdowns, streaming steps, image and voice input, history, evals, and guardrails. Built to be reused by later AI features and to serve as the portfolio case study.
+
+→ **For testing:** [`../for-testing/ai-assistant-chatbot.md`](../for-testing/ai-assistant-chatbot.md)
 
 ===
 

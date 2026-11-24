@@ -9,7 +9,10 @@ export const GET: RequestHandler = async (event) => {
   if (!session?.user?.id) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
-  return json(getAiStatus(), {
-    headers: { "Cache-Control": "private, max-age=60" },
-  });
+  return json(
+    getAiStatus((session.user as { role?: string | null }).role ?? null),
+    {
+      headers: { "Cache-Control": "private, max-age=60" },
+    },
+  );
 };

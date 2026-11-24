@@ -140,6 +140,8 @@ export interface ReceivedPayment {
   notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  /** Present on lean ledger rows; excluded before display. */
+  deletedAt?: Date | null;
 }
 
 export type GroupMemberStatus = "active" | "left" | "removed";

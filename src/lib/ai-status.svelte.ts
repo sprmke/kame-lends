@@ -4,9 +4,16 @@ import { browser } from "$app/environment";
 interface AiStatusResponse {
   enabled: boolean;
   features: Record<string, boolean>;
+  reason?: string | null;
 }
 
-const state = $state({ loaded: false, receiptExtraction: false });
+const state = $state({
+  loaded: false,
+  receiptExtraction: false,
+  assistantChat: false,
+  enabled: false,
+  reason: null as string | null,
+});
 let request: Promise<void> | null = null;
 
 function load(): Promise<void> {
@@ -14,9 +21,15 @@ function load(): Promise<void> {
     .then((response) => (response.ok ? response.json() : null))
     .then((body: AiStatusResponse | null) => {
       state.receiptExtraction = Boolean(body?.features?.receipt_extraction);
+      state.assistantChat = Boolean(body?.features?.assistant_chat);
+      state.enabled = Boolean(body?.enabled);
+      state.reason = body?.reason ?? null;
     })
     .catch(() => {
       state.receiptExtraction = false;
+      state.assistantChat = false;
+      state.enabled = false;
+      state.reason = null;
       request = null;
     })
     .finally(() => {
@@ -37,6 +50,15 @@ export function useAiStatus() {
     },
     get receiptExtraction() {
       return state.receiptExtraction;
+    },
+    get assistantChat() {
+      return state.assistantChat;
+    },
+    get enabled() {
+      return state.enabled;
+    },
+    get reason() {
+      return state.reason;
     },
     /** Resolves once the status is known (use before deciding to call AI). */
     ready(): Promise<void> {

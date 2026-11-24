@@ -13,8 +13,8 @@ import {
 } from "./config";
 import { AiGatewayError, isAiGatewayError } from "./errors";
 import {
-  AI_FEATURE_ROUTES,
   estimateCostUsd,
+  resolveFeatureRoute,
   type AiFeature,
   type AiProvider,
 } from "./features";
@@ -114,7 +114,7 @@ export async function generateStructured<Ctx, T>(
   deps: ClientDeps = defaultDeps,
 ): Promise<StructuredResult<T>> {
   const { feature, prompt, userId, schema } = options;
-  const route = AI_FEATURE_ROUTES[feature];
+  const route = resolveFeatureRoute(feature);
   const base = {
     userId,
     feature,
@@ -246,4 +246,17 @@ export async function generateStructured<Ctx, T>(
     });
     throw gatewayError;
   }
+}
+
+/**
+ * Agent-profile entry point (assistant). Kept as a thin seam so the stream
+ * route never imports the loop directly and future non-interactive profiles
+ * can call the same gateway checks.
+ */
+export async function runAgentTurn(
+  input: import("./agent/turn").TurnInput,
+): Promise<import("./agent/turn").TurnOutput> {
+  assertFeatureEnabled("assistant_chat");
+  const { runAssistantTurn } = await import("./agent/turn");
+  return runAssistantTurn(input);
 }

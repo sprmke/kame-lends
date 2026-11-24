@@ -46,6 +46,7 @@ const HIGH_COST_PREFIXES = [
   "/api/health",
   "/api/sign",
   "/api/ai/receipt-extraction",
+  "/api/ai/assistant",
   "/api/backup",
   "/api/export",
   "/api/storage/upload",

@@ -1,15 +1,15 @@
 ---
 name: ai-platform
-description: AI gateway for Kame Lends — Gemini/Groq via src/lib/server/ai (generateStructured), prompts, usage log, kill switch, receipt scanning. Use when adding or changing any AI/LLM feature, prompt, model, receipt scan, or AI env var.
+description: AI gateway for Kame Lends — Gemini/Groq via src/lib/server/ai (generateStructured, runAgentTurn), prompts, usage log, kill switch, receipt scanning, assistant. Use when adding or changing any AI/LLM feature, prompt, model, receipt scan, agent loop, or AI env var.
 ---
 
 # AI platform — Kame Lends
 
-Full doc: `docs/architecture/ai-platform.md`.
+Full docs: `docs/architecture/ai-platform.md`, `docs/architecture/ai-assistant.md`.
 
 ## Rules
 
-1. **All model calls go through `generateStructured()`** in `src/lib/server/ai/client.ts`. Never `fetch` a provider from feature code. Provider hosts live only in `transport.ts` (`bun run check:ai-gateway` enforces it).
+1. **All model calls go through `src/lib/server/ai/client.ts`.** Structured features use `generateStructured()`; agent profiles use `runAgentTurn()` / `runAssistantLoop()`. Never `fetch` a provider from feature code. Provider hosts live only in `transport.ts` (`bun run check:ai-gateway` enforces it).
 2. **Keys only from env** via `config.ts` (`GEMINI_API_KEYS` / `GEMINI_API_KEY`, `GROQ_API_KEY`). Gemini key in the `x-goog-api-key` header, never in the URL.
 3. **Versioned prompts** in `src/lib/server/ai/prompts/` with `definePrompt`. Bump `version` on any prompt or schema change. Include `DOCUMENT_INJECTION_RULE` for images and documents.
 4. **Structured output:** Gemini `responseSchema` + zod schema. Coerce field values leniently, but fail on wrong structure so the client's single repair retry can run.
@@ -18,6 +18,13 @@ Full doc: `docs/architecture/ai-platform.md`.
 7. **Privacy:** no prompt/reply bodies or names in logs. Prompt hints come from the owner's CRM on the server, not client text.
 8. **UI gating:** `useAiStatus()` from `$lib/ai-status.svelte.ts`. Hide AI buttons when the feature is off.
 9. **New feature checklist:** feature id + route in `features.ts` → prompt + schemas → `generateStructured` call → endpoint with session, zod, ownership, and `HIGH_COST_PREFIXES` rate limit → UI gated on status → tests with mocked `callModel` → docs.
+
+## Agent profiles / assistant
+
+- The assistant is read-only by construction: `src/lib/server/ai/agent/registry.ts` rejects non-read tools, and `bun run check:ai-tools` blocks DB writes, network, fs, and env inside `src/lib/server/ai/tools/`.
+- Model output never types numbers. Tools register facts and the model writes `{{fN}}`. `agent/verify.ts` rejects stray digits, PII, raw HTML, and prompt leakage, then regenerates once or falls back to deterministic blocks.
+- Scope comes from `ToolContext` built from the session; tools re-check every id. Use `assistant/viewer-data.ts`; never query `db` from a tool.
+- New tool: add a file in `ai/tools/`, strict zod args, `capability: "read"`, a `label`, `sources`, capped rows, and unit + parity tests. Register it in `ai/tools/index.ts` and add eval cases.
 
 ## Receipt scanning map
 

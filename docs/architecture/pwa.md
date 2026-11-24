@@ -47,6 +47,8 @@ Platform notes: desktop Chrome/Edge and Android are fully supported. iOS 16.4+ p
 
 **Offline API allowlist (start):** `/api/loans`, `/api/party-profile/me`, `/api/payment-methods`.
 
+**AI assistant:** `/api/ai/assistant/**` is network-only. The SSE POST passes through when online and gets the 503 offline JSON otherwise (non-GET). Conversation history is never added to `kl-pages` or `kl-data`. The launcher stays visible but sending fails with a clear message. See [`ai-assistant.md`](./ai-assistant.md).
+
 ## Push fanout
 
 ```

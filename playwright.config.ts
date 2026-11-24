@@ -105,6 +105,16 @@ export default defineConfig({
       },
     },
     {
+      name: "assistant",
+      testMatch: /assistant\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
       name: "a11y",
       testMatch: /a11y\.spec\.ts/,
       dependencies: ["setup"],

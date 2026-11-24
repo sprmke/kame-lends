@@ -57,6 +57,17 @@ Built with **SvelteKit 2** and **Svelte 5** for day-to-day operations: recording
 - Past due, maturing, pending disbursement, and completed loan panels
 - **Privacy toggle** to hide amounts and interest rates across the app (names, dates, and counts stay visible)
 
+### Ask Kame (AI assistant)
+
+- Ask plain-language questions about balances, dues, interest, payments, borrowers, investors, bank loans, and groups
+- **Read-only**: no tool can create, edit, or delete anything
+- Numbers come from the existing money engine, never from the model. Every money answer can expand into the formula, inputs, source records, rounding rule, and "as of" date
+- Live working steps, tables with CSV copy, source links, follow-up chips, `@` pins, quick tools, receipt images, and voice input
+- Same access as the screens: owner, investor, borrower, witness, and group roles see only their own data
+- Owner-first rollout, daily turn and cost caps, kill switches, and a red-team eval suite
+
+Architecture and case study: [`docs/architecture/ai-assistant.md`](./docs/architecture/ai-assistant.md).
+
 ### Google sign-in (OAuth)
 
 - **Sign in with Google** via [Auth.js](https://authjs.dev/) (`@auth/sveltekit`). No passwords stored in the app
@@ -104,9 +115,9 @@ Screenshots from the live app. Several views show the **privacy toggle** (eye ic
 | :------------------------------------------------: | :--------------------------------------------: |
 | ![Create loan](./docs/screenshots/loan-create.png) | ![Investors](./docs/screenshots/investors.png) |
 
-|                     Transactions                     |
-| :--------------------------------------------------: |
-| ![Transactions](./docs/screenshots/transactions.png) |
+|                     Transactions                     |                   Ask Kame                    |
+| :--------------------------------------------------: | :-------------------------------------------: |
+| ![Transactions](./docs/screenshots/transactions.png) | ![Ask Kame](./docs/screenshots/assistant.png) |
 
 ---
 

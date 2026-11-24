@@ -52,6 +52,7 @@ Any signed-in user. All-users backup is platform owner only.
 
 - The one-click **Fix received payments** and **Sync loan due dates** buttons are gone. Their endpoints return **410 Gone**.
 - The platform owner sees a read-only **Data health** card backed by `GET /api/admin/money-health`. It reports counts only (no PII) for unlinked payments, receipt-less payments, missing interest periods, zero-allocation loans, zero-capital fixed rows, duplicate period dates, periods or payments left on removed allocations, completed loans with a balance, debt orphan periods, and period/loan status drift against the ledger. Status drift is computed by the same rule as the daily sweep, so already-paid periods are never reported as underpaid.
+- The platform owner also sees an **Assistant usage** card backed by `GET /api/admin/ai-usage`: turns, users, cost, average turn, fallback rate, helpful ratio, and tool error rate for the last 7 days. Counts and rates only; no questions, names, or amounts.
 - Downloading a backup omits receipt image columns; loan detail still loads receipts when needed.
 - Automated email backup is weekly (not daily) and owner-only to limit Neon egress.
 - Signing out purges offline caches and the last-online timestamp.

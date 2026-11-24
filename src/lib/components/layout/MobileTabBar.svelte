@@ -118,7 +118,7 @@
 					<Avatar.Root class="size-[26px] after:hidden">
 						<Avatar.Image src={userImage ?? undefined} alt="" />
 						<Avatar.Fallback
-							class="bg-primary text-[10px] font-semibold text-primary-foreground"
+							class="bg-primary text-[10px] font-semibold text-primary-ink"
 						>
 							{userInitials}
 						</Avatar.Fallback>

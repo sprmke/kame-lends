@@ -84,3 +84,7 @@ Admin and party sessions can open `/dashboard`. Data is scoped to the signed-in 
 - **Overdue amount** comes from the ledger: unpaid overdue period interest plus unpaid principal when the loan due date has passed. Partial payments reduce it.
 - The dashboard refresh calls `/api/loans/check-overdue`, which recomputes statuses for the owner with the single rule. The daily cron is the primary writer.
 - No card may show `₱NaN`; non-finite money renders as `₱0.00`.
+
+## Ask Kame (2026-11)
+
+The floating **Ask** launcher is available on the dashboard when the assistant is enabled. Page context is "Viewing the dashboard"; starters offer due-this-week, overdue, interest-this-month, and owner-only data health. The assistant reads the same loan and dashboard loaders; it never changes a card. See [assistant.md](./assistant.md).

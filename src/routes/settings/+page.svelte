@@ -4,6 +4,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import DownloadBackupButton from '$lib/components/common/DownloadBackupButton.svelte';
 	import DataHealthCard from '$lib/components/settings/DataHealthCard.svelte';
+	import AiUsageCard from '$lib/components/settings/AiUsageCard.svelte';
 	import RecentlyDeletedCard from '$lib/components/settings/RecentlyDeletedCard.svelte';
 	import LoanTemplatesManager from '$lib/components/settings/LoanTemplatesManager.svelte';
 	import PaymentMethodsManager from '$lib/components/settings/PaymentMethodsManager.svelte';
@@ -64,6 +65,7 @@
 
 	{#if data.isPlatformOwner}
 		<DataHealthCard />
+		<AiUsageCard />
 		<RecentlyDeletedCard />
 	{/if}
 
