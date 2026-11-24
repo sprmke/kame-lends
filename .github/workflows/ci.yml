@@ -96,7 +96,6 @@ jobs:
       DATABASE_URL: postgresql://kame_lends:kame_lends@127.0.0.1:5433/kame_lends
       E2E_AUTH_SECRET: e2e-ci-secret
       E2E_USER_EMAIL: e2e@example.com
-      E2E_USE_PREVIEW: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -106,8 +105,6 @@ jobs:
         run: bun run db:migrate:pending --yes
       - name: Seed
         run: bun scripts/db/seed-e2e.ts
-      - name: Build for browser tests
-        run: bun run build
       - name: Install Playwright browsers
         run: bun x playwright install --with-deps chromium webkit
       - name: Browser journeys

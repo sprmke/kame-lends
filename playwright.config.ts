@@ -9,7 +9,6 @@ for (const [key, value] of Object.entries(localEnv)) {
 }
 
 const e2eAuthSecret = process.env.E2E_AUTH_SECRET ?? "e2e-local-secret";
-const usePreview = process.env.E2E_USE_PREVIEW === "1";
 
 export default defineConfig({
   testDir: "e2e",
@@ -177,9 +176,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: usePreview
-      ? `bun run preview --port ${previewPort} --strictPort`
-      : `bun run dev --port ${previewPort}`,
+    command: `bun run dev --port ${previewPort}`,
     port: previewPort,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
