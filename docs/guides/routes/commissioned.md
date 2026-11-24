@@ -13,6 +13,8 @@ Date range, search, status/type filters, More Filters, export PDF, cards/table/c
 
 On loan detail, each party edits **their** commission in **Your Commission** (`LoanMyCommissionCard`, `GET` / `PATCH /api/loans/[id]/my-commission`). Other users on the same loan never see that section.
 
+- **Loading:** `ListPageSkeleton` with the commissioned scope mirrors the header, date range, commission summary cards, toolbar, and the resolved view (table at `lg+`, timeline/cards below `lg`).
+
 ## Load
 
 [`src/routes/loans/+page.server.ts`](../../../src/routes/loans/+page.server.ts) → `getCachedLoansByScope(userId, 'commissioned', 'list')` (union of investment, borrowed, and witnessed IDs). [`LoanListPage`](../../../src/lib/components/loans/LoanListPage.svelte) filters to `loanHasPartyCommission` before the table and summary cards.

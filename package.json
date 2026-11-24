@@ -11,7 +11,10 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "bash scripts/dev/free-local-ports.sh && vite dev --strictPort",
+    "dev": "bash scripts/dev/free-local-ports.sh && vite dev --host 127.0.0.1 --strictPort",
+    "ui": "./scripts/dev/ui-worktree.sh",
+    "ui:port": "./scripts/dev/ui-worktree.sh --print-port",
+    "seed:dev": "bun scripts/db/seed-e2e.ts",
     "dev:stack": "bash ./dev.sh",
     "dev:ui": "bash ./dev.sh --ui-only",
     "dev:free-ports": "bash scripts/dev/free-local-ports.sh",

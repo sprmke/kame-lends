@@ -23,7 +23,7 @@ kind: plan
 | Tools           | All 25 catalog tools in `src/lib/server/ai/tools/`, read-only, viewer-scoped, calc traces.                                                                     |
 | Viewer data     | Request-scoped memo over the app's cached loaders, group projection, private commission.                                                                       |
 | Answer pipeline | Fact tokens with a streaming resolver, verifier (digits, PII, canary, HTML), one regenerate, deterministic fallback, server-built blocks.                      |
-| Storage         | `0045_ai_assistant.sql`: conversations, messages, tool audit, usage columns. 90-day lazy sweep.                                                                |
+| Storage         | `0046_ai_assistant.sql`: conversations, messages, tool audit, usage columns. 90-day lazy sweep.                                                                |
 | API             | SSE turn, conversations CRUD, feedback, mention search. Per-path rate limit, idempotency, one live stream per isolate.                                         |
 | UI              | Docked panel + mobile sheet + `/assistant` page, history, pins, quick tools, image attach, voice, price masking, markdown subset.                              |
 | Security        | `check:ai-tools`, microphone header, same-origin guard, no write tools, PII/field allowlists, untrusted-data fencing.                                          |

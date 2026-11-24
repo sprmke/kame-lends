@@ -234,8 +234,12 @@
 
 <svelte:head><title>Bank Loans</title></svelte:head>
 
-{#if items === null}
-	<ListPageSkeleton variant="debts" />
+{#if items === null || !viewModeState.isReady}
+	<ListPageSkeleton
+		variant="debts"
+		viewMode={viewModeState.viewMode}
+		ready={viewModeState.isReady}
+	/>
 {:else}
 	<DashboardPage>
 		<PageHeader

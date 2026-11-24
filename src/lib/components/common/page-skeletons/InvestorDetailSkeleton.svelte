@@ -2,45 +2,20 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { INVESTOR_DETAIL_SUMMARY_GRID } from '$lib/summary-grid';
 	import DetailHeaderSkeleton from './DetailHeaderSkeleton.svelte';
-	import DataTableSkeleton from './DataTableSkeleton.svelte';
-	import SkeletonIdentity from './SkeletonIdentity.svelte';
+	import ActivityCardsSkeleton from './ActivityCardsSkeleton.svelte';
 	import SkeletonMetricGrid from './SkeletonMetricGrid.svelte';
-	import { LOANS_TABLE_COLUMNS } from './table-columns';
 </script>
 
 <div aria-busy="true" aria-label="Loading investor details" class="dashboard-stack" role="status">
 	<DetailHeaderSkeleton />
 
-	<SkeletonMetricGrid count={6} gridClass={INVESTOR_DETAIL_SUMMARY_GRID} />
-
-	<div class="flex gap-2 overflow-hidden">
+	<div class="grid h-11 w-full max-w-lg grid-cols-3 items-center gap-1 rounded-xl border border-border/50 bg-muted/50 p-1">
 		{#each Array.from({ length: 3 }) as _, index (index)}
-			<Skeleton class="h-9 w-24 rounded-2xl" />
+			<Skeleton class="h-full rounded-lg" />
 		{/each}
 	</div>
 
-	<div class="grid gap-2.5 md:grid-cols-2 md:gap-5 2xl:grid-cols-4">
-		{#each Array.from({ length: 4 }) as _, index (index)}
-			<div class="surface-card space-y-3 p-4">
-				<Skeleton class="h-4 w-32" />
-				{#each Array.from({ length: 2 }) as _, rowIndex (rowIndex)}
-					<div class="rounded-2xl border border-border/50 bg-muted/20 p-3">
-						<SkeletonIdentity size="sm" />
-					</div>
-				{/each}
-			</div>
-		{/each}
-	</div>
+	<SkeletonMetricGrid count={8} gridClass={INVESTOR_DETAIL_SUMMARY_GRID} sub />
 
-	<div class="skeleton-toolbar">
-		<div class="mobile-list-toolbar">
-			<Skeleton class="h-11 min-w-0 flex-1 rounded-2xl lg:min-w-[12rem]" />
-			<div class="mobile-list-toolbar-controls">
-				<Skeleton class="h-11 w-28 rounded-2xl" />
-				<Skeleton class="h-11 w-28 rounded-2xl" />
-			</div>
-		</div>
-	</div>
-
-	<DataTableSkeleton columns={LOANS_TABLE_COLUMNS} tallRows />
+	<ActivityCardsSkeleton />
 </div>

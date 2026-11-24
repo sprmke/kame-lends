@@ -1,5 +1,5 @@
 -- AI assistant (chat over lending data). Additive only.
--- See docs/architecture/ai-assistant.md and docs/workflow/in-progress/ai-assistant-chatbot.md
+-- See docs/architecture/ai-assistant.md and docs/workflow/for-testing/ai-assistant-chatbot.md
 
 CREATE TABLE IF NOT EXISTS ai_conversations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

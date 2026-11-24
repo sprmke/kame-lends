@@ -207,7 +207,7 @@
 </script>
 
 {#if canEdit && isLoadingContacts && (borrowers.length === 0 || investors.length === 0)}
-	<FormPageSkeleton />
+	<FormPageSkeleton showHeader={false} />
 {:else if canEdit}
 	<LoanContractCustomizationForm
 		value={customization}

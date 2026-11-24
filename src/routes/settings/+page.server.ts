@@ -11,6 +11,8 @@ import {
 import { accountRolesFromCapabilities } from "$lib/account-roles";
 import { isWorkspaceOwnerEmail } from "$lib/server/workspace-owner";
 import { getUserPushPreferences } from "$lib/server/push/preferences";
+import { getUserEmailPreferences } from "$lib/server/email/preferences";
+import { isTransactionalEmailConfigured } from "$lib/server/email/send-email";
 import { db } from "$lib/server/db";
 import { borrowers, investors, loanGroups } from "$lib/server/db/schema";
 import { listLoanTemplatesForUser } from "$lib/server/loan-templates";
@@ -26,6 +28,7 @@ export const load: PageServerLoad = async (event) => {
     paymentMethods,
     hasPartyLinks,
     pushPreferences,
+    emailPreferences,
     loanTemplates,
     borrowerRows,
     investorRows,
@@ -38,6 +41,7 @@ export const load: PageServerLoad = async (event) => {
     listPaymentMethodsForUser(userId),
     hasPartyUserCrmLinks(userId),
     getUserPushPreferences(userId),
+    getUserEmailPreferences(userId),
     listLoanTemplatesForUser(userId),
     db.query.borrowers.findMany({
       where: eq(borrowers.userId, userId),
@@ -77,6 +81,8 @@ export const load: PageServerLoad = async (event) => {
     hasPartyLinks,
     identityDocuments,
     pushPreferences,
+    emailPreferences,
+    emailConfigured: isTransactionalEmailConfigured(),
     loanTemplates,
     templateBorrowers: uniquePartiesByName(borrowerRows),
     templateInvestors: uniquePartiesByName(investorRows),

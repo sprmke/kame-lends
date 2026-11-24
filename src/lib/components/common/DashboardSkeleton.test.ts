@@ -30,7 +30,7 @@ describe("DashboardSkeleton", () => {
 describe("ListPageSkeleton", () => {
   it("renders loans table columns and summary cards", () => {
     const { body } = render(ListPageSkeleton, { props: { variant: "loans" } });
-    expect(body).toContain("grow-[12]");
+    expect(body).toContain("grow-[22]");
     expect(body).toContain('aria-label="Loading page"');
     expect(body).toContain("skeleton-toolbar");
     expect(body).toContain("surface-card");
@@ -43,6 +43,28 @@ describe("ListPageSkeleton", () => {
     });
     expect(body).toContain("grow-[18]");
     expect(body).toContain("skeleton-toolbar");
+  });
+
+  it("switches to card placeholders when cards view is resolved", () => {
+    const { body } = render(ListPageSkeleton, {
+      props: { variant: "borrowers", viewMode: "cards", ready: true },
+    });
+    expect(body).not.toContain("grow-[18]");
+    expect(body).toContain("dashboard-metric-cell");
+  });
+
+  it("uses the timeline branch for the resolved loan mobile view", () => {
+    const { body } = render(ListPageSkeleton, {
+      props: { variant: "loans", viewMode: "timeline", ready: true },
+    });
+    expect(body).not.toContain("grow-[22]");
+    expect(body).toContain("loan-timeline");
+  });
+
+  it("renders group sections with real headings", () => {
+    const { body } = render(ListPageSkeleton, { props: { variant: "groups" } });
+    expect(body).toContain("Your groups");
+    expect(body).toContain("Shared with you");
   });
 });
 
@@ -57,7 +79,7 @@ describe("DetailPageSkeleton", () => {
       props: { variant: "investor" },
     });
     expect(body).toContain('aria-label="Loading investor details"');
-    expect(body).toContain("skeleton-toolbar");
+    expect(body).toContain("md:grid-cols-3");
   });
 });
 
@@ -71,9 +93,11 @@ describe("DebtDetailSkeleton", () => {
 
 describe("PartyProfileFormSkeleton", () => {
   it("renders contact and payment method placeholders", () => {
-    const { body } = render(PartyProfileFormSkeleton);
+    const { body } = render(PartyProfileFormSkeleton, {
+      props: { showHeader: true },
+    });
     expect(body).toContain('aria-label="Loading profile"');
-    expect(body).toContain("lg:grid-cols-2");
+    expect(body).toContain("rounded-2xl");
   });
 });
 

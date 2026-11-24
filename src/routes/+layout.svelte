@@ -16,6 +16,7 @@
 	import { Toaster } from '$lib/components/ui/sonner';
 	import PwaProvider from '$lib/components/pwa/PwaProvider.svelte';
 	import AssistantLauncher from '$lib/components/assistant/AssistantLauncher.svelte';
+	import { SHOW_GROUPS_UI } from '$lib/feature-flags';
 	import { navigating, page } from '$app/state';
 	import { releaseStaleBodyScrollLock } from '$lib/composables/body-scroll-lock-release';
 	import { createDelayedFlag } from '$lib/composables/use-delayed-flag.svelte';
@@ -57,6 +58,7 @@
 		'/borrowed',
 		'/commissioned',
 		'/witnessed',
+		'/groups',
 		'/investors',
 		'/borrowers',
 		'/witnesses',
@@ -64,20 +66,18 @@
 		'/transactions'
 	]);
 
-	const formRoutes = new Set([
-		'/debts/new',
-		'/loans/new',
-		'/transactions/new',
-		'/investors/new',
-		'/borrowers/new',
-		'/witnesses/new'
-	]);
+	const partyFormRoutes = new Set(['/investors/new', '/borrowers/new', '/witnesses/new']);
 
 	function resolveDetailSkeleton(path: string): DetailPageSkeletonVariant | null {
-		if (formRoutes.has(path)) return 'form';
+		if (path === '/loans/new') return 'loan-form';
+		if (path === '/debts/new') return 'debt-form';
+		if (path === '/transactions/new') return 'transaction-form';
+		if (partyFormRoutes.has(path)) return 'party-form';
 		if (path === '/settings') return 'settings';
 		if (/^\/debts\/[^/]+$/.test(path)) return 'debt';
-		if (/^\/loans\/[^/]+$/.test(path) && !path.endsWith('/sign')) return 'loan';
+		if (/^\/loans\/[^/]+\/sign$/.test(path)) return 'signing';
+		if (/^\/loans\/[^/]+$/.test(path)) return 'loan';
+		if (/^\/groups\/[^/]+$/.test(path)) return 'group';
 		if (/^\/investors\/[^/]+$/.test(path)) return 'investor';
 		if (/^\/transactions\/[^/]+$/.test(path)) return 'transaction';
 		if (/^\/borrowers\/[^/]+$/.test(path)) return 'borrower';
@@ -110,6 +110,11 @@
 		if (destinationPath === '/witnesses') return 'witnesses';
 		if (destinationPath === '/debts') return 'debts';
 		if (destinationPath === '/transactions') return 'transactions';
+		if (destinationPath === '/groups') return 'groups';
+		if (destinationPath === '/investments') return 'investments';
+		if (destinationPath === '/borrowed') return 'borrowed';
+		if (destinationPath === '/commissioned') return 'commissioned';
+		if (destinationPath === '/witnessed') return 'witnessed';
 		return 'loans';
 	});
 
@@ -124,6 +129,11 @@
 		data.session?.user
 			? { light: THEME_COLOR_DASHBOARD, dark: THEME_COLOR_DASHBOARD }
 			: { light: THEME_COLOR_LIGHT, dark: THEME_COLOR_DARK }
+	);
+
+	const hasGroupsColumn = $derived(
+		SHOW_GROUPS_UI &&
+			(((data as { groupsIndex?: unknown[] }).groupsIndex?.length ?? 0) > 0)
 	);
 </script>
 
@@ -157,12 +167,15 @@
 		<PriceVisibilityShell>
 			{#if showDashboardSkeleton}
 				<div class="dashboard-page">
-					<DashboardSkeleton />
+					<DashboardSkeleton showGroupsColumn={hasGroupsColumn} />
 				</div>
 			{:else if showDetailSkeleton && detailSkeletonVariant}
 				<DetailPageSkeleton variant={detailSkeletonVariant} />
 			{:else if showListSkeleton}
-				<ListPageSkeleton variant={listSkeletonVariant} />
+				<ListPageSkeleton
+					variant={listSkeletonVariant}
+					showScopeTabs={destinationPath === '/loans'}
+				/>
 			{:else}
 				{@render children()}
 			{/if}

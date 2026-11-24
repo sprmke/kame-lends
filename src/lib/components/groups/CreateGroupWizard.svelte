@@ -8,6 +8,7 @@
 	import GroupBadgeList from '$lib/components/groups/GroupBadgeList.svelte';
 	import GroupColorSwatches from '$lib/components/groups/GroupColorSwatches.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -548,7 +549,13 @@
 				</div>
 				{#if includeInvestors || includeBorrowers}
 					{#if !contactsReady}
-						<p class="text-sm text-muted-foreground">Loading…</p>
+						<div class="space-y-2" aria-busy="true" aria-label="Loading contacts" role="status">
+							<Skeleton class="h-3 w-16" />
+							<Skeleton class="h-11 w-full rounded-2xl" />
+							{#if includeInvestors && includeBorrowers}
+								<Skeleton class="h-11 w-full rounded-2xl" />
+							{/if}
+						</div>
 					{:else}
 						<div class="space-y-2">
 							{#if includeInvestors}

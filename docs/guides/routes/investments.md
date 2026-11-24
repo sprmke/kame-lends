@@ -13,6 +13,8 @@ Read-focused list with in-app calendar (`lg+`) and **timeline** on phone (same d
 
 On desktop, table rows and calendar event cards open `LoanDetailModal`; on phone, navigation goes to `/loans/[id]`. Month-view **+N more** stacks loan detail on top of the day events overlay. Row/card ⋯ menu: **Add Commission** → `LoanCommissionModal` and **Contract Details**. The list modal and Contract Details follow the same instant-row + background refresh and in-memory list patch as `/loans`. Contract Details (and other `ResponsiveModal` overlays) paint an opaque shell first, then mount the contract body so the investments table does not show through. Contract Details shows an **Open** button on the investor's own unsigned signing row (links to `/loans/[id]/sign`). The **Signing** column badge reflects only the investor's own slot (pending or signed). Investors cannot record payments; only the workspace admin can create, edit, or delete.
 
+- **Loading:** `ListPageSkeleton` with the investments scope mirrors the header, date range, summary cards, toolbar, and the resolved view (table at `lg+`, timeline/cards below `lg`).
+
 ## Load
 
 [`src/routes/investments/+page.server.ts`](../../../src/routes/investments/+page.server.ts) → `getCachedLoansByScope(userId, 'investments', 'list')`.

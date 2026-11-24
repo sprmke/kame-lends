@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Stop stale Kame Lends dev listeners so strictPort can bind.
+# Stop stale Kame Lends dev listeners for THIS worktree so strictPort can bind.
+# Never kills a listener owned by another worktree.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
@@ -17,13 +18,21 @@ for port in "${PORTS[@]}"; do
   if [[ -z "$pids" ]]; then
     continue
   fi
-  echo "free-local-ports: stopping PID(s) on :${port} — ${pids//$'\n'/ }"
-  # shellcheck disable=SC2086
-  kill $pids 2>/dev/null || true
-  sleep 0.3
-  remaining=$(lsof -ti "tcp:${port}" -sTCP:LISTEN 2>/dev/null || true)
-  if [[ -n "$remaining" ]]; then
-    # shellcheck disable=SC2086
-    kill -9 $remaining 2>/dev/null || true
-  fi
+  for pid in $pids; do
+    cwd="$(lsof -a -p "$pid" -d cwd 2>/dev/null | awk 'NR==2 { print $NF; exit }')"
+    if [[ -z "$cwd" || ( "$cwd" != "$ROOT" && "$cwd" != "$ROOT"/* ) ]]; then
+      echo "free-local-ports: :${port} belongs to another cwd (${cwd:-unknown}); leaving it."
+      continue
+    fi
+    echo "free-local-ports: stopping PID ${pid} on :${port} (this worktree)"
+    kill "$pid" 2>/dev/null || true
+    sleep 0.3
+    remaining=$(lsof -ti "tcp:${port}" -sTCP:LISTEN 2>/dev/null || true)
+    for rpid in $remaining; do
+      rcwd="$(lsof -a -p "$rpid" -d cwd 2>/dev/null | awk 'NR==2 { print $NF; exit }')"
+      if [[ -n "$rcwd" && ( "$rcwd" == "$ROOT" || "$rcwd" == "$ROOT"/* ) ]]; then
+        kill -9 "$rpid" 2>/dev/null || true
+      fi
+    done
+  done
 done

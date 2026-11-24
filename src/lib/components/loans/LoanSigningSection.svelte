@@ -74,19 +74,26 @@
 
 {#if isLoading}
 	<div class="surface-card space-y-3 p-4" aria-busy="true" aria-label="Loading signing status" role="status">
-		<Skeleton class="h-5 w-40" />
-		{#each Array.from({ length: 3 }) as _, index (index)}
-			<div class="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-muted/20 p-3">
-				<div class="flex min-w-0 items-center gap-3">
-					<Skeleton class="h-8 w-8 shrink-0 rounded-full" />
-					<div class="min-w-0 flex-1 space-y-1.5">
-						<Skeleton class="h-4 w-32" />
-						<Skeleton class="h-3 w-24" />
-					</div>
-				</div>
-				<Skeleton class="h-5 w-16 shrink-0 rounded-full" />
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			<Skeleton class="h-5 w-40 max-w-full" />
+			<div class="flex items-center gap-2">
+				<Skeleton class="h-9 w-28 rounded-xl" />
+				<Skeleton class="h-5 w-24 rounded-full" />
 			</div>
-		{/each}
+		</div>
+		<div class="divide-y divide-border rounded-lg border border-border">
+			{#each Array.from({ length: 3 }) as _, index (index)}
+				<div
+					class="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4"
+				>
+					<div class="min-w-0 flex-1 space-y-1.5">
+						<Skeleton class="h-4 w-32 max-w-full" />
+						<Skeleton class="h-3 w-40 max-w-full" />
+					</div>
+					<Skeleton class="h-5 w-16 shrink-0 self-end rounded-full sm:self-auto" />
+				</div>
+			{/each}
+		</div>
 	</div>
 {:else if invitations.length > 0}
 	<div

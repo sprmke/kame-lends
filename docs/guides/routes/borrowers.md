@@ -14,6 +14,8 @@
 - **Desktop (`lg+`):** row click opens `BorrowerDetailModal` (view + in-modal edit). Add Borrower opens `BorrowerCreateModal`. Edit from row actions opens the detail modal in edit mode.
 - Delete blocked when the borrower still has loans.
 
+- **Loading:** `ListPageSkeleton variant="borrowers"` mirrors the header, search + exposure filter toolbar, and the resolved view (table card at `lg+`, grid of `ListCardSkeleton` cards below `lg`). Table rows have name/email/contact/loan count and row actions; cards show the 2×2 metric cells. The skeleton uses the same 9-card / 10-row page sizes as the list.
+
 ## Permissions
 
 | Role                                | Access                                                                              |

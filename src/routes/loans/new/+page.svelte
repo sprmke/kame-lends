@@ -47,7 +47,7 @@
 
 <DashboardPage class="max-w-4xl">
 	{#if loading}
-		<FormPageSkeleton />
+		<FormPageSkeleton sections={2} />
 	{:else}
 		<LoanForm {investors} {borrowers} {preselectedInvestorId} {duplicateData} />
 	{/if}

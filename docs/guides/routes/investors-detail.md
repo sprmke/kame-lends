@@ -40,6 +40,8 @@ The loans table **Total Amount** column shows this investor's principal plus sch
 
 `InvestorDetailContent` also embeds on the group People tab (`embedded`, no Bank Loans tab) with loans limited to that group. Investor rows stay allocation-scoped; owner/borrower/witness rows use full loan principal for summary cards when `scopeToInvestor` is false.
 
+- **Loading:** `InvestorDetailSkeleton` matches the default Overview tab: header, three tab triggers, eight summary metric cards, and four activity cards. The loan/debt tab toolbars are not shown until that tab is opened. Detail edit uses `PartyProfileFormSkeleton`.
+
 ## Load
 
 `src/routes/investors/[id]/+page.server.ts` loads investor with debts, transactions, and loans tied to this investor only.

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import * as Card from '$lib/components/ui/card';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Input } from '$lib/components/ui/input';
@@ -137,7 +138,20 @@
 	</Card.Header>
 	<Card.Content class="space-y-3">
 		{#if loading}
-			<p class="text-sm text-muted-foreground">Loading…</p>
+			<div class="space-y-2" aria-busy="true" aria-label="Loading default witnesses" role="status">
+				{#each Array.from({ length: 2 }) as _, index (index)}
+					<div class="flex flex-col gap-3 rounded-lg border border-border/60 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+						<div class="min-w-0 flex-1 space-y-2">
+							<Skeleton class="h-4 w-32 max-w-full" />
+							<Skeleton class="h-5 w-20 rounded-full" />
+						</div>
+						<div class="flex items-center gap-3">
+							<Skeleton class="h-4 w-20" />
+							<Skeleton class="h-4 w-16" />
+						</div>
+					</div>
+				{/each}
+			</div>
 		{:else if selected.length > 0}
 			<ul class="divide-y divide-border/60 rounded-lg border border-border/60">
 				{#each selected as row (row.id)}

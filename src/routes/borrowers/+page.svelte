@@ -160,8 +160,12 @@
 
 <svelte:head><title>Borrowers</title></svelte:head>
 
-{#if items === null}
-	<ListPageSkeleton variant="borrowers" />
+{#if items === null || !viewModeState.isReady}
+	<ListPageSkeleton
+		variant="borrowers"
+		viewMode={viewModeState.viewMode}
+		ready={viewModeState.isReady}
+	/>
 {:else}
 	<DashboardPage>
 		<PageHeader

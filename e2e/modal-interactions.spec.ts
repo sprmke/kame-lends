@@ -19,11 +19,7 @@ test("loan quick-view modal shows summary and actions", async ({ page }) => {
   const hasLoans = await waitForLoansTable(page);
   test.skip(!hasLoans, "No loans in database");
 
-  await page
-    .locator("table")
-    .getByRole("button", { name: "View" })
-    .first()
-    .click();
+  await page.locator("table tbody tr").first().click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   await expect(
@@ -89,11 +85,7 @@ test("loan fund payment dialog opens from quick-view", async ({ page }) => {
   const hasLoans = await waitForLoansTable(page);
   test.skip(!hasLoans, "No loans in database");
 
-  await page
-    .locator("table")
-    .getByRole("button", { name: "View" })
-    .first()
-    .click();
+  await page.locator("table tbody tr").first().click();
   const loanDialog = page.getByRole("dialog");
   await expect(loanDialog).toBeVisible({ timeout: 15_000 });
 

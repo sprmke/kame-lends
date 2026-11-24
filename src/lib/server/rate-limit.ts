@@ -51,6 +51,7 @@ const HIGH_COST_PREFIXES = [
   "/api/export",
   "/api/storage/upload",
   "/api/push/test",
+  "/api/email/test",
 ] as const;
 
 export function isRateLimitedApiPath(pathname: string): boolean {

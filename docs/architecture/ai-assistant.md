@@ -238,7 +238,7 @@ No tool can call another tool. Composition is the model's job; shared logic live
 
 SSE events: `turn_started`, `phase`, `tool_start`, `tool_done`, `text_start`, `text_delta`, `retract`, `turn_timing`, `blocks`, `error`, plus a 15s `:heartbeat`.
 
-## Data model (migration `0045_ai_assistant.sql`)
+## Data model (migration `0046_ai_assistant.sql`)
 
 - `ai_conversations`: uuid id, `user_id` cascade, agent, title, pinned context, timestamps, archived/deleted.
 - `ai_messages`: conversation/user, role, status, text, jsonb blocks, attachments (metadata only), tool trace, prompt/model/provider, rounds, tokens, cost, latency, guard mode, feedback.
@@ -288,7 +288,7 @@ The demo workspace is synthetic: `bun scripts/db/seed-demo-workspace.ts` (12 loa
 | Health alerts              | `/api/cron/assistant-health` runs daily at 23:30 UTC. It emails the owner when 24h cost, fallback rate, tool error rate, or forbidden probes cross a threshold. Tune with `AI_ASSISTANT_ALERT_COST_USD`, `AI_ASSISTANT_ALERT_FALLBACK_RATE`, `AI_ASSISTANT_ALERT_TOOL_ERROR_RATE`, `AI_ASSISTANT_ALERT_FORBIDDEN`. |
 | Investigate a wrong answer | Message id → `ai_messages` (guard mode, rounds, tokens) → `ai_tool_calls` (names, counts, errors) → re-run the same question on the demo workspace. Stored text and blocks are in `ai_messages`; prompts and tool arguments are never stored.                                                                      |
 | Purge a user               | `delete from ai_conversations where user_id = …` (cascades messages and tool calls).                                                                                                                                                                                                                               |
-| Missing migration          | The assistant shows unavailable; other features are unaffected. Apply `0045_ai_assistant.sql`.                                                                                                                                                                                                                     |
+| Missing migration          | The assistant shows unavailable; other features are unaffected. Apply `0046_ai_assistant.sql`.                                                                                                                                                                                                                     |
 
 ## Decisions taken for v1
 

@@ -3,7 +3,8 @@ import { fetchJson, gotoApp, skipIfNoDatabase } from "./helpers";
 
 test.describe.configure({ mode: "serial", timeout: 60_000, retries: 1 });
 
-test.beforeEach((_fixtures, testInfo) => {
+// eslint-disable-next-line no-empty-pattern
+test.beforeEach(({}, testInfo) => {
   skipIfNoDatabase(testInfo);
 });
 
@@ -23,8 +24,8 @@ test("loans list renders with table columns", async ({ page }) => {
   ).toBeVisible();
 
   const emptyState = page.getByText("No loans found");
-  const interestHeader = page.getByRole("button", { name: /^interest$/i });
-  await expect(emptyState.or(interestHeader)).toBeVisible({ timeout: 20_000 });
+  const table = page.getByRole("table").first();
+  await expect(emptyState.or(table)).toBeVisible({ timeout: 20_000 });
 
   if (await emptyState.isVisible()) {
     await expect(
@@ -33,8 +34,15 @@ test("loans list renders with table columns", async ({ page }) => {
     return;
   }
 
-  await expect(interestHeader).toBeVisible();
-  await expect(page.getByRole("button", { name: /^amount$/i })).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Loan", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Total Amount", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Due", exact: true }),
+  ).toBeVisible();
 });
 
 test("loan create form renders", async ({ page }) => {
@@ -43,7 +51,7 @@ test("loan create form renders", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Create Loan" })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByRole("button", { name: /borrower/i })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /borrower/i })).toBeVisible();
 });
 
 test("investors list renders", async ({ page }) => {
@@ -98,7 +106,7 @@ test("investor detail renders", async ({ page, request }) => {
   await expect(page.getByRole("tab", { name: /overview/i })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByRole("tab", { name: /loans/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^loans\b/i })).toBeVisible();
 });
 
 test("bank loans list renders", async ({ page }) => {

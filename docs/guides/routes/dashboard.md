@@ -15,7 +15,7 @@ Load is split into two streamed promises:
 1. **Summary** (`queryDashboardSummary`): metrics + activity panels. Uses slim list caches (`getCachedLoans` / `getCachedInvestors` in `list` mode).
 2. **Charts** (`queryDashboardCharts`): cashflow, investor capital, and portfolio donuts. Reuses the same loan/investor caches when warm; fetches transactions separately for cashflow.
 
-While summary loads, `DashboardSummarySkeleton` renders the page chrome: `PageHeader`-shaped title row, 4 summary metric cards, and 4 activity panels (each with grouped loan rows). Charts show `DashboardChartsSkeleton` (section heading + chart cards) until the second promise resolves. Skeletons use the same card and toolbar surfaces as the loaded page. No orphan bars.
+While summary loads, `DashboardSummarySkeleton` renders the page chrome: `PageHeader`-shaped title row, 4 summary metric cards, and 4 activity panels (each with grouped loan rows). Charts show `DashboardChartsSkeleton` (real section headings plus chart cards) until the second promise resolves. The layout's navigation skeleton passes `showGroupsColumn` when the layout has groups, so the analytics row reserves the groups card too. Skeletons use the same card and toolbar surfaces as the loaded page. No orphan bars.
 
 **Analytics layout:** When the user has at least one group (`SHOW_GROUPS_UI` and non-empty `groupsIndex`), **Your groups** (`DashboardGroupsCard`) sits in a two-column row beside **Top investors** (`CurrencyBarChart`). The card header has **View all groups** (to `/groups`) instead of a folder icon. Cashflow (when transactions UI is on) stays full width above that row. Groups no longer appear under **Needs attention**.
 

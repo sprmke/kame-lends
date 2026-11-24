@@ -1,25 +1,17 @@
-import { format } from "date-fns";
-import { APP_NAME } from "$lib/brand";
-import {
-  buildAuthenticatedSigningUrl,
-  type SigningPartyRole,
-  normalizeEmail,
-} from "$lib/loan-signing";
+import { type SigningPartyRole, normalizeEmail } from "$lib/loan-signing";
 import { resolveAppUrl } from "$lib/server/app-url";
 import {
-  buildEmailCtaHtml,
-  renderBrandedEmailShell,
-} from "./branded-email-shell";
-import { escapeHtml } from "./email-html";
-import {
-  isTransactionalEmailConfigured,
-  sendTransactionalEmail,
-} from "./send-email";
+  isEmailNotificationsEnabled,
+  sendNotificationEmail,
+} from "$lib/server/email/index";
+import { getEmailPreferencesByEmails } from "$lib/server/email/preferences";
+import { renderEventEmail } from "$lib/server/email/notifications";
 
 export type LoanCreatedEmailRecipient = {
   partyRole: SigningPartyRole;
   partyName: string;
   partyEmail: string | null;
+  invitationId?: number | null;
 };
 
 export function signingPartyRoleLabel(role: SigningPartyRole): string {
@@ -36,67 +28,11 @@ export function signingPartyRoleLabel(role: SigningPartyRole): string {
   }
 }
 
-export function formatSigningRoleLabels(roles: SigningPartyRole[]): string {
-  const labels = [...new Set(roles.map((role) => signingPartyRoleLabel(role)))];
-  if (labels.length <= 1) return labels[0] ?? "Party";
-  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
-  return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
-}
-
-function formatLoanDueDate(dueDate: Date | string | null | undefined): string {
-  if (!dueDate) return "";
-  const date = dueDate instanceof Date ? dueDate : new Date(dueDate);
-  if (Number.isNaN(date.getTime())) return "";
-  return format(date, "MMMM d, yyyy");
-}
-
-export function buildLoanCreatedEmailBodyHtml(input: {
-  partyName: string;
-  partyRoles: SigningPartyRole[];
-  partyEmail: string;
-  loanName: string;
-  dueDateLabel: string;
-  signingUrl: string;
-}): string {
-  const roleLabel = formatSigningRoleLabels(input.partyRoles);
-  const greetingName = input.partyName.trim() || roleLabel;
-  const cta = buildEmailCtaHtml("Sign contract", input.signingUrl);
-
-  const metaRows = [
-    ["Loan", input.loanName],
-    ["Your role", roleLabel],
-    ...(input.dueDateLabel ? [["Due date", input.dueDateLabel] as const] : []),
-  ];
-
-  const metaTable = `<table role="presentation" class="data-table" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 4px 0;">
-${metaRows
-  .map(
-    ([label, value]) => `  <tr class="meta-row">
-    <td>${escapeHtml(label)}</td>
-    <td>${escapeHtml(value)}</td>
-  </tr>`,
-  )
-  .join("\n")}
-</table>`;
-
-  return `<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#333333;">Hi ${escapeHtml(greetingName)},</p>
-<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#333333;">A loan contract is ready for your signature.</p>
-<p class="section-label">Contract details</p>
-${metaTable}
-<p style="margin:20px 0 0 0;font-size:15px;line-height:1.6;color:#333333;">Sign in with Google using <strong>${escapeHtml(input.partyEmail)}</strong>, then open the contract.</p>
-${cta}
-<p style="margin:16px 0 0 0;font-size:13px;line-height:1.55;color:#64748b;">If the button does not work, copy this link:<br /><a href="${escapeHtml(input.signingUrl)}" style="color:#475569;word-break:break-all;">${escapeHtml(input.signingUrl)}</a></p>`;
-}
-
-export function buildLoanCreatedEmailSubject(loanName: string): string {
-  const name = loanName.trim() || "loan";
-  return `${APP_NAME}: Sign contract for ${name}`;
-}
-
 type GroupedRecipient = {
   email: string;
   partyName: string;
   partyRoles: SigningPartyRole[];
+  invitationIds: number[];
 };
 
 export function groupLoanCreatedEmailRecipients(
@@ -115,6 +51,9 @@ export function groupLoanCreatedEmailRecipients(
     const existing = byEmail.get(email);
     if (existing) {
       existing.partyRoles.push(recipient.partyRole);
+      if (recipient.invitationId != null) {
+        existing.invitationIds.push(recipient.invitationId);
+      }
       if (!existing.partyName.trim() && recipient.partyName.trim()) {
         existing.partyName = recipient.partyName;
       }
@@ -125,6 +64,8 @@ export function groupLoanCreatedEmailRecipients(
       email,
       partyName: recipient.partyName,
       partyRoles: [recipient.partyRole],
+      invitationIds:
+        recipient.invitationId != null ? [recipient.invitationId] : [],
     });
   }
 
@@ -135,8 +76,13 @@ export async function sendLoanCreatedSigningEmails(input: {
   loanId: number;
   loanName: string;
   dueDate?: Date | string | null;
+  loanType?: string;
+  loanStatus?: string;
+  borrowerName?: string;
+  principal?: number;
+  investorNames?: string[];
   recipients: LoanCreatedEmailRecipient[];
-}): Promise<{ sent: number; skipped: number }> {
+}): Promise<{ sent: number; skipped: number; failed: number }> {
   const { groups, skippedWithoutEmail } = groupLoanCreatedEmailRecipients(
     input.recipients,
   );
@@ -156,54 +102,83 @@ export async function sendLoanCreatedSigningEmails(input: {
     });
   }
 
-  if (!isTransactionalEmailConfigured()) {
+  if (!isEmailNotificationsEnabled()) {
     return {
       sent: 0,
       skipped: skippedWithoutEmail + groups.length,
+      failed: 0,
     };
   }
 
+  const preferences = await getEmailPreferencesByEmails(
+    groups.map((group) => group.email),
+  );
+
   const origin = resolveAppUrl();
-  const signingUrl = buildAuthenticatedSigningUrl(input.loanId, origin);
-  const dueDateLabel = formatLoanDueDate(input.dueDate);
-  const subject = buildLoanCreatedEmailSubject(input.loanName);
+  const loanContext = {
+    id: input.loanId,
+    loanName: input.loanName,
+    type: input.loanType ?? "",
+    status: input.loanStatus ?? "",
+    dueDate: input.dueDate ?? null,
+    borrowerName: input.borrowerName ?? "",
+    principal: input.principal ?? 0,
+    investorNames: input.investorNames ?? [],
+  };
 
   let sent = 0;
   let skipped = skippedWithoutEmail;
+  let failed = 0;
 
   for (const group of groups) {
-    const bodyHtml = buildLoanCreatedEmailBodyHtml({
-      partyName: group.partyName,
-      partyRoles: group.partyRoles,
-      partyEmail: group.email,
-      loanName: input.loanName,
-      dueDateLabel,
-      signingUrl,
-    });
-
-    const html = renderBrandedEmailShell({
-      emailTitle: "Contract ready to sign",
-      unitLabel: input.loanName.trim() || APP_NAME,
-      bodyHtml,
-    });
-
-    try {
-      await sendTransactionalEmail({
-        to: group.email,
-        subject,
-        html,
-      });
-      sent += 1;
-    } catch (error) {
+    const prefs = preferences.get(group.email);
+    if (!prefs || !prefs.emailEnabled || !prefs.notifySigningRequests) {
       skipped += 1;
+      continue;
+    }
+
+    const built = renderEventEmail({
+      event: {
+        type: "loan_created",
+        loan: loanContext,
+        appUrl: origin,
+      },
+      recipient: {
+        email: group.email,
+        userId: prefs.userId,
+        name: group.partyName,
+        roleLabels: group.partyRoles.map(signingPartyRoleLabel),
+        preferences: prefs,
+      },
+    });
+
+    const invitationKey =
+      group.invitationIds.length > 0
+        ? [...group.invitationIds].sort((a, b) => a - b).join("-")
+        : group.email;
+    const outcome = await sendNotificationEmail({
+      to: group.email,
+      userId: prefs.userId,
+      fingerprint: `signing_request:${input.loanId}:${invitationKey}:${group.email}`,
+      kind: "signing_request",
+      subject: built.subject,
+      html: built.html,
+    });
+
+    if (outcome.status === "sent") {
+      sent += 1;
+    } else if (outcome.status === "skipped") {
+      skipped += 1;
+    } else {
+      failed += 1;
       console.error("[email] loan-created send failed", {
         loanId: input.loanId,
         to: group.email,
         roles: group.partyRoles,
-        error,
+        error: outcome.error,
       });
     }
   }
 
-  return { sent, skipped };
+  return { sent, skipped, failed };
 }

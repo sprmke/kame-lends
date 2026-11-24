@@ -162,8 +162,12 @@
 
 <svelte:head><title>Investors</title></svelte:head>
 
-{#if items === null}
-	<ListPageSkeleton variant="investors" />
+{#if items === null || !viewModeState.isReady}
+	<ListPageSkeleton
+		variant="investors"
+		viewMode={viewModeState.viewMode}
+		ready={viewModeState.isReady}
+	/>
 {:else}
 	<DashboardPage>
 		<PageHeader

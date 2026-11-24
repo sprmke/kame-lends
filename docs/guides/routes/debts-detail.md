@@ -12,6 +12,8 @@
 - `?edit=1` opens the edit form on desktop. On phone, edit uses `EditFormSheet`.
 - Fallback title when the name is missing: **Bank loan**. Document title uses the loan name.
 
+- **Loading:** `DebtDetailSkeleton variant="page"` mirrors the header, the five summary cells, and the Interest Overview card with its nine cells and schedule rows. The detail modal uses `variant="modal"` (no page header) under `DetailModalHeaderSkeleton`.
+
 ## Load
 
 [`src/routes/debts/[id]/+page.server.ts`](../../../src/routes/debts/[id]/+page.server.ts). Mutations via `GET`/`PUT`/`DELETE` `/api/debts/[id]`.

@@ -9,6 +9,8 @@
 - Inline filter: loan exposure (**All** / **Active** open loans / **Overdue**). **Active** means at least one linked loan is not `Completed`. **Overdue** means at least one linked loan has status `Overdue`.
 - Table or card view; export PDF when the list has data. Card view (`GridListCardShell`): tap the card to open; **⋯** top-right (Edit, Delete).
 
+- **Loading:** `ListPageSkeleton variant="investors"` mirrors the header, search + exposure filter toolbar, and the resolved view (table card at `lg+`, investor cards below `lg`). Cards show the name, email line, and capital/rate cells.
+
 ## Implementation map
 
 | Concern | Path                                                           |

@@ -188,7 +188,7 @@
 	{/if}
 
 	{#if isLoading}
-		<PartyProfileFormSkeleton />
+		<PartyProfileFormSkeleton showHeader={renderFormHeader} />
 	{:else}
 		<Card.Root>
 			<Card.Header>
