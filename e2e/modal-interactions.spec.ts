@@ -10,10 +10,15 @@ test.describe.configure({ mode: "serial", timeout: 90_000, retries: 1 });
 
 async function clickFirstLoanRow(page: import("@playwright/test").Page) {
   await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(750);
   const row = page.locator("table tbody tr").first();
   await expect(row).toBeVisible({ timeout: 20_000 });
-  await row.click();
+  const dialog = page.getByRole("dialog").first();
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    await row.click();
+    if (await dialog.isVisible().catch(() => false)) return;
+    await page.waitForTimeout(500);
+  }
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
 }
 
 test.beforeEach(({ page: _page }, testInfo) => {

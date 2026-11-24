@@ -32,17 +32,28 @@ test("group Add loans exposes Review and Add to group", async ({
   try {
     await gotoApp(page, `/groups/${group.id}?tab=loans`);
     await page.waitForTimeout(1200);
-    await page.getByRole("button", { name: /Add loans/i }).click();
+    const addLoans = page.getByRole("button", { name: /Add loans/i });
     const sheet = page.getByRole("dialog").last();
-    await expect(sheet.getByRole("button", { name: "Review" })).toBeVisible({
-      timeout: 20_000,
-    });
+    const review = sheet.getByRole("button", { name: "Review" });
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      if (await sheet.isVisible().catch(() => false)) break;
+      await addLoans.click();
+      await page.waitForTimeout(500);
+    }
+    await expect(review).toBeVisible({ timeout: 20_000 });
 
     const loanChecks = sheet.getByRole("checkbox");
     await expect(loanChecks.first()).toBeVisible({ timeout: 20_000 });
-    await loanChecks.nth(1).click();
+    const selectedCount = sheet.getByText(/\d+ selected/);
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      await loanChecks.nth(1).click();
+      await page.waitForTimeout(300);
+      const count = (await selectedCount.textContent())?.trim() ?? "";
+      if (!count.startsWith("0 ")) break;
+    }
+    await expect(selectedCount).not.toHaveText(/^0 selected/);
 
-    await sheet.getByRole("button", { name: "Review" }).click();
+    await review.click();
     const add = sheet.getByRole("button", { name: /Add to group/i });
     await expect(add).toBeVisible({ timeout: 20_000 });
 

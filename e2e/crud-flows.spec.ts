@@ -321,7 +321,12 @@ test("create and delete a loan", async ({ page, request }) => {
   expect(invitation?.signingUrl).toContain(`/loans/${loanId}/sign`);
   expect(invitation?.token).toBeNull();
 
-  const signPageResponse = await gotoApp(page, invitation.signingUrl);
+  // Signing URLs are absolute (PUBLIC_APP_URL). Use their path so the test
+  // follows the Playwright baseURL instead of a developer port.
+  const signingPath =
+    new URL(invitation.signingUrl, page.url()).pathname +
+    new URL(invitation.signingUrl, page.url()).search;
+  const signPageResponse = await gotoApp(page, signingPath);
   // Admin e2e user may not be a signing party; authenticated route still requires login.
   expect([200, 303, 403]).toContain(signPageResponse?.status() ?? 0);
 
