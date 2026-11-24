@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { toast } from '$lib/toast';
 
 	type Check = {
@@ -39,7 +40,19 @@
 		<Button variant="outline" size="sm" onclick={run} disabled={loading}>
 			{loading ? 'Checking...' : 'Run health check'}
 		</Button>
-		{#if loaded}
+		{#if loading}
+			<div class="space-y-2" aria-hidden="true">
+				{#each Array.from({ length: 2 }) as _, index (index)}
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0 flex-1 space-y-1.5">
+							<Skeleton class="h-4 w-2/3 max-w-full" />
+							<Skeleton class="h-3 w-1/2 max-w-full" />
+						</div>
+						<Skeleton class="h-4 w-8 shrink-0" />
+					</div>
+				{/each}
+			</div>
+		{:else if loaded}
 			{#if checks.every((check) => check.count === 0)}
 				<p class="text-sm text-muted-foreground">No anomalies found.</p>
 			{:else}

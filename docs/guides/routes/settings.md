@@ -16,6 +16,7 @@ All signed-in users get:
 - **Loan templates** — each user saves their own presets (template name, borrowers, investors, type, groups, rate, loan name). None are shared. Borrowers and investors are multi-selects, and each name is listed once. Chosen people are listed under the field, and each investor row has a rate that starts from the template rate. Due in days and the rate sit in one column. The loan name can include `{sent}` and `{due}`. The form shows an example under that field, and switching type fills the matching pattern until the name is edited. Due in days starts at 14, so a new loan is due two weeks after the sent date. New Loan can start from one.
 - **Install app** — shown only when this browser can install. **Chromium:** after `beforeinstallprompt`, the sidebar, account sheet (`InstallAppNavButton`), and this card run the browser install dialog. **iOS:** those same controls open an in-app sheet (Share → Add to Home Screen). Hidden when already installed, and hidden in browsers that will not offer install (desktop Safari, Firefox, or Chromium before the prompt). No Settings redirect.
 - **Notifications** — per-device Web Push opt-in, reminder/activity/signing preferences, **Send test** when subscribed.
+- **Email notifications** — per-user email switches (`user_email_preferences`): master switch; loan and payment updates; signing requests; unsigned contract reminders with **First reminder after** and **Repeat every** days; upcoming due dates with lead-day checkboxes; due today; overdue with **Repeat every** days; and **Show amounts in emails**. **Save** writes `PUT /api/email/preferences`. **Send test** calls `POST /api/email/test` and sends to the signed-in user; it is disabled when Resend is not configured. When email is not configured, the card shows one short read-only line and saving still works. See [`docs/architecture/email-notifications.md`](../../architecture/email-notifications.md).
 - **Contract signing** — checkbox **Auto attach my signature on loans** (`PUT /api/signing/preferences`). Requires a saved e-signature (identity documents or linked party rows). When turned on, unsigned slots on existing loans where you are borrower, lender, or witness are signed with your saved signature; new and updated loans do the same for parties with this setting. Turning it off does not remove signatures already recorded.
 - **Data & maintenance** — **Download my data** (`GET /api/backup?download=true`). JSON omits receipt image blobs (amounts/dates remain). Rate-limited.
 
@@ -28,13 +29,16 @@ Party users with linked CRM rows also get **Identity documents** (valid ID and e
 
 Google Calendar sync is per group on the group hub only (no workspace calendar on Settings).
 
+- **Loading:** `SettingsPageSkeleton` mirrors the header, Account card, and manager cards. Data health and recently deleted rows use inline row skeletons while their explicit checks run. Party identity and payment method cards load from the page payload, not a spinner.
+
 ## Load
 
 [`src/routes/settings/+page.server.ts`](../../../src/routes/settings/+page.server.ts)
 
 - Requires session.
 - `isPlatformOwner` from `isWorkspaceOwnerEmail`.
-- Payment methods, loan templates (plus the user's borrowers and groups for the template form), signing preferences, saved-signature flag, and optional party identity documents.
+- Payment methods, loan templates (plus the user's borrowers and groups for the template form), signing preferences, saved-signature flag, push preferences, email preferences, and optional party identity documents.
+- `emailConfigured` comes from `isTransactionalEmailConfigured()` and only controls the Send test button.
 
 ## Permissions
 

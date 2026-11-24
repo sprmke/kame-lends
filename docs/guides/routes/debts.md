@@ -14,6 +14,8 @@
 
 Create/edit copy uses **Create Bank Loan** / **Edit Bank Loan**. Detail back label: **Back to Bank Loans**.
 
+- **Loading:** `ListPageSkeleton variant="debts"` mirrors the header, search plus repayment/accrual filters and More Filters, and the resolved view (table card at `lg+`, bank loan cards below `lg`). Table rows use the same date/name/investor/principal/rate/period visibility; cards show the interval badge and 2×2 interest cells.
+
 ## Permissions
 
 The list page is owner-only. `requireWorkspaceAdminPage` redirects other signed-in users to `/dashboard`. Linked investors reach their bank loan from the investor detail page instead; see `debts-detail.md` for read-only access.

@@ -387,13 +387,13 @@
 	{/snippet}
 
 	{#if isLoadingLoan && !isEditing}
-		<LoanDetailSkeleton />
+		<LoanDetailSkeleton variant="modal" />
 	{:else if loan}
 		{@const modalLoan = loan}
 		<div>
 			{#if isEditing}
 				{#if showEditFormSkeleton}
-					<FormPageSkeleton />
+					<FormPageSkeleton showHeader={false} sections={2} />
 				{:else}
 					{#key `loan-form-edit-${modalLoan.id}-${loanFetchKey}`}
 						<LoanFormComponent
@@ -411,7 +411,7 @@
 					{/key}
 				{/if}
 			{:else if showViewDetailSkeleton}
-				<LoanDetailSkeleton investorSections={1} />
+				<LoanDetailSkeleton variant="modal" />
 			{:else}
 				<div class="dashboard-stack">
 					<LoanDetailContentComponent

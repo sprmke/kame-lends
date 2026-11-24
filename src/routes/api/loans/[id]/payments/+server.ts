@@ -201,6 +201,8 @@ export const POST: RequestHandler = async (event) => {
         activity: {
           type: "disbursement",
           entityId: loanId,
+          actorUserId: userId,
+          actorEmail: session.user?.email ?? undefined,
           detail: {
             amount,
             date: toLocalDateString(sentDate),

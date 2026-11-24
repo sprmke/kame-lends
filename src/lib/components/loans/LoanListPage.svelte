@@ -113,6 +113,9 @@
 	} = $props();
 
 	const variant = $derived(resolveLoanListPageVariant(scope));
+	const skeletonVariant = $derived(
+		scope === 'group' ? ('loans' as const) : scope
+	);
 	const pageTitle = $derived(data.pageTitle ?? variant.defaultPageTitle);
 	const emptyMessage = $derived(data.emptyMessage ?? variant.defaultEmptyMessage);
 	const canCreate = $derived(data.canCreate !== false);
@@ -680,8 +683,16 @@
 	{/if}
 </svelte:head>
 
-{#if loans === null}
-	<ListPageSkeleton variant="loans" embedded={variant.embedded} />
+{#if loans === null || !viewModeState.isReady}
+	<ListPageSkeleton
+		variant={skeletonVariant}
+		embedded={variant.embedded}
+		viewMode={viewModeState.viewMode}
+		ready={viewModeState.isReady}
+		showScopeTabs={showScopeTabs}
+		summaryCount={showInterestSummary ? 4 : 3}
+		summaryGridClass={showInterestSummary ? undefined : 'grid-cols-2 lg:grid-cols-3'}
+	/>
 {:else if variant.embedded}
 	<div class="space-y-4">
 		{@render listChrome()}

@@ -2,7 +2,7 @@
 title: "Done"
 status: active
 tags: [workflow, done]
-updated: 2026-10-17
+updated: 2026-11-21
 stage: done
 kind: reference
 ---
@@ -17,3 +17,4 @@ Plans fully complete.
 | [sveltekit-migration.md](./sveltekit-migration.md)                           | Done   | Next.js → SvelteKit migration                                      |
 | [pwa-offline-install-push.md](./pwa-offline-install-push.md)                 | Done   | Installable PWA, offline read, Web Push                            |
 | [user-privacy-and-group-calendars.md](./user-privacy-and-group-calendars.md) | Done   | Multi-user privacy, group-only Google Calendar, open sign-up       |
+| [email-notifications.md](./email-notifications.md)                           | Done   | Activity emails, daily reminder digest, email preferences, logging |

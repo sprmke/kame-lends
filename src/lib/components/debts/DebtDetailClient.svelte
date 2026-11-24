@@ -173,7 +173,7 @@
 		submitLabel={editSubmitting ? 'Saving...' : 'Save Changes'}
 	>
 		{#if investors.length === 0}
-			<FormPageSkeleton />
+			<FormPageSkeleton showHeader={false} />
 		{:else}
 			{#key debt.id}
 				<DebtForm

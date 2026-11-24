@@ -142,7 +142,7 @@
 	{/snippet}
 
 	{#if isLoading && !isEditing}
-		<WitnessDetailSkeleton />
+		<WitnessDetailSkeleton variant="modal" />
 	{:else if witness}
 		{#if isEditing}
 			{#key `witness-form-edit-${witness.id}-${fetchKey}`}

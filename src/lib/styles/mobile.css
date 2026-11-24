@@ -272,8 +272,7 @@
 
   html.dashboard-shell .surface-card,
   html.dashboard-shell .surface-card-interactive,
-  html.dashboard-shell .dashboard-filter-panel,
-  html.dashboard-shell .skeleton-toolbar {
+  html.dashboard-shell .dashboard-filter-panel {
     border-width: 0;
     border-radius: 1.35rem;
     box-shadow: var(--shadow-native-float);

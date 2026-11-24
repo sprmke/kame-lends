@@ -58,7 +58,7 @@
 	{/snippet}
 
 	{#if isLoading}
-		<FormPageSkeleton />
+		<FormPageSkeleton showHeader={false} />
 	{:else}
 		<TransactionForm
 			{investors}

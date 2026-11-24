@@ -201,6 +201,8 @@ export const PATCH: RequestHandler = async (event) => {
               ? "loan_completed"
               : "loan_updated",
           entityId: loanId,
+          actorUserId: userId,
+          actorEmail: session.user?.email ?? undefined,
           summary:
             updatedLoan?.status === "Completed"
               ? `Loan completed: ${updatedLoan.loanName}`

@@ -57,11 +57,6 @@
     box-shadow: var(--shadow-elevated);
   }
 
-  html.dashboard-shell .skeleton-toolbar {
-    @apply rounded-3xl border border-border/50 bg-card p-3;
-    box-shadow: var(--shadow-elevated);
-  }
-
   html.dashboard-shell .dashboard-empty {
     @apply flex flex-col items-center justify-center py-10;
   }

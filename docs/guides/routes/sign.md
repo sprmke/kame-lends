@@ -29,6 +29,10 @@ Access failures render `+error.svelte`, not a bare 404: no signature slot for th
 - Phone (`<lg`): contract preview stacks above signature and consent. Contract body uses page scroll (no inner `max-height` on the preview). Submit stays in the consent card (scrolls with content; no fixed bottom bar). Tab dock clearance comes from `pb-mobile-tab` on the app shell.
 - Desktop (`xl+`): two-column layout (contract left, signature + consent sticky right). Contract preview expands naturally (no inner scroll region). When a profile e-signature exists, **Draw** / **E-signature** toggle above the pad or preview. Signature hint text wraps; **Clear Signature** sits below the hint in draw mode. Consent checkbox label uses `text-sm` (same as body copy). Full-width submit in the consent card.
 
+## Loading
+
+Client navigation to this route shows `SigningPageSkeleton` from the layout after ~120ms: back/title/badge header, contract preview card, and the sticky signature + consent cards. Direct loads render the signer payload from the server load.
+
 ## APIs
 
 | Method   | Path                      | Auth                                                                                                                                                                                                           |

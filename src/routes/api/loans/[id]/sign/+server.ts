@@ -136,6 +136,8 @@ export const POST: RequestHandler = async (event) => {
         invitationId: invitation.id,
         partyName: invitation.partyName,
         partyRole: invitation.partyRole,
+        actorUserId: session.user.id,
+        actorEmail: session.user.email ?? invitation.partyEmail,
       });
     } catch (notifyErr) {
       console.error("[telegram] contract signed notify failed", notifyErr);

@@ -91,7 +91,7 @@
 >
 	{#snippet header()}
 		{#if isLoading}
-			<DetailModalHeaderSkeleton />
+			<DetailModalHeaderSkeleton showSubtitle />
 		{:else if debt}
 			<div class="flex items-start justify-between gap-3 md:gap-4">
 				<div class="min-w-0 flex-1">
@@ -118,7 +118,7 @@
 	{/snippet}
 
 	{#if isLoading}
-		<DebtDetailSkeleton />
+		<DebtDetailSkeleton variant="modal" />
 	{:else if debt}
 		<div class="space-y-4">
 			<div

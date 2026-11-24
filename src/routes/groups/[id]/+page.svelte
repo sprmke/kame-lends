@@ -17,6 +17,7 @@
 	import LoanListSummaryCards from '$lib/components/loans/LoanListSummaryCards.svelte';
 	import LoanListPage from '$lib/components/loans/LoanListPage.svelte';
 	import * as Card from '$lib/components/ui/card';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Button } from '$lib/components/ui/button';
 	import { groupSettingsActionClass } from '$lib/groups/group-settings-actions';
 	import { Label } from '$lib/components/ui/label';
@@ -600,7 +601,10 @@
 				</div>
 			</div>
 			{#if ruleContactsLoading}
-				<p class="text-sm text-muted-foreground">Loading contacts…</p>
+				<div class="space-y-2" aria-busy="true" aria-label="Loading contacts" role="status">
+					<Skeleton class="h-3 w-16" />
+					<Skeleton class="h-11 w-full rounded-2xl" />
+				</div>
 			{:else if ruleContactsForType.length === 0}
 				<p class="text-sm text-muted-foreground">No {rulePartyType}s with loans yet.</p>
 			{:else}

@@ -15,6 +15,7 @@ Behind `SHOW_GROUPS_UI` in `src/lib/feature-flags.ts` (currently on for local QA
 
 - **Create query:** `/groups?create=1` (and `/groups/new`) opens the wizard after hydration. The query is cleared when the wizard closes, not while it opens, so production hydration cannot drop the open state. Contact prefill forms (`investorId` / `borrowerId`, optional `loanIds`, `name`) are applied once.
 - **Pre-selection:** contact prefill excludes completed loans when **Show completed** is off, so the selected count matches the visible rows. The group hub Loans tab defaults to all-time, and a group's earliest open due date reads **Overdue since** when it is already past.
+- **Loading:** The page header renders immediately. `ListPageSkeleton variant="groups" embedded` then shows the two section headers and group card grids (3 owned, 2 shared) while the streamed list resolves. Search stays hidden until the real list has more than 6 groups, matching the loaded toolbar rule.
 
 ## Load
 

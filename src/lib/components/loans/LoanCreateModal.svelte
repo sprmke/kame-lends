@@ -109,7 +109,7 @@
 	{/snippet}
 
 	{#if showFormSkeleton}
-		<FormPageSkeleton />
+		<FormPageSkeleton showHeader={false} sections={2} />
 	{:else}
 		{#key duplicateData ? `dup-${duplicateData.name}` : `new-${initialTemplate?.id ?? 'blank'}`}
 			<LoanFormComponent

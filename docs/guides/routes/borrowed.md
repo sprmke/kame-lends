@@ -15,6 +15,8 @@ Loan detail shows the loan owner’s **payment methods** (bank name, account num
 
 **Commission** lives on the **Commissioned** tab (`?scope=commissioned`) and on loan detail. On detail, the borrower sees **Your Commission** only (`LoanMyCommissionCard`, `GET` / `PATCH /api/loans/[id]/my-commission`). The loan owner and other parties never see it. Everything else on the page stays read-only.
 
+- **Loading:** `ListPageSkeleton` with the borrowed scope mirrors the header, date range, summary cards, toolbar, and the resolved view (table at `lg+`, timeline/cards below `lg`).
+
 ## Load
 
 [`src/routes/borrowed/+page.server.ts`](../../../src/routes/borrowed/+page.server.ts) redirects to `/loans?scope=borrowed`. List load: `getCachedLoansByScope(userId, 'borrowed', 'list')`.

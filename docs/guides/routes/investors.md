@@ -11,6 +11,8 @@
 - Rate columns are labelled **Total rate** because the figure is the sum across allocations, not a single loan rate. Export offers PDF plus CSV.
   Card view (`GridListCardShell`): tap the card to open; **⋯** top-right (Edit, Delete).
 
+- **Loading:** `ListPageSkeleton variant="investors"` mirrors the header, search + exposure filter toolbar, and the resolved view (table card at `lg+`, investor cards below `lg`). Cards show the name, email line, and capital/rate cells.
+
 ## Implementation map
 
 | Concern | Path                                                           |

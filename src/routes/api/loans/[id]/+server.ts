@@ -6,6 +6,7 @@ import {
   loanInvestors,
   interestPeriods,
   receivedPayments,
+  loanSigningInvitations,
 } from "$lib/server/db/schema";
 import { eq, and, inArray, isNull } from "drizzle-orm";
 import { getSession } from "$lib/server/session";
@@ -33,12 +34,18 @@ import {
   loanWriteSchema,
 } from "$lib/schemas/loan";
 import { parseIdParam } from "$lib/server/route-params";
+import { toLocalDateString } from "$lib/date-utils";
 import { recordMoneyAudit } from "$lib/server/money-audit";
 import { publicJsonError } from "$lib/server/http-error";
 import {
   recalculateInterestPeriodStatusFromLinkedPayments,
   syncLoanStatusFromInterestPeriods,
 } from "$lib/server/loan-interest-period-sync";
+import {
+  detectInterestDateExtensions,
+  latestExtension,
+  type PeriodDueSnapshot,
+} from "$lib/loans/interest-extensions";
 
 export const GET: RequestHandler = async (event) => {
   const { params } = event;
@@ -126,12 +133,31 @@ export const PUT: RequestHandler = async (event) => {
             receivedPayments: { where: isNull(receivedPayments.deletedAt) },
           },
         },
+        signingInvitations: true,
       },
     });
 
     if (!existingLoan) {
       return json({ error: "Loan not found" }, { status: 404 });
     }
+
+    const invitationsBefore = new Map(
+      existingLoan.signingInvitations.map((invitation) => [
+        invitation.id,
+        {
+          signedAt: invitation.signedAt,
+          partyEmail: (invitation.partyEmail ?? "").trim().toLowerCase(),
+        },
+      ]),
+    );
+
+    const periodDueBefore: PeriodDueSnapshot[] =
+      existingLoan.loanInvestors.flatMap((allocation) =>
+        (allocation.interestPeriods ?? []).map((period) => ({
+          id: period.id,
+          dueDateKey: toLocalDateString(period.dueDate),
+        })),
+      );
 
     // Legacy rows may have been saved before receipts were required. Allow an
     // existing row to keep an empty receipt field, but only when its id really
@@ -625,10 +651,11 @@ export const PUT: RequestHandler = async (event) => {
       with: {
         borrower: true,
         loanInvestors: {
+          where: isNull(loanInvestors.deletedAt),
           with: {
             investor: true,
             interestPeriods: true,
-            receivedPayments: true,
+            receivedPayments: { where: isNull(receivedPayments.deletedAt) },
           },
         },
       },
@@ -656,6 +683,50 @@ export const PUT: RequestHandler = async (event) => {
       } catch (autoSignErr) {
         console.error("[signing] auto attach failed", autoSignErr);
       }
+
+      try {
+        const freshInvitations = await db.query.loanSigningInvitations.findMany(
+          {
+            where: eq(loanSigningInvitations.loanId, loanId),
+          },
+        );
+        const newUnsigned = freshInvitations.filter((invitation) => {
+          if (invitation.signedAt) return false;
+          const before = invitationsBefore.get(invitation.id);
+          if (!before) return true;
+          const currentEmail = (invitation.partyEmail ?? "")
+            .trim()
+            .toLowerCase();
+          return Boolean(before.signedAt) || before.partyEmail !== currentEmail;
+        });
+        if (newUnsigned.length > 0) {
+          const { sendLoanCreatedSigningEmails } =
+            await import("$lib/server/email/loan-created-email");
+          await sendLoanCreatedSigningEmails({
+            loanId,
+            loanName: updatedLoan.loanName,
+            dueDate: updatedLoan.dueDate,
+            loanType: updatedLoan.type,
+            loanStatus: updatedLoan.status,
+            borrowerName: updatedLoan.borrower?.name ?? "",
+            principal: updatedLoan.loanInvestors.reduce((sum, row) => {
+              const amount = Number.parseFloat(row.amount);
+              return sum + (Number.isFinite(amount) ? amount : 0);
+            }, 0),
+            investorNames: updatedLoan.loanInvestors
+              .map((row) => row.investor?.name?.trim())
+              .filter((name): name is string => Boolean(name)),
+            recipients: newUnsigned.map((invitation) => ({
+              partyRole: invitation.partyRole,
+              partyName: invitation.partyName,
+              partyEmail: invitation.partyEmail,
+              invitationId: invitation.id,
+            })),
+          });
+        }
+      } catch (emailErr) {
+        console.error("[email] new signing invitations failed", emailErr);
+      }
     }
 
     invalidateLoanData();
@@ -667,14 +738,45 @@ export const PUT: RequestHandler = async (event) => {
         await import("$lib/server/jobs/queue");
       const { scheduleDrain } = await import("$lib/server/jobs/after-response");
       await recomputeGroupsForLoans([loanId]);
+
+      const periodDueAfter: PeriodDueSnapshot[] = (
+        updatedLoan?.loanInvestors ?? []
+      ).flatMap((allocation) =>
+        (allocation.interestPeriods ?? []).map((period) => ({
+          id: period.id,
+          dueDateKey: toLocalDateString(period.dueDate),
+        })),
+      );
+      const extensions = detectInterestDateExtensions(
+        periodDueBefore,
+        periodDueAfter,
+      );
+      const latest = latestExtension(extensions);
+
       await enqueueGroupLoanChanged(loanId, {
-        activity: {
-          type: "loan_updated",
-          entityId: loanId,
-          summary: updatedLoan?.loanName
-            ? `Loan updated: ${updatedLoan.loanName}`
-            : "Loan updated",
-        },
+        activity: latest
+          ? {
+              type: "interest_extended",
+              entityId: latest.periodId,
+              actorUserId: userId,
+              actorEmail: session.user?.email ?? undefined,
+              detail: {
+                date: latest.dueDateKey,
+                previousDate: latest.previousDueDateKey,
+              },
+              summary: updatedLoan?.loanName
+                ? `Interest due date extended: ${updatedLoan.loanName}`
+                : "Interest due date extended",
+            }
+          : {
+              type: "loan_updated",
+              entityId: loanId,
+              actorUserId: userId,
+              actorEmail: session.user?.email ?? undefined,
+              summary: updatedLoan?.loanName
+                ? `Loan updated: ${updatedLoan.loanName}`
+                : "Loan updated",
+            },
       });
       scheduleDrain(event);
     } catch (groupErr) {
@@ -747,6 +849,10 @@ export const DELETE: RequestHandler = async (event) => {
 
     // Soft delete (D-8): the row and its money history stay, so it can be
     // restored and audited.
+    const deletedLoan = await db.query.loans.findFirst({
+      where: eq(loans.id, loanId),
+      columns: { loanName: true },
+    });
     await db.transaction(async (tx) => {
       await tx
         .update(loans)
@@ -761,6 +867,23 @@ export const DELETE: RequestHandler = async (event) => {
         reason: "soft delete",
       });
     });
+
+    try {
+      const { enqueueGroupLoanChanged } =
+        await import("$lib/server/jobs/queue");
+      await enqueueGroupLoanChanged(loanId, {
+        calendar: false,
+        activity: {
+          type: "loan_deleted",
+          entityId: loanId,
+          actorUserId: userId,
+          actorEmail: session.user?.email ?? undefined,
+          summary: `Loan deleted: ${deletedLoan?.loanName ?? "Loan"}`,
+        },
+      });
+    } catch (notifyErr) {
+      console.error("[email] loan deleted notify failed", notifyErr);
+    }
 
     invalidateLoanData();
     scheduleDrain(event);

@@ -158,8 +158,12 @@
 
 <svelte:head><title>Transactions</title></svelte:head>
 
-{#if items === null}
-	<ListPageSkeleton variant="transactions" />
+{#if items === null || !viewModeState.isReady}
+	<ListPageSkeleton
+		variant="transactions"
+		viewMode={viewModeState.viewMode}
+		ready={viewModeState.isReady}
+	/>
 {:else}
 	<DashboardPage>
 		<PageHeader

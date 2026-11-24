@@ -10,6 +10,7 @@
 	import PartyIdentityDocumentsManager from '$lib/components/settings/PartyIdentityDocumentsManager.svelte';
 	import InstallAppCard from '$lib/components/settings/InstallAppCard.svelte';
 	import PushNotificationsCard from '$lib/components/settings/PushNotificationsCard.svelte';
+	import EmailNotificationsCard from '$lib/components/settings/EmailNotificationsCard.svelte';
 	import AutoAttachSignatureCard from '$lib/components/settings/AutoAttachSignatureCard.svelte';
 	import { formatAccountRoles } from '$lib/account-roles';
 	import { PAGE_DESCRIPTIONS } from '$lib/page-descriptions';
@@ -54,22 +55,22 @@
 
 	<div id="settings-templates">
 		<LoanTemplatesManager
-		initialTemplates={data.loanTemplates ?? []}
-		borrowers={data.templateBorrowers ?? []}
-		investors={data.templateInvestors ?? []}
+			initialTemplates={data.loanTemplates ?? []}
+			borrowers={data.templateBorrowers ?? []}
+			investors={data.templateInvestors ?? []}
 			groups={data.templateGroups ?? []}
 		/>
 	</div>
 
 	{#if hasPartyLinks}
 		<div id="settings-identity">
-		<PartyIdentityDocumentsManager initialDocuments={data.identityDocuments} />
-	</div>
+			<PartyIdentityDocumentsManager initialDocuments={data.identityDocuments} />
+		</div>
 	{/if}
 
 	<div id="settings-signing">
 		<AutoAttachSignatureCard
-		initialEnabled={data.signingPreferences?.autoAttachSignature === true}
+			initialEnabled={data.signingPreferences?.autoAttachSignature === true}
 			hasSavedSignature={data.hasSavedSignature === true}
 		/>
 	</div>
@@ -84,7 +85,13 @@
 	{/if}
 
 	<div id="settings-install"><InstallAppCard /></div>
-	<div id="settings-notifications"><PushNotificationsCard initialPreferences={data.pushPreferences} /></div>
+	<div id="settings-notifications">
+		<PushNotificationsCard initialPreferences={data.pushPreferences} />
+		<EmailNotificationsCard
+			initialPreferences={data.emailPreferences}
+			emailConfigured={data.emailConfigured}
+		/>
+	</div>
 
 	<Card.Root id="settings-data">
 		<Card.Header>

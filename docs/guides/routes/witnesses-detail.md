@@ -12,6 +12,8 @@
 
 Witnessed loans come from `loan_signing_invitations` where `witness_id` matches. Investor transactions are not linked to witnesses in the data model.
 
+- **Loading:** `WitnessDetailSkeleton` mirrors the page header, contact card, and witnessed-loan rows. Inside `WitnessDetailModal` the body skeleton omits the page header.
+
 ## Permissions
 
 Owner or linked witness (`witness_user_id`). Workspace owner can edit. Linked party is read-only. Others get 404.

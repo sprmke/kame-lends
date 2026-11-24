@@ -206,7 +206,7 @@
 	</PageHeader>
 
 	{#if items === null}
-		<ListPageSkeleton variant="groups" />
+		<ListPageSkeleton variant="groups" embedded />
 	{:else}
 		{#if showSearch || hasActiveFilters}
 			<div class="mb-4 space-y-3">

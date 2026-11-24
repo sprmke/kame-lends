@@ -12,6 +12,8 @@
 - Delete requires zero linked loans.
 - Desktop list quick-view uses the same content inside `BorrowerDetailModal`, including in-modal edit.
 
+- **Loading:** `BorrowerDetailSkeleton` mirrors the page header, contact card, six summary metrics, and loan rows. Inside `BorrowerDetailModal` the body skeleton omits the page header and sits under the dialog header. Edit mode uses `PartyProfileFormSkeleton` (header only when the form renders its own `FormHeader`).
+
 ## Permissions
 
 Owner or linked borrower (`borrower_user_id`). Workspace owner can edit. Linked party is read-only. Others get 404.

@@ -8,7 +8,7 @@
 		disablePush,
 		enablePush,
 		getPushState,
-		type PushClientState
+		type PushClientState,
 	} from '$lib/pwa/push';
 
 	type Preferences = {
@@ -50,7 +50,7 @@
 			const res = await fetch('/api/push/preferences', {
 				method: 'PUT',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify(prefs)
+				body: JSON.stringify(prefs),
 			});
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}));
@@ -101,7 +101,7 @@
 	</Card.Header>
 	<Card.Content class="space-y-4">
 		{#if pushState?.needsInstallFirst}
-			<p class="text-sm text-muted-foreground">
+			<p class="text-muted-foreground text-sm">
 				Install the app to your home screen before enabling push on iOS.
 			</p>
 		{:else if pushState?.supported}
@@ -115,7 +115,7 @@
 				<Label for="push-device">Notifications on this device</Label>
 			</div>
 		{:else}
-			<p class="text-sm text-muted-foreground">
+			<p class="text-muted-foreground text-sm">
 				Push is unavailable until VAPID keys are configured.
 			</p>
 		{/if}
@@ -179,9 +179,19 @@
 		</div>
 
 		<div class="flex flex-wrap gap-2">
-			<Button type="button" disabled={busy || preferencesDisabled} onclick={() => void savePreferences()}>Save</Button>
+			<Button
+				type="button"
+				class="text-primary-ink"
+				disabled={busy || preferencesDisabled}
+				onclick={() => void savePreferences()}>Save</Button
+			>
 			{#if pushState?.subscribed}
-				<Button type="button" variant="outline" disabled={busy || preferencesDisabled} onclick={() => void sendTest()}>
+				<Button
+					type="button"
+					variant="outline"
+					disabled={busy || preferencesDisabled}
+					onclick={() => void sendTest()}
+				>
 					Send test
 				</Button>
 			{/if}

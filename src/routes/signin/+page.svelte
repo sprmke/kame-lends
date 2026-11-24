@@ -68,6 +68,18 @@
 				</Button>
 			</form>
 
+			{#if data.devLogin}
+				<form method="POST" action="?/devSignIn">
+					<Button
+						type="submit"
+						variant="outline"
+						class="h-12 w-full rounded-2xl text-sm font-semibold"
+					>
+						Use local test account
+					</Button>
+				</form>
+			{/if}
+
 			<p class="text-center text-xs text-muted-foreground">
 				By continuing, you agree to our <a class="underline underline-offset-2 hover:text-foreground" href="/terms">Terms of Service</a> and <a class="underline underline-offset-2 hover:text-foreground" href="/privacy">Privacy Policy</a>.
 			</p>

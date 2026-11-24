@@ -12,10 +12,10 @@
 	let { showGroupsColumn = false }: Props = $props();
 </script>
 
-{#snippet chartCard(showToggle: boolean)}
+{#snippet chartCard(title: string, showToggle: boolean)}
 	<Card.Root class="surface-card border-border/60">
 		<Card.Header class="flex flex-row items-center justify-between gap-3 space-y-0 pb-3">
-			<Skeleton class="h-4 w-44" />
+			<Card.Title class="text-sm font-medium">{title}</Card.Title>
 			{#if showToggle}
 				<div class="pill-segment self-start">
 					<Skeleton class="h-7 w-12 rounded-md" />
@@ -30,10 +30,10 @@
 	</Card.Root>
 {/snippet}
 
-{#snippet sectionHeading()}
+{#snippet sectionHeading(eyebrow: string, title: string)}
 	<div>
-		<Skeleton class="h-2.5 w-16" />
-		<Skeleton class="mt-1 h-4 w-36" />
+		<p class="section-eyebrow">{eyebrow}</p>
+		<h2 class="dashboard-section-title">{title}</h2>
 	</div>
 {/snippet}
 
@@ -44,18 +44,18 @@
 	role="status"
 >
 	<section class="dashboard-section">
-		{@render sectionHeading()}
+		{@render sectionHeading('Analytics', 'Trends & insights')}
 		{#if SHOW_TRANSACTIONS_UI}
 			<div class="mb-5">
-				{@render chartCard(true)}
+				{@render chartCard('Cashflow Trend', true)}
 			</div>
 		{/if}
 		<div class={cn('grid gap-5', showGroupsColumn ? 'lg:grid-cols-2' : 'lg:grid-cols-1')}>
 			{#if showGroupsColumn}
 				<Card.Root class="flex h-full flex-col overflow-hidden border-border/60">
-					<Card.Header class="space-y-0 pb-2">
-						<Skeleton class="h-4 w-28" />
-						<Skeleton class="mt-2 h-3 w-full max-w-xs" />
+					<Card.Header class="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+						<Card.Title class="text-sm font-medium">Your groups</Card.Title>
+						<Skeleton class="h-4 w-24" />
 					</Card.Header>
 					<Card.Content>
 						<div class="space-y-2">
@@ -65,15 +65,15 @@
 					</Card.Content>
 				</Card.Root>
 			{/if}
-			{@render chartCard(false)}
+			{@render chartCard('Top investors', false)}
 		</div>
 	</section>
 
 	<section class="dashboard-section">
-		{@render sectionHeading()}
+		{@render sectionHeading('Portfolio', 'Distribution')}
 		<div class="grid gap-5 lg:grid-cols-2">
-			{@render chartCard(false)}
-			{@render chartCard(false)}
+			{@render chartCard('Loan Type Distribution', false)}
+			{@render chartCard('Loan Status Distribution', false)}
 		</div>
 	</section>
 </div>

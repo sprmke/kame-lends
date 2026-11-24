@@ -1,0 +1,16 @@
+# Orca worktree lifecycle for Kame Lends.
+# Sticky per-worktree Vite port (3200-3299) and a UI tab.
+# The shared Docker Postgres on :5433 is started once by ./dev.sh, not by setup.
+
+scripts:
+  setup: |
+    bun install
+    cp -n "$ORCA_ROOT_PATH/.env.local" .env.local 2>/dev/null || true
+  archive: |
+    bash scripts/dev/archive-worktree-ui.sh
+
+setupAgentStartupPolicy: wait-for-setup
+
+defaultTabs:
+  - title: UI
+    command: bun run ui

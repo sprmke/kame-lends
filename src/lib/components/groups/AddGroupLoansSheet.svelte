@@ -3,6 +3,7 @@
 	import AccessPreview from '$lib/components/groups/AccessPreview.svelte';
 	import GroupBadgeList from '$lib/components/groups/GroupBadgeList.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Input } from '$lib/components/ui/input';
 	import type { AccessPreviewData, WizardLoanRow } from '$lib/components/groups/types';
@@ -169,7 +170,22 @@
 	{#if step === 'pick'}
 		<div class="space-y-3">
 			{#if loansLoading}
-				<p class="text-sm text-muted-foreground">Loading loans…</p>
+				<div class="space-y-3" aria-busy="true" aria-label="Loading loans" role="status">
+					<Skeleton class="h-11 w-full rounded-2xl" />
+					<Skeleton class="h-5 w-32" />
+					<ul class="space-y-1">
+						{#each Array.from({ length: 5 }) as _, index (index)}
+							<li class="flex items-start gap-2 rounded-lg px-2 py-2">
+								<Skeleton class="mt-0.5 h-5 w-5 shrink-0 rounded-sm" />
+								<div class="min-w-0 flex-1 space-y-2">
+									<Skeleton class="h-4 w-2/3 max-w-full" />
+									<Skeleton class="h-3 w-1/2 max-w-full" />
+								</div>
+							</li>
+						{/each}
+					</ul>
+					<Skeleton class="mx-auto h-3 w-20" />
+				</div>
 			{:else if loanChoices.length === 0}
 				<p class="text-sm text-muted-foreground">All of your loans are already in this group.</p>
 			{:else}

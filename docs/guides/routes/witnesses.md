@@ -13,6 +13,8 @@
 - **Desktop (`lg+`):** row click opens `WitnessDetailModal` (view + in-modal edit). Add Witness opens `WitnessCreateModal`. Edit from row actions opens the detail modal in edit mode.
 - Delete blocked when the witness has signing invitations on loans.
 
+- **Loading:** `ListPageSkeleton variant="witnesses"` mirrors the header, search + activity/signing filters, and the resolved view (table card at `lg+`, witness cards below `lg`). Cards show the name and email/contact/loans cells.
+
 ## Permissions
 
 | Role                                | Access                                                                               |

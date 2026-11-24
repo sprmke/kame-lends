@@ -353,6 +353,8 @@ export const POST: RequestHandler = async (event) => {
           activity: {
             type: "loan_created",
             entityId: completeLoan.id,
+            actorUserId: userId,
+            actorEmail: session.user?.email ?? undefined,
             summary: `New loan: ${completeLoan.loanName}`,
           },
         });
@@ -379,10 +381,21 @@ export const POST: RequestHandler = async (event) => {
           loanId: completeLoan.id,
           loanName: completeLoan.loanName,
           dueDate: completeLoan.dueDate,
+          loanType: completeLoan.type,
+          loanStatus: completeLoan.status,
+          borrowerName: completeLoan.borrower?.name ?? "",
+          principal: completeLoan.loanInvestors.reduce((sum, row) => {
+            const amount = Number.parseFloat(row.amount);
+            return sum + (Number.isFinite(amount) ? amount : 0);
+          }, 0),
+          investorNames: completeLoan.loanInvestors
+            .map((row) => row.investor?.name?.trim())
+            .filter((name): name is string => Boolean(name)),
           recipients: emailRecipients.map((invitation) => ({
             partyRole: invitation.partyRole,
             partyName: invitation.partyName,
             partyEmail: invitation.partyEmail,
+            invitationId: invitation.id,
           })),
         });
         if (emailResult.sent > 0 || emailResult.skipped > 0) {
