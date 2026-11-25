@@ -1,15 +1,15 @@
 /**
  * Production AI probe. Run only in CI after `vercel env pull` so the Gemini key
- * comes from the production environment. Never prints a key or a full error.
+ * comes from the production environment. Never prints a key or a raw error.
  *
  *   node --env-file=.env.production scripts/ci/probe-ai.mjs
  */
 const raw = process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "";
-const key = raw
+const keys = raw
   .split(",")
   .map((value) => value.trim())
-  .filter(Boolean)[0];
-if (!key) {
+  .filter(Boolean);
+if (keys.length === 0) {
   console.error(JSON.stringify({ ok: false, error: "no Gemini key in env" }));
   process.exit(1);
 }
@@ -19,7 +19,7 @@ const BASE = "https://generativelanguage.googleapis.com/v1beta";
 const TINY_PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nH0AAAAASUVORK5CYII=";
 
-async function probe({ model, body }) {
+async function probe({ key, model, body }) {
   const started = Date.now();
   try {
     const response = await fetch(`${BASE}/models/${model}:generateContent`, {
@@ -55,15 +55,30 @@ async function probe({ model, body }) {
   }
 }
 
-const keyCheck = await probe({
-  model: "gemini-3.8-flash",
-  body: {
-    contents: [{ role: "user", parts: [{ text: "Reply with OK." }] }],
-    generationConfig: { maxOutputTokens: 8 },
-  },
-});
+const keyChecks = [];
+for (const [index, key] of keys.entries()) {
+  const result = await probe({
+    key,
+    model: "gemini-3.8-flash",
+    body: {
+      contents: [{ role: "user", parts: [{ text: "Reply with OK." }] }],
+      generationConfig: { maxOutputTokens: 8 },
+    },
+  });
+  keyChecks.push({ index, ...result });
+}
 
+const working = keyChecks.find((check) => check.ok);
+if (!working) {
+  console.log(
+    JSON.stringify({ keys: keyChecks, assistant: null, receipts: null }),
+  );
+  process.exit(1);
+}
+
+const key = keys[working.index];
 const assistant = await probe({
+  key,
   model: "gemini-3.8-flash",
   body: {
     contents: [{ role: "user", parts: [{ text: "Reply with the word OK." }] }],
@@ -76,6 +91,7 @@ const assistant = await probe({
 });
 
 const receipts = await probe({
+  key,
   model: "gemini-3.5-flash-lite",
   body: {
     contents: [
@@ -101,5 +117,5 @@ const receipts = await probe({
   },
 });
 
-console.log(JSON.stringify({ keyCheck, assistant, receipts }));
-if (!keyCheck.ok || !assistant.ok || !receipts.ok) process.exit(1);
+console.log(JSON.stringify({ keyChecks, assistant, receipts }));
+if (!assistant.ok || !receipts.ok) process.exit(1);
