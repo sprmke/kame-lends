@@ -59,7 +59,9 @@ If CD is red, **do not** hand-deploy app code until quality passes and migration
 
 ### Post-deploy smoke test
 
-After Vercel promote, CD polls `GET /api/health` on production (default `https://pawn-tracker.vercel.app`, override with GitHub secret `PRODUCTION_URL`). The endpoint is public on purpose (CD + ops). It returns **200** only when the DB is reachable and migrations/columns match the running build. It lists pending file names and missing columns; treat that as deploy-state metadata, not a secret. The health function reads `db/migrations` from disk, so `scripts/deploy/copy-health-migrations.mjs` copies those SQL files into the function during `bun run build`.
+After Vercel promote, CD polls `GET /api/health` on production (default `https://pawn-tracker.vercel.app`, override with GitHub secret `PRODUCTION_URL`). The endpoint is public on purpose (CD + ops). It returns **200** only when the DB is reachable and migrations/columns match the running build. It lists pending file names and missing columns; treat that as deploy-state metadata, not a secret. The health function reads `db/migrations` from disk, so `scripts/deploy/copy-health-migrations.mjs` copies those SQL files into the function during `bun run build`. Health also reports whether AI and the assistant are configured, as booleans only.
+
+For an AI release, run the **Production AI probe** workflow (manual `workflow_dispatch`). It pulls production env with the Vercel token, makes one small call to `gemini-3.8-flash` and one image + JSON call to `gemini-3.5-flash-lite`, prints only model/status/finish reason, and deletes the pulled env. It never prints keys or prompts. The script is `scripts/ci/probe-ai.mjs`.
 
 ## Migrations
 
