@@ -31,7 +31,7 @@ jobs:
         run: bunx vitest run src/lib/server/ai/assistant-live.eval.test.ts
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: assistant-eval-results
           path: evals/assistant/last-run.json
