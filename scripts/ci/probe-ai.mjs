@@ -4,11 +4,20 @@
  *
  *   node --env-file=.env.production scripts/ci/probe-ai.mjs
  */
-const raw = process.env.GEMINI_API_KEYS ?? process.env.GEMINI_API_KEY ?? "";
-const keys = raw
-  .split(",")
-  .map((value) => value.trim())
-  .filter(Boolean);
+const keys: Array<{ key: string; source: string }> = [];
+const seen = new Set<string>();
+for (const value of (process.env.GEMINI_API_KEYS ?? "").split(",")) {
+  const key = value.trim();
+  if (key && !seen.has(key)) {
+    seen.add(key);
+    keys.push({ key, source: "GEMINI_API_KEYS" });
+  }
+}
+const single = (process.env.GEMINI_API_KEY ?? "").trim();
+if (single && !seen.has(single)) {
+  seen.add(single);
+  keys.push({ key: single, source: "GEMINI_API_KEY" });
+}
 if (keys.length === 0) {
   console.error(JSON.stringify({ ok: false, error: "no Gemini key in env" }));
   process.exit(1);
@@ -56,16 +65,16 @@ async function probe({ key, model, body }) {
 }
 
 const keyChecks = [];
-for (const [index, key] of keys.entries()) {
+for (const [index, entry] of keys.entries()) {
   const result = await probe({
-    key,
+    key: entry.key,
     model: "gemini-3.8-flash",
     body: {
       contents: [{ role: "user", parts: [{ text: "Reply with OK." }] }],
       generationConfig: { maxOutputTokens: 8 },
     },
   });
-  keyChecks.push({ index, ...result });
+  keyChecks.push({ index, source: entry.source, ...result });
 }
 
 const working = keyChecks.find((check) => check.ok);
@@ -76,7 +85,7 @@ if (!working) {
   process.exit(1);
 }
 
-const key = keys[working.index];
+const key = keys[working.index].key;
 const assistant = await probe({
   key,
   model: "gemini-3.8-flash",
