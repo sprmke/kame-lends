@@ -30,12 +30,16 @@ async function probe({ model, body }) {
     });
     const parsed = await response.json().catch(() => null);
     const candidate = parsed?.candidates?.[0];
+    const rawMessage = String(parsed?.error?.message ?? "");
     return {
       model,
       ok: response.ok,
       status: response.status,
       finishReason: candidate?.finishReason ?? null,
       errorCode: parsed?.error?.status ?? null,
+      errorMessage: rawMessage
+        .replace(/[A-Za-z0-9_-]{24,}/g, "[redacted]")
+        .slice(0, 240),
       ms: Date.now() - started,
     };
   } catch (error) {
@@ -45,10 +49,19 @@ async function probe({ model, body }) {
       status: null,
       finishReason: null,
       errorCode: error?.name === "TimeoutError" ? "timeout" : "network",
+      errorMessage: "",
       ms: Date.now() - started,
     };
   }
 }
+
+const keyCheck = await probe({
+  model: "gemini-3.8-flash",
+  body: {
+    contents: [{ role: "user", parts: [{ text: "Reply with OK." }] }],
+    generationConfig: { maxOutputTokens: 8 },
+  },
+});
 
 const assistant = await probe({
   model: "gemini-3.8-flash",
@@ -88,5 +101,5 @@ const receipts = await probe({
   },
 });
 
-console.log(JSON.stringify({ assistant, receipts }));
-if (!assistant.ok || !receipts.ok) process.exit(1);
+console.log(JSON.stringify({ keyCheck, assistant, receipts }));
+if (!keyCheck.ok || !assistant.ok || !receipts.ok) process.exit(1);
