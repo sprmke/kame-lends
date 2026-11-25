@@ -4,8 +4,8 @@
  *
  *   node --env-file=.env.production scripts/ci/probe-ai.mjs
  */
-const keys: Array<{ key: string; source: string }> = [];
-const seen = new Set<string>();
+const keys = [];
+const seen = new Set();
 for (const value of (process.env.GEMINI_API_KEYS ?? "").split(",")) {
   const key = value.trim();
   if (key && !seen.has(key)) {
