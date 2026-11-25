@@ -26,7 +26,8 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          npx --yes vercel@65.9.0 env pull .env.production \
+          cd "$RUNNER_TEMP"
+          npx --yes vercel@65.9.0 env pull "$GITHUB_WORKSPACE/.env.production" \
             --environment=production --yes --token="$VERCEL_TOKEN"
       - name: Probe Gemini
         run: node --env-file=.env.production scripts/ci/probe-ai.mjs
