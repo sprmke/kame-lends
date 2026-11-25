@@ -1,0 +1,35 @@
+name: Production AI probe
+
+# Manual post-deploy check. Pulls production env with the Vercel token and makes
+# one small call per model. Never prints a key or a prompt.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: prod-ai-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Gemini models
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pull production env
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npx --yes vercel@65.9.0 env pull .env.production \
+            --environment=production --yes --token="$VERCEL_TOKEN"
+      - name: Probe Gemini
+        run: node --env-file=.env.production scripts/ci/probe-ai.mjs
+      - name: Remove pulled env
+        if: always()
+        run: rm -f .env.production
