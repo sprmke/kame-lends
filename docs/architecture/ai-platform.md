@@ -16,7 +16,7 @@ feature (receipt-extraction.ts)        assistant (agent/turn.ts)
 | File (`src/lib/server/ai/`) | Role                                                                                                                                                                                               |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `config.ts`                 | Env: keys, `AI_ENABLED`, `AI_DISABLED_FEATURES`, `AI_DAILY_CALLS_PER_USER`, `AI_RESPONSE_CACHE_DISABLED`; assistant caps/rollout; `getAiStatus()`                                                  |
-| `features.ts`               | Feature ids and routing: model, fallback model, `maxOutputTokens`, `thinkingBudget`, timeout, prices, env model override                                                                           |
+| `features.ts`               | Feature ids and routing: model, fallback model, `maxOutputTokens`, thinking level, timeout, prices, env model override                                                                             |
 | `transport.ts`              | Gemini REST (`x-goog-api-key` header), Groq OpenAI-compatible; 2 attempts per key, jittered backoff honoring `retry-after`, 55s whole-call budget; `callModelWithTools` and `streamModelWithTools` |
 | `client.ts`                 | `generateStructured()` for structured features; `runAgentTurn()` for agent profiles                                                                                                                |
 | `agent/*`                   | Bounded loop, context, registry, facts/number tokens, verifier, SSE encoder, thread memory                                                                                                         |
@@ -59,7 +59,7 @@ Per-path request rate limiting (`src/lib/server/rate-limit.ts`, 30/min/user) als
 ## Cost and privacy
 
 - Receipt extraction: `gemini-3.5-flash-lite` (replacement for the deprecated `gemini-2.5-flash`), thinking off, max 2048 output tokens. A compressed receipt (≤1600px) is roughly 1–2k input tokens, so about **$0.001 per scan**. Re-uploading the same image is a cache hit (no cost).
-- Assistant: `gemini-3.8-flash`, thinking budget 512, 6 rounds max. A turn is typically 2–3 rounds with a stable prefix, so roughly **one cent per turn** before caching. Caps stop runaway use.
+- Assistant: `gemini-3.8-flash`, thinking level `medium`, 6 rounds max. A turn is typically 2–3 rounds with a stable prefix, so roughly **one cent per turn** before caching. Caps stop runaway use.
 - `ai_usage_events` stores tokens, estimated USD, latency, provider, model, prompt id/version, status, error code, fallback, cache hit. No prompt or reply text, no names.
 - Logs print one JSON line (`ai.<feature>.<status>`) with the same fields. Receipt summaries are never logged.
 - **Use a paid-tier Gemini key in production.** Free-tier data may be used by Google to improve products, and receipts contain names and account numbers.

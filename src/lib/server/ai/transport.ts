@@ -270,6 +270,15 @@ function parseGroqReply(body: unknown): ParsedReply {
   };
 }
 
+/** Gemini 2.5 uses a token budget; Gemini 3 uses a reasoning level. */
+export function thinkingConfigFor(
+  route: AiFeatureRoute,
+): Record<string, unknown> {
+  return /^gemini-2\.5/.test(route.geminiModel)
+    ? { thinkingBudget: route.thinkingBudget }
+    : { thinkingLevel: route.thinkingLevel };
+}
+
 function geminiCall(key: string, request: TransportRequest): HttpCall {
   const { route } = request;
   return {
@@ -294,7 +303,7 @@ function geminiCall(key: string, request: TransportRequest): HttpCall {
         ...(request.responseSchema
           ? { responseSchema: request.responseSchema }
           : {}),
-        thinkingConfig: { thinkingBudget: route.thinkingBudget },
+        thinkingConfig: thinkingConfigFor(route),
       },
     }),
   };
@@ -493,7 +502,7 @@ function toGeminiGenerationConfig(
   return {
     temperature: route.temperature,
     maxOutputTokens: request.maxOutputTokens ?? route.maxOutputTokens,
-    thinkingConfig: { thinkingBudget: route.thinkingBudget },
+    thinkingConfig: thinkingConfigFor(route),
   };
 }
 

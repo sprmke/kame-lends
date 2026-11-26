@@ -94,7 +94,7 @@ const assistant = await probe({
     generationConfig: {
       maxOutputTokens: 16,
       temperature: 0.2,
-      thinkingConfig: { thinkingBudget: 512 },
+      thinkingConfig: { thinkingLevel: "medium" },
     },
   },
 });
@@ -121,7 +121,7 @@ const receipts = await probe({
         properties: { ok: { type: "STRING" } },
         required: ["ok"],
       },
-      thinkingConfig: { thinkingBudget: 0 },
+      thinkingConfig: { thinkingLevel: "minimal" },
     },
   },
 });
