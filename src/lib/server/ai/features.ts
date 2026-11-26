@@ -20,8 +20,10 @@ export interface AiFeatureRoute {
   /** Groq fallback when every Gemini key fails (images: jpeg/png/gif/webp only). */
   groqFallback: boolean;
   maxOutputTokens: number;
-  /** 0 disables Gemini "thinking". */
+  /** Gemini 2.5 fallback only. Gemini 3 models use `thinkingLevel`. */
   thinkingBudget: number;
+  /** Gemini 3 reasoning depth. */
+  thinkingLevel: "minimal" | "low" | "medium" | "high";
   temperature: number;
   /** Per HTTP attempt. */
   timeoutMs: number;
@@ -35,6 +37,7 @@ export const AI_FEATURE_ROUTES: Record<AiFeature, AiFeatureRoute> = {
     groqFallback: true,
     maxOutputTokens: 2048,
     thinkingBudget: 0,
+    thinkingLevel: "minimal",
     temperature: 0.1,
     timeoutMs: 30_000,
     price: {
@@ -48,6 +51,7 @@ export const AI_FEATURE_ROUTES: Record<AiFeature, AiFeatureRoute> = {
     groqFallback: false,
     maxOutputTokens: 4096,
     thinkingBudget: 512,
+    thinkingLevel: "medium",
     temperature: 0.2,
     timeoutMs: 25_000,
     price: {

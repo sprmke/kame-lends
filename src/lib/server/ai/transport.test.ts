@@ -106,9 +106,24 @@ describe("transport.callModel", () => {
     expect(init.headers["x-goog-api-key"]).toBe("gem-key");
     const body = JSON.parse(init.body);
     expect(body.systemInstruction.parts[0].text).toBe("system prompt");
-    expect(body.generationConfig.thinkingConfig.thinkingBudget).toBe(0);
+    expect(body.generationConfig.thinkingConfig.thinkingLevel).toBe("minimal");
     expect(body.generationConfig.responseSchema).toEqual({ type: "OBJECT" });
     expect(body.contents[0].parts[1].inlineData.mimeType).toBe("image/jpeg");
+  });
+
+  it("uses thinkingBudget for a Gemini 2.5 model override", async () => {
+    process.env.GEMINI_API_KEY = "gem-key";
+    const fetchMock = vi.fn().mockResolvedValueOnce(geminiOk('{"ok":true}'));
+    await callModel(
+      {
+        ...request,
+        route: { ...route, geminiModel: "gemini-2.5-flash" },
+      },
+      makeDeps(fetchMock),
+    );
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.generationConfig.thinkingConfig.thinkingBudget).toBe(0);
+    expect(body.generationConfig.thinkingConfig.thinkingLevel).toBeUndefined();
   });
 
   it("retries a 429 on the same key with backoff, then succeeds", async () => {
